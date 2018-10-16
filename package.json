@@ -1,0 +1,26 @@
+{
+  "name": "pinpoint-node-agent",
+  "version": "0.0.1",
+  "main": "src/index.ts",
+  "license": "MIT",
+  "scripts": {
+    "start": "npm run build",
+    "clean": "rimraf build",
+    "build": "yarn clean && tsc",
+    "build:watch": "yarn clean && tsc -w",
+    "test": "jest --coverage --verbose",
+    "test:watch": "jest --watch",
+    "lint": "tslint --project tsconfig.json"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/jest": "^23.3.5",
+    "@types/node": "^10.11.7",
+    "rimraf": "^2.6.2",
+    "ts-jest": "^23.10.4",
+    "tslint": "^5.11.0",
+    "tslint-config-airbnb": "^5.11.0",
+    "tslint-config-prettier": "^1.15.0",
+    "typescript": "^3.1.3"
+  }
+}

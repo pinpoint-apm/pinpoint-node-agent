@@ -1,0 +1,32 @@
+# See https://help.github.com/ignore-files/ for more about ignoring files.
+
+/.idea
+.vscode
+*.iml
+
+# dependencies
+node_modules
+packages/**/node_modules
+
+# tslint
+checkstyle-result.xml
+
+# testing
+coverage
+logs
+.cache
+
+# build
+build
+dist
+.cache-loader
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# mac os
+.DS_Store
+
+# npmrc
+packages/**/.npmrc

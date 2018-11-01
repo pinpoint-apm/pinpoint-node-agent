@@ -13,7 +13,7 @@ function init(agent) {
         if (MODULES.includes(name)) {
           console.log('load module:', name)
           try {
-            require('./module/express')(agent, m)
+            require('./module/' + name)(agent, m)
           } catch (e) {
             console.error('fail to load:', e)
           }

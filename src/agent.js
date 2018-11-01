@@ -1,10 +1,19 @@
 const instManager = require('instrumentation/inst-manager')
-const TraceContext = require('context/trace-context')
+const contextManger = require('context/context-manager')
 
 class Agent {
   constructor () {
+    this.contextManger = contextManger
+
     instManager.init(this)
-    this.traceContext = new TraceContext().createNew()
+  }
+
+  createNewContext () {
+    this.contextManger.create()
+  }
+
+  get currentContext () {
+    return this.contextManger.currentContext
   }
 }
 

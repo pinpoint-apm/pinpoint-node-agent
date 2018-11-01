@@ -3,11 +3,14 @@
 const shimmer = require('shimmer')
 
 module.exports = function(agent, express) {
-  console.log('agent >', agent)
   shimmer.wrap(express.Router, 'handle', function (original) {
     return function (req) {
-      const spanEventRecorder = agent.traceContext.spanEventRecorder
-      spanEventRecorder.recordStartTime(Date.now())
+      //TODO should move to http
+      agent.createNewContext()
+      if (agent.currentContext) {
+        const spanEventRecorder = agent.currentContext.spanEventRecorder
+        spanEventRecorder.recordStartTime(Date.now())
+      }
       return original.apply(this, arguments)
     }
   })

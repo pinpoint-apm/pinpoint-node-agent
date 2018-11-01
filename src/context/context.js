@@ -1,7 +1,7 @@
 const SpanRecorder = require('./span-recorder')
 const SpanEventRecorder = require('./span-event-recorder')
 
-class TraceContext {
+class Context {
   constructor () {
     this.spanRecorder = null;
     this.spanEventRecorder = null;
@@ -9,9 +9,9 @@ class TraceContext {
 
   createNew () {
     this.spanRecorder = new SpanRecorder()
-    this.spanEventRecorder = new SpanEventRecorder();
+    this.spanEventRecorder = new SpanEventRecorder()
     return this
   }
 }
 
-module.exports = TraceContext
+module.exports = Context

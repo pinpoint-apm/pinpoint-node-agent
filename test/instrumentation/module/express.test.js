@@ -9,8 +9,8 @@ function startServer() {
   return new express()
 }
 
-test('Should record a span event with start time', function (t) {
-  t.plan(2)
+test('Should create a context', function (t) {
+  t.plan(1)
 
   const app = startServer()
   app.get('/test', function (req, res) {
@@ -18,11 +18,10 @@ test('Should record a span event with start time', function (t) {
   })
 
   const server = app.listen(5005, async function () {
-    const beforeApiCall = Date.now()
     await axios.get('http://localhost:5005/test')
-    t.ok(agent.traceContext.spanEventRecorder.spanEvent)
-    t.ok(agent.traceContext.spanEventRecorder.spanEvent.startTime > beforeApiCall)
+
+    t.equal(agent.contextManger.getContextCount(), 1)
+
     server.close()
   })
 })
-

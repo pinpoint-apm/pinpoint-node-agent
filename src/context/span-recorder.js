@@ -1,4 +1,4 @@
-const Span = require('./span')
+const Span = require('./vo/span')
 
 class SpanRecorder {
   constructor () {

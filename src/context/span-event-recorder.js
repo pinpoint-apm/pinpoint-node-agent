@@ -1,4 +1,4 @@
-const SpanEvent = require('./span-event')
+const SpanEvent = require('./vo/span-event')
 
 class SpanEventRecorder {
   constructor () {

@@ -5,7 +5,8 @@
   "scripts": {
     "build": "",
     "clean": "rimraf build",
-    "test": "NODE_PATH=src tape 'test/**/*.js'"
+    "test-all": "NODE_PATH=src tape 'test/**/*.js'",
+    "test": "NODE_PATH=src tape"
   },
   "dependencies": {
     "loglevel": "^1.6.1",

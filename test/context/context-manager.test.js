@@ -1,12 +1,12 @@
-const test = require('tape')
+const test = require('tap').test
 
-const contextManger = require('../../src/context/context-manager')
-const Context = require('../../src/context/context')
+const contextManger = require('context/context-manager')
+const Context = require('context/context')
 
 test('Should set and get with same context id', function (t) {
   t.plan(1)
 
-  const context1 = new Context().createNew()
+  const context1 = new Context().create()
 
   contextManger.context = context1
   const context2 = contextManger.context

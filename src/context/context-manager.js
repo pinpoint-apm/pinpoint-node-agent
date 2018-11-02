@@ -7,7 +7,7 @@ class ContextManager {
   }
 
   create() {
-    this.currentContext = new Context().createNew()
+    this.currentContext = new Context().create()
   }
 
   get currentContext () {

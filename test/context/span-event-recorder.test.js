@@ -1,6 +1,6 @@
-const test = require('tape')
+const test = require('tap').test
 
-const SpanEventRecorder = require('../../src/context/span-event-recorder')
+const SpanEventRecorder = require('context/span-event-recorder')
 
 test('Should initialize with sequence -1', function (t) {
   t.plan(1)

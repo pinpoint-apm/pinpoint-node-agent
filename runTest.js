@@ -1,4 +1,4 @@
-const exec= require('child_process').execSync;
+const exec = require('child_process').execSync;
 
 
 const fileName = process.argv[2] || '*'

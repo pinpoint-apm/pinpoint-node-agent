@@ -1,7 +1,7 @@
 const Agent = require('../../../src/agent')
 const agent = new Agent()
 
-const test = require('tape')
+const test = require('tap').test
 const axios = require('axios')
 
 function startServer() {

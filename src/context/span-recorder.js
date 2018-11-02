@@ -2,7 +2,7 @@ const Span = require('./vo/span')
 
 class SpanRecorder {
   constructor () {
-    this.span= null
+    this.span = null
   }
 
   init () {

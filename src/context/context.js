@@ -7,7 +7,7 @@ class Context {
     this.spanEventRecorder = null;
   }
 
-  createNew () {
+  create () {
     this.spanRecorder = new SpanRecorder()
     this.spanEventRecorder = new SpanEventRecorder()
     return this

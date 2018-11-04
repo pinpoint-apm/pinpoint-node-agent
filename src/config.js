@@ -12,11 +12,11 @@ const initialConf = {
 
 let conf = null
 
-const init = (argumentConf = {}) => {
+const init = (agentConfig = {}) => {
   conf = Object.assign({},
       initialConf,
       readEnv(),
-      argumentConf)
+      agentConfig)
   console.log('config', conf)
 }
 
@@ -29,9 +29,9 @@ const readEnv = () => {
   }, {})
 }
 
-const get = (argumentConf) => {
+const get = (agentConfig) => {
   if (!conf) {
-    init(argumentConf)
+    init(agentConfig)
   }
   return conf
 }

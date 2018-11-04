@@ -5,8 +5,8 @@ class SpanRecorder {
     this.span = null
   }
 
-  init () {
-    this.span = new SpanEvent()
+  start (traceId) {
+    this.span = new Span(traceId)
   }
 }
 

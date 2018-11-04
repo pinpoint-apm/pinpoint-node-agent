@@ -6,10 +6,12 @@ const Context = require('context/context')
 test('Should set and get with same context id', function (t) {
   t.plan(1)
 
-  const context1 = new Context().create()
+  this.contextManger = contextManger.create({
+    agentId: 'agent-for-dev',
+    agenStartTime: Date.now()
+  })
 
-  contextManger.context = context1
-  const context2 = contextManger.context
+  const context = this.contextManger.createNewContext()
 
-  t.equal(context1, context2)
+  t.equal(context, this.contextManger.currentContext)
 })

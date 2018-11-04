@@ -3,16 +3,21 @@ const contextManger = require('context/context-manager')
 const getConfig = require('config').get
 
 class Agent {
-  constructor (config) {
-    this.config = getConfig(config)
+  constructor (agentConfig) {
+    this.config = getConfig(agentConfig)
+    this.agentId = this.config.agentId
+    this.agentStartTime = Date.now()
 
-    this.contextManger = contextManger
+    this.contextManger = contextManger.create({
+      agentId: this.agentId,
+      agenStartTime: this.agenStartTime,
+    })
 
     instManager.init(this)
   }
 
   createNewContext () {
-    this.contextManger.create()
+    this.contextManger.createNewContext()
   }
 
   get currentContext () {

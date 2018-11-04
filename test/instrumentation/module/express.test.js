@@ -1,5 +1,8 @@
-const Agent = require('../../../src/agent')
-const agent = new Agent()
+const Agent = require('agent')
+const agent = new Agent({
+  agentId: 'agent-for-dev',
+  applicationName: 'test web application'
+})
 
 const test = require('tap').test
 const axios = require('axios')

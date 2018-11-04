@@ -1,9 +1,10 @@
 
 class TraceId {
-  constructor () {
-    this.transactionId = null
-    this.spanId = null
-    this.parentSpanId = null
+  constructor (transactionId, spanId, parentSpanId) {
+    // transactionId + spanId + parentSpanId
+    this.transactionId = transactionId
+    this.spanId = spanId
+    this.parentSpanId = parentSpanId || -1
   }
 }
 

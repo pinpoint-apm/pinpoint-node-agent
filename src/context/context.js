@@ -2,15 +2,10 @@ const SpanRecorder = require('./span-recorder')
 const SpanEventRecorder = require('./span-event-recorder')
 
 class Context {
-  constructor () {
-    this.spanRecorder = null;
-    this.spanEventRecorder = null;
-  }
-
-  create () {
-    this.spanRecorder = new SpanRecorder()
+  constructor (traceId) {
+    this.traceId = traceId
+    this.spanRecorder = new SpanRecorder().start(traceId)
     this.spanEventRecorder = new SpanEventRecorder()
-    return this
   }
 }
 

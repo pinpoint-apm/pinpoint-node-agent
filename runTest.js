@@ -11,11 +11,12 @@ if (testNamePattern) {
     cmd += '--grep ' + testNamePattern + ' '
 }
 cmd += filePath
+cmd += ' | ./node_modules/.bin/tap-spec'
 
 console.log ('>> run cmd : ' + cmd)
 
 try {
-  exec(cmd, {stdio: [process.stdin, process.stdout, 'ignore']});
+  exec(cmd, {stdio: [process.stdin, process.stdout, process.stderr]});
 } catch (e) {
   process.exit(1)
 }

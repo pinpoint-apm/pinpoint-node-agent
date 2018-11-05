@@ -1,4 +1,4 @@
-const test = require('tap').test
+const test = require('tape')
 
 const SpanEventRecorder = require('context/span-event-recorder')
 

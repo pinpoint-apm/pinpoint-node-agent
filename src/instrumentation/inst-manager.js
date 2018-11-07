@@ -1,7 +1,8 @@
 const shimmer = require('shimmer')
 
 const MODULES = [
-  'express'
+  'express',
+  'http'
 ]
 
 function init(agent) {
@@ -13,7 +14,7 @@ function init(agent) {
         if (MODULES.includes(name)) {
           console.log('load module:', name)
           try {
-            require('./module/' + name)(agent, m)
+              require('./module/' + name)(agent, m)
           } catch (e) {
             console.error('fail to load:', e)
           }

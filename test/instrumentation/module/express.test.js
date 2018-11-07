@@ -4,7 +4,7 @@ const agent = new Agent({
   applicationName: 'test web application'
 })
 
-const test = require('tap').test
+const test = require('tape')
 const axios = require('axios')
 
 function startServer() {

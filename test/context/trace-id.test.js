@@ -1,4 +1,4 @@
-const test = require('tap').test
+const test = require('tape')
 
 const TransactionId = require('context/transaction-id')
 const TraceId = require('context/trace-id')

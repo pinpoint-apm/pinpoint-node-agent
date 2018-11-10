@@ -2,7 +2,7 @@ const serviceTypeConstant = require('constant/service-type')
 const ServiceTypeProperty = serviceTypeConstant.ServiceTypeProperty
 
 class ServiceType {
-  constructor (code, properties = []) {
+  constructor (code, ...properties) {
     this.code = code
     this.name = null
     this.terminal = false
@@ -13,7 +13,7 @@ class ServiceType {
     this.setProperties(properties)
   }
 
-  setProperties (properties) {
+  setProperties (properties = []) {
     properties.forEach(p => {
       switch (p) {
         case ServiceTypeProperty.TERMINAL:

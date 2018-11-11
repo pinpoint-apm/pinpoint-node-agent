@@ -1,8 +1,11 @@
 const shimmer = require('shimmer')
 
 const MODULES = [
-  'express'
+  'express',
+  'http'
 ]
+
+const testMap = new Map()
 
 function init(agent) {
   try {
@@ -13,7 +16,11 @@ function init(agent) {
         if (MODULES.includes(name)) {
           console.log('load module:', name)
           try {
-            require('./module/' + name)(agent, m)
+            // console.log('name='+name+'/->'+getLoadTest(name))
+            // if (!getLoadTest(name)) {
+            //   setLoadTest(name)
+              require('./module/' + name)(agent, m)
+            // }
           } catch (e) {
             console.error('fail to load:', e)
           }
@@ -24,6 +31,14 @@ function init(agent) {
   } catch (e) {
     console.error('error occurred', e)
   }
+}
+
+function getLoadTest (name) {
+  return testMap.get(name)
+}
+
+function setLoadTest (name) {
+  testMap.set(name, true)
 }
 
 module.exports = {

@@ -1,9 +1,12 @@
-const test = require('tap').test
+const test = require('tape')
 
+const SequenceGenerator = require('context/sequence-generator')
 const TransactionId = require('context/transaction-id')
 
 test('Should create with sequence number', function (t) {
   t.plan(3)
+
+  SequenceGenerator.reset()
 
   const agentId = 'agent-for-dev'
   const agentStartTime = Date.now()
@@ -11,6 +14,6 @@ test('Should create with sequence number', function (t) {
   const transactionId2 = new TransactionId(agentId, agentStartTime)
 
   t.ok(transactionId)
-  t.equal(0, transactionId.sequence)
-  t.equal(1, transactionId2.sequence)
+  t.equal(transactionId.sequence, 0)
+  t.equal(transactionId2.sequence, 1)
 })

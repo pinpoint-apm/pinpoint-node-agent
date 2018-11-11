@@ -1,4 +1,4 @@
-const test = require('tap').test
+const test = require('tape')
 
 const contextManger = require('context/context-manager')
 const Context = require('context/context')

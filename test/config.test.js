@@ -1,8 +1,8 @@
-const tap = require('tap')
+const test = require('tape')
 
 const config = require('config')
 
-tap.test('Should be configured with default', function (t) {
+test('Should be configured with default', function (t) {
   t.plan(1)
 
   config.clear()
@@ -11,7 +11,7 @@ tap.test('Should be configured with default', function (t) {
   t.equal(null, conf.agentId)
 })
 
-tap.test('Should be configured with environment variable', function (t) {
+test('Should be configured with environment variable', function (t) {
   t.plan(1)
 
   const agentId = 'id-from-env'
@@ -22,7 +22,7 @@ tap.test('Should be configured with environment variable', function (t) {
   t.equal(agentId, conf.agentId)
 })
 
-tap.test('Should be configured with argument', function (t) {
+test('Should be configured with argument', function (t) {
   t.plan(1)
 
   process.env.PINPOINT_AGENT_ID = 'id-from-env'

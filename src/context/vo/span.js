@@ -5,31 +5,30 @@ class Span {
       // TODO app에 영향을 미치지 않으려면 예외처리는 어떻게 해야 할까??
     }
 
-    // this.agentId = null; // required, meta
-    // this.applicationName = null; // required, meta
-    // this.agentStartTime = null; // required, meta
-    // this.transactionId = traceId.transactionId; // required, by traceId
-    // this.parentSpanId = traceId.parentSpanId || -1; // by traceId
-    // this.serviceType = null; // required, meta
-    // this.parentApplicationName = null; // meta
-    // this.parentApplicationType = null; // meta
+    // this.agentId = null; // required, from config
+    // this.applicationName = null; // required, from config
+    // this.agentStartTime = null; // required, from config
+    this.serviceType = null; // required, meta
     this.spanId = traceId.spanId; // required
-    this.traceId = traceId.transactionId
+    this.parentSpanId = traceId.parentSpanId;
+    this.transactionId = traceId.transactionId
     this.startTime = Date.now(); // required
     this.elapsed = 0;
-    this.rpc = null;
-    this.endPoint = null;
-    this.remoteAddr = null;
+    this.rpc = null; // uri
+    this.endPoint = null; // host, domain
+    this.remoteAddr = null; // ip
     this.annotations = [];
-    this.flag = 0;
+    this.flag = traceId.flag;
     this.err = null;
     this.spanEventList = [];
-    this.acceptorHost = null;
     this.apiId = null;
     this.exceptionInfo = null;
-    this.applicationServiceType = null;
-    this.loggingTransactionInfo = null;
-    this.version = null;
+    // this.applicationServiceType = null; // from config
+    this.loggingTransactionInfo = null; // ?
+    this.version = 1;
+    this.acceptorHost = null; // parent host ?
+    this.parentApplicationName = null;
+    this.parentApplicationType = null;
   }
 }
 

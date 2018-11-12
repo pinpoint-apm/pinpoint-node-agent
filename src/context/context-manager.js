@@ -19,11 +19,14 @@ class ContextManager {
   }
 
   createNewContext (traceId) {
-    if (!traceId) {
-      const transactionId = new TransactionId(this.agentId, this.agentStartTime)
-      const spanId = IdGenerator.next
-      traceId = new TraceId(transactionId, spanId)
-    }
+    this.currentContext = new Context(traceId)
+    return this.currentContext
+  }
+
+  continueTrace () {
+    const transactionId = new TransactionId(this.agentId, this.agentStartTime)
+    const spanId = IdGenerator.next
+    const traceId = new TraceId(transactionId, spanId)
     this.currentContext = new Context(traceId)
     return this.currentContext
   }

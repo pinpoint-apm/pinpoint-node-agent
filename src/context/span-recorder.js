@@ -47,6 +47,7 @@ class SpanRecorder {
       (this.span.rpc = rpc)
     }
   }
+
   recordException (error) {
     if (this.span && error) {
       this.span.err = 1

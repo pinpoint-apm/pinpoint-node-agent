@@ -7,5 +7,5 @@ test('Should initialize with sequence -1', function (t) {
 
   const spanEventRecorder = new SpanEventRecorder()
 
-  t.equal(spanEventRecorder.sequence, -1)
+  t.equal(spanEventRecorder.spanEvent.sequence, -1)
 })

@@ -8,15 +8,20 @@ const config = {
   serviceType: null,
 }
 
-const getTraceId = () => {
+const getTransactionId = () => {
   const agentId = config.agentId
   const agentStartTime = Date.now()
-  const transactionId = new TransactionId(agentId, agentStartTime)
+  return new TransactionId(agentId, agentStartTime, 99)
+}
+
+const getTraceId = (_transactionId) => {
+  const transactionId = _transactionId || getTransactionId()
   const spanId = IdGenerator.next
   return new TraceId(transactionId, spanId)
 }
 
 module.exports = {
   config,
+  getTransactionId,
   getTraceId,
 }

@@ -34,7 +34,7 @@ test('Should create a context', function(t) {
 
     const server = app.listen(5006, async () => {
         await axios.get('http://localhost:5006/test')
-        t.equal(agent.contextManger.getContextCount(), 1)
+        t.equal(agent.traceContext.getTraceObjectCount(), 1)
         server.close()
     })
 })

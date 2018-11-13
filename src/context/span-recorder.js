@@ -1,21 +1,15 @@
-const Span = require('./vo/span')
 const Annotation = require('./annotation')
-const DefaultAnnotationKey = require('constant/annotation-keyt ').DefaultAnnotationKey
+const ServiceType = require('./service-type')
+const DefaultAnnotationKey = require('constant/annotation-key').DefaultAnnotationKey
 
 class SpanRecorder {
-  constructor () {
-    this.span = null
+  constructor (span) {
+    this.span = span
   }
 
-  start (traceId) {
-    if (traceId) {
-      this.span = new Span(traceId)
-    }
-  }
-
-  recordServiceType (serviceType) {
-    if (this.span && serviceType) {
-      this.span.serviceType = serviceType
+  recordServiceType (code, ...properties) {
+    if (this.span && code) {
+      this.span.serviceType = new ServiceType(code, properties)
     }
   }
 
@@ -25,12 +19,13 @@ class SpanRecorder {
     }
   }
 
-  recordApi (methodDescriptor) {
-    if (this.span && methodDescriptor) {
-      if (methodDescriptor.apiId === 0) {
-        this.recordAttribute(DefaultAnnotationKey.API, methodDescriptor.fullName)
+  recordApi (methodName, apiId) {
+    if (this.span && methodName) {
+      if (!apiId || apiId === 0) {
+        this.recordAttribute(DefaultAnnotationKey.API, methodName)
+        this.recordApiId(0)
       } else {
-        this.recordApiId(methodDescriptor.apiId)
+        this.recordApiId(apiId)
       }
     }
   }

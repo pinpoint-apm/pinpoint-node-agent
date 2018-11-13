@@ -7,7 +7,7 @@ exports.instrumentRequest = function (agent, moduleName) {
                 // todo. agent log
                 console.log('intercepted request event call to %s.Server.prototype.emit', moduleName)
                 // blackist ?
-                agent.createNewContext()
+                agent.getTraceObject()
                 // todo. agent setting data?
 
                 // todo. end Of Stream ?

@@ -16,11 +16,11 @@ class Agent {
     instManager.init(this)
   }
 
-  getTraceObject (traceId) {
+  createTraceObject (traceId) {
     if (traceId) {
-      this.traceContext.continueTraceObject(traceId)
+      return this.traceContext.continueTraceObject(traceId)
     } else {
-      this.traceContext.newTraceObject()
+      return this.traceContext.newTraceObject()
     }
   }
 }

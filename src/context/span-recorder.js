@@ -43,6 +43,18 @@ class SpanRecorder {
     }
   }
 
+  recordEndPoint (endPoint) {
+    if (this.span && endPoint) {
+      (this.span.endPoint = endPoint)
+    }
+  }
+
+  recordRemoteAddr (remoteAddr) {
+    if (this.span && remoteAddr) {
+      (this.span.remoteAddr = remoteAddr)
+    }
+  }
+
   recordException (error) {
     if (this.span && error) {
       this.span.err = 1

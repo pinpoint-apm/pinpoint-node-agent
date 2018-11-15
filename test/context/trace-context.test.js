@@ -46,5 +46,40 @@ test('Should get current trace and begin trace block', function (t) {
     currentTrace.traceBlockEnd()
     t.equal(currentTrace.callStack.length, 0)
   }, 500)
+
 })
 
+test('Async context test', async function (t) {
+  t.plan(1)
+
+  const traceContext = TraceContext.init(agentInfo)
+  traceContext.newTraceObject()
+  traceContext.currentTraceObject()
+
+  // setTimeout(() => {
+  //   const anotherTrace = traceContext.currentTraceObject()
+  //   anotherTrace.traceBlockEnd()
+  //   t.equal(anotherTrace.callStack.length, 0)
+  // }, 500)
+
+  const promise = new Promise((resolve, reject) => {
+    setTimeout(() => {
+      console.log('promise resolved => ' + traceContext.currentTraceObject())
+      resolve()
+    }, 500)
+  })
+
+  promise.then(() => {
+    console.log('promise then => ' + traceContext.currentTraceObject())
+    // const anotherTrace = traceContext.currentTraceObject()
+    // anotherTrace.traceBlockEnd()
+  })
+
+  testFn(traceContext)
+
+  t.ok(traceContext)
+})
+
+const testFn = (traceContext) => {
+  console.log('testFn => ' + traceContext.currentTraceObject())
+}

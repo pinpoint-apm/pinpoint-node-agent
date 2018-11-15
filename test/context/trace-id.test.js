@@ -14,5 +14,5 @@ test('Should create', function (t) {
   const traceId = new TraceId(transactionId, spanId)
 
   t.ok(traceId)
-  t.equal(-1, traceId.parentSpanId)
+  t.equal(traceId.parentSpanId, -1)
 })

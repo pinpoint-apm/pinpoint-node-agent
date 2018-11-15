@@ -1,5 +1,5 @@
 const instManager = require('instrumentation/inst-manager')
-const contextManger = require('context/context-manager')
+const traceContext = require('context/trace-context')
 const getConfig = require('config').get
 
 class Agent {
@@ -8,7 +8,7 @@ class Agent {
     this.agentId = this.config.agentId
     this.agentStartTime = Date.now()
 
-    this.contextManger = contextManger.create({
+    this.traceContext = traceContext.init({
       agentId: this.agentId,
       agenStartTime: this.agenStartTime,
     })
@@ -16,12 +16,12 @@ class Agent {
     instManager.init(this)
   }
 
-  createNewContext () {
-    this.contextManger.createNewContext()
-  }
-
-  get currentContext () {
-    return this.contextManger.currentContext
+  getTraceObject (traceId) {
+    if (traceId) {
+      this.traceContext.continueTraceObject(traceId)
+    } else {
+      this.traceContext.newTraceObject()
+    }
   }
 }
 

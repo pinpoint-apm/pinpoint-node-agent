@@ -8,7 +8,7 @@ class Span {
     // this.agentId = null; // required, from config
     // this.applicationName = null; // required, from config
     // this.agentStartTime = null; // required, from config
-    this.serviceType = null; // required, meta
+    this.serviceType = null; // required
     this.spanId = traceId.spanId; // required
     this.parentSpanId = traceId.parentSpanId;
     this.transactionId = traceId.transactionId

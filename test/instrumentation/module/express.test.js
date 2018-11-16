@@ -12,19 +12,21 @@ function startServer() {
   return new express()
 }
 
-test('Should create a context', function (t) {
-  t.plan(1)
+test('Should create new trace by request', function (t) {
+  t.plan(2)
 
   const app = startServer()
-  app.get('/test', function (req, res) {
+
+  const path = '/test'
+  app.get(path, function (req, res) {
     res.send('hello')
   })
 
   const server = app.listen(5005, async function () {
     await axios.get('http://localhost:5005/test')
-
-    t.equal(agent.traceContext.getTraceObjectCount(), 1)
-
+    t.ok(agent.traceContext.getTraceObjectCount() > 0)
+    t.ok(Array.from(agent.traceContext.traceObjectMap.values())
+        .find(v => v.spanRecorder.span.rpc === path))
     server.close()
   })
 })

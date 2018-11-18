@@ -12,6 +12,8 @@ class TraceContext {
   }
 
   static init (options) {
+    async_hooks.createHook({ init(){} }).enable();
+
     const instance = new TraceContext()
     options.agentId && (instance.agentId = options.agentId)
     options.agentStartTime && (instance.agentStartTime = options.agentStartTime)
@@ -19,6 +21,7 @@ class TraceContext {
   }
 
   static getContextId () {
+    console.log('triggerAsyncId : ', async_hooks.triggerAsyncId())
     return async_hooks.executionAsyncId()
   }
 

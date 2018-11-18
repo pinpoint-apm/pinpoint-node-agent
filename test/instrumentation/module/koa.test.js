@@ -17,13 +17,14 @@ function startRouter() {
     return new Router()
 }
 
-test('Should create a context', function(t) {
-    t.plan(1)
+test('Should create new trace by request', function(t) {
+    t.plan(2)
 
     const app = startServer()
     const router = startRouter()
 
-    router.get('/test', (ctx, next) => {
+    const path = '/test'
+    router.get(path, (ctx, next) => {
         ctx.body = 'hello'
     })
 
@@ -33,8 +34,12 @@ test('Should create a context', function(t) {
 
 
     const server = app.listen(5006, async () => {
-        await axios.get('http://localhost:5006/test')
-        t.equal(agent.traceContext.getTraceObjectCount(), 1)
+        await axios.get('http://localhost:5006' + path)
+
+        const traceMap = agent.traceContext.traceObjectMap
+        t.ok(traceMap.size > 0)
+        t.ok(Array.from(traceMap.values()).some(v => v.spanRecorder.span.rpc === path))
+
         server.close()
     })
 })

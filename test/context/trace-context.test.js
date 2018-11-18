@@ -56,24 +56,24 @@ test('Async context test', async function (t) {
   traceContext.newTraceObject()
   traceContext.currentTraceObject()
 
-  // setTimeout(() => {
-  //   const anotherTrace = traceContext.currentTraceObject()
-  //   anotherTrace.traceBlockEnd()
-  //   t.equal(anotherTrace.callStack.length, 0)
-  // }, 500)
+  setTimeout(() => {
+    const anotherTrace = traceContext.currentTraceObject()
+    anotherTrace.traceBlockEnd()
+    t.equal(anotherTrace.callStack.length, 0)
+  }, 500)
 
-  const promise = new Promise((resolve, reject) => {
-    setTimeout(() => {
-      console.log('promise resolved => ' + traceContext.currentTraceObject())
-      resolve()
-    }, 500)
-  })
+  // const promise = new Promise((resolve, reject) => {
+  //   setTimeout(() => {
+  //     console.log('promise resolved => ' + traceContext.currentTraceObject())
+  //     resolve()
+  //   }, 500)
+  // })
 
-  promise.then(() => {
-    console.log('promise then => ' + traceContext.currentTraceObject())
+  // promise.then(() => {
+  //   console.log('promise then => ' + traceContext.currentTraceObject())
     // const anotherTrace = traceContext.currentTraceObject()
     // anotherTrace.traceBlockEnd()
-  })
+  // })
 
   testFn(traceContext)
 

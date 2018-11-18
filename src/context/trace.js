@@ -32,6 +32,7 @@ class Trace {
 
   traceBlockEnd () {
     const spanEvent = this.callStack.pop()
+    this.spanRecorder.recordSpanEvent(spanEvent)
     spanEvent.markElapsedTime()
   }
 

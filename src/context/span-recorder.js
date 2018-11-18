@@ -61,6 +61,12 @@ class SpanRecorder {
       this.span.exceptionInfo = error
     }
   }
+
+  recordSpanEvent (spanEvent) {
+    if (this.span && spanEvent) {
+      this.span.spanEventList.push(spanEvent)
+    }
+  }
 }
 
 module.exports = SpanRecorder

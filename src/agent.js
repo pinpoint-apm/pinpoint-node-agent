@@ -7,6 +7,7 @@ class Agent {
     this.config = getConfig(agentConfig)
     this.agentId = this.config.agentId
     this.agentStartTime = Date.now()
+    this.loadedModule = []
 
     this.traceContext = traceContext.init({
       agentId: this.agentId,
@@ -22,6 +23,15 @@ class Agent {
     } else {
       return this.traceContext.newTraceObject()
     }
+  }
+
+  includedModules (moduleName) {
+    return !this.loadedModule.includes(moduleName)
+  }
+
+  setModules (moduleName) {
+    console.debug('set Loaded module : ' + moduleName)
+    this.loadedModule.push(moduleName)
   }
 }
 

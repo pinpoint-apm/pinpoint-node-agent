@@ -12,13 +12,13 @@ function init(agent) {
     shimmer.wrap(Module, '_load', function (original) {
       return function (name) {
         const m = original.apply(this, arguments)
-        if (MODULES.includes(name)) {
+        if (MODULES.includes(name) && agent.includedModules(name)) {
           console.log('load module:', name)
           // todo. versioning Logic add On
           const version = '1.0.0'
           try {
-              // todo. one loading add
-              require('./module/' + name)(agent, version, m)
+            require('./module/' + name)(agent, version, m)
+            agent.setModules(name)
           } catch (e) {
             console.error('fail to load:', e)
           }

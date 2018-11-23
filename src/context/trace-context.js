@@ -1,4 +1,4 @@
-const async_hooks = require('async_hooks')
+const contextManager = require('context/context-manager')
 const Trace = require('context/trace')
 const TransactionId = require('context/transaction-id')
 const TraceId = require('context/trace-id')
@@ -6,23 +6,15 @@ const IdGenerator = require('context/id-generator')
 
 class TraceContext {
   constructor () {
-    this.traceObjectMap = new Map()
     this.agentId = null
     this.agentStartTime = null
   }
 
   static init (options) {
-    async_hooks.createHook({ init(){} }).enable();
-
     const instance = new TraceContext()
     options.agentId && (instance.agentId = options.agentId)
     options.agentStartTime && (instance.agentStartTime = options.agentStartTime)
     return instance
-  }
-
-  static getContextId () {
-    console.log('triggerAsyncId : ', async_hooks.triggerAsyncId())
-    return async_hooks.executionAsyncId()
   }
 
   continueTraceObject (traceId) {
@@ -40,19 +32,22 @@ class TraceContext {
     return trace
   }
 
+  completeTraceObject () {
+    const trace = this.currentTraceObject()
+    trace.spanRecorder.span.markElapsedTime()
+    return trace;
+  }
+
   currentTraceObject () {
-    const contextId = TraceContext.getContextId()
-    console.log('getter context id : ' + contextId)
-    return this.traceObjectMap.has(contextId) ? this.traceObjectMap.get(contextId) : null
+    return contextManager.getObject()
   }
 
   setCurrentTraceObject (traceObject) {
-    console.log('setter context id : ' + TraceContext.getContextId())
-    this.traceObjectMap.set(TraceContext.getContextId(), traceObject)
+    contextManager.setObject(traceObject)
   }
 
-  getTraceObjectCount() {
-    return this.traceObjectMap.size
+  getAllTraceObject () {
+    return contextManager.getAllObject()
   }
 }
 

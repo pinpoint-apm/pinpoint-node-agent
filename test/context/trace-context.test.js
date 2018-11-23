@@ -3,6 +3,7 @@ const test = require('tape')
 const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
 const TraceContext = require('context/trace-context')
 const fixture = require('../fixture')
+const util = require('../util')
 
 const agentInfo = {
   agentId: fixture.config.agentId,
@@ -26,8 +27,8 @@ test('Should create continued trace and add span info', function (t) {
   t.equal(traceContext.currentTraceObject().spanRecorder.span.serviceType.code, ServiceTypeCode.express)
 })
 
-test('Should get current trace and begin trace block', function (t) {
-  t.plan(2)
+test('Should begin/end trace block asynchronously', async function (t) {
+  t.plan(4)
 
   // start trace and write span info
   const traceContext = TraceContext.init(agentInfo)
@@ -42,44 +43,34 @@ test('Should get current trace and begin trace block', function (t) {
 
   t.equal(traceContext.currentTraceObject().callStack.length, 1)
 
-  setTimeout(() => {
-    currentTrace.traceBlockEnd()
-    t.equal(currentTrace.callStack.length, 0)
-  }, 500)
+  await new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const anotherContext = traceContext.currentTraceObject()
+      t.equal(anotherContext.traceId, currentTrace.traceId)
 
+      const spanEventRecorder2 = anotherContext.traceBlockBegin()
+      t.equal(traceContext.currentTraceObject().callStack.length, 2)
+
+      anotherContext.traceBlockEnd(spanEventRecorder2)
+      resolve()
+    }, 300)
+  })
+
+  currentTrace.traceBlockEnd(spanEventRecorder)
+  t.equal(traceContext.currentTraceObject().callStack.length, 0)
 })
 
-test('Async context test', async function (t) {
+test('Should complete trace ', async function (t) {
   t.plan(1)
 
+  const transactionId = fixture.getTransactionId()
+  const traceId = fixture.getTraceId(transactionId)
   const traceContext = TraceContext.init(agentInfo)
-  traceContext.newTraceObject()
-  traceContext.currentTraceObject()
 
-  setTimeout(() => {
-    const anotherTrace = traceContext.currentTraceObject()
-    anotherTrace.traceBlockEnd()
-    t.equal(anotherTrace.callStack.length, 0)
-  }, 500)
+  traceContext.newTraceObject(traceId)
 
-  // const promise = new Promise((resolve, reject) => {
-  //   setTimeout(() => {
-  //     console.log('promise resolved => ' + traceContext.currentTraceObject())
-  //     resolve()
-  //   }, 500)
-  // })
+  await util.sleep(501)
 
-  // promise.then(() => {
-  //   console.log('promise then => ' + traceContext.currentTraceObject())
-    // const anotherTrace = traceContext.currentTraceObject()
-    // anotherTrace.traceBlockEnd()
-  // })
-
-  testFn(traceContext)
-
-  t.ok(traceContext)
+  const trace = traceContext.completeTraceObject()
+  t.ok(trace.spanRecorder.span.elapsedTime > 500)
 })
-
-const testFn = (traceContext) => {
-  console.log('testFn => ' + traceContext.currentTraceObject())
-}

@@ -27,9 +27,10 @@ test('Should create new trace by request', function (t) {
   const server = app.listen(5005, async function () {
     await axios.get('http://localhost:5005' + path)
 
-    const traceMap = agent.traceContext.traceObjectMap
+    const traceMap = agent.traceContext.getAllTraceObject()
     t.ok(traceMap.size > 0)
-    t.ok(Array.from(traceMap.values()).some(v => v.spanRecorder.span.rpc === path))
+    console.log('traceMap.size', traceMap.size)
+    t.ok(Array.from(traceMap.values()).some(v => v.spanRecorder && v.spanRecorder.span.rpc === path))
 
     server.close()
   })
@@ -48,8 +49,8 @@ test('Should record spanEvent', function (t) {
   const server = app.listen(5005, async function () {
     await axios.get('http://localhost:5005' + path)
 
-    const traceMap = agent.traceContext.traceObjectMap
-    const trace = Array.from(traceMap.values()).find(v => v.spanRecorder.span.rpc === path)
+    const traceMap = agent.traceContext.getAllTraceObject()
+    const trace = Array.from(traceMap.values()).find(v => v.spanRecorder && v.spanRecorder.span.rpc === path)
     const span = trace.spanRecorder.span
     t.ok(span.spanEventList.length > 0)
     t.ok(span.spanEventList.some(r => r.serviceType.code === ServiceTypeCode.express))

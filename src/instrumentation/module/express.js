@@ -14,8 +14,9 @@ module.exports = function(agent, version, express) {
   shimmer.wrap(express.Router, 'handle', function (original) {
     return function (req) {
       const trace = agent.traceContext.currentTraceObject()
+      let spanEventRecorder = null
       if (trace) {
-        const spanEventRecorder = trace.traceBlockBegin()
+        spanEventRecorder = trace.traceBlockBegin()
         spanEventRecorder.recordServiceType(ServiceTypeCode.express)
         spanEventRecorder.recordApi('express.get')
         // todo. Add on spanRecod
@@ -23,7 +24,9 @@ module.exports = function(agent, version, express) {
 
       const result = original.apply(this, arguments)
 
-      trace.traceBlockEnd()
+      if (trace) {
+        trace.traceBlockEnd(spanEventRecorder)
+      }
 
       return result
     }

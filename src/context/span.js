@@ -13,7 +13,7 @@ class Span {
     this.parentSpanId = traceId.parentSpanId;
     this.transactionId = traceId.transactionId
     this.startTime = Date.now(); // required
-    this.elapsed = 0;
+    this.elapsedTime = 0;
     this.rpc = null; // uri
     this.endPoint = null; // host, domain
     this.remoteAddr = null; // ip
@@ -29,6 +29,12 @@ class Span {
     this.acceptorHost = null; // parent host ?
     this.parentApplicationName = null;
     this.parentApplicationType = null;
+  }
+
+  markElapsedTime () {
+    if (this.startTime) {
+      this.elapsedTime = Date.now() - this.startTime
+    }
   }
 }
 

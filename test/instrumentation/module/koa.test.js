@@ -36,9 +36,9 @@ test('Should create new trace by request', function(t) {
     const server = app.listen(5006, async () => {
         await axios.get('http://localhost:5006' + path)
 
-        const traceMap = agent.traceContext.traceObjectMap
+        const traceMap = agent.traceContext.getAllTraceObject()
         t.ok(traceMap.size > 0)
-        t.ok(Array.from(traceMap.values()).some(v => v.spanRecorder.span.rpc === path))
+        t.ok(Array.from(traceMap.values()).some(v => v.spanRecorder && v.spanRecorder.span.rpc === path))
 
         server.close()
     })

@@ -21,26 +21,29 @@ class Trace {
   }
 
   traceBlockBegin () {
-    const spanEvent = new SpanEvent(this.sequence++)
-    this.callStack.push(spanEvent)
+    const spanEvent = new SpanEvent(this.sequence)
     spanEvent.depth = this.callStack.length
     spanEvent.startTime = Date.now()
+    this.callStack.push(spanEvent)
+    this.sequence++
 
     this.spanEventRecorder = new SpanEventRecorder(spanEvent)
     return this.spanEventRecorder
   }
 
-  traceBlockEnd () {
-    const spanEvent = this.callStack.pop()
-    this.spanRecorder.recordSpanEvent(spanEvent)
-    spanEvent.markElapsedTime()
-  }
-
-  pushCallStack (spanEventRecorder) {
-    this.callStack.push(spanEventRecorder)
-    spanEventRecorder(this.sequence)
-
-    this.sequence += 1
+  traceBlockEnd (spanEventRecorder) {
+    const peekedItem = this.callStack[this.callStack.length - 1]
+    if (peekedItem && spanEventRecorder && peekedItem === spanEventRecorder.spanEvent) {
+      const spanEvent = this.callStack.pop()
+      this.spanRecorder.recordSpanEvent(spanEvent)
+      spanEvent.markElapsedTime()
+    } else {
+      const index = this.callStack.indexOf(spanEvent)
+      if (index) {
+        this.callStack.splice(index, Number.MAX_VALUE)
+        throw new Error("Invalid call stacks are removed.")
+      }
+    }
   }
 }
 

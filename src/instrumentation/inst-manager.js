@@ -31,6 +31,34 @@ function init(agent) {
   }
 }
 
+
+function bindEmitter(emitter) {
+  const ins = this
+  const methods = [
+      'on',
+      'addListener',
+      'prependListener'
+  ]
+
+    // if (semver.satisfies(process.versions.node, '>=6')) {
+  //   methods.push('prependListener')
+  // }
+  shimmer.massWrap(emitter, methods, (original) => function(name, handler) {
+    return original.call(this, name, ins.bindFunction(handler))
+  })
+}
+
+function bindFunction (original) {
+    if (typeof original !== 'function') return original
+    //
+    // const ins = this
+    //
+
+  return original
+}
+
 module.exports = {
-  init
+  init,
+  bindEmitter,
+  bindFunction,
 }

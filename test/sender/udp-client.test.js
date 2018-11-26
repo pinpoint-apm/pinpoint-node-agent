@@ -42,7 +42,9 @@ test('Should send udp message', function (t) {
   createServer()
 
   const udpClient = new UdpClient(HOST, PORT)
-  udpClient.send('test message')
+
+  const buffer = new Buffer('test message')
+  udpClient.send(buffer)
 
   t.ok(udpClient)
 

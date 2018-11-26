@@ -3,13 +3,19 @@
 //
 // DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
 //
+"use strict";
+
+var thrift = require('thrift');
+var Thrift = thrift.Thrift;
+var Q = thrift.Q;
 
 
-TThreadDumpType = {
+var ttypes = module.exports = {};
+ttypes.TThreadDumpType = {
   'TARGET' : 0,
   'PENDING' : 1
 };
-TThreadState = {
+ttypes.TThreadState = {
   'NEW' : 0,
   'RUNNABLE' : 1,
   'BLOCKED' : 2,
@@ -18,7 +24,7 @@ TThreadState = {
   'TERMINATED' : 5,
   'UNKNOWN' : 6
 };
-TRouteResult = {
+ttypes.TRouteResult = {
   'OK' : 0,
   'BAD_REQUEST' : 200,
   'EMPTY_REQUEST' : 201,
@@ -32,7 +38,7 @@ TRouteResult = {
   'NOT_SUPPORTED_SERVICE' : 241,
   'UNKNOWN' : -1
 };
-TCommandThreadDump = function(args) {
+var TCommandThreadDump = module.exports.TCommandThreadDump = function(args) {
   this.type = 0;
   this.name = null;
   this.pendingTimeMillis = null;
@@ -64,21 +70,21 @@ TCommandThreadDump.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I32) {
-        this.type = input.readI32().value;
+        this.type = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.STRING) {
-        this.name = input.readString().value;
+        this.name = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.I64) {
-        this.pendingTimeMillis = input.readI64().value;
+        this.pendingTimeMillis = input.readI64();
       } else {
         input.skip(ftype);
       }
@@ -114,7 +120,7 @@ TCommandThreadDump.prototype.write = function(output) {
   return;
 };
 
-TMonitorInfo = function(args) {
+var TMonitorInfo = module.exports.TMonitorInfo = function(args) {
   this.stackDepth = null;
   this.stackFrame = null;
   if (args) {
@@ -142,14 +148,14 @@ TMonitorInfo.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I32) {
-        this.stackDepth = input.readI32().value;
+        this.stackDepth = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.STRING) {
-        this.stackFrame = input.readString().value;
+        this.stackFrame = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -180,7 +186,7 @@ TMonitorInfo.prototype.write = function(output) {
   return;
 };
 
-TThreadDump = function(args) {
+var TThreadDump = module.exports.TThreadDump = function(args) {
   this.threadName = null;
   this.threadId = null;
   this.blockedTime = null;
@@ -237,7 +243,7 @@ TThreadDump = function(args) {
       this.stackTrace = Thrift.copyList(args.stackTrace, [null]);
     }
     if (args.lockedMonitors !== undefined && args.lockedMonitors !== null) {
-      this.lockedMonitors = Thrift.copyList(args.lockedMonitors, [TMonitorInfo]);
+      this.lockedMonitors = Thrift.copyList(args.lockedMonitors, [ttypes.TMonitorInfo]);
     }
     if (args.lockedSynchronizers !== undefined && args.lockedSynchronizers !== null) {
       this.lockedSynchronizers = Thrift.copyList(args.lockedSynchronizers, [null]);
@@ -260,84 +266,84 @@ TThreadDump.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.threadName = input.readString().value;
+        this.threadName = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I64) {
-        this.threadId = input.readI64().value;
+        this.threadId = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.I64) {
-        this.blockedTime = input.readI64().value;
+        this.blockedTime = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.I64) {
-        this.blockedCount = input.readI64().value;
+        this.blockedCount = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 5:
       if (ftype == Thrift.Type.I64) {
-        this.waitedTime = input.readI64().value;
+        this.waitedTime = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 6:
       if (ftype == Thrift.Type.I64) {
-        this.waitedCount = input.readI64().value;
+        this.waitedCount = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 7:
       if (ftype == Thrift.Type.STRING) {
-        this.lockName = input.readString().value;
+        this.lockName = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 8:
       if (ftype == Thrift.Type.I64) {
-        this.lockOwnerId = input.readI64().value;
+        this.lockOwnerId = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 9:
       if (ftype == Thrift.Type.STRING) {
-        this.lockOwnerName = input.readString().value;
+        this.lockOwnerName = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 10:
       if (ftype == Thrift.Type.BOOL) {
-        this.inNative = input.readBool().value;
+        this.inNative = input.readBool();
       } else {
         input.skip(ftype);
       }
       break;
       case 11:
       if (ftype == Thrift.Type.BOOL) {
-        this.suspended = input.readBool().value;
+        this.suspended = input.readBool();
       } else {
         input.skip(ftype);
       }
       break;
       case 12:
       if (ftype == Thrift.Type.I32) {
-        this.threadState = input.readI32().value;
+        this.threadState = input.readI32();
       } else {
         input.skip(ftype);
       }
@@ -354,7 +360,7 @@ TThreadDump.prototype.read = function(input) {
         for (var _i5 = 0; _i5 < _size0; ++_i5)
         {
           var elem6 = null;
-          elem6 = input.readString().value;
+          elem6 = input.readString();
           this.stackTrace.push(elem6);
         }
         input.readListEnd();
@@ -374,7 +380,7 @@ TThreadDump.prototype.read = function(input) {
         for (var _i12 = 0; _i12 < _size7; ++_i12)
         {
           var elem13 = null;
-          elem13 = new TMonitorInfo();
+          elem13 = new ttypes.TMonitorInfo();
           elem13.read(input);
           this.lockedMonitors.push(elem13);
         }
@@ -395,7 +401,7 @@ TThreadDump.prototype.read = function(input) {
         for (var _i19 = 0; _i19 < _size14; ++_i19)
         {
           var elem20 = null;
-          elem20 = input.readString().value;
+          elem20 = input.readString();
           this.lockedSynchronizers.push(elem20);
         }
         input.readListEnd();
@@ -521,7 +527,7 @@ TThreadDump.prototype.write = function(output) {
   return;
 };
 
-TThreadLightDump = function(args) {
+var TThreadLightDump = module.exports.TThreadLightDump = function(args) {
   this.threadName = null;
   this.threadId = null;
   this.threadState = null;
@@ -553,21 +559,21 @@ TThreadLightDump.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.threadName = input.readString().value;
+        this.threadName = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I64) {
-        this.threadId = input.readI64().value;
+        this.threadId = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.I32) {
-        this.threadState = input.readI32().value;
+        this.threadState = input.readI32();
       } else {
         input.skip(ftype);
       }
@@ -603,11 +609,11 @@ TThreadLightDump.prototype.write = function(output) {
   return;
 };
 
-TCommandThreadDumpResponse = function(args) {
+var TCommandThreadDumpResponse = module.exports.TCommandThreadDumpResponse = function(args) {
   this.threadDumps = null;
   if (args) {
     if (args.threadDumps !== undefined && args.threadDumps !== null) {
-      this.threadDumps = Thrift.copyList(args.threadDumps, [TThreadDump]);
+      this.threadDumps = Thrift.copyList(args.threadDumps, [ttypes.TThreadDump]);
     }
   }
 };
@@ -637,7 +643,7 @@ TCommandThreadDumpResponse.prototype.read = function(input) {
         for (var _i29 = 0; _i29 < _size24; ++_i29)
         {
           var elem30 = null;
-          elem30 = new TThreadDump();
+          elem30 = new ttypes.TThreadDump();
           elem30.read(input);
           this.threadDumps.push(elem30);
         }
@@ -679,7 +685,7 @@ TCommandThreadDumpResponse.prototype.write = function(output) {
   return;
 };
 
-TCmdActiveThreadCount = function(args) {
+var TCmdActiveThreadCount = module.exports.TCmdActiveThreadCount = function(args) {
 };
 TCmdActiveThreadCount.prototype = {};
 TCmdActiveThreadCount.prototype.read = function(input) {
@@ -707,7 +713,7 @@ TCmdActiveThreadCount.prototype.write = function(output) {
   return;
 };
 
-TCmdActiveThreadCountRes = function(args) {
+var TCmdActiveThreadCountRes = module.exports.TCmdActiveThreadCountRes = function(args) {
   this.histogramSchemaType = null;
   this.activeThreadCount = null;
   this.timeStamp = null;
@@ -739,7 +745,7 @@ TCmdActiveThreadCountRes.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I32) {
-        this.histogramSchemaType = input.readI32().value;
+        this.histogramSchemaType = input.readI32();
       } else {
         input.skip(ftype);
       }
@@ -756,7 +762,7 @@ TCmdActiveThreadCountRes.prototype.read = function(input) {
         for (var _i37 = 0; _i37 < _size32; ++_i37)
         {
           var elem38 = null;
-          elem38 = input.readI32().value;
+          elem38 = input.readI32();
           this.activeThreadCount.push(elem38);
         }
         input.readListEnd();
@@ -766,7 +772,7 @@ TCmdActiveThreadCountRes.prototype.read = function(input) {
       break;
       case 3:
       if (ftype == Thrift.Type.I64) {
-        this.timeStamp = input.readI64().value;
+        this.timeStamp = input.readI64();
       } else {
         input.skip(ftype);
       }
@@ -811,7 +817,7 @@ TCmdActiveThreadCountRes.prototype.write = function(output) {
   return;
 };
 
-TActiveThreadDump = function(args) {
+var TActiveThreadDump = module.exports.TActiveThreadDump = function(args) {
   this.startTime = null;
   this.localTraceId = null;
   this.threadDump = null;
@@ -826,7 +832,7 @@ TActiveThreadDump = function(args) {
       this.localTraceId = args.localTraceId;
     }
     if (args.threadDump !== undefined && args.threadDump !== null) {
-      this.threadDump = new TThreadDump(args.threadDump);
+      this.threadDump = new ttypes.TThreadDump(args.threadDump);
     }
     if (args.sampled !== undefined && args.sampled !== null) {
       this.sampled = args.sampled;
@@ -855,21 +861,21 @@ TActiveThreadDump.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I64) {
-        this.startTime = input.readI64().value;
+        this.startTime = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I64) {
-        this.localTraceId = input.readI64().value;
+        this.localTraceId = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.STRUCT) {
-        this.threadDump = new TThreadDump();
+        this.threadDump = new ttypes.TThreadDump();
         this.threadDump.read(input);
       } else {
         input.skip(ftype);
@@ -877,21 +883,21 @@ TActiveThreadDump.prototype.read = function(input) {
       break;
       case 4:
       if (ftype == Thrift.Type.BOOL) {
-        this.sampled = input.readBool().value;
+        this.sampled = input.readBool();
       } else {
         input.skip(ftype);
       }
       break;
       case 5:
       if (ftype == Thrift.Type.STRING) {
-        this.transactionId = input.readString().value;
+        this.transactionId = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 6:
       if (ftype == Thrift.Type.STRING) {
-        this.entryPoint = input.readString().value;
+        this.entryPoint = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -942,7 +948,7 @@ TActiveThreadDump.prototype.write = function(output) {
   return;
 };
 
-TActiveThreadLightDump = function(args) {
+var TActiveThreadLightDump = module.exports.TActiveThreadLightDump = function(args) {
   this.startTime = null;
   this.localTraceId = null;
   this.threadDump = null;
@@ -957,7 +963,7 @@ TActiveThreadLightDump = function(args) {
       this.localTraceId = args.localTraceId;
     }
     if (args.threadDump !== undefined && args.threadDump !== null) {
-      this.threadDump = new TThreadLightDump(args.threadDump);
+      this.threadDump = new ttypes.TThreadLightDump(args.threadDump);
     }
     if (args.sampled !== undefined && args.sampled !== null) {
       this.sampled = args.sampled;
@@ -986,21 +992,21 @@ TActiveThreadLightDump.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I64) {
-        this.startTime = input.readI64().value;
+        this.startTime = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I64) {
-        this.localTraceId = input.readI64().value;
+        this.localTraceId = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.STRUCT) {
-        this.threadDump = new TThreadLightDump();
+        this.threadDump = new ttypes.TThreadLightDump();
         this.threadDump.read(input);
       } else {
         input.skip(ftype);
@@ -1008,21 +1014,21 @@ TActiveThreadLightDump.prototype.read = function(input) {
       break;
       case 4:
       if (ftype == Thrift.Type.BOOL) {
-        this.sampled = input.readBool().value;
+        this.sampled = input.readBool();
       } else {
         input.skip(ftype);
       }
       break;
       case 5:
       if (ftype == Thrift.Type.STRING) {
-        this.transactionId = input.readString().value;
+        this.transactionId = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 6:
       if (ftype == Thrift.Type.STRING) {
-        this.entryPoint = input.readString().value;
+        this.entryPoint = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -1073,7 +1079,7 @@ TActiveThreadLightDump.prototype.write = function(output) {
   return;
 };
 
-TCmdActiveThreadDump = function(args) {
+var TCmdActiveThreadDump = module.exports.TCmdActiveThreadDump = function(args) {
   this.limit = null;
   this.threadNameList = null;
   this.localTraceIdList = null;
@@ -1105,7 +1111,7 @@ TCmdActiveThreadDump.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I32) {
-        this.limit = input.readI32().value;
+        this.limit = input.readI32();
       } else {
         input.skip(ftype);
       }
@@ -1122,7 +1128,7 @@ TCmdActiveThreadDump.prototype.read = function(input) {
         for (var _i45 = 0; _i45 < _size40; ++_i45)
         {
           var elem46 = null;
-          elem46 = input.readString().value;
+          elem46 = input.readString();
           this.threadNameList.push(elem46);
         }
         input.readListEnd();
@@ -1142,7 +1148,7 @@ TCmdActiveThreadDump.prototype.read = function(input) {
         for (var _i52 = 0; _i52 < _size47; ++_i52)
         {
           var elem53 = null;
-          elem53 = input.readI64().value;
+          elem53 = input.readI64();
           this.localTraceIdList.push(elem53);
         }
         input.readListEnd();
@@ -1199,7 +1205,7 @@ TCmdActiveThreadDump.prototype.write = function(output) {
   return;
 };
 
-TCmdActiveThreadLightDump = function(args) {
+var TCmdActiveThreadLightDump = module.exports.TCmdActiveThreadLightDump = function(args) {
   this.limit = null;
   this.threadNameList = null;
   this.localTraceIdList = null;
@@ -1231,7 +1237,7 @@ TCmdActiveThreadLightDump.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I32) {
-        this.limit = input.readI32().value;
+        this.limit = input.readI32();
       } else {
         input.skip(ftype);
       }
@@ -1248,7 +1254,7 @@ TCmdActiveThreadLightDump.prototype.read = function(input) {
         for (var _i61 = 0; _i61 < _size56; ++_i61)
         {
           var elem62 = null;
-          elem62 = input.readString().value;
+          elem62 = input.readString();
           this.threadNameList.push(elem62);
         }
         input.readListEnd();
@@ -1268,7 +1274,7 @@ TCmdActiveThreadLightDump.prototype.read = function(input) {
         for (var _i68 = 0; _i68 < _size63; ++_i68)
         {
           var elem69 = null;
-          elem69 = input.readI64().value;
+          elem69 = input.readI64();
           this.localTraceIdList.push(elem69);
         }
         input.readListEnd();
@@ -1325,14 +1331,14 @@ TCmdActiveThreadLightDump.prototype.write = function(output) {
   return;
 };
 
-TCmdActiveThreadDumpRes = function(args) {
+var TCmdActiveThreadDumpRes = module.exports.TCmdActiveThreadDumpRes = function(args) {
   this.threadDumps = null;
   this.type = null;
   this.subType = null;
   this.version = null;
   if (args) {
     if (args.threadDumps !== undefined && args.threadDumps !== null) {
-      this.threadDumps = Thrift.copyList(args.threadDumps, [TActiveThreadDump]);
+      this.threadDumps = Thrift.copyList(args.threadDumps, [ttypes.TActiveThreadDump]);
     }
     if (args.type !== undefined && args.type !== null) {
       this.type = args.type;
@@ -1371,7 +1377,7 @@ TCmdActiveThreadDumpRes.prototype.read = function(input) {
         for (var _i77 = 0; _i77 < _size72; ++_i77)
         {
           var elem78 = null;
-          elem78 = new TActiveThreadDump();
+          elem78 = new ttypes.TActiveThreadDump();
           elem78.read(input);
           this.threadDumps.push(elem78);
         }
@@ -1382,21 +1388,21 @@ TCmdActiveThreadDumpRes.prototype.read = function(input) {
       break;
       case 2:
       if (ftype == Thrift.Type.STRING) {
-        this.type = input.readString().value;
+        this.type = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.STRING) {
-        this.subType = input.readString().value;
+        this.subType = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.STRING) {
-        this.version = input.readString().value;
+        this.version = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -1446,14 +1452,14 @@ TCmdActiveThreadDumpRes.prototype.write = function(output) {
   return;
 };
 
-TCmdActiveThreadLightDumpRes = function(args) {
+var TCmdActiveThreadLightDumpRes = module.exports.TCmdActiveThreadLightDumpRes = function(args) {
   this.threadDumps = null;
   this.type = null;
   this.subType = null;
   this.version = null;
   if (args) {
     if (args.threadDumps !== undefined && args.threadDumps !== null) {
-      this.threadDumps = Thrift.copyList(args.threadDumps, [TActiveThreadLightDump]);
+      this.threadDumps = Thrift.copyList(args.threadDumps, [ttypes.TActiveThreadLightDump]);
     }
     if (args.type !== undefined && args.type !== null) {
       this.type = args.type;
@@ -1492,7 +1498,7 @@ TCmdActiveThreadLightDumpRes.prototype.read = function(input) {
         for (var _i85 = 0; _i85 < _size80; ++_i85)
         {
           var elem86 = null;
-          elem86 = new TActiveThreadLightDump();
+          elem86 = new ttypes.TActiveThreadLightDump();
           elem86.read(input);
           this.threadDumps.push(elem86);
         }
@@ -1503,21 +1509,21 @@ TCmdActiveThreadLightDumpRes.prototype.read = function(input) {
       break;
       case 2:
       if (ftype == Thrift.Type.STRING) {
-        this.type = input.readString().value;
+        this.type = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.STRING) {
-        this.subType = input.readString().value;
+        this.subType = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.STRING) {
-        this.version = input.readString().value;
+        this.version = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -1567,7 +1573,7 @@ TCmdActiveThreadLightDumpRes.prototype.write = function(output) {
   return;
 };
 
-TCommandEcho = function(args) {
+var TCommandEcho = module.exports.TCommandEcho = function(args) {
   this.message = null;
   if (args) {
     if (args.message !== undefined && args.message !== null) {
@@ -1591,7 +1597,7 @@ TCommandEcho.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.message = input.readString().value;
+        this.message = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -1620,7 +1626,7 @@ TCommandEcho.prototype.write = function(output) {
   return;
 };
 
-TCommandTransfer = function(args) {
+var TCommandTransfer = module.exports.TCommandTransfer = function(args) {
   this.applicationName = null;
   this.agentId = null;
   this.startTime = null;
@@ -1656,28 +1662,28 @@ TCommandTransfer.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.applicationName = input.readString().value;
+        this.applicationName = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.STRING) {
-        this.agentId = input.readString().value;
+        this.agentId = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.I64) {
-        this.startTime = input.readI64().value;
+        this.startTime = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.STRING) {
-        this.payload = input.readBinary().value;
+        this.payload = input.readBinary();
       } else {
         input.skip(ftype);
       }
@@ -1718,7 +1724,7 @@ TCommandTransfer.prototype.write = function(output) {
   return;
 };
 
-TCommandTransferResponse = function(args) {
+var TCommandTransferResponse = module.exports.TCommandTransferResponse = function(args) {
   this.routeResult = null;
   this.payload = null;
   this.message = null;
@@ -1750,21 +1756,21 @@ TCommandTransferResponse.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I32) {
-        this.routeResult = input.readI32().value;
+        this.routeResult = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.STRING) {
-        this.payload = input.readBinary().value;
+        this.payload = input.readBinary();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.STRING) {
-        this.message = input.readString().value;
+        this.message = input.readString();
       } else {
         input.skip(ftype);
       }

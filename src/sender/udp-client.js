@@ -8,8 +8,7 @@ class UdpClient {
     this.port = port
   }
 
-  send (str) {
-    const msg = new Buffer(str)
+  send (msg) {
     console.log('host and port', this.host, this.port)
     this.client.send(msg, this.port, this.host, (err) => {
       if (err)  {

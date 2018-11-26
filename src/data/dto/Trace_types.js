@@ -3,9 +3,15 @@
 //
 // DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
 //
+"use strict";
+
+var thrift = require('thrift');
+var Thrift = thrift.Thrift;
+var Q = thrift.Q;
 
 
-TIntStringValue = function(args) {
+var ttypes = module.exports = {};
+var TIntStringValue = module.exports.TIntStringValue = function(args) {
   this.intValue = null;
   this.stringValue = null;
   if (args) {
@@ -33,14 +39,14 @@ TIntStringValue.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I32) {
-        this.intValue = input.readI32().value;
+        this.intValue = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.STRING) {
-        this.stringValue = input.readString().value;
+        this.stringValue = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -71,7 +77,7 @@ TIntStringValue.prototype.write = function(output) {
   return;
 };
 
-TIntStringStringValue = function(args) {
+var TIntStringStringValue = module.exports.TIntStringStringValue = function(args) {
   this.intValue = null;
   this.stringValue1 = null;
   this.stringValue2 = null;
@@ -103,21 +109,21 @@ TIntStringStringValue.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I32) {
-        this.intValue = input.readI32().value;
+        this.intValue = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.STRING) {
-        this.stringValue1 = input.readString().value;
+        this.stringValue1 = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.STRING) {
-        this.stringValue2 = input.readString().value;
+        this.stringValue2 = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -153,7 +159,7 @@ TIntStringStringValue.prototype.write = function(output) {
   return;
 };
 
-TLongIntIntByteByteStringValue = function(args) {
+var TLongIntIntByteByteStringValue = module.exports.TLongIntIntByteByteStringValue = function(args) {
   this.longValue = null;
   this.intValue1 = null;
   this.intValue2 = null;
@@ -197,42 +203,42 @@ TLongIntIntByteByteStringValue.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I64) {
-        this.longValue = input.readI64().value;
+        this.longValue = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I32) {
-        this.intValue1 = input.readI32().value;
+        this.intValue1 = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.I32) {
-        this.intValue2 = input.readI32().value;
+        this.intValue2 = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.BYTE) {
-        this.byteValue1 = input.readByte().value;
+        this.byteValue1 = input.readByte();
       } else {
         input.skip(ftype);
       }
       break;
       case 5:
       if (ftype == Thrift.Type.BYTE) {
-        this.byteValue2 = input.readByte().value;
+        this.byteValue2 = input.readByte();
       } else {
         input.skip(ftype);
       }
       break;
       case 6:
       if (ftype == Thrift.Type.STRING) {
-        this.stringValue = input.readString().value;
+        this.stringValue = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -283,7 +289,7 @@ TLongIntIntByteByteStringValue.prototype.write = function(output) {
   return;
 };
 
-TIntBooleanIntBooleanValue = function(args) {
+var TIntBooleanIntBooleanValue = module.exports.TIntBooleanIntBooleanValue = function(args) {
   this.intValue1 = null;
   this.boolValue1 = null;
   this.intValue2 = null;
@@ -319,28 +325,28 @@ TIntBooleanIntBooleanValue.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I32) {
-        this.intValue1 = input.readI32().value;
+        this.intValue1 = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.BOOL) {
-        this.boolValue1 = input.readBool().value;
+        this.boolValue1 = input.readBool();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.I32) {
-        this.intValue2 = input.readI32().value;
+        this.intValue2 = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.BOOL) {
-        this.boolValue2 = input.readBool().value;
+        this.boolValue2 = input.readBool();
       } else {
         input.skip(ftype);
       }
@@ -381,7 +387,7 @@ TIntBooleanIntBooleanValue.prototype.write = function(output) {
   return;
 };
 
-TStringStringValue = function(args) {
+var TStringStringValue = module.exports.TStringStringValue = function(args) {
   this.stringValue1 = null;
   this.stringValue2 = null;
   if (args) {
@@ -409,14 +415,14 @@ TStringStringValue.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.stringValue1 = input.readString().value;
+        this.stringValue1 = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.STRING) {
-        this.stringValue2 = input.readString().value;
+        this.stringValue2 = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -447,7 +453,7 @@ TStringStringValue.prototype.write = function(output) {
   return;
 };
 
-TAnnotationValue = function(args) {
+var TAnnotationValue = module.exports.TAnnotationValue = function(args) {
   this.stringValue = null;
   this.boolValue = null;
   this.intValue = null;
@@ -487,19 +493,19 @@ TAnnotationValue = function(args) {
       this.byteValue = args.byteValue;
     }
     if (args.intStringValue !== undefined && args.intStringValue !== null) {
-      this.intStringValue = new TIntStringValue(args.intStringValue);
+      this.intStringValue = new ttypes.TIntStringValue(args.intStringValue);
     }
     if (args.intStringStringValue !== undefined && args.intStringStringValue !== null) {
-      this.intStringStringValue = new TIntStringStringValue(args.intStringStringValue);
+      this.intStringStringValue = new ttypes.TIntStringStringValue(args.intStringStringValue);
     }
     if (args.longIntIntByteByteStringValue !== undefined && args.longIntIntByteByteStringValue !== null) {
-      this.longIntIntByteByteStringValue = new TLongIntIntByteByteStringValue(args.longIntIntByteByteStringValue);
+      this.longIntIntByteByteStringValue = new ttypes.TLongIntIntByteByteStringValue(args.longIntIntByteByteStringValue);
     }
     if (args.intBooleanIntBooleanValue !== undefined && args.intBooleanIntBooleanValue !== null) {
-      this.intBooleanIntBooleanValue = new TIntBooleanIntBooleanValue(args.intBooleanIntBooleanValue);
+      this.intBooleanIntBooleanValue = new ttypes.TIntBooleanIntBooleanValue(args.intBooleanIntBooleanValue);
     }
     if (args.stringStringValue !== undefined && args.stringStringValue !== null) {
-      this.stringStringValue = new TStringStringValue(args.stringStringValue);
+      this.stringStringValue = new ttypes.TStringStringValue(args.stringStringValue);
     }
   }
 };
@@ -519,63 +525,63 @@ TAnnotationValue.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.stringValue = input.readString().value;
+        this.stringValue = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.BOOL) {
-        this.boolValue = input.readBool().value;
+        this.boolValue = input.readBool();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.I32) {
-        this.intValue = input.readI32().value;
+        this.intValue = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.I64) {
-        this.longValue = input.readI64().value;
+        this.longValue = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 5:
       if (ftype == Thrift.Type.I16) {
-        this.shortValue = input.readI16().value;
+        this.shortValue = input.readI16();
       } else {
         input.skip(ftype);
       }
       break;
       case 6:
       if (ftype == Thrift.Type.DOUBLE) {
-        this.doubleValue = input.readDouble().value;
+        this.doubleValue = input.readDouble();
       } else {
         input.skip(ftype);
       }
       break;
       case 7:
       if (ftype == Thrift.Type.STRING) {
-        this.binaryValue = input.readBinary().value;
+        this.binaryValue = input.readBinary();
       } else {
         input.skip(ftype);
       }
       break;
       case 8:
       if (ftype == Thrift.Type.BYTE) {
-        this.byteValue = input.readByte().value;
+        this.byteValue = input.readByte();
       } else {
         input.skip(ftype);
       }
       break;
       case 9:
       if (ftype == Thrift.Type.STRUCT) {
-        this.intStringValue = new TIntStringValue();
+        this.intStringValue = new ttypes.TIntStringValue();
         this.intStringValue.read(input);
       } else {
         input.skip(ftype);
@@ -583,7 +589,7 @@ TAnnotationValue.prototype.read = function(input) {
       break;
       case 10:
       if (ftype == Thrift.Type.STRUCT) {
-        this.intStringStringValue = new TIntStringStringValue();
+        this.intStringStringValue = new ttypes.TIntStringStringValue();
         this.intStringStringValue.read(input);
       } else {
         input.skip(ftype);
@@ -591,7 +597,7 @@ TAnnotationValue.prototype.read = function(input) {
       break;
       case 11:
       if (ftype == Thrift.Type.STRUCT) {
-        this.longIntIntByteByteStringValue = new TLongIntIntByteByteStringValue();
+        this.longIntIntByteByteStringValue = new ttypes.TLongIntIntByteByteStringValue();
         this.longIntIntByteByteStringValue.read(input);
       } else {
         input.skip(ftype);
@@ -599,7 +605,7 @@ TAnnotationValue.prototype.read = function(input) {
       break;
       case 12:
       if (ftype == Thrift.Type.STRUCT) {
-        this.intBooleanIntBooleanValue = new TIntBooleanIntBooleanValue();
+        this.intBooleanIntBooleanValue = new ttypes.TIntBooleanIntBooleanValue();
         this.intBooleanIntBooleanValue.read(input);
       } else {
         input.skip(ftype);
@@ -607,7 +613,7 @@ TAnnotationValue.prototype.read = function(input) {
       break;
       case 13:
       if (ftype == Thrift.Type.STRUCT) {
-        this.stringStringValue = new TStringStringValue();
+        this.stringStringValue = new ttypes.TStringStringValue();
         this.stringStringValue.read(input);
       } else {
         input.skip(ftype);
@@ -694,7 +700,7 @@ TAnnotationValue.prototype.write = function(output) {
   return;
 };
 
-TAnnotation = function(args) {
+var TAnnotation = module.exports.TAnnotation = function(args) {
   this.key = null;
   this.value = null;
   if (args) {
@@ -702,7 +708,7 @@ TAnnotation = function(args) {
       this.key = args.key;
     }
     if (args.value !== undefined && args.value !== null) {
-      this.value = new TAnnotationValue(args.value);
+      this.value = new ttypes.TAnnotationValue(args.value);
     }
   }
 };
@@ -722,14 +728,14 @@ TAnnotation.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I32) {
-        this.key = input.readI32().value;
+        this.key = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.STRUCT) {
-        this.value = new TAnnotationValue();
+        this.value = new ttypes.TAnnotationValue();
         this.value.read(input);
       } else {
         input.skip(ftype);
@@ -761,7 +767,7 @@ TAnnotation.prototype.write = function(output) {
   return;
 };
 
-TSpanEvent = function(args) {
+var TSpanEvent = module.exports.TSpanEvent = function(args) {
   this.spanId = null;
   this.sequence = null;
   this.startElapsed = 0;
@@ -801,7 +807,7 @@ TSpanEvent = function(args) {
       this.endPoint = args.endPoint;
     }
     if (args.annotations !== undefined && args.annotations !== null) {
-      this.annotations = Thrift.copyList(args.annotations, [TAnnotation]);
+      this.annotations = Thrift.copyList(args.annotations, [ttypes.TAnnotation]);
     }
     if (args.depth !== undefined && args.depth !== null) {
       this.depth = args.depth;
@@ -816,7 +822,7 @@ TSpanEvent = function(args) {
       this.apiId = args.apiId;
     }
     if (args.exceptionInfo !== undefined && args.exceptionInfo !== null) {
-      this.exceptionInfo = new TIntStringValue(args.exceptionInfo);
+      this.exceptionInfo = new ttypes.TIntStringValue(args.exceptionInfo);
     }
     if (args.asyncId !== undefined && args.asyncId !== null) {
       this.asyncId = args.asyncId;
@@ -845,49 +851,49 @@ TSpanEvent.prototype.read = function(input) {
     {
       case 7:
       if (ftype == Thrift.Type.I64) {
-        this.spanId = input.readI64().value;
+        this.spanId = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 8:
       if (ftype == Thrift.Type.I16) {
-        this.sequence = input.readI16().value;
+        this.sequence = input.readI16();
       } else {
         input.skip(ftype);
       }
       break;
       case 9:
       if (ftype == Thrift.Type.I32) {
-        this.startElapsed = input.readI32().value;
+        this.startElapsed = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 10:
       if (ftype == Thrift.Type.I32) {
-        this.endElapsed = input.readI32().value;
+        this.endElapsed = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 11:
       if (ftype == Thrift.Type.STRING) {
-        this.rpc = input.readString().value;
+        this.rpc = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 12:
       if (ftype == Thrift.Type.I16) {
-        this.serviceType = input.readI16().value;
+        this.serviceType = input.readI16();
       } else {
         input.skip(ftype);
       }
       break;
       case 13:
       if (ftype == Thrift.Type.STRING) {
-        this.endPoint = input.readString().value;
+        this.endPoint = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -904,7 +910,7 @@ TSpanEvent.prototype.read = function(input) {
         for (var _i5 = 0; _i5 < _size0; ++_i5)
         {
           var elem6 = null;
-          elem6 = new TAnnotation();
+          elem6 = new ttypes.TAnnotation();
           elem6.read(input);
           this.annotations.push(elem6);
         }
@@ -915,35 +921,35 @@ TSpanEvent.prototype.read = function(input) {
       break;
       case 15:
       if (ftype == Thrift.Type.I32) {
-        this.depth = input.readI32().value;
+        this.depth = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 16:
       if (ftype == Thrift.Type.I64) {
-        this.nextSpanId = input.readI64().value;
+        this.nextSpanId = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 20:
       if (ftype == Thrift.Type.STRING) {
-        this.destinationId = input.readString().value;
+        this.destinationId = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 25:
       if (ftype == Thrift.Type.I32) {
-        this.apiId = input.readI32().value;
+        this.apiId = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 26:
       if (ftype == Thrift.Type.STRUCT) {
-        this.exceptionInfo = new TIntStringValue();
+        this.exceptionInfo = new ttypes.TIntStringValue();
         this.exceptionInfo.read(input);
       } else {
         input.skip(ftype);
@@ -951,21 +957,21 @@ TSpanEvent.prototype.read = function(input) {
       break;
       case 30:
       if (ftype == Thrift.Type.I32) {
-        this.asyncId = input.readI32().value;
+        this.asyncId = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 31:
       if (ftype == Thrift.Type.I32) {
-        this.nextAsyncId = input.readI32().value;
+        this.nextAsyncId = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 32:
       if (ftype == Thrift.Type.I16) {
-        this.asyncSequence = input.readI16().value;
+        this.asyncSequence = input.readI16();
       } else {
         input.skip(ftype);
       }
@@ -1075,7 +1081,7 @@ TSpanEvent.prototype.write = function(output) {
   return;
 };
 
-TSpan = function(args) {
+var TSpan = module.exports.TSpan = function(args) {
   this.agentId = null;
   this.applicationName = null;
   this.agentStartTime = null;
@@ -1138,7 +1144,7 @@ TSpan = function(args) {
       this.remoteAddr = args.remoteAddr;
     }
     if (args.annotations !== undefined && args.annotations !== null) {
-      this.annotations = Thrift.copyList(args.annotations, [TAnnotation]);
+      this.annotations = Thrift.copyList(args.annotations, [ttypes.TAnnotation]);
     }
     if (args.flag !== undefined && args.flag !== null) {
       this.flag = args.flag;
@@ -1147,7 +1153,7 @@ TSpan = function(args) {
       this.err = args.err;
     }
     if (args.spanEventList !== undefined && args.spanEventList !== null) {
-      this.spanEventList = Thrift.copyList(args.spanEventList, [TSpanEvent]);
+      this.spanEventList = Thrift.copyList(args.spanEventList, [ttypes.TSpanEvent]);
     }
     if (args.parentApplicationName !== undefined && args.parentApplicationName !== null) {
       this.parentApplicationName = args.parentApplicationName;
@@ -1162,7 +1168,7 @@ TSpan = function(args) {
       this.apiId = args.apiId;
     }
     if (args.exceptionInfo !== undefined && args.exceptionInfo !== null) {
-      this.exceptionInfo = new TIntStringValue(args.exceptionInfo);
+      this.exceptionInfo = new ttypes.TIntStringValue(args.exceptionInfo);
     }
     if (args.applicationServiceType !== undefined && args.applicationServiceType !== null) {
       this.applicationServiceType = args.applicationServiceType;
@@ -1191,84 +1197,84 @@ TSpan.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.agentId = input.readString().value;
+        this.agentId = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.STRING) {
-        this.applicationName = input.readString().value;
+        this.applicationName = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.I64) {
-        this.agentStartTime = input.readI64().value;
+        this.agentStartTime = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.STRING) {
-        this.transactionId = input.readBinary().value;
+        this.transactionId = input.readBinary();
       } else {
         input.skip(ftype);
       }
       break;
       case 7:
       if (ftype == Thrift.Type.I64) {
-        this.spanId = input.readI64().value;
+        this.spanId = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 8:
       if (ftype == Thrift.Type.I64) {
-        this.parentSpanId = input.readI64().value;
+        this.parentSpanId = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 9:
       if (ftype == Thrift.Type.I64) {
-        this.startTime = input.readI64().value;
+        this.startTime = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 10:
       if (ftype == Thrift.Type.I32) {
-        this.elapsed = input.readI32().value;
+        this.elapsed = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 11:
       if (ftype == Thrift.Type.STRING) {
-        this.rpc = input.readString().value;
+        this.rpc = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 12:
       if (ftype == Thrift.Type.I16) {
-        this.serviceType = input.readI16().value;
+        this.serviceType = input.readI16();
       } else {
         input.skip(ftype);
       }
       break;
       case 13:
       if (ftype == Thrift.Type.STRING) {
-        this.endPoint = input.readString().value;
+        this.endPoint = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 14:
       if (ftype == Thrift.Type.STRING) {
-        this.remoteAddr = input.readString().value;
+        this.remoteAddr = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -1285,7 +1291,7 @@ TSpan.prototype.read = function(input) {
         for (var _i13 = 0; _i13 < _size8; ++_i13)
         {
           var elem14 = null;
-          elem14 = new TAnnotation();
+          elem14 = new ttypes.TAnnotation();
           elem14.read(input);
           this.annotations.push(elem14);
         }
@@ -1296,14 +1302,14 @@ TSpan.prototype.read = function(input) {
       break;
       case 16:
       if (ftype == Thrift.Type.I16) {
-        this.flag = input.readI16().value;
+        this.flag = input.readI16();
       } else {
         input.skip(ftype);
       }
       break;
       case 17:
       if (ftype == Thrift.Type.I32) {
-        this.err = input.readI32().value;
+        this.err = input.readI32();
       } else {
         input.skip(ftype);
       }
@@ -1320,7 +1326,7 @@ TSpan.prototype.read = function(input) {
         for (var _i20 = 0; _i20 < _size15; ++_i20)
         {
           var elem21 = null;
-          elem21 = new TSpanEvent();
+          elem21 = new ttypes.TSpanEvent();
           elem21.read(input);
           this.spanEventList.push(elem21);
         }
@@ -1331,35 +1337,35 @@ TSpan.prototype.read = function(input) {
       break;
       case 19:
       if (ftype == Thrift.Type.STRING) {
-        this.parentApplicationName = input.readString().value;
+        this.parentApplicationName = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 20:
       if (ftype == Thrift.Type.I16) {
-        this.parentApplicationType = input.readI16().value;
+        this.parentApplicationType = input.readI16();
       } else {
         input.skip(ftype);
       }
       break;
       case 21:
       if (ftype == Thrift.Type.STRING) {
-        this.acceptorHost = input.readString().value;
+        this.acceptorHost = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 25:
       if (ftype == Thrift.Type.I32) {
-        this.apiId = input.readI32().value;
+        this.apiId = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 26:
       if (ftype == Thrift.Type.STRUCT) {
-        this.exceptionInfo = new TIntStringValue();
+        this.exceptionInfo = new ttypes.TIntStringValue();
         this.exceptionInfo.read(input);
       } else {
         input.skip(ftype);
@@ -1367,21 +1373,21 @@ TSpan.prototype.read = function(input) {
       break;
       case 30:
       if (ftype == Thrift.Type.I16) {
-        this.applicationServiceType = input.readI16().value;
+        this.applicationServiceType = input.readI16();
       } else {
         input.skip(ftype);
       }
       break;
       case 31:
       if (ftype == Thrift.Type.BYTE) {
-        this.loggingTransactionInfo = input.readByte().value;
+        this.loggingTransactionInfo = input.readByte();
       } else {
         input.skip(ftype);
       }
       break;
       case 32:
       if (ftype == Thrift.Type.BYTE) {
-        this.version = input.readByte().value;
+        this.version = input.readByte();
       } else {
         input.skip(ftype);
       }
@@ -1540,7 +1546,7 @@ TSpan.prototype.write = function(output) {
   return;
 };
 
-TSpanChunk = function(args) {
+var TSpanChunk = module.exports.TSpanChunk = function(args) {
   this.agentId = null;
   this.applicationName = null;
   this.agentStartTime = null;
@@ -1575,7 +1581,7 @@ TSpanChunk = function(args) {
       this.endPoint = args.endPoint;
     }
     if (args.spanEventList !== undefined && args.spanEventList !== null) {
-      this.spanEventList = Thrift.copyList(args.spanEventList, [TSpanEvent]);
+      this.spanEventList = Thrift.copyList(args.spanEventList, [ttypes.TSpanEvent]);
     }
     if (args.applicationServiceType !== undefined && args.applicationServiceType !== null) {
       this.applicationServiceType = args.applicationServiceType;
@@ -1604,49 +1610,49 @@ TSpanChunk.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.agentId = input.readString().value;
+        this.agentId = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.STRING) {
-        this.applicationName = input.readString().value;
+        this.applicationName = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.I64) {
-        this.agentStartTime = input.readI64().value;
+        this.agentStartTime = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.I16) {
-        this.serviceType = input.readI16().value;
+        this.serviceType = input.readI16();
       } else {
         input.skip(ftype);
       }
       break;
       case 5:
       if (ftype == Thrift.Type.STRING) {
-        this.transactionId = input.readBinary().value;
+        this.transactionId = input.readBinary();
       } else {
         input.skip(ftype);
       }
       break;
       case 8:
       if (ftype == Thrift.Type.I64) {
-        this.spanId = input.readI64().value;
+        this.spanId = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 9:
       if (ftype == Thrift.Type.STRING) {
-        this.endPoint = input.readString().value;
+        this.endPoint = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -1663,7 +1669,7 @@ TSpanChunk.prototype.read = function(input) {
         for (var _i29 = 0; _i29 < _size24; ++_i29)
         {
           var elem30 = null;
-          elem30 = new TSpanEvent();
+          elem30 = new ttypes.TSpanEvent();
           elem30.read(input);
           this.spanEventList.push(elem30);
         }
@@ -1674,21 +1680,21 @@ TSpanChunk.prototype.read = function(input) {
       break;
       case 11:
       if (ftype == Thrift.Type.I16) {
-        this.applicationServiceType = input.readI16().value;
+        this.applicationServiceType = input.readI16();
       } else {
         input.skip(ftype);
       }
       break;
       case 12:
       if (ftype == Thrift.Type.I64) {
-        this.keyTime = input.readI64().value;
+        this.keyTime = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 13:
       if (ftype == Thrift.Type.BYTE) {
-        this.version = input.readByte().value;
+        this.version = input.readByte();
       } else {
         input.skip(ftype);
       }
@@ -1773,7 +1779,7 @@ TSpanChunk.prototype.write = function(output) {
   return;
 };
 
-TStringMetaData = function(args) {
+var TStringMetaData = module.exports.TStringMetaData = function(args) {
   this.agentId = null;
   this.agentStartTime = null;
   this.stringId = null;
@@ -1809,28 +1815,28 @@ TStringMetaData.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.agentId = input.readString().value;
+        this.agentId = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I64) {
-        this.agentStartTime = input.readI64().value;
+        this.agentStartTime = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.I32) {
-        this.stringId = input.readI32().value;
+        this.stringId = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 5:
       if (ftype == Thrift.Type.STRING) {
-        this.stringValue = input.readString().value;
+        this.stringValue = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -1871,7 +1877,7 @@ TStringMetaData.prototype.write = function(output) {
   return;
 };
 
-TSqlMetaData = function(args) {
+var TSqlMetaData = module.exports.TSqlMetaData = function(args) {
   this.agentId = null;
   this.agentStartTime = null;
   this.sqlId = null;
@@ -1907,28 +1913,28 @@ TSqlMetaData.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.agentId = input.readString().value;
+        this.agentId = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I64) {
-        this.agentStartTime = input.readI64().value;
+        this.agentStartTime = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.I32) {
-        this.sqlId = input.readI32().value;
+        this.sqlId = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 5:
       if (ftype == Thrift.Type.STRING) {
-        this.sql = input.readString().value;
+        this.sql = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -1969,7 +1975,7 @@ TSqlMetaData.prototype.write = function(output) {
   return;
 };
 
-TApiMetaData = function(args) {
+var TApiMetaData = module.exports.TApiMetaData = function(args) {
   this.agentId = null;
   this.agentStartTime = null;
   this.apiId = null;
@@ -2013,42 +2019,42 @@ TApiMetaData.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.agentId = input.readString().value;
+        this.agentId = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I64) {
-        this.agentStartTime = input.readI64().value;
+        this.agentStartTime = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.I32) {
-        this.apiId = input.readI32().value;
+        this.apiId = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 5:
       if (ftype == Thrift.Type.STRING) {
-        this.apiInfo = input.readString().value;
+        this.apiInfo = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 6:
       if (ftype == Thrift.Type.I32) {
-        this.line = input.readI32().value;
+        this.line = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 10:
       if (ftype == Thrift.Type.I32) {
-        this.type = input.readI32().value;
+        this.type = input.readI32();
       } else {
         input.skip(ftype);
       }
@@ -2099,7 +2105,7 @@ TApiMetaData.prototype.write = function(output) {
   return;
 };
 
-TResult = function(args) {
+var TResult = module.exports.TResult = function(args) {
   this.success = null;
   this.message = null;
   if (args) {
@@ -2127,14 +2133,14 @@ TResult.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.BOOL) {
-        this.success = input.readBool().value;
+        this.success = input.readBool();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.STRING) {
-        this.message = input.readString().value;
+        this.message = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -2165,5 +2171,5 @@ TResult.prototype.write = function(output) {
   return;
 };
 
-TRACE_V1 = 0;
-TRACE_V2 = 1;
+ttypes.TRACE_V1 = 0;
+ttypes.TRACE_V2 = 1;

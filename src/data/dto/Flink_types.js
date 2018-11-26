@@ -3,16 +3,22 @@
 //
 // DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
 //
+"use strict";
+
+var thrift = require('thrift');
+var Thrift = thrift.Thrift;
+var Q = thrift.Q;
 
 
-TFJvmGcType = {
+var ttypes = module.exports = {};
+ttypes.TFJvmGcType = {
   'UNKNOWN' : 0,
   'SERIAL' : 1,
   'PARALLEL' : 2,
   'CMS' : 3,
   'G1' : 4
 };
-TFServiceInfo = function(args) {
+var TFServiceInfo = module.exports.TFServiceInfo = function(args) {
   this.serviceName = null;
   this.serviceLibs = null;
   if (args) {
@@ -40,7 +46,7 @@ TFServiceInfo.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.serviceName = input.readString().value;
+        this.serviceName = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -57,7 +63,7 @@ TFServiceInfo.prototype.read = function(input) {
         for (var _i5 = 0; _i5 < _size0; ++_i5)
         {
           var elem6 = null;
-          elem6 = input.readString().value;
+          elem6 = input.readString();
           this.serviceLibs.push(elem6);
         }
         input.readListEnd();
@@ -100,7 +106,7 @@ TFServiceInfo.prototype.write = function(output) {
   return;
 };
 
-TFServerMetaData = function(args) {
+var TFServerMetaData = module.exports.TFServerMetaData = function(args) {
   this.serverInfo = null;
   this.vmArgs = null;
   this.serviceInfos = null;
@@ -112,7 +118,7 @@ TFServerMetaData = function(args) {
       this.vmArgs = Thrift.copyList(args.vmArgs, [null]);
     }
     if (args.serviceInfos !== undefined && args.serviceInfos !== null) {
-      this.serviceInfos = Thrift.copyList(args.serviceInfos, [TFServiceInfo]);
+      this.serviceInfos = Thrift.copyList(args.serviceInfos, [ttypes.TFServiceInfo]);
     }
   }
 };
@@ -132,7 +138,7 @@ TFServerMetaData.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.serverInfo = input.readString().value;
+        this.serverInfo = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -149,7 +155,7 @@ TFServerMetaData.prototype.read = function(input) {
         for (var _i13 = 0; _i13 < _size8; ++_i13)
         {
           var elem14 = null;
-          elem14 = input.readString().value;
+          elem14 = input.readString();
           this.vmArgs.push(elem14);
         }
         input.readListEnd();
@@ -169,7 +175,7 @@ TFServerMetaData.prototype.read = function(input) {
         for (var _i20 = 0; _i20 < _size15; ++_i20)
         {
           var elem21 = null;
-          elem21 = new TFServiceInfo();
+          elem21 = new ttypes.TFServiceInfo();
           elem21.read(input);
           this.serviceInfos.push(elem21);
         }
@@ -227,7 +233,7 @@ TFServerMetaData.prototype.write = function(output) {
   return;
 };
 
-TFJvmInfo = function(args) {
+var TFJvmInfo = module.exports.TFJvmInfo = function(args) {
   this.version = 0;
   this.vmVersion = null;
   this.gcType = 0;
@@ -259,21 +265,21 @@ TFJvmInfo.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I16) {
-        this.version = input.readI16().value;
+        this.version = input.readI16();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.STRING) {
-        this.vmVersion = input.readString().value;
+        this.vmVersion = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.I32) {
-        this.gcType = input.readI32().value;
+        this.gcType = input.readI32();
       } else {
         input.skip(ftype);
       }
@@ -309,7 +315,7 @@ TFJvmInfo.prototype.write = function(output) {
   return;
 };
 
-TFAgentInfo = function(args) {
+var TFAgentInfo = module.exports.TFAgentInfo = function(args) {
   this.hostname = null;
   this.ip = null;
   this.ports = null;
@@ -363,10 +369,10 @@ TFAgentInfo = function(args) {
       this.endStatus = args.endStatus;
     }
     if (args.serverMetaData !== undefined && args.serverMetaData !== null) {
-      this.serverMetaData = new TFServerMetaData(args.serverMetaData);
+      this.serverMetaData = new ttypes.TFServerMetaData(args.serverMetaData);
     }
     if (args.jvmInfo !== undefined && args.jvmInfo !== null) {
-      this.jvmInfo = new TFJvmInfo(args.jvmInfo);
+      this.jvmInfo = new ttypes.TFJvmInfo(args.jvmInfo);
     }
     if (args.container !== undefined && args.container !== null) {
       this.container = args.container;
@@ -389,91 +395,91 @@ TFAgentInfo.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.hostname = input.readString().value;
+        this.hostname = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.STRING) {
-        this.ip = input.readString().value;
+        this.ip = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.STRING) {
-        this.ports = input.readString().value;
+        this.ports = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.STRING) {
-        this.agentId = input.readString().value;
+        this.agentId = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 5:
       if (ftype == Thrift.Type.STRING) {
-        this.applicationName = input.readString().value;
+        this.applicationName = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 6:
       if (ftype == Thrift.Type.I16) {
-        this.serviceType = input.readI16().value;
+        this.serviceType = input.readI16();
       } else {
         input.skip(ftype);
       }
       break;
       case 7:
       if (ftype == Thrift.Type.I32) {
-        this.pid = input.readI32().value;
+        this.pid = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 8:
       if (ftype == Thrift.Type.STRING) {
-        this.agentVersion = input.readString().value;
+        this.agentVersion = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 9:
       if (ftype == Thrift.Type.STRING) {
-        this.vmVersion = input.readString().value;
+        this.vmVersion = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 10:
       if (ftype == Thrift.Type.I64) {
-        this.startTimestamp = input.readI64().value;
+        this.startTimestamp = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 11:
       if (ftype == Thrift.Type.I64) {
-        this.endTimestamp = input.readI64().value;
+        this.endTimestamp = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 12:
       if (ftype == Thrift.Type.I32) {
-        this.endStatus = input.readI32().value;
+        this.endStatus = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 20:
       if (ftype == Thrift.Type.STRUCT) {
-        this.serverMetaData = new TFServerMetaData();
+        this.serverMetaData = new ttypes.TFServerMetaData();
         this.serverMetaData.read(input);
       } else {
         input.skip(ftype);
@@ -481,7 +487,7 @@ TFAgentInfo.prototype.read = function(input) {
       break;
       case 30:
       if (ftype == Thrift.Type.STRUCT) {
-        this.jvmInfo = new TFJvmInfo();
+        this.jvmInfo = new ttypes.TFJvmInfo();
         this.jvmInfo.read(input);
       } else {
         input.skip(ftype);
@@ -489,7 +495,7 @@ TFAgentInfo.prototype.read = function(input) {
       break;
       case 40:
       if (ftype == Thrift.Type.BOOL) {
-        this.container = input.readBool().value;
+        this.container = input.readBool();
       } else {
         input.skip(ftype);
       }
@@ -585,7 +591,7 @@ TFAgentInfo.prototype.write = function(output) {
   return;
 };
 
-TFJvmGc = function(args) {
+var TFJvmGc = module.exports.TFJvmGc = function(args) {
   this.type = 0;
   this.jvmMemoryHeapUsed = null;
   this.jvmMemoryHeapMax = null;
@@ -617,7 +623,7 @@ TFJvmGc = function(args) {
       this.jvmGcOldTime = args.jvmGcOldTime;
     }
     if (args.jvmGcDetailed !== undefined && args.jvmGcDetailed !== null) {
-      this.jvmGcDetailed = new TFJvmGcDetailed(args.jvmGcDetailed);
+      this.jvmGcDetailed = new ttypes.TFJvmGcDetailed(args.jvmGcDetailed);
     }
   }
 };
@@ -637,56 +643,56 @@ TFJvmGc.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I32) {
-        this.type = input.readI32().value;
+        this.type = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I64) {
-        this.jvmMemoryHeapUsed = input.readI64().value;
+        this.jvmMemoryHeapUsed = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.I64) {
-        this.jvmMemoryHeapMax = input.readI64().value;
+        this.jvmMemoryHeapMax = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.I64) {
-        this.jvmMemoryNonHeapUsed = input.readI64().value;
+        this.jvmMemoryNonHeapUsed = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 5:
       if (ftype == Thrift.Type.I64) {
-        this.jvmMemoryNonHeapMax = input.readI64().value;
+        this.jvmMemoryNonHeapMax = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 6:
       if (ftype == Thrift.Type.I64) {
-        this.jvmGcOldCount = input.readI64().value;
+        this.jvmGcOldCount = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 7:
       if (ftype == Thrift.Type.I64) {
-        this.jvmGcOldTime = input.readI64().value;
+        this.jvmGcOldTime = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 8:
       if (ftype == Thrift.Type.STRUCT) {
-        this.jvmGcDetailed = new TFJvmGcDetailed();
+        this.jvmGcDetailed = new ttypes.TFJvmGcDetailed();
         this.jvmGcDetailed.read(input);
       } else {
         input.skip(ftype);
@@ -748,7 +754,7 @@ TFJvmGc.prototype.write = function(output) {
   return;
 };
 
-TFDirectBuffer = function(args) {
+var TFDirectBuffer = module.exports.TFDirectBuffer = function(args) {
   this.directCount = null;
   this.directMemoryUsed = null;
   this.mappedCount = null;
@@ -784,28 +790,28 @@ TFDirectBuffer.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I64) {
-        this.directCount = input.readI64().value;
+        this.directCount = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I64) {
-        this.directMemoryUsed = input.readI64().value;
+        this.directMemoryUsed = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.I64) {
-        this.mappedCount = input.readI64().value;
+        this.mappedCount = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.I64) {
-        this.mappedMemoryUsed = input.readI64().value;
+        this.mappedMemoryUsed = input.readI64();
       } else {
         input.skip(ftype);
       }
@@ -846,7 +852,7 @@ TFDirectBuffer.prototype.write = function(output) {
   return;
 };
 
-TFJvmGcDetailed = function(args) {
+var TFJvmGcDetailed = module.exports.TFJvmGcDetailed = function(args) {
   this.jvmGcNewCount = null;
   this.jvmGcNewTime = null;
   this.jvmPoolCodeCacheUsed = null;
@@ -898,56 +904,56 @@ TFJvmGcDetailed.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I64) {
-        this.jvmGcNewCount = input.readI64().value;
+        this.jvmGcNewCount = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I64) {
-        this.jvmGcNewTime = input.readI64().value;
+        this.jvmGcNewTime = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.DOUBLE) {
-        this.jvmPoolCodeCacheUsed = input.readDouble().value;
+        this.jvmPoolCodeCacheUsed = input.readDouble();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.DOUBLE) {
-        this.jvmPoolNewGenUsed = input.readDouble().value;
+        this.jvmPoolNewGenUsed = input.readDouble();
       } else {
         input.skip(ftype);
       }
       break;
       case 5:
       if (ftype == Thrift.Type.DOUBLE) {
-        this.jvmPoolOldGenUsed = input.readDouble().value;
+        this.jvmPoolOldGenUsed = input.readDouble();
       } else {
         input.skip(ftype);
       }
       break;
       case 6:
       if (ftype == Thrift.Type.DOUBLE) {
-        this.jvmPoolSurvivorSpaceUsed = input.readDouble().value;
+        this.jvmPoolSurvivorSpaceUsed = input.readDouble();
       } else {
         input.skip(ftype);
       }
       break;
       case 7:
       if (ftype == Thrift.Type.DOUBLE) {
-        this.jvmPoolPermGenUsed = input.readDouble().value;
+        this.jvmPoolPermGenUsed = input.readDouble();
       } else {
         input.skip(ftype);
       }
       break;
       case 8:
       if (ftype == Thrift.Type.DOUBLE) {
-        this.jvmPoolMetaspaceUsed = input.readDouble().value;
+        this.jvmPoolMetaspaceUsed = input.readDouble();
       } else {
         input.skip(ftype);
       }
@@ -1008,7 +1014,7 @@ TFJvmGcDetailed.prototype.write = function(output) {
   return;
 };
 
-TFCpuLoad = function(args) {
+var TFCpuLoad = module.exports.TFCpuLoad = function(args) {
   this.jvmCpuLoad = null;
   this.systemCpuLoad = null;
   if (args) {
@@ -1036,14 +1042,14 @@ TFCpuLoad.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.DOUBLE) {
-        this.jvmCpuLoad = input.readDouble().value;
+        this.jvmCpuLoad = input.readDouble();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.DOUBLE) {
-        this.systemCpuLoad = input.readDouble().value;
+        this.systemCpuLoad = input.readDouble();
       } else {
         input.skip(ftype);
       }
@@ -1074,7 +1080,7 @@ TFCpuLoad.prototype.write = function(output) {
   return;
 };
 
-TFTransaction = function(args) {
+var TFTransaction = module.exports.TFTransaction = function(args) {
   this.sampledNewCount = null;
   this.sampledContinuationCount = null;
   this.unsampledNewCount = null;
@@ -1110,28 +1116,28 @@ TFTransaction.prototype.read = function(input) {
     {
       case 2:
       if (ftype == Thrift.Type.I64) {
-        this.sampledNewCount = input.readI64().value;
+        this.sampledNewCount = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.I64) {
-        this.sampledContinuationCount = input.readI64().value;
+        this.sampledContinuationCount = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.I64) {
-        this.unsampledNewCount = input.readI64().value;
+        this.unsampledNewCount = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 5:
       if (ftype == Thrift.Type.I64) {
-        this.unsampledContinuationCount = input.readI64().value;
+        this.unsampledContinuationCount = input.readI64();
       } else {
         input.skip(ftype);
       }
@@ -1172,7 +1178,7 @@ TFTransaction.prototype.write = function(output) {
   return;
 };
 
-TFActiveTraceHistogram = function(args) {
+var TFActiveTraceHistogram = module.exports.TFActiveTraceHistogram = function(args) {
   this.version = 0;
   this.histogramSchemaType = null;
   this.activeTraceCount = null;
@@ -1204,14 +1210,14 @@ TFActiveTraceHistogram.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I16) {
-        this.version = input.readI16().value;
+        this.version = input.readI16();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I32) {
-        this.histogramSchemaType = input.readI32().value;
+        this.histogramSchemaType = input.readI32();
       } else {
         input.skip(ftype);
       }
@@ -1228,7 +1234,7 @@ TFActiveTraceHistogram.prototype.read = function(input) {
         for (var _i29 = 0; _i29 < _size24; ++_i29)
         {
           var elem30 = null;
-          elem30 = input.readI32().value;
+          elem30 = input.readI32();
           this.activeTraceCount.push(elem30);
         }
         input.readListEnd();
@@ -1276,11 +1282,11 @@ TFActiveTraceHistogram.prototype.write = function(output) {
   return;
 };
 
-TFActiveTrace = function(args) {
+var TFActiveTrace = module.exports.TFActiveTrace = function(args) {
   this.histogram = null;
   if (args) {
     if (args.histogram !== undefined && args.histogram !== null) {
-      this.histogram = new TFActiveTraceHistogram(args.histogram);
+      this.histogram = new ttypes.TFActiveTraceHistogram(args.histogram);
     }
   }
 };
@@ -1300,7 +1306,7 @@ TFActiveTrace.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRUCT) {
-        this.histogram = new TFActiveTraceHistogram();
+        this.histogram = new ttypes.TFActiveTraceHistogram();
         this.histogram.read(input);
       } else {
         input.skip(ftype);
@@ -1330,7 +1336,7 @@ TFActiveTrace.prototype.write = function(output) {
   return;
 };
 
-TFResponseTime = function(args) {
+var TFResponseTime = module.exports.TFResponseTime = function(args) {
   this.avg = 0;
   if (args) {
     if (args.avg !== undefined && args.avg !== null) {
@@ -1354,7 +1360,7 @@ TFResponseTime.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I64) {
-        this.avg = input.readI64().value;
+        this.avg = input.readI64();
       } else {
         input.skip(ftype);
       }
@@ -1383,7 +1389,7 @@ TFResponseTime.prototype.write = function(output) {
   return;
 };
 
-TFAgentStat = function(args) {
+var TFAgentStat = module.exports.TFAgentStat = function(args) {
   this.agentId = null;
   this.startTimestamp = null;
   this.timestamp = null;
@@ -1411,28 +1417,28 @@ TFAgentStat = function(args) {
       this.collectInterval = args.collectInterval;
     }
     if (args.gc !== undefined && args.gc !== null) {
-      this.gc = new TFJvmGc(args.gc);
+      this.gc = new ttypes.TFJvmGc(args.gc);
     }
     if (args.cpuLoad !== undefined && args.cpuLoad !== null) {
-      this.cpuLoad = new TFCpuLoad(args.cpuLoad);
+      this.cpuLoad = new ttypes.TFCpuLoad(args.cpuLoad);
     }
     if (args.transaction !== undefined && args.transaction !== null) {
-      this.transaction = new TFTransaction(args.transaction);
+      this.transaction = new ttypes.TFTransaction(args.transaction);
     }
     if (args.activeTrace !== undefined && args.activeTrace !== null) {
-      this.activeTrace = new TFActiveTrace(args.activeTrace);
+      this.activeTrace = new ttypes.TFActiveTrace(args.activeTrace);
     }
     if (args.dataSourceList !== undefined && args.dataSourceList !== null) {
-      this.dataSourceList = new TFDataSourceList(args.dataSourceList);
+      this.dataSourceList = new ttypes.TFDataSourceList(args.dataSourceList);
     }
     if (args.responseTime !== undefined && args.responseTime !== null) {
-      this.responseTime = new TFResponseTime(args.responseTime);
+      this.responseTime = new ttypes.TFResponseTime(args.responseTime);
     }
     if (args.fileDescriptor !== undefined && args.fileDescriptor !== null) {
-      this.fileDescriptor = new TFFileDescriptor(args.fileDescriptor);
+      this.fileDescriptor = new ttypes.TFFileDescriptor(args.fileDescriptor);
     }
     if (args.directBuffer !== undefined && args.directBuffer !== null) {
-      this.directBuffer = new TFDirectBuffer(args.directBuffer);
+      this.directBuffer = new ttypes.TFDirectBuffer(args.directBuffer);
     }
     if (args.metadata !== undefined && args.metadata !== null) {
       this.metadata = args.metadata;
@@ -1455,35 +1461,35 @@ TFAgentStat.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.agentId = input.readString().value;
+        this.agentId = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I64) {
-        this.startTimestamp = input.readI64().value;
+        this.startTimestamp = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.I64) {
-        this.timestamp = input.readI64().value;
+        this.timestamp = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.I64) {
-        this.collectInterval = input.readI64().value;
+        this.collectInterval = input.readI64();
       } else {
         input.skip(ftype);
       }
       break;
       case 10:
       if (ftype == Thrift.Type.STRUCT) {
-        this.gc = new TFJvmGc();
+        this.gc = new ttypes.TFJvmGc();
         this.gc.read(input);
       } else {
         input.skip(ftype);
@@ -1491,7 +1497,7 @@ TFAgentStat.prototype.read = function(input) {
       break;
       case 20:
       if (ftype == Thrift.Type.STRUCT) {
-        this.cpuLoad = new TFCpuLoad();
+        this.cpuLoad = new ttypes.TFCpuLoad();
         this.cpuLoad.read(input);
       } else {
         input.skip(ftype);
@@ -1499,7 +1505,7 @@ TFAgentStat.prototype.read = function(input) {
       break;
       case 30:
       if (ftype == Thrift.Type.STRUCT) {
-        this.transaction = new TFTransaction();
+        this.transaction = new ttypes.TFTransaction();
         this.transaction.read(input);
       } else {
         input.skip(ftype);
@@ -1507,7 +1513,7 @@ TFAgentStat.prototype.read = function(input) {
       break;
       case 40:
       if (ftype == Thrift.Type.STRUCT) {
-        this.activeTrace = new TFActiveTrace();
+        this.activeTrace = new ttypes.TFActiveTrace();
         this.activeTrace.read(input);
       } else {
         input.skip(ftype);
@@ -1515,7 +1521,7 @@ TFAgentStat.prototype.read = function(input) {
       break;
       case 50:
       if (ftype == Thrift.Type.STRUCT) {
-        this.dataSourceList = new TFDataSourceList();
+        this.dataSourceList = new ttypes.TFDataSourceList();
         this.dataSourceList.read(input);
       } else {
         input.skip(ftype);
@@ -1523,7 +1529,7 @@ TFAgentStat.prototype.read = function(input) {
       break;
       case 60:
       if (ftype == Thrift.Type.STRUCT) {
-        this.responseTime = new TFResponseTime();
+        this.responseTime = new ttypes.TFResponseTime();
         this.responseTime.read(input);
       } else {
         input.skip(ftype);
@@ -1531,7 +1537,7 @@ TFAgentStat.prototype.read = function(input) {
       break;
       case 80:
       if (ftype == Thrift.Type.STRUCT) {
-        this.fileDescriptor = new TFFileDescriptor();
+        this.fileDescriptor = new ttypes.TFFileDescriptor();
         this.fileDescriptor.read(input);
       } else {
         input.skip(ftype);
@@ -1539,7 +1545,7 @@ TFAgentStat.prototype.read = function(input) {
       break;
       case 90:
       if (ftype == Thrift.Type.STRUCT) {
-        this.directBuffer = new TFDirectBuffer();
+        this.directBuffer = new ttypes.TFDirectBuffer();
         this.directBuffer.read(input);
       } else {
         input.skip(ftype);
@@ -1547,7 +1553,7 @@ TFAgentStat.prototype.read = function(input) {
       break;
       case 200:
       if (ftype == Thrift.Type.STRING) {
-        this.metadata = input.readString().value;
+        this.metadata = input.readString();
       } else {
         input.skip(ftype);
       }
@@ -1633,7 +1639,7 @@ TFAgentStat.prototype.write = function(output) {
   return;
 };
 
-TFAgentStatBatch = function(args) {
+var TFAgentStatBatch = module.exports.TFAgentStatBatch = function(args) {
   this.agentId = null;
   this.startTimestamp = null;
   this.agentStats = null;
@@ -1645,7 +1651,7 @@ TFAgentStatBatch = function(args) {
       this.startTimestamp = args.startTimestamp;
     }
     if (args.agentStats !== undefined && args.agentStats !== null) {
-      this.agentStats = Thrift.copyList(args.agentStats, [TFAgentStat]);
+      this.agentStats = Thrift.copyList(args.agentStats, [ttypes.TFAgentStat]);
     }
   }
 };
@@ -1665,14 +1671,14 @@ TFAgentStatBatch.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.STRING) {
-        this.agentId = input.readString().value;
+        this.agentId = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I64) {
-        this.startTimestamp = input.readI64().value;
+        this.startTimestamp = input.readI64();
       } else {
         input.skip(ftype);
       }
@@ -1689,7 +1695,7 @@ TFAgentStatBatch.prototype.read = function(input) {
         for (var _i37 = 0; _i37 < _size32; ++_i37)
         {
           var elem38 = null;
-          elem38 = new TFAgentStat();
+          elem38 = new ttypes.TFAgentStat();
           elem38.read(input);
           this.agentStats.push(elem38);
         }
@@ -1738,7 +1744,7 @@ TFAgentStatBatch.prototype.write = function(output) {
   return;
 };
 
-TFDataSource = function(args) {
+var TFDataSource = module.exports.TFDataSource = function(args) {
   this.id = null;
   this.serviceTypeCode = null;
   this.databaseName = null;
@@ -1782,42 +1788,42 @@ TFDataSource.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I32) {
-        this.id = input.readI32().value;
+        this.id = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 2:
       if (ftype == Thrift.Type.I16) {
-        this.serviceTypeCode = input.readI16().value;
+        this.serviceTypeCode = input.readI16();
       } else {
         input.skip(ftype);
       }
       break;
       case 3:
       if (ftype == Thrift.Type.STRING) {
-        this.databaseName = input.readString().value;
+        this.databaseName = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 4:
       if (ftype == Thrift.Type.STRING) {
-        this.url = input.readString().value;
+        this.url = input.readString();
       } else {
         input.skip(ftype);
       }
       break;
       case 5:
       if (ftype == Thrift.Type.I32) {
-        this.activeConnectionSize = input.readI32().value;
+        this.activeConnectionSize = input.readI32();
       } else {
         input.skip(ftype);
       }
       break;
       case 6:
       if (ftype == Thrift.Type.I32) {
-        this.maxConnectionSize = input.readI32().value;
+        this.maxConnectionSize = input.readI32();
       } else {
         input.skip(ftype);
       }
@@ -1868,11 +1874,11 @@ TFDataSource.prototype.write = function(output) {
   return;
 };
 
-TFDataSourceList = function(args) {
+var TFDataSourceList = module.exports.TFDataSourceList = function(args) {
   this.dataSourceList = null;
   if (args) {
     if (args.dataSourceList !== undefined && args.dataSourceList !== null) {
-      this.dataSourceList = Thrift.copyList(args.dataSourceList, [TFDataSource]);
+      this.dataSourceList = Thrift.copyList(args.dataSourceList, [ttypes.TFDataSource]);
     }
   }
 };
@@ -1902,7 +1908,7 @@ TFDataSourceList.prototype.read = function(input) {
         for (var _i45 = 0; _i45 < _size40; ++_i45)
         {
           var elem46 = null;
-          elem46 = new TFDataSource();
+          elem46 = new ttypes.TFDataSource();
           elem46.read(input);
           this.dataSourceList.push(elem46);
         }
@@ -1944,7 +1950,7 @@ TFDataSourceList.prototype.write = function(output) {
   return;
 };
 
-TFFileDescriptor = function(args) {
+var TFFileDescriptor = module.exports.TFFileDescriptor = function(args) {
   this.openFileDescriptorCount = null;
   if (args) {
     if (args.openFileDescriptorCount !== undefined && args.openFileDescriptorCount !== null) {
@@ -1968,7 +1974,7 @@ TFFileDescriptor.prototype.read = function(input) {
     {
       case 1:
       if (ftype == Thrift.Type.I64) {
-        this.openFileDescriptorCount = input.readI64().value;
+        this.openFileDescriptorCount = input.readI64();
       } else {
         input.skip(ftype);
       }

@@ -41,12 +41,30 @@ test('Should create new trace by redis', function(t) {
     })
 
     const client = redis.createClient('6379', process.env.REDIS_HOST)
+
     const trace = agent.createTraceObject(null)
     const spanEventRecorder = trace.traceBlockBegin()
 
     spanEventRecorder.recordServiceType(ServiceTypeCode.redis)
 
     client.flushall(function (err, reply) {
+
+
+        console.log('=========================================')
+        console.log(err)
+        console.log('=========================================')
+        console.log(reply)
+        console.log('=========================================')
+
+
+        trace.traceBlockEnd(spanEventRecorder)
+        const traceMap = agent.traceContext.getAllTraceObject()
+
+        console.log(traceMap)
+
+
+
+
         t.error(err)
         t.equal(reply, 'OK')
         let done = 0

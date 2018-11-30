@@ -37,6 +37,7 @@ class Trace {
       const spanEvent = this.callStack.pop()
       this.spanRecorder.recordSpanEvent(spanEvent)
       spanEvent.markElapsedTime()
+      return spanEvent
     } else {
       const index = this.callStack.indexOf(spanEvent)
       if (index) {

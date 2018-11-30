@@ -24,8 +24,11 @@ test('Should create new trace by request', function(t) {
     const router = startRouter()
 
     const path = '/test'
-    router.get(path, (ctx, next) => {
-        ctx.body = 'hello'
+    router.get(path, async (ctx, next) => {
+
+        await axios.get('http://localhost:3000/users')
+
+        ctx.body = 'test'
     })
 
     app

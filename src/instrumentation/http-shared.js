@@ -56,8 +56,7 @@ exports.traceOutgoingRequest = function (agent, moduleName) {
             const trace = agent.createTraceObject(httpRequestReader.getTraceId())
             recordRequest(trace.spanRecorder, httpRequestReader)
             */
-            const trace = agent.createTraceObject(null)
-
+            const trace = agent.traceContext.currentTraceObject()
             if (!trace) return req
             // Fixme :  Trace id !?
             const id = 'TEST'

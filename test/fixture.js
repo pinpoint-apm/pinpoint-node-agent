@@ -4,8 +4,12 @@ const IdGenerator = require('context/id-generator')
 
 const config = {
   agentId: 'agent-for-dev',
-  applicationName: 'development application',
+  applicationName: 'agent for dev',
   serviceType: null,
+  collectorIp: '127.0.0.1',
+  collectorTcpPort: 9994,
+  collectorStatPort: 9995,
+  collectorSpanPort: 9996,
 }
 
 const getTransactionId = () => {

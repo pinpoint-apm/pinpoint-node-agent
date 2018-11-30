@@ -3,7 +3,8 @@ const shimmer = require('shimmer')
 const MODULES = [
   'express',
   'http',
-  'koa-router'
+  'koa-router',
+  'redis',
 ]
 
 function init(agent) {
@@ -15,7 +16,7 @@ function init(agent) {
         if (MODULES.includes(name) && agent.includedModules(name)) {
           console.log('load module:', name)
           // todo. versioning Logic add On
-          const version = '1.0.0'
+          const version = '2.5.6'
           try {
             require('./module/' + name)(agent, version, m)
             agent.setModules(name)
@@ -31,6 +32,34 @@ function init(agent) {
   }
 }
 
+
+function bindEmitter(emitter) {
+  const ins = this
+  const methods = [
+      'on',
+      'addListener',
+      'prependListener'
+  ]
+
+    // if (semver.satisfies(process.versions.node, '>=6')) {
+  //   methods.push('prependListener')
+  // }
+  shimmer.massWrap(emitter, methods, (original) => function(name, handler) {
+    return original.call(this, name, ins.bindFunction(handler))
+  })
+}
+
+function bindFunction (original) {
+    if (typeof original !== 'function') return original
+    //
+    // const ins = this
+    //
+
+  return original
+}
+
 module.exports = {
-  init
+  init,
+  bindEmitter,
+  bindFunction,
 }

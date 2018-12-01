@@ -5,6 +5,7 @@ const MODULES = [
   'http',
   'koa-router',
   'redis',
+  'mongodb-core',
 ]
 
 function init(agent) {

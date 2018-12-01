@@ -35,7 +35,7 @@ class TraceContext {
   completeTraceObject () {
     const trace = this.currentTraceObject()
     trace.spanRecorder.span.markElapsedTime()
-    return trace;
+    return trace
   }
 
   currentTraceObject () {

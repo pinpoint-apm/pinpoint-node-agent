@@ -48,22 +48,8 @@ test('Should create new trace by redis', function(t) {
     spanEventRecorder.recordServiceType(ServiceTypeCode.redis)
 
     client.flushall(function (err, reply) {
-
-
-        console.log('=========================================')
-        console.log(err)
-        console.log('=========================================')
-        console.log(reply)
-        console.log('=========================================')
-
-
         trace.traceBlockEnd(spanEventRecorder)
         const traceMap = agent.traceContext.getAllTraceObject()
-
-        console.log(traceMap)
-
-
-
 
         t.error(err)
         t.equal(reply, 'OK')
@@ -99,7 +85,7 @@ test('Should create new trace by redis', function(t) {
             t.equal(done, 3)
 
             console.log(agent)
-            agent.completeTraceObject();
+            agent.completeTraceObject()
 
             client.quit()
         })

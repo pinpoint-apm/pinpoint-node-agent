@@ -1,10 +1,11 @@
 //fixme
-const appendPayload = (header, payload) => {
+const appendPayload = (header, payload, offset) => {
   if (payload === null) {
     header.writeInt32BE(-1)
     return header
   } else {
-    header.writeInt32BE(payload.length, 2)
+    console.log('append offset', )
+    header.writeInt32BE(payload.length, offset)
     return Buffer.concat([header, payload])
   }
 }

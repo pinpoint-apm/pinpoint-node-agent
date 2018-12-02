@@ -5,11 +5,13 @@ const traceTypes = require('data/dto/Trace_types')
 const TypeCode = {
   SPAN: 40,
   AGENT_INFO: 50,
+  API_META_DATA: 310,
 }
 
 const TypeBase = {
   SPAN: traceTypes.TSpan,
   AGENT_INFO: pinpointTypes.TAgentInfo,
+  API_META_DATA: traceTypes.TApiMetaData,
 }
 
 const headerMap = Object.keys(TypeCode).reduce((acc, type) => {
@@ -23,6 +25,9 @@ const headerLookup = (tBase) => {
   }
   if (tBase instanceof pinpointTypes.TAgentInfo) {
     return headerMap[TypeCode.AGENT_INFO]
+  }
+  if (tBase instanceof traceTypes.TApiMetaData) {
+    return headerMap[TypeCode.API_META_DATA]
   }
   return null
 }

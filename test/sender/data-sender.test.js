@@ -45,8 +45,6 @@ test.only('Should send request on express server', function (t) {
 
   const server = app.listen(5005, async function () {
     await axios.get('http://localhost:5005' + path)
-
-    agent.completeTraceObject()
     t.ok(agent)
     // server.close()
   })

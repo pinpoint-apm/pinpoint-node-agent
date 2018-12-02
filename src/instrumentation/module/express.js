@@ -4,6 +4,7 @@ const shimmer = require('shimmer')
 const semver = require('semver')
 
 const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
+const ExpressMethodDescritpor = require('constant/method-descriptor').ExpressMethodDescritpor
 
 module.exports = function(agent, version, express) {
     // if (!semver.satisfies(version, '^1.0.0')) {
@@ -19,7 +20,7 @@ module.exports = function(agent, version, express) {
       if (trace) {
         spanEventRecorder = trace.traceBlockBegin()
         // spanEventRecorder.recordServiceType(ServiceTypeCode.express)
-        spanEventRecorder.recordApi('express.get')
+        spanEventRecorder.recordApi(ExpressMethodDescritpor.HANDLE)
         // spanEventRecorder.recordDestinationId('EXPRESS')
         // todo. Add on spanRecod
       }

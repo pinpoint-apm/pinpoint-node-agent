@@ -10,7 +10,7 @@ class SendPacket extends BasicPacket {
   toBuffer () {
     var header = new Buffer(2 + 4)
     header.writeInt16BE(this.getPacketType())
-    return appendPayload(header, this.payload)
+    return appendPayload(header, this.payload, 2)
   }
 }
 

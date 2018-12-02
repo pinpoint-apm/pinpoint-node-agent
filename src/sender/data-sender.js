@@ -4,6 +4,7 @@ const TcpClient = require('sender/tcp-client')
 const UdpClient = require('sender/udp-client')
 const serialize = require('data/serializer').serialize
 const SendPacket = require('sender/packet/send-packet')
+const RequestPacket = require('sender/packet/request-packet')
 const TSpan = require('data/dto/Trace_types').TSpan
 
 class DataSender {
@@ -31,10 +32,19 @@ class DataSender {
     }
   }
 
+  sendApiMetaInfo (tApiMetaInfo) {
+    if (tApiMetaInfo && this.enabledDataSending) {
+      console.log('tApiMetaInfo >> ', tApiMetaInfo)
+      const packet = new RequestPacket(tApiMetaInfo.apiId, serialize(tApiMetaInfo)).toBuffer()
+      console.log('packet >> ', packet)
+      this.tcpClient.send(packet)
+    }
+  }
+
   sendSpan (span) {
     if (span && this.enabledDataSending) {
       const tSpan = new TSpan(span)
-      console.log('tData >> ', tSpan)
+      console.log('spanData>> ', tSpan)
       const packet = serialize(tSpan)
       console.log('packet >> ', packet)
       this.spanUdpClient.send(packet)

@@ -20,10 +20,10 @@ class SpanRecorder {
     }
   }
 
-  recordApi (methodName, apiId) {
-    if (this.span && methodName) {
-      if (!apiId || apiId === 0) {
-        this.recordAttribute(DefaultAnnotationKey.API, methodName)
+  recordApi (methodDescriptor) {
+    if (this.span && methodDescriptor) {
+      if (methodDescriptor.apiId === 0) {
+        this.recordAttribute(DefaultAnnotationKey.API, methodDescriptor.fullName)
         this.recordApiId(0)
       } else {
         this.recordApiId(apiId)
@@ -33,8 +33,7 @@ class SpanRecorder {
 
   recordAttribute (key, value) {
     if (this.span && key && value) {
-      const annotation = new Annotation(key, value)
-      this.span.annotations.push(annotation)
+      this.span.annotations.push(new 2Annotation(key, value))
     }
   }
 

@@ -2,7 +2,9 @@ const os = require('os');
 
 const instManager = require('instrumentation/inst-manager')
 const traceContext = require('context/trace-context')
+const MethodDescriptors = require('constant/method-descriptor').MethodDescriptors
 const TAgentInfo = require('data/dto/Pinpoint_types').TAgentInfo
+const TApiMetaData = require('data/dto/Trace_types').TApiMetaData
 const networkUtils = require('utils/network');
 const DataSender = require('sender/data-sender')
 
@@ -61,7 +63,7 @@ class Agent {
 
   sendAgentInfo () {
     try {
-      this.dataSender.send(this.getAgentInfo())
+      this.dataSender.send(this.createAgentInfo())
     } catch (e) {
       console.log(e)
       throw new Error()
@@ -69,7 +71,7 @@ class Agent {
     return true
   }
 
-  getAgentInfo () {
+  createAgentInfo () {
     const info = {
       agentId: this.agentId,
       applicationName: this.applicationName,
@@ -86,6 +88,31 @@ class Agent {
     return new TAgentInfo(info)
   }
 
+  sendApiMetaInfo () {
+    try {
+      MethodDescriptors.forEach(methodDescriptor => {
+        Object.keys(methodDescriptor).forEach(key => {
+          const apiMetaInfo = this.createApiMetaInfo(methodDescriptor[key])
+          this.dataSender.sendApiMetaInfo(apiMetaInfo)
+        })
+      })
+    } catch (e) {
+      console.log(e)
+      throw new Error()
+    }
+    return true
+  }
+
+
+  createApiMetaInfo (methodDescriptor) {
+    const info = {
+      agentId: this.agentId,
+      agentStartTime: this.agentStartTime,
+      apiId: methodDescriptor.apiId,
+      apiInfo: methodDescriptor.apiInfo,
+    }
+    return new TApiMetaData(info)
+  }
 }
 
 module.exports = Agent

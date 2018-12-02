@@ -30,21 +30,22 @@ class SpanEventRecorder {
     }
   }
 
-  recordApi (methodName, apiId) {
-    if (this.spanEvent && methodName) {
-      if (!apiId || apiId === 0) {
-        // this.recordAttribute(DefaultAnnotationKey.API, methodName)
+  recordApi (methodDescriptor) {
+    if (this.spanEvent && methodDescriptor) {
+      console.log('>>> methodDescriptor', methodDescriptor)
+      if (methodDescriptor.apiId === 0) {
+        this.recordAttribute(DefaultAnnotationKey.API, methodDescriptor.fullName)
         this.recordApiId(0)
       } else {
-        this.recordApiId(apiId)
+        this.recordApiId(methodDescriptor.apiId)
       }
     }
   }
 
   recordAttribute (key, value) {
     if (this.spanEvent && key && value) {
-      const annotation = new Annotation(key, value)
-      this.spanEvent.annotations.push(annotation)
+      this.spanEvent.annotations.push(new Annotation(key, value))
+      console.log('annotations >>', this.spanEvent.annotations)
     }
   }
 

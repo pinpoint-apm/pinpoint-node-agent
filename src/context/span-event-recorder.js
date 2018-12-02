@@ -13,12 +13,19 @@ class SpanEventRecorder {
 
   recordServiceType (code, ...properties) {
     if (this.spanEvent && code) {
-      this.spanEvent.serviceType = new ServiceType(code, properties)
+      // this.spanEvent.serviceType = new ServiceType(code, properties)
+      this.spanEvent.serviceType = code
+    }
+  }
+
+  recordDestinationId (id) {
+    if (this.spanEvent && id) {
+      this.spanEvent.destinationId= id
     }
   }
 
   recordApiId (apiId) {
-    if (this.spanEvent && apiId) {
+    if (this.spanEvent && apiId !== undefined) {
       this.spanEvent.apiId = apiId
     }
   }
@@ -26,7 +33,7 @@ class SpanEventRecorder {
   recordApi (methodName, apiId) {
     if (this.spanEvent && methodName) {
       if (!apiId || apiId === 0) {
-        this.recordAttribute(DefaultAnnotationKey.API, methodName)
+        // this.recordAttribute(DefaultAnnotationKey.API, methodName)
         this.recordApiId(0)
       } else {
         this.recordApiId(apiId)

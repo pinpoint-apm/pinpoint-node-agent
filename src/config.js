@@ -16,6 +16,8 @@ const initialConf = {
   collectorTcpPort: null,
   collectorStatPort: null,
   collectorSpanPort: null,
+
+  enabledDataSending: true,
 }
 
 let conf = null

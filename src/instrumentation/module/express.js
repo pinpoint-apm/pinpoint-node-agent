@@ -6,19 +6,21 @@ const semver = require('semver')
 const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
 
 module.exports = function(agent, version, express) {
-    if (!semver.satisfies(version, '^1.0.0')) {
-        console.log('express version %s not supported - aborting...', version)
-        return express
-    }
+    // if (!semver.satisfies(version, '^1.0.0')) {
+    //     console.log('express version %s not supported - aborting...', version)
+    //     return express
+    // }
 
   shimmer.wrap(express.Router, 'handle', function (original) {
     return function (req) {
+      console.log('express handle !!')
       const trace = agent.traceContext.currentTraceObject()
       let spanEventRecorder = null
       if (trace) {
         spanEventRecorder = trace.traceBlockBegin()
-        spanEventRecorder.recordServiceType(ServiceTypeCode.express)
+        // spanEventRecorder.recordServiceType(ServiceTypeCode.express)
         spanEventRecorder.recordApi('express.get')
+        // spanEventRecorder.recordDestinationId('EXPRESS')
         // todo. Add on spanRecod
       }
 

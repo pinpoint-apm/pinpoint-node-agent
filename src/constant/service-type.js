@@ -1,6 +1,6 @@
 // TODO 코드 확인 후 추가
 const ServiceTypeCode = {
-  express: 5100,
+  express: 1000,
   koa : 5200,
   mongodb : 2700,
   redis : 8200,

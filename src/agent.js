@@ -21,7 +21,9 @@ class Agent {
 
     this.traceContext = traceContext.init({
       agentId: this.agentId,
-      agenStartTime: this.agentStartTime,
+      applicationName: this.applicationName,
+      agentStartTime: this.agentStartTime,
+      serviceType: this.serviceType,
     })
 
     this.dataSender = new DataSender(this.config)
@@ -34,6 +36,17 @@ class Agent {
       return this.traceContext.continueTraceObject(traceId)
     } else {
       return this.traceContext.newTraceObject()
+    }
+  }
+
+  currentTraceObject (j) {
+    return this.traceContext.currentTraceObject()
+  }
+
+  completeTraceObject (trace) {
+    this.traceContext.completeTraceObject(trace)
+    if (trace.span) {
+      this.dataSender.sendSpan(trace.span)
     }
   }
 

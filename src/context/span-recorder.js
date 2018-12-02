@@ -9,7 +9,8 @@ class SpanRecorder {
 
   recordServiceType (code, ...properties) {
     if (this.span && code) {
-      this.span.serviceType = new ServiceType(code, properties)
+      // this.span.serviceType = new ServiceType(code, properties)
+      this.span.serviceType = code
     }
   }
 

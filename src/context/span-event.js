@@ -1,13 +1,14 @@
 
 class SpanEvent {
-  constructor (sequence) {
+  constructor (spanId, sequence) {
     if (!sequence) {
     }
 
-    this.spanId = null // optional
-    this.sequence = sequence || -1 // required
+    this.spanId = spanId// optional
+    this.sequence = sequence // required
     this.startTime = 0 // required
     this.elapsedTime = 0 // optional
+    this.startElapsed = 0 // required
     // this.rpc = null // optional, deprecated
     this.serviceType = null // required
     this.endPoint = null // optional
@@ -26,6 +27,10 @@ class SpanEvent {
     if (this.startTime) {
       this.elapsedTime = Date.now() - this.startTime
     }
+  }
+
+  get endElapsed () {
+    return this.elapsedTime
   }
 }
 

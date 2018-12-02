@@ -1,8 +1,9 @@
 const MethodType = require('constant/method-type').MethodType
 
 class MethodDescriptor {
-  constructor (fullName, apiId, type) {
+  constructor (fullName, descriptor, apiId, type) {
     this.fullName = fullName || null
+    this.descriptor = descriptor
     this.apiId = apiId || 0
     this.type = type || MethodType.WEB_REQUEST
   }

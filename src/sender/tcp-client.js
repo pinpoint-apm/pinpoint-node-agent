@@ -16,10 +16,14 @@ class TcpClient {
   }
 
   send (msg) {
-    this.connect(() => {
-      this.client.write(msg)
-      console.log('sent successfully')
-    })
+    try {
+      this.connect(() => {
+        this.client.write(msg)
+        console.log('sent successfully')
+      })
+    } catch (e) {
+      console.log('udp sending error',  e)
+    }
   }
 
   close () {

@@ -6,36 +6,45 @@ const IdGenerator = require('context/id-generator')
 
 class TraceContext {
   constructor () {
-    this.agentId = null
-    this.agentStartTime = null
+    this.agentInfo = null
   }
 
   static init (options) {
+    if (!options.agentId || !options.applicationName) {
+      throw new Error()
+    }
+
     const instance = new TraceContext()
-    options.agentId && (instance.agentId = options.agentId)
-    options.agentStartTime && (instance.agentStartTime = options.agentStartTime)
+    instance.agentInfo = {
+      agentId : options.agentId,
+      applicationName : options.applicationName,
+      agentStartTime : options.agentStartTime,
+      serviceType : options.serviceType,
+    }
     return instance
   }
 
   continueTraceObject (traceId) {
-    const trace = new Trace(traceId)
+    const trace = new Trace(traceId, this.agentInfo)
     this.setCurrentTraceObject(trace)
     return trace
   }
 
   newTraceObject () {
-    const transactionId = new TransactionId(this.agentId, this.agentStartTime)
+    const transactionId = new TransactionId(this.agentInfo.agentId, this.agentInfo.agentStartTime)
     const spanId = IdGenerator.next
     const traceId = new TraceId(transactionId, spanId)
-    const trace = new Trace(traceId)
+    const trace = new Trace(traceId, this.agentInfo)
     this.setCurrentTraceObject(trace)
     return trace
   }
 
-  completeTraceObject () {
-    const trace = this.currentTraceObject()
-    trace.spanRecorder.span.markElapsedTime()
-    return trace
+  completeTraceObject (trace) {
+    const targetTrace = trace || this.currentTraceObject()
+    if (targetTrace) {
+      targetTrace.spanRecorder.span.markElapsedTime()
+      return targetTrace
+    }
   }
 
   currentTraceObject () {

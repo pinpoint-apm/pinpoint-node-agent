@@ -26,7 +26,7 @@ exports.instrumentRequest = function (agent, moduleName) {
 
                 // todo. end Of Stream ?
                 endOfStream(res, function (err) {
-                    // if (!err) return trace.completeTraceObject()
+                    if (!err) return agent.completeTraceObject(trace)
                     //
                     //
                     // console.log('E-O-S')

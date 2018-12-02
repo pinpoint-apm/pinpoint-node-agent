@@ -1,17 +1,21 @@
+const TransactionIdUtil = require('utils/transaction-id-util');
 
 class Span {
-  constructor (traceId) {
-    if (!traceId) {
+  constructor (traceId, agentInfo) {
+    if (!traceId || !agentInfo) {
       // TODO app에 영향을 미치지 않으려면 예외처리는 어떻게 해야 할까??
     }
 
-    // this.agentId = null; // required, from config
-    // this.applicationName = null; // required, from config
-    // this.agentStartTime = null; // required, from config
-    this.serviceType = null; // required
+    // fixme
+    const tid = TransactionIdUtil.toTransactionId(traceId.transactionId.toString())
+
+    this.agentId = agentInfo.agentId; // required, from config
+    this.applicationName = agentInfo.applicationName; // required, from config
+    this.agentStartTime = agentInfo.agentStartTime; // required, from config
+    this.serviceType = 0; // required
     this.spanId = traceId.spanId; // required
     this.parentSpanId = traceId.parentSpanId;
-    this.transactionId = traceId.transactionId
+    this.transactionId = TransactionIdUtil.formatBytes(tid)
     this.startTime = Date.now(); // required
     this.elapsedTime = 0;
     this.rpc = null; // uri
@@ -23,7 +27,7 @@ class Span {
     this.spanEventList = [];
     this.apiId = null;
     this.exceptionInfo = null;
-    // this.applicationServiceType = null; // from config
+    this.applicationServiceType = agentInfo.serviceType; // from config
     this.loggingTransactionInfo = null; // ?
     this.version = 1;
     this.acceptorHost = null; // parent host ?
@@ -35,6 +39,10 @@ class Span {
     if (this.startTime) {
       this.elapsedTime = Date.now() - this.startTime
     }
+  }
+
+  get elapsed () {
+    return this.elapsedTime
   }
 }
 

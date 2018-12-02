@@ -4,15 +4,15 @@ const Span = require('./span')
 const SpanEvent = require('./span-event')
 
 class Trace {
-  constructor (traceId) {
-    if (!traceId) {
+  constructor (traceId, agentInfo) {
+    if (!traceId || !agentInfo) {
       // TODO define custom error
       throw new Error()
     }
     this.traceId = traceId
 
-    const span = new Span(traceId)
-    this.spanRecorder = new SpanRecorder(span)
+    this.span = new Span(traceId, agentInfo)
+    this.spanRecorder = new SpanRecorder(this.span)
 
     this.spanEventRecorder = null
 
@@ -21,9 +21,10 @@ class Trace {
   }
 
   traceBlockBegin () {
-    const spanEvent = new SpanEvent(this.sequence)
-    spanEvent.depth = this.callStack.length
+    const spanEvent = new SpanEvent(this.span.spanId, this.sequence)
+    spanEvent.depth = this.callStack.length + 1
     spanEvent.startTime = Date.now()
+    spanEvent.startElapsed = spanEvent.startTime - this.span.startTime
     this.callStack.push(spanEvent)
     this.sequence++
 

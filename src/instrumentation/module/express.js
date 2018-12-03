@@ -19,7 +19,7 @@ module.exports = function(agent, version, express) {
       let spanEventRecorder = null
       if (trace) {
         spanEventRecorder = trace.traceBlockBegin()
-        // spanEventRecorder.recordServiceType(ServiceTypeCode.express)
+        spanEventRecorder.recordServiceType(ServiceTypeCode.express)
         spanEventRecorder.recordApi(ExpressMethodDescritpor.HANDLE)
         // spanEventRecorder.recordDestinationId('EXPRESS')
         // todo. Add on spanRecod

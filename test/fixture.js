@@ -20,10 +20,9 @@ const getTransactionId = () => {
   return new TransactionId(agentId, agentStartTime, 99)
 }
 
-const getTraceId = (_transactionId) => {
-  const transactionId = _transactionId || getTransactionId()
+const getTraceId = (transactionId) => {
   const spanId = IdGenerator.next
-  return new TraceId(transactionId, spanId)
+  return new TraceId(transactionId || getTransactionId(), spanId)
 }
 
 const getAgentInfo = () => ({

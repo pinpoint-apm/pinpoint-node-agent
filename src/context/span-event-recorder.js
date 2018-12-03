@@ -32,7 +32,6 @@ class SpanEventRecorder {
 
   recordApi (methodDescriptor) {
     if (this.spanEvent && methodDescriptor) {
-      console.log('>>> methodDescriptor', methodDescriptor)
       if (methodDescriptor.apiId === 0) {
         this.recordAttribute(DefaultAnnotationKey.API, methodDescriptor.fullName)
         this.recordApiId(0)
@@ -42,10 +41,16 @@ class SpanEventRecorder {
     }
   }
 
+  recordApiDesc (desc) {
+    if (this.spanEvent && desc) {
+      this.recordAttribute(DefaultAnnotationKey.API, desc)
+      this.recordApiId(0)
+    }
+  }
+
   recordAttribute (key, value) {
     if (this.spanEvent && key && value) {
       this.spanEvent.annotations.push(new Annotation(key, value))
-      console.log('annotations >>', this.spanEvent.annotations)
     }
   }
 

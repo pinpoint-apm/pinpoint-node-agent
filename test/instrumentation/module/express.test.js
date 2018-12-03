@@ -14,13 +14,39 @@ function startServer() {
   return new express()
 }
 
+test('Should create new trace with outgoing api call', function (t) {
+  t.plan(1)
+
+  const app = startServer()
+
+  const path = '/test'
+  app.get(path, async (req, res) => {
+    // setTimeout(async () => {
+      // slow outgoing call
+      await axios.get('http://dummy.restapiexample.com/api/v1/employees')
+    // }, 5000)
+    res.send('hello')
+  })
+
+  const server = app.listen(5005, async function () {
+    await axios.get('http://localhost:5005' + path)
+
+    const traceMap = agent.traceContext.getAllTraceObject()
+    t.ok(traceMap.size > 0)
+
+    server.close()
+  })
+})
+
 test('Should create new trace by request', function (t) {
   t.plan(1)
 
   const app = startServer()
 
   const path = '/test'
-  app.get(path, function (req, res) {
+  app.get(path, async (req, res) => {
+    // slow external call
+    await axios.get('http://dummy.restapiexample.agentcom/api/v1/employees')
     res.send('hello')
   })
 
@@ -34,26 +60,3 @@ test('Should create new trace by request', function (t) {
     server.close()
   })
 })
-//
-// test('Should record spanEvent', function (t) {
-//   t.plan(2)
-//
-//   const app = startServer()
-//
-//   const path = '/test'
-//   app.get(path, function (req, res) {
-//     res.send('hello')
-//   })
-//
-//   const server = app.listen(5005, async function () {
-//     await axios.get('http://localhost:5005' + path)
-//
-//     const traceMap = agent.traceContext.getAllTraceObject()
-//     const trace = Array.from(traceMap.values()).find(v => v.spanRecorder && v.spanRecorder.span.rpc === path)
-//     const span = trace.spanRecorder.span
-//     t.ok(span.spanEventList.length > 0)
-//     t.ok(span.spanEventList.some(r => r.serviceType.code === ServiceTypeCode.express))
-//
-//     server.close()
-//   })
-// })

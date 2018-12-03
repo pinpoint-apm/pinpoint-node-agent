@@ -64,8 +64,8 @@ exports.traceOutgoingRequest = function (agent, moduleName) {
             const name = req.method + ' ' + req._headers.host + url.parse(req.path).pathname
             const spanEventRecorder = trace.traceBlockBegin()
             // FIXME : Http 호출이 어디서 나가는 지 알수가 없음. Type을 추가해야할 듯함.
-            spanEventRecorder.recordServiceType(ServiceTypeCode.koa)
-            spanEventRecorder.recordApi(name)
+            spanEventRecorder.recordServiceType(ServiceTypeCode.ASYNC_HTTP_CLIENT)
+            spanEventRecorder.recordApiDesc(name)
 
             req.on('response', onresponse)
 

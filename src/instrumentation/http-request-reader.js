@@ -4,18 +4,18 @@ const PinpointHeader = require('constant/http-header').PinpointHeader
 const TraceId = require('context/trace-id')
 
 class HttpRequestReader {
-  constructor (req) {
-    if (!req) {
+  constructor (request) {
+    if (!request) {
       throw new Error
     }
-    this.transactionId = req.headers[PinpointHeader.HTTP_TRACE_ID.toLowerCase()]
-    this.spanId = req.headers[PinpointHeader.HTTP_SPAN_ID.toLowerCase()]
-    this.parentSpanId = req.headers[PinpointHeader.HTTP_PARENT_SPAN_ID.toLowerCase()]
-    this.flag = req.headers[PinpointHeader.HTTP_FLAGS.toLowerCase()]
+    this.transactionId = request.headers[PinpointHeader.HTTP_TRACE_ID.toLowerCase()]
+    this.spanId = request.headers[PinpointHeader.HTTP_SPAN_ID.toLowerCase()]
+    this.parentSpanId = request.headers[PinpointHeader.HTTP_PARENT_SPAN_ID.toLowerCase()]
+    this.flag = request.headers[PinpointHeader.HTTP_FLAGS.toLowerCase()]
 
-    this.rpcName = url.parse(req.url).pathname
-    this.endPoint = req.headers && req.headers.host
-    this.remoteAddress = req.connection.remoteAddress
+    this.rpcName = url.parse(request.url).pathname
+    this.endPoint = request.headers && request.headers.host
+    this.remoteAddress = request.connection.remoteAddress
   }
 
   getTraceId () {

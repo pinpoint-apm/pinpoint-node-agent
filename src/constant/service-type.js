@@ -4,6 +4,8 @@ const ServiceTypeCode = {
   koa : 5200,
   mongodb : 2700,
   redis : 8200,
+
+  ASYNC_HTTP_CLIENT : 9056,
 }
 
 const ServiceTypeProperty = {

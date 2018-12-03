@@ -31,9 +31,10 @@ class SpanRecorder {
     }
   }
 
+
   recordAttribute (key, value) {
     if (this.span && key && value) {
-      this.span.annotations.push(new 2Annotation(key, value))
+      this.span.annotations.push(new Annotation(key, value))
     }
   }
 

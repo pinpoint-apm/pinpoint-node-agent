@@ -41,7 +41,7 @@ class Agent {
     }
   }
 
-  currentTraceObject (j) {
+  currentTraceObject () {
     return this.traceContext.currentTraceObject()
   }
 

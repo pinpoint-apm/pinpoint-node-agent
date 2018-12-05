@@ -59,7 +59,10 @@ class SpanRecorder {
   recordException (error) {
     if (this.span && error) {
       this.span.err = 1
-      this.span.exceptionInfo = error
+      this.span.exceptionInfo = {
+        intValue: error.length,
+        stringValue: error.toString()
+      }
     }
   }
 

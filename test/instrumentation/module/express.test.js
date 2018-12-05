@@ -38,23 +38,31 @@ test('Should create new trace with outgoing api call', function (t) {
   })
 })
 
-test('Should create new trace by request', function (t) {
+test('Should record exception', function (t) {
   t.plan(1)
 
   const app = startServer()
 
   const path = '/test'
-  app.get(path, async (req, res) => {
-    // slow external call
-    await axios.get('http://dummy.restapiexample.agentcom/api/v1/employees')
+  app.get(path, async (req, res, next) => {
+    try {
+      const foo = null
+      const bar = foo.no.value
+    } catch (e) {
+      next(e)
+    }
     res.send('hello')
   })
+  app.use((error, req, res, next) => {
+    console.log('============================= error handling middleware')
+    res.json({ message: error.message });
+  });
+
 
   const server = app.listen(5005, async function () {
     await axios.get('http://localhost:5005' + path)
 
     const traceMap = agent.traceContext.getAllTraceObject()
-    // console.log('traceMap', traceMap)
     t.ok(traceMap.size > 0)
 
     server.close()

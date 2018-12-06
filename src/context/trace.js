@@ -28,7 +28,7 @@ class Trace {
     this.callStack.push(spanEvent)
     this.sequence++
 
-    this.spanEventRecorder = new SpanEventRecorder(spanEvent)
+    this.spanEventRecorder = new SpanEventRecorder(spanEvent, this.span)
     return this.spanEventRecorder
   }
 

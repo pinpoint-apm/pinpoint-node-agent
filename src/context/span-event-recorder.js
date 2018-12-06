@@ -3,8 +3,9 @@ const ServiceType = require('./service-type')
 const DefaultAnnotationKey = require('constant/annotation-key').DefaultAnnotationKey
 
 class SpanEventRecorder {
-  constructor (spanEvent) {
+  constructor (spanEvent, span) {
     this.spanEvent = spanEvent
+    this.span = span
   }
 
   recordStartTime (startTime) {
@@ -54,11 +55,15 @@ class SpanEventRecorder {
     }
   }
 
-  recordException (error) {
+  recordException (error, isError) {
     if (this.spanEvent && error) {
       this.spanEvent.exceptionInfo = {
         intValue: 1,
         stringValue: error.toString()
+      }
+
+      if (this.span && isError) {
+        this.span.err = 1
       }
     }
   }

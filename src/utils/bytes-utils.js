@@ -42,7 +42,6 @@ var BytesUtils = {
      */
     
     longToBuffer : function (value) {
-        console.log('value', value)
         var binaryStr = value.toString(2);
         var bufferLen = parseInt(binaryStr.length / 7 + 1);
         var buffer = new Buffer(bufferLen);

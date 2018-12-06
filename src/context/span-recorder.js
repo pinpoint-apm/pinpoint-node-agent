@@ -26,7 +26,7 @@ class SpanRecorder {
         this.recordAttribute(DefaultAnnotationKey.API, methodDescriptor.fullName)
         this.recordApiId(0)
       } else {
-        this.recordApiId(apiId)
+        this.recordApiId(methodDescriptor.apiId)
       }
     }
   }

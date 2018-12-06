@@ -12,7 +12,7 @@ class Span {
     this.agentId = agentInfo.agentId; // required, from config
     this.applicationName = agentInfo.applicationName; // required, from config
     this.agentStartTime = agentInfo.agentStartTime; // required, from config
-    this.serviceType = 0; // required
+    this.serviceType = agentInfo.serviceType; // required
     this.spanId = traceId.spanId; // required
     this.parentSpanId = traceId.parentSpanId;
     this.transactionId = TransactionIdUtil.formatBytes(tid)

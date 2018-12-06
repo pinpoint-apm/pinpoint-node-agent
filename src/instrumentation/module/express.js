@@ -24,7 +24,7 @@ module.exports = function(agent, version, express) {
             const spanEventRecorder = trace.traceBlockBegin()
             spanEventRecorder.recordServiceType(ServiceTypeCode.express)
             spanEventRecorder.recordApi(ExpressMethodDescritpor.HANDLE)
-            spanEventRecorder.recordException(err)
+            spanEventRecorder.recordException(err, true)
             trace.traceBlockEnd(spanEventRecorder)
             return original.apply(this, arguments)
           }
@@ -52,23 +52,12 @@ module.exports = function(agent, version, express) {
   }
 
 
-  console.log('simm process_params')
   shimmer.wrap(express.Router, 'process_params', function (orig) {
     return function (layer, called, req, res, done) {
-      console.log('call process_params')
       patchLayer(layer)
       return orig.apply(this, arguments)
     }
   })
-
-  shimmer.wrap(express.Router, 'get', function (orig) {
-    return function (layer, called, req, res, done) {
-      console.log('call process_params')
-      patchLayer(layer)
-      return orig.apply(this, arguments)
-    }
-  })
-
 
   return express
 }

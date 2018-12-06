@@ -1,8 +1,10 @@
 'use strict'
 
-const HttpRequestReader = require('instrumentation/http-request-reader')
 const endOfStream = require('end-of-stream')
 const url = require('url')
+
+const HttpRequestReader = require('instrumentation/http-request-reader')
+const HttpMethodDescritpor = require('constant/method-descriptor').HttpMethodDescritpor
 
 exports.instrumentRequest = function (agent, moduleName) {
     return function(original) {
@@ -16,6 +18,7 @@ exports.instrumentRequest = function (agent, moduleName) {
                 const httpRequestReader = new HttpRequestReader(req)
                 const trace = agent.createTraceObject(httpRequestReader.getTraceId())
                 recordRequest(trace.spanRecorder, httpRequestReader)
+                trace.spanRecorder.recordApiId(HttpMethodDescritpor.SERVER_REQUEST.apiId)
 
                 // todo. agent setting data?
 

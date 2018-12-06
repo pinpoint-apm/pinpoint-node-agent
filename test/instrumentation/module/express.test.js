@@ -7,60 +7,68 @@ fixture.config.enabledDataSending = true
 const Agent = require('agent')
 const agent = new Agent(fixture.config)
 
-const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
-
 function startServer() {
   const express = require('express')
   return new express()
 }
 
-test('Should create new trace with outgoing api call', function (t) {
-  t.plan(1)
+const TEST_ENV = {
+  host: 'localhost',
+  port: 5005,
+}
+const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
+// close client connection
+setTimeout(() => agent.dataSender.closeClient(), 4000)
+
+// send api meta info
+agent.sendApiMetaInfo()
+
+test('Should record a request taking more than 2 sec', function (t) {
+  t.plan(2)
+
+  const PATH = '/express/test'
   const app = startServer()
-
-  const path = '/test'
-  app.get(path, async (req, res) => {
-    // setTimeout(async () => {
+  app.get(PATH, async (req, res) => {
       // slow outgoing call
-      await axios.get('http://dummy.restapiexample.com/api/v1/employees')
-    // }, 5000)
+    await axios.get('http://dummy.restapiexample.com/api/v1/employees')
     res.send('hello')
   })
 
-  const server = app.listen(5005, async function () {
-    await axios.get('http://localhost:5005' + path)
+  const server = app.listen(TEST_ENV.port, async function () {
+    const result = await axios.get(getServerUrl(PATH))
+    t.ok(result.status, 200)
 
     const traceMap = agent.traceContext.getAllTraceObject()
+    console.log(traceMap.size)
     t.ok(traceMap.size > 0)
 
     server.close()
   })
 })
 
-test('Should record exception', function (t) {
-  t.plan(1)
+test('Should record a request with internal error', function (t) {
+  t.plan(2)
 
+  const PATH = '/express/test/error'
   const app = startServer()
-
-  const path = '/test'
-  app.get(path, async (req, res, next) => {
+  app.get(PATH, async (req, res, next) => {
     try {
       const foo = null
-      const bar = foo.no.value
+      const bar = foo.noValue
     } catch (e) {
       next(e)
     }
     res.send('hello')
   })
   app.use((error, req, res, next) => {
-    console.log('============================= error handling middleware')
     res.json({ message: error.message });
+    res.status = 500
   });
 
-
-  const server = app.listen(5005, async function () {
-    await axios.get('http://localhost:5005' + path)
+  const server = app.listen(TEST_ENV.port, async function () {
+    const result = await axios.get(getServerUrl(PATH))
+    t.ok(result.status, 500)
 
     const traceMap = agent.traceContext.getAllTraceObject()
     t.ok(traceMap.size > 0)

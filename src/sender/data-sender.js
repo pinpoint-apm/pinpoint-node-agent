@@ -50,6 +50,11 @@ class DataSender {
       this.spanUdpClient.send(packet)
     }
   }
+
+  closeClient () {
+    this.tcpClient.close()
+    this.spanUdpClient.close()
+  }
 }
 
 module.exports = DataSender

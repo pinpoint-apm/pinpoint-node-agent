@@ -91,7 +91,9 @@ class Agent {
   sendApiMetaInfo () {
     try {
       MethodDescriptors.forEach(methodDescriptor => {
-        Object.keys(methodDescriptor).forEach(key => {
+        Object.keys(methodDescriptor)
+        .filter(key => methodDescriptor[key].apiId !== 0)
+        .forEach(key => {
           const apiMetaInfo = this.createApiMetaInfo(methodDescriptor[key])
           this.dataSender.sendApiMetaInfo(apiMetaInfo)
         })

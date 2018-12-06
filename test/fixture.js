@@ -4,8 +4,8 @@ const IdGenerator = require('context/id-generator')
 const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
 
 const config = {
-  agentId: 'dev-agent-2',
-  applicationName: 'dev agent2',
+  agentId: 'dev-agent-app',
+  applicationName: 'dev agent application',
   serviceType: ServiceTypeCode.express,
   collectorIp: '***REMOVED***',
   collectorTcpPort: 9994,
@@ -28,6 +28,7 @@ const getTraceId = (transactionId) => {
 const getAgentInfo = () => ({
   agentId: config.agentId,
   applicationName: config.applicationName,
+  serviceType : config.serviceType,
   agentStartTime: Date.now(),
 })
 

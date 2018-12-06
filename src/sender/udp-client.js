@@ -9,18 +9,19 @@ class UdpClient {
   }
 
   send (msg) {
-    console.log('host and port', this.host, this.port)
     this.client.send(msg, this.port, this.host, (err) => {
       if (err)  {
         console.log('udp send error', err)
         return
       }
-      console.log('success')
+      console.log('udp sent successfully')
     })
   }
 
   close () {
-    this.client.close()
+    if (this.client) {
+      this.client.close()
+    }
   }
 }
 

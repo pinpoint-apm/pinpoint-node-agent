@@ -1,6 +1,5 @@
 const test = require('tape')
-const fixture = require('../fixture')
-const util = require('../util')
+const { log, fixture, util } = require('../test-helper')
 
 const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
 const TraceContext = require('context/trace-context')

@@ -1,4 +1,5 @@
 const test = require('tape')
+const { log, fixture, util } = require('../test-helper')
 
 const TransactionId = require('context/transaction-id')
 const TraceId = require('context/trace-id')

@@ -1,3 +1,5 @@
+'use strict'
+
 // TODO 코드 확인 후 추가
 const ServiceTypeCode = {
   express: 1000,

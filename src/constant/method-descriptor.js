@@ -1,3 +1,5 @@
+'use strict'
+
 const MethodDescriptor = require('context/method-descriptor')
 
 const HttpMethodDescritpor = {

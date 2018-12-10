@@ -1,6 +1,9 @@
+const test = require('tape')
 const net = require('net')
 
-const test = require('tape')
+const { log, fixture, util, enableDataSending } = require('../test-helper')
+enableDataSending()
+
 const TcpClient = require('sender/tcp-client')
 
 const HOST = '127.0.0.1'
@@ -8,24 +11,24 @@ const PORT = 5000
 
 let server = null
 const createServer = () => {
-  console.log('start creating server !!')
+  log.debug('start creating server !!')
   server = net.createServer((socket) => {
     socket.on('data', (chunk) => {
-      console.log('received chunk :', chunk.toString())
+      log.debug('received chunk :', chunk.toString())
     })
   })
 
   server.on('listening', () => {
-    console.log('listening')
+    log.debug('listening')
   })
 
   server.on('error', (err) => {
-    console.log('error', err)
+    log.debug('error', err)
     server.close()
   })
 
   server.on('close', () => {
-    console.log('close')
+    log.debug('close')
   })
 
   server.listen(PORT)

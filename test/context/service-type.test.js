@@ -1,4 +1,5 @@
 const test = require('tape')
+const { log, fixture, util } = require('../test-helper')
 
 const serviceTypeConstant = require('constant/service-type')
 const ServiceTypeProperty = serviceTypeConstant.ServiceTypeProperty

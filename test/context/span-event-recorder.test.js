@@ -1,6 +1,5 @@
 const test = require('tape')
-const fixture = require('../fixture')
-const util = require('../util')
+const { log, fixture, util } = require('../test-helper')
 
 const Span = require('context/span')
 const SpanEvent = require('context/span-event')

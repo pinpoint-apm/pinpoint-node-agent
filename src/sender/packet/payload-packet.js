@@ -1,10 +1,11 @@
+'use strict'
+
 //fixme
 const appendPayload = (header, payload, offset) => {
   if (payload === null) {
     header.writeInt32BE(-1)
     return header
   } else {
-    console.log('append offset', )
     header.writeInt32BE(payload.length, offset)
     return Buffer.concat([header, payload])
   }

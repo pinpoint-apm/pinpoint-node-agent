@@ -1,3 +1,5 @@
+'use strict'
+
 const net = require('net')
 
 const TcpClient = require('sender/tcp-client')
@@ -6,6 +8,7 @@ const serialize = require('data/serializer').serialize
 const SendPacket = require('sender/packet/send-packet')
 const RequestPacket = require('sender/packet/request-packet')
 const TSpan = require('data/dto/Trace_types').TSpan
+const log = require('utils/logger')
 
 class DataSender {
   constructor (config) {
@@ -25,18 +28,18 @@ class DataSender {
 
   send (tData) {
     if (tData && this.enabledDataSending) {
-      console.log('tData >> ', tData)
+      log.debug('tData >> ', tData)
       const packet = new SendPacket(serialize(tData)).toBuffer()
-      console.log('packet >> ', packet)
+      log.debug('packet >> ', packet)
       this.tcpClient.send(packet)
     }
   }
 
   sendApiMetaInfo (tApiMetaInfo) {
     if (tApiMetaInfo && this.enabledDataSending) {
-      console.log('tApiMetaInfo >> ', tApiMetaInfo)
+      log.debug('tApiMetaInfo >> ', tApiMetaInfo)
       const packet = new RequestPacket(tApiMetaInfo.apiId, serialize(tApiMetaInfo)).toBuffer()
-      console.log('packet >> ', packet)
+      log.debug('packet >> ', packet)
       this.tcpClient.send(packet)
     }
   }
@@ -44,9 +47,9 @@ class DataSender {
   sendSpan (span) {
     if (span && this.enabledDataSending) {
       const tSpan = new TSpan(span)
-      console.log('spanData>> ', tSpan)
+      log.debug('spanData>> ', tSpan)
       const packet = serialize(tSpan)
-      console.log('packet >> ', packet)
+      log.debug('packet >> ', packet)
       this.spanUdpClient.send(packet)
     }
   }

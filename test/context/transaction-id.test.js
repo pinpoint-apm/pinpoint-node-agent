@@ -1,4 +1,5 @@
 const test = require('tape')
+const { log, fixture, util } = require('../test-helper')
 
 const SequenceGenerator = require('context/sequence-generator')
 const TransactionId = require('context/transaction-id')

@@ -1,3 +1,4 @@
+'use strict'
 
 class BasicPacket {
   constructor (payload) {

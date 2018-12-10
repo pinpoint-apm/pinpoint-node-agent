@@ -3,16 +3,17 @@
 const shimmer = require('shimmer')
 const semver = require('semver')
 const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
+const log = require('utils/logger')
 
 module.exports = function (agent, version, redis) {
 
     const proto = redis.RedisClient && redis.RedisClient.prototype
 
     if (semver.satisfies(version, '>2.5.3')) {
-        console.debug('shimming redis.RedisClient.prototype.internal_send_command')
+        log.debug('shimming redis.RedisClient.prototype.internal_send_command')
         shimmer.wrap(proto, 'internal_send_command', wrapInternalSendCommand)
     } else {
-        console.debug('shimming redis.RedisClient.prototype.send_command')
+        log.debug('shimming redis.RedisClient.prototype.send_command')
         shimmer.wrap(proto, 'send_command', wrapSendCommand)
     }
 

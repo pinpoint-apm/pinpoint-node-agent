@@ -1,3 +1,5 @@
+'use strict'
+
 const thrift = require('thrift');
 const TCompactProtocol = thrift.TCompactProtocol
 const TFramedTransport = thrift.TFramedTransport

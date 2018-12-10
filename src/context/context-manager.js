@@ -1,4 +1,7 @@
+'use strict'
+
 const async_hooks = require('async_hooks')
+const log = require('utils/logger')
 
 const traceObjectMap = new Map()
 
@@ -19,13 +22,13 @@ async_hooks.createHook({ init, destory }).enable()
 
 const getObject = () => {
   const asyncId = async_hooks.executionAsyncId()
-  console.log('getter asyncId :', asyncId)
+  log.debug('getter asyncId :', asyncId)
   return traceObjectMap.get(asyncId)
 }
 
 const setObject = (value) => {
   const asyncId = async_hooks.executionAsyncId()
-  console.log('setter asyncId :', asyncId)
+  log.debug('setter asyncId :', asyncId)
   traceObjectMap.set(asyncId, value)
 }
 

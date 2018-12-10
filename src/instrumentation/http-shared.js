@@ -2,6 +2,7 @@
 
 const endOfStream = require('end-of-stream')
 const url = require('url')
+const log = require('utils/logger')
 
 const HttpRequestReader = require('instrumentation/http-request-reader')
 const HttpMethodDescritpor = require('constant/method-descriptor').HttpMethodDescritpor
@@ -11,8 +12,8 @@ exports.instrumentRequest = function (agent, moduleName) {
         return function (event ,req, res) {
             if (event === 'request') {
                 // todo. agent log
-                console.log('intercepted request event call to %s.Server.prototype.emit', moduleName)
-                console.warn('start instrumentRequest')
+                log.debug('intercepted request event call to %s.Server.prototype.emit', moduleName)
+                log.warn('start instrumentRequest')
 
                 // console.log(req)
                 const httpRequestReader = new HttpRequestReader(req)
@@ -50,7 +51,7 @@ const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
 exports.traceOutgoingRequest = function (agent, moduleName) {
     return function (original) {
         return function () {
-            console.warn('start traceOutgoingRequest')
+            log.warn('start traceOutgoingRequest')
             const req = original.apply(this, arguments)
             /*
             FIXME: 다음의 방법을 쓸 수 없다. ClientRequest 이기에 실행 될 때 문제가 있음.
@@ -75,7 +76,7 @@ exports.traceOutgoingRequest = function (agent, moduleName) {
             return req
 
             function onresponse (res) {
-                console.debug('intercepted http.ClientRequest response event %o', { id: id })
+                log.debug('intercepted http.ClientRequest response event %o', { id: id })
                 // Inspired by:
                 // https://github.com/nodejs/node/blob/9623ce572a02632b7596452e079bba066db3a429/lib/events.js#L258-L274
                 if (res.prependListener) {
@@ -95,7 +96,7 @@ exports.traceOutgoingRequest = function (agent, moduleName) {
             }
 
             function onEnd () {
-                console.debug('intercepted http.IncomingMessage end event %o', { id: id })
+                log.debug('intercepted http.IncomingMessage end event %o', { id: id })
                 if (trace) {
                     trace.traceBlockEnd(spanEventRecorder)
                 }

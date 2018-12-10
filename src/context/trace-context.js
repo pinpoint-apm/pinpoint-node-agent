@@ -1,3 +1,5 @@
+'use strict'
+
 const contextManager = require('context/context-manager')
 const Trace = require('context/trace')
 const TransactionId = require('context/transaction-id')

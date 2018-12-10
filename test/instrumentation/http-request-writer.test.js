@@ -2,8 +2,8 @@ const test = require('tape')
 const axios = require('axios')
 const http = require('http')
 
-const fixture = require('../fixture')
-fixture.config.enabledDataSending = true
+const { log, fixture, util, enableDataSending } = require('../test-helper')
+enableDataSending()
 
 const Agent= require('agent')
 const agent = new Agent(fixture.config)

@@ -1,3 +1,4 @@
+'use strict'
 
 class SpanEvent {
   constructor (spanId, sequence) {

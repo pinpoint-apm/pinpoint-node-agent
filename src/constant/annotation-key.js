@@ -1,3 +1,5 @@
+'use strict'
+
 const AnnotationKey = require('context/annotation-key')
 
 const DefaultAnnotationKey = {

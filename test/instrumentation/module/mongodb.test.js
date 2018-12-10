@@ -1,3 +1,7 @@
+const test = require('tape')
+const { log, fixture, util, enableDataSending } = require('../../test-helper')
+enableDataSending()
+
 const Agent = require('agent')
 const agent = new Agent({
     agentId: 'agent-for-dev',
@@ -6,7 +10,6 @@ const agent = new Agent({
 
 const Server = require('mongodb-core').Server
 
-const test = require('tape')
 const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
 
 test('instrument simple command', function(t) {
@@ -20,7 +23,7 @@ test('instrument simple command', function(t) {
     })
 
     server.on('connect', function(_server) {
-        console.log('connected');
+        log.debug('connected');
         const trace = agent.createTraceObject(null)
         const spanEventRecorder = trace.traceBlockBegin()
         spanEventRecorder.recordServiceType(ServiceTypeCode.mongodb)

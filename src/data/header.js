@@ -1,3 +1,4 @@
+'use strict'
 
 const SIGNATURE = -17
 const VERSION = 16

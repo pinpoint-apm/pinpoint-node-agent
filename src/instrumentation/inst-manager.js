@@ -1,4 +1,7 @@
+'use strict'
+
 const shimmer = require('shimmer')
+const log = require('utils/logger')
 
 const MODULES = [
   'express',
@@ -15,21 +18,21 @@ function init(agent) {
       return function (name) {
         const m = original.apply(this, arguments)
         if (MODULES.includes(name) && agent.includedModules(name)) {
-          console.log('load module:', name)
+          log.debug('load module:', name)
           // todo. versioning Logic add On
           const version = '2.5.6'
           try {
             require('./module/' + name)(agent, version, m)
             agent.setModules(name)
           } catch (e) {
-            console.error('fail to load:', e)
+            log.error('fail to load:', e)
           }
         }
         return m
       }
     })
   } catch (e) {
-    console.error('error occurred', e)
+    log.error('error occurred', e)
   }
 }
 

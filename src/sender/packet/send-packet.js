@@ -1,3 +1,5 @@
+'use strict'
+
 const BasicPacket = require('./basic-packet')
 const PacketType = require('./packet-type').PacketType
 const appendPayload = require('./payload-packet').appendPayload

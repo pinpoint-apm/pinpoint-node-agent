@@ -1,3 +1,5 @@
+'use strict'
+
 const SequenceGenerator = require('context/sequence-generator')
 
 const DELIMETER = '^'

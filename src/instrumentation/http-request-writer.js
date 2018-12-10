@@ -1,3 +1,5 @@
+'use strict'
+
 const PinpointHeader = require('constant/http-header').PinpointHeader
 const IdGenerator = require('context/id-generator')
 

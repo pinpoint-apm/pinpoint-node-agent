@@ -1,3 +1,5 @@
+'use strict'
+
 const PinpointHeader = {
   HTTP_TRACE_ID : 'Pinpoint-TraceID',
   HTTP_SPAN_ID : 'Pinpoint-SpanID',

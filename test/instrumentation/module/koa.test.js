@@ -1,11 +1,14 @@
+const test = require('tape')
+const axios = require('axios')
+const { log, fixture, util, enableDataSending } = require('../../test-helper')
+enableDataSending()
+
 const Agent = require('agent')
 const agent = new Agent({
     agentId: 'agent-for-dev',
     applicationName: 'test web application'
 })
 
-const test = require('tape')
-const axios = require('axios')
 
 function startServer() {
     const koa = require('koa')
@@ -67,7 +70,7 @@ test('Should create new trace by request', function(t) {
         // await axios.get('http://localhost:3000/users')
         t.ok(traceMap.size > 0)
 
-        console.log(traceMap)
+        log.debug(traceMap)
         // await axios.get('http://localhost:5007' + path2)
 
         server.close()

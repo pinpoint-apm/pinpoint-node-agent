@@ -1,3 +1,5 @@
+'use strict'
+
 const MethodType = {
   DEFAULT: 0,
   EXCEPTION: 1,

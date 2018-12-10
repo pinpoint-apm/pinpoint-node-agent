@@ -1,3 +1,5 @@
+'use strict'
+
 const TransactionIdUtil = require('utils/transaction-id-util');
 
 class Span {

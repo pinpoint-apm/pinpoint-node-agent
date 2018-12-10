@@ -1,8 +1,8 @@
 const test = require('tape')
 const axios = require('axios')
+const { log, fixture, util, enableDataSending } = require('../../test-helper')
+enableDataSending()
 
-const fixture = require('../../fixture')
-fixture.config.enabledDataSending = true
 
 const Agent = require('agent')
 const agent = new Agent(fixture.config)
@@ -40,7 +40,7 @@ test('Should record a request taking more than 2 sec', function (t) {
     t.ok(result.status, 200)
 
     const traceMap = agent.traceContext.getAllTraceObject()
-    console.log(traceMap.size)
+    log.debug(traceMap.size)
     t.ok(traceMap.size > 0)
 
     server.close()

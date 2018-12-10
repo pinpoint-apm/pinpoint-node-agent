@@ -1,3 +1,5 @@
+'use strict'
+
 const Annotation = require('./annotation')
 const ServiceType = require('./service-type')
 const DefaultAnnotationKey = require('constant/annotation-key').DefaultAnnotationKey

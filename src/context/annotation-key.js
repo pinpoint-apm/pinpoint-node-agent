@@ -1,3 +1,5 @@
+'use strict'
+
 const AnnotationKeyProperty = require('constant/annotation').AnnotationKeyProperty
 
 class AnnotationKey {

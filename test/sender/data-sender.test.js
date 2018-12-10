@@ -1,8 +1,8 @@
 const test = require('tape')
 const axios = require('axios')
 
-const fixture = require('../fixture')
-fixture.config.enabledDataSending = true
+const { log, fixture, util, enableDataSending } = require('../test-helper')
+enableDataSending()
 
 const Trace = require('context/trace')
 const DataSender = require('sender/data-sender')

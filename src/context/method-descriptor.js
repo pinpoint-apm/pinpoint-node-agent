@@ -1,3 +1,5 @@
+'use strict'
+
 const MethodType = require('constant/method-type').MethodType
 
 class MethodDescriptor {

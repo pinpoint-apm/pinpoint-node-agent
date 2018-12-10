@@ -1,40 +1,52 @@
+'use strict'
+
 const net = require('net')
+const log = require('utils/logger')
+
+const DEFAULT_TIMEOUT = 3000
 
 class TcpClient {
   constructor (host, port) {
     this.host = host
     this.port = port
-    this.client = null
+    this.socket = null
+
+    this.init()
   }
 
-  connect (send) {
-    this.client = new net.Socket()
-    this.client.connect(this.port, this.host, () => {
-      console.log('tcp connected')
-      send()
+  init () {
+    if (this.socket) {
+      this.close()
+    }
+    this.socket = new net.Socket()
+    this.socket.setTimeout(DEFAULT_TIMEOUT)
+    this.socket.connect(this.port, this.host, () => {
+      log.debug('tcp socket created and connected')
     })
-    this.client.on('data', (data) => {
-      console.log('tcp data received', data)
-    })
-    this.client.on('end', () => {
-      console.log('tcp disconnected')
+    this.socket.on('data', (data) => {
+      log.debug('tcp data received', data)
     })
   }
 
-  send (msg) {
+  send (msg, callback) {
     try {
-      this.connect(() => {
-        this.client.write(msg)
-        console.log('tcp sent successfully')
-      })
-    } catch (e) {
-      console.log('tcp sending error',  e)
+      if (!this.socket) {
+        this.init()
+      }
+      this.socket.write(msg)
+      log.debug('tcp sent successfully')
+      callback && callback.apply()
+    } catch (err) {
+      log.debug('error in tcp sending',  err)
+      this.close()
     }
   }
 
   close () {
-    if (this.client) {
-      this.client.end()
+    if (this.socket) {
+      this.socket.end()
+      this.socket = null
+      log.info('tcp socket closed')
     }
   }
 }

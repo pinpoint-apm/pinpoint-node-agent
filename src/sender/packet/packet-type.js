@@ -1,3 +1,5 @@
+'use strict'
+
 const PacketType = {
   APPLICATION_SEND : 1,
   APPLICATION_TRACE_SEND : 2,

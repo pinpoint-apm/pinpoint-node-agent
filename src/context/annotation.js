@@ -1,3 +1,5 @@
+'use strict'
+
 const annotationConstant = require('constant/annotation')
 const TypedValue = require('context/typed-value')
 

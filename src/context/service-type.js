@@ -1,3 +1,5 @@
+'use strict'
+
 const serviceTypeConstant = require('constant/service-type')
 const ServiceTypeProperty = serviceTypeConstant.ServiceTypeProperty
 

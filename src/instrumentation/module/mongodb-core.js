@@ -3,7 +3,7 @@
 const shimmer = require('shimmer')
 const semver = require('semver')
 const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
-
+const log = require('utils/logger')
 
 const SERVER_FNS = ['insert', 'update', 'remove', 'auth']
 const CURSOR_FNS_FIRST = ['_find', '_getmore']
@@ -14,15 +14,15 @@ module.exports = function(agent, version, mongodb) {
     }
 
     if (mongodb.Server) {
-        console.debug('shimming mongodb-core.Server.prototype.command')
+        log.debug('shimming mongodb-core.Server.prototype.command')
         shimmer.wrap(mongodb.Server.prototype, 'command', wrapCommand)
 
-        console.debug('shimming mongodb-core.Server.prototype functions:', SERVER_FNS)
+        log.debug('shimming mongodb-core.Server.prototype functions:', SERVER_FNS)
         shimmer.massWrap(mongodb.Server.prototype, SERVER_FNS, wrapQuery)
     }
 
     if (mongodb.Cursor) {
-        console.debug('shimming mongodb-core.Cursor.prototype functions:', CURSOR_FNS_FIRST)
+        log.debug('shimming mongodb-core.Cursor.prototype functions:', CURSOR_FNS_FIRST)
         shimmer.massWrap(mongodb.Cursor.prototype, CURSOR_FNS_FIRST, wrapCursor)
     }
 
@@ -63,7 +63,7 @@ module.exports = function(agent, version, mongodb) {
             return orginal.apply(this, arguments)
 
             function wrappedCallback () {
-                console.debug('intercepted mongodb-core.Server.prototype.command callback %o', { id: id })
+                log.debug('intercepted mongodb-core.Server.prototype.command callback %o', { id: id })
                 trace.traceBlockEnd(spanEventRecorder)
                 return cb.apply(this, arguments)
             }
@@ -95,7 +95,7 @@ module.exports = function(agent, version, mongodb) {
             return orginal.apply(this, arguments)
 
             function wrappedCallback () {
-                console.debug('intercepted mongodb-core.Server.prototype.command callback %o', { id: id })
+                log.debug('intercepted mongodb-core.Server.prototype.command callback %o', { id: id })
                 trace.traceBlockEnd(spanEventRecorder)
                 return cb.apply(this, arguments)
             }
@@ -108,7 +108,7 @@ module.exports = function(agent, version, mongodb) {
 
             const id = 'mongodbTestCursorId' // todo. 협의 후 기록 혹은 삭제
 
-            console.debug('intercepted call to mongodb-core.Cursor.prototype.%s %o', name, { id: id })
+            log.debug('intercepted call to mongodb-core.Cursor.prototype.%s %o', name, { id: id })
 
             let spanEventRecorder
             let cb
@@ -128,7 +128,7 @@ module.exports = function(agent, version, mongodb) {
             return orginal.apply(this, arguments)
 
             function wrappedCallback () {
-                console.debug('intercepted mongodb-core.Cursor.prototype.%s callback %o', name, { id: id })
+                log.debug('intercepted mongodb-core.Cursor.prototype.%s callback %o', name, { id: id })
                 trace.traceBlockEnd(spanEventRecorder)
 
                 return cb.apply(this, arguments)

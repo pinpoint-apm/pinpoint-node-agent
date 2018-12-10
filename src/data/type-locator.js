@@ -1,3 +1,5 @@
+'use strict'
+
 const Header = require('./header').Header
 const pinpointTypes = require('data/dto/Pinpoint_types')
 const traceTypes = require('data/dto/Trace_types')

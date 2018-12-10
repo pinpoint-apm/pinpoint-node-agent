@@ -1,3 +1,7 @@
+const test = require('tape')
+const { log, fixture, util, enableDataSending } = require('../../test-helper')
+enableDataSending()
+
 const Agent = require('agent')
 const agent = new Agent({
     agentId: 'agent-for-dev',
@@ -5,7 +9,6 @@ const agent = new Agent({
 })
 
 const redis = require('redis')
-const test = require('tape')
 const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
 
 test('Should create new trace by redis', function(t) {
@@ -84,7 +87,7 @@ test('Should create new trace by redis', function(t) {
             // })
             t.equal(done, 3)
 
-            console.log(agent)
+            log.debug(agent)
             agent.completeTraceObject()
 
             client.quit()

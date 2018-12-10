@@ -1,5 +1,6 @@
-const os = require('os');
+'use strict'
 
+const os = require('os');
 const instManager = require('instrumentation/inst-manager')
 const traceContext = require('context/trace-context')
 const MethodDescriptors = require('constant/method-descriptor').MethodDescriptors
@@ -7,11 +8,14 @@ const TAgentInfo = require('data/dto/Pinpoint_types').TAgentInfo
 const TApiMetaData = require('data/dto/Trace_types').TApiMetaData
 const networkUtils = require('utils/network');
 const DataSender = require('sender/data-sender')
+const log = require('utils/logger')
 
 const getConfig = require('config').get
 
 class Agent {
   constructor (agentConfig) {
+    log.init(agentConfig.logLevel)
+
     this.config = getConfig(agentConfig)
 
     this.agentId = this.config.agentId
@@ -57,7 +61,7 @@ class Agent {
   }
 
   setModules (moduleName) {
-    console.debug('set Loaded module : ' + moduleName)
+    log.debug('set Loaded module : ' + moduleName)
     this.loadedModule.push(moduleName)
   }
 
@@ -65,7 +69,7 @@ class Agent {
     try {
       this.dataSender.send(this.createAgentInfo())
     } catch (e) {
-      console.log(e)
+      log.error(e)
       throw new Error()
     }
     return true
@@ -99,7 +103,7 @@ class Agent {
         })
       })
     } catch (e) {
-      console.log(e)
+      log.error(e)
       throw new Error()
     }
     return true

@@ -1,6 +1,9 @@
+const test = require('tape')
 const dgram = require('dgram')
 
-const test = require('tape')
+const { log, fixture, util, enableDataSending } = require('../test-helper')
+enableDataSending()
+
 const UdpClient = require('sender/udp-client')
 
 const HOST = '127.0.0.1'
@@ -8,25 +11,25 @@ const PORT = 5000
 
 let server = null
 const createServer = () => {
-  console.log('start creating server !!')
+  log.debug('start creating server !!')
   server = dgram.createSocket('udp4')
 
   server.on('listening', () => {
-    console.log('listening')
+    log.debug('listening')
   })
 
   server.on('message', (msg, info) => {
-    console.log('message : ', msg.toString())
-    console.log('message info : ', info)
+    log.debug('message : ', msg.toString())
+    log.debug('message info : ', info)
   })
 
   server.on('error', (err) => {
-    console.log('error', err)
+    log.debug('error', err)
     server.close()
   })
 
   server.on('close', () => {
-    console.log('close')
+    log.debug('close')
   })
 
   server.bind(PORT)

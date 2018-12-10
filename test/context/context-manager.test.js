@@ -1,4 +1,5 @@
 const test = require('tape')
+const { log, fixture, util } = require('../test-helper')
 
 const contextManger = require('context/context-manager')
 

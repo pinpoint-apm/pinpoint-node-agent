@@ -1,8 +1,7 @@
 const test = require('tape')
+const { log, fixture, util } = require('../test-helper')
 
 const Trace = require('context/trace')
-const fixture = require('../fixture')
-const util = require('../util')
 
 test('Should begin/end trace block', async function (t) {
   t.plan(2)
@@ -17,7 +16,7 @@ test('Should begin/end trace block', async function (t) {
   await util.sleep(200)
   trace.traceBlockEnd(spanEventRecorder)
 
-  console.log('spanEventRecorder.spanEvent.elapsedTime', spanEventRecorder.spanEvent.elapsedTime)
+  log.debug('spanEventRecorder.spanEvent.elapsedTime', spanEventRecorder.spanEvent.elapsedTime)
   t.ok(spanEventRecorder.spanEvent.elapsedTime > 100)
 })
 

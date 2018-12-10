@@ -1,3 +1,7 @@
+'use strict'
+
+const LOG_LEVEL = require('utils/logger').LOG_LEVEL
+
 const ENV_MAP = {
   agentId: 'PINPOINT_AGENT_ID',
   applicationName: 'PINPOINT_APPLICATION_NAME',
@@ -18,6 +22,7 @@ const initialConf = {
   collectorSpanPort: null,
 
   enabledDataSending: true,
+  logLevel: LOG_LEVEL.DEBUG
 }
 
 let conf = null
@@ -27,7 +32,6 @@ const init = (agentConfig = {}) => {
       initialConf,
       readEnv(),
       agentConfig)
-  console.log('config', conf)
 }
 
 const readEnv = () => {

@@ -2,6 +2,7 @@ const TransactionId = require('context/transaction-id')
 const TraceId = require('context/trace-id')
 const IdGenerator = require('context/id-generator')
 const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
+const LOG_LEVEL = require('utils/logger').LOG_LEVEL
 
 const config = {
   agentId: 'dev-agent-app',
@@ -11,7 +12,9 @@ const config = {
   collectorTcpPort: 9994,
   collectorStatPort: 9995,
   collectorSpanPort: 9996,
+
   enabledDataSending: false,
+  logLevel: LOG_LEVEL.DEBUG
 }
 
 const getTransactionId = () => {

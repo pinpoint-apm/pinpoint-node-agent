@@ -29,9 +29,10 @@ module.exports = {
         umdNamedDefine: true
     },
     resolve: {
+        // root: [`${__dirname}/src`],
         modules: [`${__dirname}/src`, 'node_modules']
     },
     target: 'node',
     plugins: plugins,
-    externals: [nodeExternals()],
+    // externals: [nodeExternals({whitelist: []})],
 }

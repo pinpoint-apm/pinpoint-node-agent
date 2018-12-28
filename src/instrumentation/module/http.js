@@ -1,7 +1,7 @@
 'use strict'
 
 const shimmer = require('shimmer')
-const httpShared = require('../http-shared')    // Todo: Common binding (e.g. http, https ... )
+const httpShared = require('instrumentation/http-shared')
 const log = require('utils/logger')
 
 module.exports = function(agent, version, http) {

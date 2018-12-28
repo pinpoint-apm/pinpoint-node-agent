@@ -28,15 +28,15 @@ class Logger {
   }
 
   info() {
-    this.logger.info.apply(arguments)
+    this.logger.info.apply(null, arguments)
   }
 
   warn() {
-    this.logger.warn.apply(arguments)
+    this.logger.warn.apply(null, arguments)
   }
 
   error() {
-    this.logger.error.apply(arguments)
+    this.logger.error.apply(null, arguments)
   }
 }
 

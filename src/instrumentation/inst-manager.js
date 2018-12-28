@@ -18,7 +18,6 @@ function init(agent) {
       return function (name) {
         const m = original.apply(this, arguments)
         if (MODULES.includes(name) && agent.includedModules(name)) {
-          log.debug('load module:', name)
           // todo. versioning Logic add On
           const version = '2.5.6'
           try {

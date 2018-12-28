@@ -1,63 +1,88 @@
 'use strict'
 
 const shimmer = require('shimmer')
-const semver = require('semver')
 
+const log = require('../../utils/logger')
 const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
-const ExpressMethodDescritpor = require('constant/method-descriptor').ExpressMethodDescritpor
 
-const patched = new Set()
+const patchedLayerSet = new Set()
 
 module.exports = function(agent, version, express) {
-    // if (!semver.satisfies(version, '^1.0.0')) {
-    //     console.log('express version %s not supported - aborting...', version)
-    //     return express
-    // }
-  function patchLayer(layer) {
-    if (!patched.has(layer.name)) {
-      patched.add(layer.name)
-      shimmer.wrap(layer, 'handle', function (original) {
-        if (original.length !== 4) return original
-        return function (err, req, res, next) {
-          if (err) {
-            const trace = agent.traceContext.currentTraceObject()
-            const spanEventRecorder = trace.traceBlockBegin()
-            spanEventRecorder.recordServiceType(ServiceTypeCode.express)
-            spanEventRecorder.recordApi(ExpressMethodDescritpor.HANDLE)
-            spanEventRecorder.recordException(err, true)
-            trace.traceBlockEnd(spanEventRecorder)
-            return original.apply(this, arguments)
-          }
 
-          const trace = agent.traceContext.currentTraceObject()
-          let spanEventRecorder = null
-          if (trace) {
-            spanEventRecorder = trace.traceBlockBegin()
-            spanEventRecorder.recordServiceType(ServiceTypeCode.express)
-            spanEventRecorder.recordApi(ExpressMethodDescritpor.HANDLE)
-            // spanEventRecorder.recordDestinationId('EXPRESS')
-            // todo. Add on spanRecod
-          }
+  // shimmer.wrap(express.application, 'use', function (original) {
+  //   return function () {
+  //     log.info('>> [Express] express.application.use ', this.stack)
+  //     return original.apply(this, arguments)
+  //   }
+  // })
 
-          const result = original.apply(this, arguments)
+  shimmer.wrap(express.Router, 'use', function (original) {
+    return function () {
+      const result = original.apply(this, arguments)
+      const fn = arguments && arguments[1]
+      if (fn && fn.name !== 'router' && this.stack && this.stack.length) {
+        log.debug('>> [Express] express.Router.use ', this.stack[this.stack.length - 1])
+        const layer = this.stack[this.stack.length - 1]
+        doPatchLayer(layer, 'express.use')
+      }
+      return result
+    }
+  })
 
-          if (trace) {
-            trace.traceBlockEnd(spanEventRecorder)
-          }
+  shimmer.wrap(express.Router, 'route', function (original) {
+    return function () {
+      const result = original.apply(this, arguments)
+      if (this.stack && this.stack.length) {
+        log.debug('>> [Express] express.Router.route ', this.stack[this.stack.length - 1])
+        const layer = this.stack[this.stack.length - 1]
+        doPatchLayer(layer, 'express.route')
+      }
+      return result
+    }
+  })
 
-          return result
-        }
-      })
+  function doPatchLayer(layer, moduleName) {
+    shimmer.wrap(layer, 'handle', function(original) {
+      return (original.length === 4)
+        ? recordErrorHandle(original, moduleName)
+        : recordHandle(original, moduleName)
+    })
+  }
+
+  function recordHandle (original, moduleName) {
+    return function (req, res, next) {
+      const trace = agent.traceContext.currentTraceObject()
+      let spanEventRecorder = null
+      if (trace) {
+        spanEventRecorder = trace.traceBlockBegin()
+        spanEventRecorder.recordServiceType(ServiceTypeCode.express)
+        spanEventRecorder.recordApiDesc(getApiDesc(moduleName, req))
+      }
+      const result = original.apply(this, arguments)
+      if (trace) {
+        trace.traceBlockEnd(spanEventRecorder)
+      }
+      return result
     }
   }
 
-
-  shimmer.wrap(express.Router, 'process_params', function (orig) {
-    return function (layer, called, req, res, done) {
-      patchLayer(layer)
-      return orig.apply(this, arguments)
+  function recordErrorHandle (original, moduleName) {
+    return function (err, req, res, next) {
+      const trace = agent.traceContext.currentTraceObject()
+      if (err && trace) {
+        const spanEventRecorder = trace.traceBlockBegin()
+        spanEventRecorder.recordServiceType(ServiceTypeCode.express)
+        spanEventRecorder.recordApiDesc(getApiDesc(moduleName, req))
+        spanEventRecorder.recordException(err, true)
+        trace.traceBlockEnd(spanEventRecorder)
+      }
+      return original.apply(this, arguments)
     }
-  })
+  }
+
+  function getApiDesc (moduleName, req) {
+    return moduleName + (req.method ? `.${req.method.toLowerCase()}` : '')
+  }
 
   return express
 }

@@ -14,7 +14,7 @@ const config = {
   collectorSpanPort: 9996,
 
   enabledDataSending: false,
-  logLevel: LOG_LEVEL.DEBUG
+  logLevel: LOG_LEVEL.INFO
 }
 
 const getTransactionId = () => {

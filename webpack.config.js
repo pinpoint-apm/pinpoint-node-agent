@@ -33,5 +33,4 @@ module.exports = {
     },
     target: 'node',
     plugins: plugins,
-    externals: [nodeExternals()],
 }

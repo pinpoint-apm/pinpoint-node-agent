@@ -6,6 +6,7 @@ const log = require('utils/logger')
 const MODULES = [
   'express',
   'http',
+  'koa',
   'koa-router',
   'redis',
   'mongodb-core',
@@ -21,6 +22,8 @@ function init(agent) {
           // todo. versioning Logic add On
           const version = '2.5.6'
           try {
+            console.log('loader=>', name)
+
             require('./module/' + name)(agent, version, m)
             agent.setModules(name)
           } catch (e) {

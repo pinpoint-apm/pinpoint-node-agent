@@ -1,6 +1,5 @@
 const test = require('tape')
 const axios = require('axios')
-const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
 
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 enableDataSending()

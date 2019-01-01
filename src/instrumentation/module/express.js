@@ -23,7 +23,7 @@ module.exports = function(agent, version, express) {
       if (fn && fn.name !== 'router' && this.stack && this.stack.length) {
         log.debug('>> [Express] express.Router.use ', this.stack[this.stack.length - 1])
         const layer = this.stack[this.stack.length - 1]
-        doPatchLayer(layer, 'express.use')
+        doPatchLayer(layer, 'middleware')
       }
       return result
     }
@@ -35,7 +35,7 @@ module.exports = function(agent, version, express) {
       if (this.stack && this.stack.length) {
         log.debug('>> [Express] express.Router.route ', this.stack[this.stack.length - 1])
         const layer = this.stack[this.stack.length - 1]
-        doPatchLayer(layer, 'express.route')
+        doPatchLayer(layer, 'route')
       }
       return result
     }
@@ -81,7 +81,11 @@ module.exports = function(agent, version, express) {
   }
 
   function getApiDesc (moduleName, req) {
-    return moduleName + (req.method ? `.${req.method.toLowerCase()}` : '')
+    const apiDesc = ['express', moduleName]
+    if (moduleName === 'route' && req.method) {
+      apiDesc.push(req.method.toLowerCase())
+    }
+    return apiDesc.join('.')
   }
 
   return express

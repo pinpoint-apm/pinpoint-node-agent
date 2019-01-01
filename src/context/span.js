@@ -1,6 +1,6 @@
 'use strict'
 
-const TransactionIdUtil = require('utils/transaction-id-util');
+const TransactionIdUtils = require('../utils/transaction-id-utils');
 
 class Span {
   constructor (traceId, agentInfo) {
@@ -8,16 +8,13 @@ class Span {
       // TODO app에 영향을 미치지 않으려면 예외처리는 어떻게 해야 할까??
     }
 
-    // fixme
-    const tid = TransactionIdUtil.toTransactionId(traceId.transactionId.toString())
-
     this.agentId = agentInfo.agentId; // required, from config
     this.applicationName = agentInfo.applicationName; // required, from config
     this.agentStartTime = agentInfo.agentStartTime; // required, from config
     this.serviceType = agentInfo.serviceType; // required
     this.spanId = traceId.spanId; // required
     this.parentSpanId = traceId.parentSpanId;
-    this.transactionId = TransactionIdUtil.formatBytes(tid)
+    this.transactionId = TransactionIdUtils.formatBytes(traceId.transactionId)
     this.startTime = Date.now(); // required
     this.elapsedTime = 0;
     this.rpc = null; // uri

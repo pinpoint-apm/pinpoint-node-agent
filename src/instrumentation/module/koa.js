@@ -2,11 +2,13 @@
 
 const shimmer = require('shimmer')
 const semver = require('semver')
+const log = require('utils/logger')
 
 const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
 
 module.exports = function(agent, version, koa) {
-  // Test 1. emit handdle
+
+  // todo. emit 체크
   shimmer.wrap(koa.prototype, 'emit', function(original) {
     return function (evt, err, ctx) {
       const trace = agent.traceContext.currentTraceObject()
@@ -31,22 +33,44 @@ module.exports = function(agent, version, koa) {
       return result
     }
   })
-  // Test 2. middleware mount
   shimmer.wrap(koa.prototype, 'use', function(original) {
     return function wrapMiddleware(middleware) {
+      if (typeof middleware === 'function') {
+        const cb = arguments[0]
+        const name = middleware.name || 'AnonymousFunction'
+        // todo. 기본로직을 제외 하는 방법 검토할 것
+        // if (cb.toString().trim().match(/^async/)) {}
+        arguments[0] = async function(ctx, next) {
+          let result
+          const trace = agent.traceContext.currentTraceObject()
+          let spanEventRecorder = null
+          try {
+            if (trace) {
+              spanEventRecorder = trace.traceBlockBegin()
+              spanEventRecorder.recordServiceType(ServiceTypeCode.koa)
+              spanEventRecorder.recordApiDesc(`middleware [${name}]`)
+            }
+            result = await cb.apply(this, arguments)
+          } catch (e) {
+            if (!e.match(/^record_/)) {
+              spanEventRecorder.recordServiceType(ServiceTypeCode.koa)
+              spanEventRecorder.recordApiDesc(`middleware [${name}]`)
+              spanEventRecorder.recordException(e, true)
+            }
+            throw e.match(/^record_/) ? e : `record_${e}`
+          } finally {
+            if (trace) {
+              trace.traceBlockEnd(spanEventRecorder)
+            }
+          }
+          return result
+        }
+
+      }
       return original.apply(this, arguments)
     }
   })
   // Test 3. createContext
-
-  // Test 4.
-  shimmer.wrap(koa.prototype, 'onerror', function (original) {
-    return function wrapError(a, b, c) {
-      return original.apply(this, arguments)
-    }
-  })
-
-  // Test 5.
   // shimmer.wrap(koa.prototype, 'createContext', function(original) {
   //   return function wrapCreateContext(req, res) {
   //     const result = original.apply(this, arguments)
@@ -73,7 +97,5 @@ module.exports = function(agent, version, koa) {
   //     return result
   //   }
   // })
-
-
   return koa
 }

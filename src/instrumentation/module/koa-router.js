@@ -11,6 +11,7 @@ module.exports = function(agent, version, router) {
   //   return Router
   // // }
   //
+  //todo. koa 미들웨어 스텍으로 옮겨도 될꺼 같긴 한데 검토해보기
   shimmer.wrap(router.prototype, 'register', function(original) {
     return function (path, methods, middleware, opts) {
       const layer = original.apply(this, arguments)
@@ -18,21 +19,22 @@ module.exports = function(agent, version, router) {
         layer.stack.forEach((fn, index) => {
           if (typeof fn === 'function') {
             let result
-            layer.stack[index] = async function(req, next) {
+            layer.stack[index] = async function(ctx, next) {
+              const name = fn.name || 'AnonymousFunction'
               const trace = agent.traceContext.currentTraceObject()
               let spanEventRecorder = null
               try {
                 if (trace) {
                   spanEventRecorder = trace.traceBlockBegin()
                   spanEventRecorder.recordServiceType(ServiceTypeCode.koa)
-                  spanEventRecorder.recordApiDesc(`koa.router.${req.method.toLocaleLowerCase()}`)
+                  spanEventRecorder.recordApiDesc(`router.${ctx.method.toLocaleLowerCase()} [${name}]`)
                 }
                 result = await fn.apply(this, arguments)
               } catch (e) {
                 spanEventRecorder.recordServiceType(ServiceTypeCode.koa)
-                spanEventRecorder.recordApiDesc(`koa.router.${req.method.toLocaleLowerCase()}`)
+                spanEventRecorder.recordApiDesc(`router.${ctx.method.toLocaleLowerCase()} [${name}]`)
                 spanEventRecorder.recordException(e, true)
-                throw e
+                throw `record_${e}`
               } finally {
                 if (trace) {
                   trace.traceBlockEnd(spanEventRecorder)

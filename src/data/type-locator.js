@@ -8,12 +8,7 @@ const TypeCode = {
   SPAN: 40,
   AGENT_INFO: 50,
   API_META_DATA: 310,
-}
-
-const TypeBase = {
-  SPAN: traceTypes.TSpan,
-  AGENT_INFO: pinpointTypes.TAgentInfo,
-  API_META_DATA: traceTypes.TApiMetaData,
+  STRING_META_DATA: 330,
 }
 
 const headerMap = Object.keys(TypeCode).reduce((acc, type) => {
@@ -30,6 +25,9 @@ const headerLookup = (tBase) => {
   }
   if (tBase instanceof traceTypes.TApiMetaData) {
     return headerMap[TypeCode.API_META_DATA]
+  }
+  if (tBase instanceof traceTypes.TStringMetaData) {
+    return headerMap[TypeCode.STRING_META_DATA]
   }
   return null
 }

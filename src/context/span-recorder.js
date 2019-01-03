@@ -60,11 +60,12 @@ class SpanRecorder {
 
   recordException (error) {
     if (this.span && error) {
-      this.span.err = 1
+      const metaInfo = StringMetaCache.get(error.name || 'Error')
       this.span.exceptionInfo = {
-        intValue: error.length,
+        intValue: metaInfo.stringId,
         stringValue: error.toString()
       }
+      this.span.err = 1
     }
   }
 

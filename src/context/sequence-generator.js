@@ -1,8 +1,8 @@
 'use strict'
 
 class SequenceGenerator{
-  constructor () {
-    this.sequence = -1
+  constructor (initValue) {
+    this.sequence = initValue || -1
   }
 
   get next () {
@@ -15,4 +15,7 @@ class SequenceGenerator{
   }
 }
 
-module.exports = new SequenceGenerator()
+module.exports = {
+  transactionIdGenerator: new SequenceGenerator(),
+  cacheKeyGenerator: new SequenceGenerator()
+}

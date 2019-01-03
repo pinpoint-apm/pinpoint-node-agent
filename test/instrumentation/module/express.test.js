@@ -3,7 +3,6 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 enableDataSending()
 
-
 const Agent = require('agent')
 const agent = new Agent(fixture.config)
 
@@ -129,8 +128,14 @@ test(`${testName3} Should record request taking more than 2 sec`, function (t) {
   })
 })
 
+class MyError extends Error {
+  constructor(message) {
+    super(message)
+    this.name = 'MyError'
+  }
+}
 const testName4 = 'express4'
-test(`${testName4} Should record internal error`, function (t) {
+test.only(`${testName4} Should record internal error`, function (t) {
   const testName = testName4
   testCompletions.set(testName, false)
 

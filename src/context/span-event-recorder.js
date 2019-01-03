@@ -3,6 +3,7 @@
 const Annotation = require('./annotation')
 const ServiceType = require('./service-type')
 const DefaultAnnotationKey = require('constant/annotation-key').DefaultAnnotationKey
+const StringMetaCache = require('./string-meta-cache')
 
 class SpanEventRecorder {
   constructor (spanEvent, span) {
@@ -59,11 +60,11 @@ class SpanEventRecorder {
 
   recordException (error, isError) {
     if (this.spanEvent && error) {
+      const metaInfo = StringMetaCache.get(error.name || 'Error')
       this.spanEvent.exceptionInfo = {
-        intValue: 1,
-        stringValue: error.toString()
+        intValue: metaInfo.stringId,
+        stringValue: error.toString(),
       }
-
       if (this.span && isError) {
         this.span.err = 1
       }

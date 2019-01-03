@@ -22,15 +22,18 @@ const computeVar64Size = (value) => {
 }
 
 const writeVar64Size = (value, buffer, offset, size) => {
-  let binary = value.toString(2)
-  if (binary.length % 7 > 0) {
-    binary = binary.padStart(7 * Math.ceil(binary.length / 7 ), '0')
-  }
+  const binary = value.toString(2)
 
-  for (let i = size - 1; i >= 0; i--) {
-    const byteValue = binary.substr(i * 7, 7)
+  for (let i = 1; i <= size; i++) {
+    const startIndex = Math.max(binary.length - (i * 7), 0)
+    const endIndex = binary.length - ((i - 1) * 7)
+    const byteValue = binary.substring(startIndex, endIndex)
     const intValue = parseInt(byteValue, 2)
-    offset = buffer.writeUInt8((intValue & 0x7F) | 0x80, offset)
+    if (i === size) {
+      offset = buffer.writeUInt8(intValue, offset);
+    } else {
+      offset = buffer.writeUInt8((intValue & 0x7F) | 0x80, offset)
+    }
   }
   return offset
 }

@@ -22,3 +22,9 @@ test('Should api meta info', function (t) {
 
   t.ok(agent.sendApiMetaInfo())
 })
+
+test('Should string meta info', function (t) {
+  t.plan(1)
+
+  t.ok(agent.sendStringMetaInfo())
+})

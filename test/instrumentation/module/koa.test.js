@@ -27,7 +27,7 @@ setInterval(() => {
 agent.sendApiMetaInfo()
 
 const testName1 = 'koa-router1'
-test.only(`${testName1} Should record request in basic route`, function (t) {
+test(`${testName1} Should record request in basic route`, function (t) {
   const testName = testName1
   testCompletions.set(testName, false)
 
@@ -63,7 +63,7 @@ test.only(`${testName1} Should record request in basic route`, function (t) {
 })
 
 const testName2 = 'koa-router2'
-test(`${testName2} Should record internal error`, function (t) {
+test.only(`${testName2} Should record internal error`, function (t) {
   const testName = testName2
   testCompletions.set(testName, false)
 
@@ -79,8 +79,12 @@ test(`${testName2} Should record internal error`, function (t) {
       const foo = null
       const bar = foo.noValue
     } catch (err) {
-      ctx.throw(500, err.message);
+      ctx.throw(500, err.message)
     }
+    ctx.body = 'ok. hello world'
+  })
+
+  router.get('/test3', async (ctx, next) => {
     ctx.body = 'ok. hello world'
   })
 
@@ -95,13 +99,19 @@ test(`${testName2} Should record internal error`, function (t) {
       console.log('[app] error handler')
       ctx.status = err.status || 500
       ctx.body = err.message
+      // ctx.app.emit('error', err, ctx);
     }
   })
+  // app.on('error', (ctx, err) => {
+  //   console.log('!@#?!@#')
+  // })
   app.use(router.routes()).use(router.allowedMethods())
 
   const server = app.listen(TEST_ENV.port, async () => {
-    const result = await axios.get(getServerUrl(PATH))
-    t.ok(result.status, 500)
+    const result = await axios.get(getServerUrl('/test3'))
+
+    //const result = await axios.get(getServerUrl(PATH))
+    t.equal(result.status, 200)
 
     const traceMap = agent.traceContext.getAllTraceObject()
     t.ok(traceMap.size > 0)

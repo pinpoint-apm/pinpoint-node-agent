@@ -15,12 +15,12 @@ class HttpRequestWriter {
 
   write (request) {
     if (request && this.traceId) {
-      request.headers[PinpointHeader.HTTP_TRACE_ID] = this.traceId.transactionId.toString()
-      request.headers[PinpointHeader.HTTP_SPAN_ID] = IdGenerator.next
-      request.headers[PinpointHeader.HTTP_PARENT_SPAN_ID] = this.traceId.spanId
-      request.headers[PinpointHeader.HTTP_PARENT_APPLICATION_NAME] = this.applicationName
-      request.headers[PinpointHeader.HTTP_PARENT_APPLICATION_TYPE] = this.serviceType
-      request.headers[PinpointHeader.HTTP_FLAGS] = this.traceId.flag
+      request.setHeader(PinpointHeader.HTTP_TRACE_ID, this.traceId.transactionId.toString())
+      request.setHeader(PinpointHeader.HTTP_SPAN_ID, IdGenerator.next)
+      request.setHeader(PinpointHeader.HTTP_PARENT_SPAN_ID, this.traceId.spanId)
+      request.setHeader(PinpointHeader.HTTP_PARENT_APPLICATION_NAME, this.applicationName)
+      request.setHeader(PinpointHeader.HTTP_PARENT_APPLICATION_TYPE, this.serviceType)
+      request.setHeader(PinpointHeader.HTTP_FLAGS, this.traceId.flag)
     }
     return request
   }

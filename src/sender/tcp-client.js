@@ -21,10 +21,10 @@ class TcpClient {
     this.socket = new net.Socket()
     this.socket.setTimeout(DEFAULT_TIMEOUT)
     this.socket.connect(this.port, this.host, () => {
-      log.debug('tcp socket created and connected')
+      log.info('[TDP] Socket Created')
     })
     this.socket.on('data', (data) => {
-      log.debug('tcp data received', data)
+      log.debug('[TDP] Data Received', data)
     })
   }
 
@@ -34,11 +34,10 @@ class TcpClient {
         this.init()
       }
       this.socket.write(msg)
-      log.debug('tcp sent successfully')
+      log.debug('[TDP] Sent Successfully')
       callback && callback.apply()
     } catch (err) {
-      log.debug('error in tcp sending',  err)
-      this.close()
+      log.error('[TDP] Data Send Error')
     }
   }
 
@@ -46,7 +45,7 @@ class TcpClient {
     if (this.socket) {
       this.socket.end()
       this.socket = null
-      log.info('tcp socket closed')
+      log.info('[TDP] Socket closed')
     }
   }
 }

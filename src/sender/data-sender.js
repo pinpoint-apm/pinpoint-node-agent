@@ -28,18 +28,16 @@ class DataSender {
 
   send (tData) {
     if (tData && this.enabledDataSending) {
-      log.debug('tData >> ', tData)
+      log.debug('>> TDATA \n ', tData)
       const packet = new SendPacket(serialize(tData)).toBuffer()
-      log.debug('packet >> ', packet)
       this.tcpClient.send(packet)
     }
   }
 
-  sendApiMetaInfo (tApiMetaInfo) {
+  sendMetaInfo (tApiMetaInfo) {
     if (tApiMetaInfo && this.enabledDataSending) {
-      log.debug('tApiMetaInfo >> ', tApiMetaInfo)
+      log.debug('>> META INFO \n ', tApiMetaInfo)
       const packet = new RequestPacket(tApiMetaInfo.apiId, serialize(tApiMetaInfo)).toBuffer()
-      log.debug('packet >> ', packet)
       this.tcpClient.send(packet)
     }
   }
@@ -47,9 +45,8 @@ class DataSender {
   sendSpan (span) {
     if (span && this.enabledDataSending) {
       const tSpan = new TSpan(span)
-      log.debug('spanData>> ', tSpan)
+      log.debug('>> SPAN DATA \n ', tSpan)
       const packet = serialize(tSpan)
-      log.debug('packet >> ', packet)
       this.spanUdpClient.send(packet)
     }
   }

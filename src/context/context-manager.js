@@ -22,13 +22,13 @@ async_hooks.createHook({ init, destory }).enable()
 
 const getObject = () => {
   const asyncId = async_hooks.executionAsyncId()
-  log.debug('getter asyncId :', asyncId)
+  log.debug('>> GETTER ASYNC ID:', asyncId)
   return traceObjectMap.get(asyncId)
 }
 
 const setObject = (value) => {
   const asyncId = async_hooks.executionAsyncId()
-  log.debug('setter asyncId :', asyncId)
+  log.debug('>> SETTER ASYNC ID :', asyncId)
   traceObjectMap.set(asyncId, value)
 }
 

@@ -35,15 +35,21 @@ class Agent {
 
     this.dataSender = new DataSender(this.config)
 
+    // TODO sampling
+    this.sampled = false
+
     StringMetaCache.init(this.agentId, this.agentStartTime, this.dataSender)
     instManager.init(this)
+
+    this.sendAgentInfo()
+    this.sendApiMetaInfo()
   }
 
-  createTraceObject (traceId) {
-    if (traceId) {
-      return this.traceContext.continueTraceObject(traceId)
-    } else {
+  createTraceObject (requestData) {
+    if (requestData.isRoot) {
       return this.traceContext.newTraceObject()
+    } else {
+      return this.traceContext.continueTraceObject(requestData)
     }
   }
 
@@ -101,7 +107,7 @@ class Agent {
         .filter(key => methodDescriptor[key].apiId !== 0)
         .forEach(key => {
           const apiMetaInfo = this.createApiMetaInfo(methodDescriptor[key])
-          this.dataSender.sendApiMetaInfo(apiMetaInfo)
+          this.dataSender.sendMetaInfo(apiMetaInfo)
         })
       })
     } catch (e) {
@@ -119,29 +125,6 @@ class Agent {
       apiInfo: methodDescriptor.apiInfo,
     }
     return new TApiMetaData(info)
-  }
-
-  sendStringMetaInfo () {
-    try {
-      Object.keys(stringMetaData).forEach(key => {
-        const stringMetaInfo = this.createStringMetaInfo(stringMetaData[key])
-        this.dataSender.sendApiMetaInfo(stringMetaInfo)
-      })
-    } catch (e) {
-      log.error(e)
-      throw new Error()
-    }
-    return true
-  }
-
-  createStringMetaInfo (stringInfo) {
-    const info = {
-      agentId: this.agentId,
-      agentStartTime: this.agentStartTime,
-      stringId: stringInfo.stringId,
-      stringValue: stringInfo.stringValue,
-    }
-    return new TStringMetaData(info)
   }
 }
 

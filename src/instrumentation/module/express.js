@@ -74,7 +74,6 @@ module.exports = function(agent, version, express) {
       const trace = agent.traceContext.currentTraceObject()
       let spanEventRecorder = null
 
-      console.log('>>>>>>>> EEEEEEEEEEERRRRRRRR', err)
       if (err && trace) {
         spanEventRecorder = trace.traceBlockBegin()
         spanEventRecorder.recordServiceType(ServiceTypeCode.express)

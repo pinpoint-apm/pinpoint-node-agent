@@ -1,22 +1,22 @@
 'use strict'
 
 class SpanEvent {
-  constructor (spanId, sequence) {
+  constructor (span, sequence) {
     if (!sequence) {
     }
 
-    this.spanId = spanId// optional
+    this.spanId = span.id// optional
     this.sequence = sequence // required
     this.startTime = 0 // required
     this.elapsedTime = 0 // optional
     this.startElapsed = 0 // required
     // this.rpc = null // optional, deprecated
     this.serviceType = null // required
-    this.endPoint = null // optional
+    this.endPoint = span.endPoint// optional
     this.annotations = []// optional
     this.depth = -1 // optional
     this.nextSpanId = -1 // optional
-    this.destinationId = null // optional
+    this.destinationId = span.endPoint // optional
     this.apiId = null // optional
     this.exceptionInfo = null // optional
     this.asyncId = null // optional

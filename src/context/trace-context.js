@@ -26,8 +26,9 @@ class TraceContext {
     return instance
   }
 
-  continueTraceObject (traceId) {
-    const trace = new Trace(traceId, this.agentInfo)
+  continueTraceObject (requestData) {
+    const traceId = new TraceId(requestData.transactionId, requestData.spanId, requestData.parentSpanId, requestData.flag)
+    const trace = new Trace(traceId, this.agentInfo, requestData)
     this.setCurrentTraceObject(trace)
     return trace
   }

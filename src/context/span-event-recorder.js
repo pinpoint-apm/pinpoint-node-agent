@@ -28,6 +28,18 @@ class SpanEventRecorder {
     }
   }
 
+  recordEndPoint (endPoint) {
+    if (this.spanEvent && endPoint) {
+      this.spanEvent.endPoint = endPoint
+    }
+  }
+
+  recordNextSpanId (nextSpanId) {
+    if (this.spanEvent && nextSpanId) {
+      this.spanEvent.nextSpanId = nextSpanId
+    }
+  }
+
   recordApiId (apiId) {
     if (this.spanEvent && apiId !== undefined) {
       this.spanEvent.apiId = apiId

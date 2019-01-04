@@ -23,11 +23,8 @@ setInterval(() => {
   }
 }, 2000)
 
-// send api meta info
-agent.sendApiMetaInfo()
-
 const testName1 = 'express1'
-test(`${testName1} Should record request in basic route`, function (t) {
+test.only(`${testName1} Should record request in basic route`, function (t) {
   const testName = testName1
   testCompletions.set(testName, false)
 
@@ -36,7 +33,9 @@ test(`${testName1} Should record request in basic route`, function (t) {
   const PATH = '/'+testName
   const app = new express()
 
-  app.get(PATH, (req, res) => {
+  app.get(PATH, async (req, res) => {
+    // await util.sleep(3000)
+    await axios.get('http://***REMOVED***:9999/test/express')
     res.send('ok get')
   })
   app.post(PATH, (req, res) => {
@@ -111,7 +110,7 @@ test(`${testName3} Should record request taking more than 2 sec`, function (t) {
   const app = new express()
 
   app.get(PATH, async (req, res) => {
-      // slow outgoing call
+    // slow outgoing call
     await axios.get('http://dummy.restapiexample.com/api/v1/employees')
     res.send('hello')
   })
@@ -136,7 +135,7 @@ class MyError extends Error {
   }
 }
 const testName4 = 'express4'
-test.only(`${testName4} Should record internal error`, function (t) {
+test(`${testName4} Should record internal error`, function (t) {
   const testName = testName4
   testCompletions.set(testName, false)
 
@@ -265,3 +264,5 @@ test(`${testName6} Should record each http method`, function (t) {
     testCompletions.set(testName, true)
   })
 })
+
+

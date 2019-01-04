@@ -23,9 +23,6 @@ setInterval(() => {
   }
 }, 2000)
 
-// send api meta info
-agent.sendApiMetaInfo()
-
 const testName1 = 'koa-router1'
 test(`${testName1} Should record request in basic route`, function (t) {
   const testName = testName1

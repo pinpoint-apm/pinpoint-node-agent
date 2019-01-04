@@ -6,7 +6,7 @@ const LOG_LEVEL = require('utils/logger').LOG_LEVEL
 
 const config = {
   agentId: 'dev-agent-app',
-  applicationName: 'dev agent application',
+  applicationName: 'dev.agent.app',
   serviceType: ServiceTypeCode.express,
   collectorIp: '***REMOVED***',
   collectorTcpPort: 9994,

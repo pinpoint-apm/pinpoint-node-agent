@@ -48,7 +48,7 @@ class SpanRecorder {
 
   recordEndPoint (endPoint) {
     if (this.span && endPoint) {
-      (this.span.endPoint = endPoint)
+      this.span.endPoint = endPoint
     }
   }
 

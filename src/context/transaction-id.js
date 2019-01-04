@@ -9,11 +9,23 @@ class TransactionId {
     // agnetId + agentStartTime + sequenceNumber
     this.agentId = agentId
     this.agentStartTime = agentStartTime
-    this.sequence = sequence || transactionIdGenerator.next
+    if (sequence === null || sequence === undefined) {
+      this.sequence = transactionIdGenerator.next
+    } else {
+      this.sequence = sequence
+    }
   }
 
   toString () {
     return [this.agentId, this.agentStartTime, this.sequence].join(DELIMETER)
+  }
+
+  static toTransactionId(str) {
+    if (str !== null && str !== undefined) {
+      const r = str.split(DELIMETER)
+      return new TransactionId(r[0], Number(r[1]), Number(r[2]))
+    }
+    return null
   }
 }
 

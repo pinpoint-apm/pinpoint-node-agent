@@ -34,7 +34,7 @@ class StringMetaCache {
   sendStringMetaInfo (metaInfo) {
     try {
       const stringMetaInfo = this.createStringMetaInfo(metaInfo)
-      this.dataSender.sendApiMetaInfo(stringMetaInfo)
+      this.dataSender.sendMetaInfo(stringMetaInfo)
     } catch (e) {
       throw new Error()
     }

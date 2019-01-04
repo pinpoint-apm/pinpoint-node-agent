@@ -17,7 +17,7 @@ class UdpClient {
       this.close()
     }
     this.socket = dgram.createSocket('udp4')
-    log.debug('tcp socket created')
+    log.info('[UDP] Socket Created')
   }
 
   send (msg, callback) {
@@ -26,11 +26,10 @@ class UdpClient {
     }
     this.socket.send(msg, this.port, this.host, (err) => {
       if (err)  {
-        log.error('error in sending udp', err)
-        this.close()
+        log.error('[UDP] Data Send Error')
         return
       }
-      log.debug('udp sent successfully')
+      log.debug('[UDP] Sent Successfully')
       callback && callback.apply()
     })
   }
@@ -39,7 +38,7 @@ class UdpClient {
     if (this.socket) {
       this.socket.close()
       this.socket = null
-      log.info('udp socket closed')
+      log.info('[UDP] Socket closed')
     }
   }
 }

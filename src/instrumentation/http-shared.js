@@ -3,9 +3,9 @@
 const endOfStream = require('end-of-stream')
 const url = require('url')
 const log = require('utils/logger')
+const IdGenerator = require('context/id-generator')
 
-const HttpRequestReader = require('instrumentation/http-request-reader')
-const HttpRequestWriter = require('instrumentation/http-request-writer')
+const RequestHeaderUtils = require('instrumentation/request-header-utils')
 const HttpMethodDescritpor = require('constant/method-descriptor').HttpMethodDescritpor
 
 exports.instrumentRequest = function (agent, moduleName) {
@@ -15,9 +15,9 @@ exports.instrumentRequest = function (agent, moduleName) {
         log.debug('intercepted request event call to %s.Server.prototype.emit', moduleName)
         log.warn('start instrumentRequest')
 
-        const httpRequestReader = new HttpRequestReader(req)
-        const trace = agent.createTraceObject(httpRequestReader.getTraceId())
-        recordRequest(trace.spanRecorder, httpRequestReader)
+        const requestData = RequestHeaderUtils.read(req)
+        const trace = agent.createTraceObject(requestData)
+        recordRequest(trace.spanRecorder, requestData)
         trace.spanRecorder.recordApiId(HttpMethodDescritpor.SERVER_REQUEST.apiId)
         // todo. emmiter
         // ins.bindEmitter(req)
@@ -44,13 +44,19 @@ exports.traceOutgoingRequest = function (agent, moduleName) {
       const trace = agent.traceContext.currentTraceObject()
       if (!trace) return req
       // Fixme :  Trace id !?
-      new HttpRequestWriter(agent).write(req)
 
       const id = 'TEST'   // ?
       const name = req.method + ' ' + req._headers.host + url.parse(req.path).pathname
+
+      const destinationId = req._headers.host
+      const nextSpanId = IdGenerator.next
+      RequestHeaderUtils.write(req, agent, nextSpanId, destinationId)
+
       const spanEventRecorder = trace.traceBlockBegin()
       spanEventRecorder.recordServiceType(ServiceTypeCode.ASYNC_HTTP_CLIENT)
       spanEventRecorder.recordApiDesc(name)
+      spanEventRecorder.recordNextSpanId(nextSpanId)
+      spanEventRecorder.recordDestinationId(destinationId)
 
       req.on('response', onresponse)
 
@@ -85,8 +91,8 @@ exports.traceOutgoingRequest = function (agent, moduleName) {
   }
 }
 
-const recordRequest = (recorder, reader) => {
-  recorder.recordRpc(reader.rpcName)
-  recorder.recordEndPoint(reader.endPoint)
-  recorder.recordRemoteAddr(reader.remoteAddress)
+const recordRequest = (recorder, requestData) => {
+  recorder.recordRpc(requestData.rpcName)
+  recorder.recordEndPoint(requestData.endPoint)
+  recorder.recordRemoteAddr(requestData.remoteAddress)
 }

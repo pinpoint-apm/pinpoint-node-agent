@@ -10,6 +10,7 @@ const networkUtils = require('utils/network');
 const DataSender = require('sender/data-sender')
 const log = require('utils/logger')
 const StringMetaCache = require('./context/string-meta-cache')
+const sampler = require('sampler/sampler')
 
 const getConfig = require('config').get
 
@@ -35,8 +36,7 @@ class Agent {
 
     this.dataSender = new DataSender(this.config)
 
-    // TODO sampling
-    this.sampled = false
+    this.isSampling = sampler.getIsSampling(this.config.sampling, this.config.sampleRate)
 
     StringMetaCache.init(this.agentId, this.agentStartTime, this.dataSender)
     instManager.init(this)
@@ -47,7 +47,7 @@ class Agent {
 
   createTraceObject (requestData) {
     if (requestData.isRoot) {
-      return this.traceContext.newTraceObject()
+      return this.traceContext.newTraceObject(this.isSampling())
     } else {
       return this.traceContext.continueTraceObject(requestData)
     }

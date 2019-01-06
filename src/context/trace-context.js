@@ -28,25 +28,26 @@ class TraceContext {
 
   continueTraceObject (requestData) {
     const traceId = new TraceId(requestData.transactionId, requestData.spanId, requestData.parentSpanId, requestData.flag)
-    const trace = new Trace(traceId, this.agentInfo, requestData)
-    this.setCurrentTraceObject(trace)
-    return trace
+    return this.createTraceObject(traceId, requestData.sampled, requestData)
   }
 
-  newTraceObject () {
+  newTraceObject (sampling) {
     const transactionId = new TransactionId(this.agentInfo.agentId, this.agentInfo.agentStartTime)
     const spanId = IdGenerator.next
     const traceId = new TraceId(transactionId, spanId)
-    const trace = new Trace(traceId, this.agentInfo)
+    return this.createTraceObject(traceId, sampling)
+  }
+
+  createTraceObject (traceId, sampling, requestData) {
+    const trace = new Trace(traceId, this.agentInfo, sampling, requestData)
     this.setCurrentTraceObject(trace)
     return trace
   }
 
   completeTraceObject (trace) {
-    const targetTrace = trace || this.currentTraceObject()
-    if (targetTrace) {
-      targetTrace.spanRecorder.span.markElapsedTime()
-      return targetTrace
+    if (trace) {
+      trace.spanRecorder.span.markElapsedTime()
+      return trace
     }
   }
 

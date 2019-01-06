@@ -17,16 +17,24 @@ exports.instrumentRequest = function (agent, moduleName) {
 
         const requestData = RequestHeaderUtils.read(req)
         const trace = agent.createTraceObject(requestData)
-        recordRequest(trace.spanRecorder, requestData)
-        trace.spanRecorder.recordApiId(HttpMethodDescritpor.SERVER_REQUEST.apiId)
+        if (trace && trace.canSampled()) {
+          recordRequest(trace.spanRecorder, requestData)
+          trace.spanRecorder.recordApiId(HttpMethodDescritpor.SERVER_REQUEST.apiId)
+        }
         // todo. emmiter
         // ins.bindEmitter(req)
         // ins.bindEmitter(res)
         endOfStream(res, function (err) {
-          if (!err) return agent.completeTraceObject(trace)
+          if (!err) {
+            if (trace && trace.canSampled()) {
+              return agent.completeTraceObject(trace)
+            }
+          }
           // todo. status error ? how to ?
           res.on('prefinish', function() {
-            agent.completeTraceObject(trace)
+            if (trace && trace.canSampled()) {
+              agent.completeTraceObject(trace)
+            }
           })
         })
       }

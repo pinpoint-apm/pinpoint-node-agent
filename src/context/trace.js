@@ -6,7 +6,7 @@ const Span = require('./span')
 const SpanEvent = require('./span-event')
 
 class Trace {
-  constructor (traceId, agentInfo, requestData) {
+  constructor (traceId, agentInfo, sampling, requestData) {
     if (!traceId || !agentInfo) {
       // TODO define custom error
       throw new Error()
@@ -20,6 +20,7 @@ class Trace {
 
     this.callStack = []
     this.sequence = 0
+    this.sampling = sampling
   }
 
   traceBlockBegin () {
@@ -48,6 +49,10 @@ class Trace {
         throw new Error("Invalid call stacks are removed.")
       }
     }
+  }
+
+  canSampled () {
+    return this.sampling
   }
 }
 

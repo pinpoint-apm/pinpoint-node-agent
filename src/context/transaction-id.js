@@ -21,11 +21,13 @@ class TransactionId {
   }
 
   static toTransactionId(str) {
-    if (str !== null && str !== undefined) {
-      const r = str.split(DELIMETER)
-      return new TransactionId(r[0], Number(r[1]), Number(r[2]))
+    if (!str) return null
+
+    const tokens = str.split(DELIMETER)
+    if (tokens.length !== 3 || isNaN(tokens[1]) || isNaN(tokens[2])) {
+      return null
     }
-    return null
+    return new TransactionId(tokens[0], Number(tokens[1]), Number(tokens[2]))
   }
 }
 

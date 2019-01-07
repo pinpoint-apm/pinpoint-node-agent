@@ -26,14 +26,16 @@ class RequestHeaderUtils {
 
   static readPinpointHeader (request, requestData) {
     requestData.transactionId = TransactionId.toTransactionId(this.getHeader(request, PinpointHeader.HTTP_TRACE_ID))
-    requestData.spanId = Number(this.getHeader(request, PinpointHeader.HTTP_SPAN_ID))
-    requestData.parentSpanId = Number(this.getHeader(request, PinpointHeader.HTTP_PARENT_SPAN_ID))
-    requestData.parentApplicationName = this.getHeader(request, PinpointHeader.HTTP_PARENT_APPLICATION_NAME)
-    requestData.parentApplicationType = Number(this.getHeader(request, PinpointHeader.HTTP_PARENT_APPLICATION_TYPE))
-    requestData.flags = Number(this.getHeader(request, PinpointHeader.HTTP_FLAGS))
-    requestData.host = this.getHeader(request, PinpointHeader.HTTP_HOST)
-    requestData.sampled = this.getHeader(request, PinpointHeader.HTTP_SAMPLED) === 'true'
-    requestData.isRoot = false
+    if (requestData.transactionId) {
+      requestData.spanId = Number(this.getHeader(request, PinpointHeader.HTTP_SPAN_ID))
+      requestData.parentSpanId = Number(this.getHeader(request, PinpointHeader.HTTP_PARENT_SPAN_ID))
+      requestData.parentApplicationName = this.getHeader(request, PinpointHeader.HTTP_PARENT_APPLICATION_NAME)
+      requestData.parentApplicationType = Number(this.getHeader(request, PinpointHeader.HTTP_PARENT_APPLICATION_TYPE))
+      requestData.flags = Number(this.getHeader(request, PinpointHeader.HTTP_FLAGS))
+      requestData.host = this.getHeader(request, PinpointHeader.HTTP_HOST)
+      requestData.sampled = this.getHeader(request, PinpointHeader.HTTP_SAMPLED) === 'true'
+      requestData.isRoot = false
+    }
     return requestData
   }
 
@@ -58,7 +60,7 @@ class RequestHeaderUtils {
       this.setHeader(request, PinpointHeader.HTTP_PARENT_APPLICATION_TYPE, agent.serviceType)
       this.setHeader(request, PinpointHeader.HTTP_FLAGS, trace.traceId.flag)
       this.setHeader(request, PinpointHeader.HTTP_HOST, host)
-      this.setHeader(request, PinpointHeader.HTTP_SAMPLED, agent.sampled)
+      this.setHeader(request, PinpointHeader.HTTP_SAMPLED, trace.canSampled())
     }
     log.debug('>> Writer http header \n', request._headers)
     return request

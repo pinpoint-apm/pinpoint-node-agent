@@ -9,7 +9,7 @@ test('Should be configured with default', function (t) {
   config.clear()
   const conf = config.get()
 
-  t.equal(null, conf.agentId)
+  t.ok(conf.agentId)
 })
 
 test('Should be configured with environment variable', function (t) {
@@ -30,8 +30,17 @@ test('Should be configured with argument', function (t) {
   const agentId = 'id-from-argument'
   config.clear()
   const conf = config.get({
-    agentId
+    "agent-id": agentId
   }, false)
 
   t.equal(agentId, conf.agentId)
+})
+
+test('Should be read from config file', function (t) {
+  t.plan(1)
+
+  const testConfig = require('./pinpoint-config-test')
+  const result = config.readConfigJson(testConfig)
+  log.debug(result)
+  t.ok(result)
 })

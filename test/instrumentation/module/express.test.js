@@ -35,7 +35,7 @@ test.only(`${testName1} Should record request in basic route`, function (t) {
 
   app.get(PATH, async (req, res) => {
     // await util.sleep(3000)
-    await axios.get('http://***REMOVED***:9999/test/express')
+    // await axios.get('http://***REMOVED***:9999/test/express')
     res.send('ok get')
   })
   app.post(PATH, (req, res) => {

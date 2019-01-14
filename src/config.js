@@ -1,6 +1,6 @@
 'use strict'
 
-const LOG_LEVEL = require('utils/logger').LOG_LEVEL
+const defaultConfig = require('./pinpoint-config-default')
 
 const ENV_MAP = {
   agentId: 'PINPOINT_AGENT_ID',
@@ -12,35 +12,58 @@ const ENV_MAP = {
   collectorSpanPort: 'PINPOINT_COLLECTOR_SPAN_PORT',
 }
 
-const initialConf = {
-  agentId: null,
-  applicationName: null,
-  serviceType: null,
-  collectorIp: null,
-  collectorTcpPort: null,
-  collectorStatPort: null,
-  collectorSpanPort: null,
-
-  enabledDataSending: true,
-  logLevel: LOG_LEVEL.DEBUG
+const CONFIG_FILE_MAP = {
+  agentId: 'agent-id',
+  applicationName: 'application-name',
+  serviceType: 'application-type',
+  collectorIp: 'collector.ip',
+  collectorTcpPort: 'collector.tcp-port',
+  collectorStatPort: 'collector.stat-port',
+  collectorSpanPort: 'collector.span-port',
+  sampling: 'sampling.enable',
+  sampleRate: 'sampling.rate',
+  httpStatusCodeErrors: 'http-status-code-errors',
+  logLevel: 'log-level',
+  express: 'express.enable',
+  koa: 'koa.enable',
+  mongo: 'mongo.enable',
+  redis: 'redis.enable',
 }
 
 let conf = null
 
 const init = (agentConfig = {}) => {
+  console.log('>> readConfigJson(defaultConfig)', readConfigJson(defaultConfig))
+  console.log('>> readConfigJson(agentConfig)', readConfigJson(agentConfig))
   conf = Object.assign({},
-      initialConf,
-      readEnv(),
-      agentConfig)
+      readConfigJson(defaultConfig),
+      readFromEnv(),
+      readConfigJson(agentConfig))
 }
 
-const readEnv = () => {
-  return Object.entries(ENV_MAP).reduce((acc, [key, value]) => {
-    if (process.env[value]) {
-      acc[key] = process.env[value]
+const readFromEnv = () => {
+  return Object.entries(ENV_MAP).reduce((acc, [key, envName]) => {
+    if (process.env[envName]) {
+      acc[key] = process.env[envName]
     }
     return acc
   }, {})
+}
+
+const readConfigJson = (formattedConfig) => {
+  return Object.entries(CONFIG_FILE_MAP).reduce((acc, [key, propName]) => {
+    const value = getValue(propName, formattedConfig)
+    if (value) {
+      acc[key] = value
+    }
+    return acc
+  }, {})
+}
+
+const getValue = (key, configFile) => {
+  if (key) {
+    return key.split('.').reduce((object, prop) => object && object[prop], configFile)
+  }
 }
 
 const get = (agentConfig) => {
@@ -54,5 +77,6 @@ const clear = () => conf && (conf = null)
 
 module.exports = {
  get,
- clear
+ clear,
+ readConfigJson
 }

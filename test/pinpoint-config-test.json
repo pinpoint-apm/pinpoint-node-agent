@@ -1,0 +1,23 @@
+{
+  "agent-id": "node.test.app",
+  "application-name": "node.test.app",
+  "application-type": 1000,
+  "collector": {
+    "ip": "***REMOVED***",
+    "span-port": 9996,
+    "stat-port": 9995,
+    "tcp-port": 9994
+  },
+  "sampling": {
+    "enable": true,
+    "rate": 1
+  },
+  "http-status-code-errors": ["5xx"],
+  "log-level": "DEBUG",
+  "modules": {
+    "express": true,
+    "koa": true,
+    "mongodb": true,
+    "redis": true
+  }
+}

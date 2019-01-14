@@ -1,24 +1,9 @@
 const TransactionId = require('context/transaction-id')
 const TraceId = require('context/trace-id')
 const IdGenerator = require('context/id-generator')
-const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
-const LOG_LEVEL = require('utils/logger').LOG_LEVEL
 
-const config = {
-  agentId: 'dev-agent-app',
-  applicationName: 'dev.agent.app',
-  serviceType: ServiceTypeCode.express,
-  collectorIp: '***REMOVED***',
-  collectorTcpPort: 9994,
-  collectorStatPort: 9995,
-  collectorSpanPort: 9996,
-
-  enabledDataSending: false,
-  logLevel: LOG_LEVEL.DEBUG,
-
-  sampling: true,
-  sampleRate: 1
-}
+const testConfig= require('./pinpoint-config-test')
+const config = require('config').get(testConfig)
 
 const getTransactionId = () => {
   const agentId = config.agentId

@@ -28,23 +28,15 @@ module.exports = function(agent, version, mongodb) {
 
   return mongodb
 
-  /**
-   *
-   * @param orig
-   * @returns {wrappedFunction}
-   */
   function wrapCommand (orginal) {
-    return function wrappedFunction (ns, cmd, k, j) {
+    return function (ns, cmd) {
       const trace = agent.traceContext.currentTraceObject()
-
-      const id = 'mongodbTestCommandId'  // todo. 협의 후 기록 혹은 삭제
-
+      log.debug('intercepted call to mongodb-core.Server.prototype.command %o', { ns: ns, cmd: cmd })
       let spanEventRecorder
       let cb
       if (trace && arguments.length > 0) {
         const index = arguments.length - 1
         cb = arguments[index]
-
         if (typeof  cb === 'function') {
           let type
           if (cmd.findAndModify) type = 'findAndModify'
@@ -54,85 +46,68 @@ module.exports = function(agent, version, mongodb) {
           else type = 'command'
           spanEventRecorder = trace.traceBlockBegin()
           spanEventRecorder.recordServiceType(ServiceTypeCode.mongodb)
-          spanEventRecorder.recordApi(ns + '.' + type, 'db.mongodb.query')
-
-          arguments[index] = wrappedCallback
+          spanEventRecorder.recordApiDesc(`db.mongodb.query [${ns}.${type}]`)
+          // Todo. arguments -> cmd
         }
       }
 
-      return orginal.apply(this, arguments)
-
-      function wrappedCallback () {
-        log.debug('intercepted mongodb-core.Server.prototype.command callback %o', { id: id })
+      const result =  orginal.apply(this, arguments)
+      if (trace) {
         trace.traceBlockEnd(spanEventRecorder)
-        return cb.apply(this, arguments)
       }
-
+      log.debug('intercepted mongodb-core.Server.prototype.command callback %o', { ns: ns, cmd: cmd })
+      return result
     }
   }
 
   function wrapQuery (orginal, name) {
-    return function wrappedFunction(ns) {
+    return function (ns, cmd) {
       const trace = agent.traceContext.currentTraceObject()
-
-      const id = 'mongodbTestQueryId' // todo. 협의 후 기록 혹은 삭제
-
+      log.debug('intercepted call to mongodb-core.Server.prototype.%s %o', name, { ns: ns, cmd: cmd })
       let spanEventRecorder
       let cb
-
       if (trace && arguments.length > 0) {
         const index = arguments.length - 1
         cb = arguments[index]
         if (typeof cb === 'function') {
           spanEventRecorder = trace.traceBlockBegin()
           spanEventRecorder.recordServiceType(ServiceTypeCode.mongodb)
-          spanEventRecorder.recordApi(ns + '.' + name, 'db.mongodb.query')
-
-          arguments[index] = wrappedCallback
+          spanEventRecorder.recordApiDesc(`db.mongodb.query [${ns}.${name}]`)
+          // Todo. arguments -> cmd
         }
       }
-
-      return orginal.apply(this, arguments)
-
-      function wrappedCallback () {
-        log.debug('intercepted mongodb-core.Server.prototype.command callback %o', { id: id })
+      const result = orginal.apply(this, arguments)
+      if (trace) {
         trace.traceBlockEnd(spanEventRecorder)
-        return cb.apply(this, arguments)
       }
+      log.debug('intercepted mongodb-core.Server.prototype.%s callback %o', name, { ns: ns, cmd: cmd })
+      return result
+
     }
   }
 
   function wrapCursor (orginal, name) {
-    return function wrappedFunction () {
+    return function () {
       const trace = agent.traceContext.currentTraceObject()
-
-      const id = 'mongodbTestCursorId' // todo. 협의 후 기록 혹은 삭제
-
+      const id = `${this.ns}.${this.cmd.find ? 'find' : name}`
       log.debug('intercepted call to mongodb-core.Cursor.prototype.%s %o', name, { id: id })
-
       let spanEventRecorder
       let cb
       if (trace && arguments.length > 0) {
         cb = arguments[0]
         if (typeof cb === 'function') {
-          const spanName = `${this.ns}.${this.cmd.find ? 'find' : name}`
-
           spanEventRecorder = trace.traceBlockBegin()
           spanEventRecorder.recordServiceType(ServiceTypeCode.mongodb)
-          spanEventRecorder.recordApi(spanName, 'db.mongodb.query')
-
-          arguments[0] = wrappedCallback
+          spanEventRecorder.recordApiDesc(`db.mongodb.query [${id}]`)
+          // Todo. arguments -> this.cmd.query
         }
       }
-
-      return orginal.apply(this, arguments)
-
-      function wrappedCallback () {
-        log.debug('intercepted mongodb-core.Cursor.prototype.%s callback %o', name, { id: id })
+      const result = orginal.apply(this, arguments)
+      if (trace) {
         trace.traceBlockEnd(spanEventRecorder)
-
-        return cb.apply(this, arguments)
       }
+      log.debug('intercepted mongodb-core.Cursor.prototype.%s callback %o', name, { id: id })
+      return result
     }
   }
 }

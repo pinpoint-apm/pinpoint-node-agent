@@ -5,7 +5,7 @@ class SpanEvent {
     if (!sequence) {
     }
 
-    this.spanId = span.id// optional
+    this.spanId = span.spanId// optional
     this.sequence = sequence // required
     this.startTime = 0 // required
     this.elapsedTime = 0 // optional

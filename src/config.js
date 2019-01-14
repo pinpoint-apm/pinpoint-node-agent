@@ -33,8 +33,6 @@ const CONFIG_FILE_MAP = {
 let conf = null
 
 const init = (agentConfig = {}) => {
-  console.log('>> readConfigJson(defaultConfig)', readConfigJson(defaultConfig))
-  console.log('>> readConfigJson(agentConfig)', readConfigJson(agentConfig))
   conf = Object.assign({},
       readConfigJson(defaultConfig),
       readFromEnv(),

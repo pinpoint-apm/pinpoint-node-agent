@@ -9,6 +9,7 @@ const MODULES = [
   'koa',
   'koa-router',
   'redis',
+  'ioredis',
   'mongodb-core',
 ]
 

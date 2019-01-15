@@ -8,7 +8,6 @@ const log = require('utils/logger')
 module.exports = function (agent, version, redis) {
 
   const proto = redis.RedisClient && redis.RedisClient.prototype
-
   if (semver.satisfies(version, '>2.5.3')) {
     log.debug('shimming redis.RedisClient.prototype.internal_send_command')
     shimmer.wrap(proto, 'internal_send_command', wrapInternalSendCommand)
@@ -18,7 +17,6 @@ module.exports = function (agent, version, redis) {
   }
 
   return redis
-
 
   function makeWrappedCallback (cb, trace, spanEventRecorder) {
     if (trace) trace.traceBlockEnd(spanEventRecorder)
@@ -32,12 +30,11 @@ module.exports = function (agent, version, redis) {
     return function wrappedInternalSendCommand (commandObj) {
       const trace = agent.traceContext.currentTraceObject()
       let spanEventRecorder
-
       if (commandObj && trace) {
         const command = commandObj && commandObj.command
         spanEventRecorder = trace.traceBlockBegin()
         spanEventRecorder.recordServiceType(ServiceTypeCode.redis)
-        spanEventRecorder.recordApi('cache.redis::'+ String(command).toUpperCase())
+        spanEventRecorder.recordApiDesc('cache.redis::'+ String(command).toUpperCase())
         commandObj.callback = makeWrappedCallback(commandObj.callback, trace, spanEventRecorder)
       }
 
@@ -54,7 +51,7 @@ module.exports = function (agent, version, redis) {
         const trace = agent.traceContext.currentTraceObject()
         const spanEventRecorder = trace.traceBlockBegin()
         spanEventRecorder.recordServiceType(ServiceTypeCode.redis)
-        spanEventRecorder.recordApi('cache.redis::'+ String(command).toUpperCase())
+        spanEventRecorder.recordApiDesc('cache.redis::'+ String(command).toUpperCase())
 
         const index = args.length - 1
         const cb = args[index]

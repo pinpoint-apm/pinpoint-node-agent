@@ -82,7 +82,6 @@ module.exports = function(agent, version, mongodb) {
       }
       log.debug('intercepted mongodb-core.Server.prototype.%s callback %o', name, { ns: ns, cmd: cmd })
       return result
-
     }
   }
 

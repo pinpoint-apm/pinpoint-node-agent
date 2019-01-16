@@ -24,7 +24,7 @@ module.exports = function(agent, version, koa) {
       if (trace) {
         spanEventRecorder = trace.traceBlockBegin()
         spanEventRecorder.recordServiceType(ServiceTypeCode.koa)
-        spanEventRecorder.recordApiDesc('koa')
+        spanEventRecorder.recordApiDesc('koa') // Todo. check this
       }
       const result = original.apply(this, arguments)
       if (trace) {

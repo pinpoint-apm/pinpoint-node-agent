@@ -170,7 +170,7 @@ test(`${testName3} should Record the connections between koa and redis.`, functi
   const app = new Koa()
   const router = new Router()
   const client = Redis.createClient(6379,'***REMOVED***')
-  const PATH = `/${testName3}`
+  const PATH = `/${testName}`
 
   app.use(koaBodyParser())
   router.post(PATH, async function(ctx, next) {
@@ -229,7 +229,7 @@ test(`${testName4} should Record the connections between koa and ioredis.`, func
   const app = new Koa()
   const router = new Router()
   const redis = new ioRedis(6379,'***REMOVED***')
-  const PATH = `/${testName4}`
+  const PATH = `/${testName}`
 
   app.use(koaBodyParser())
   router.post(PATH, async function(ctx, next) {

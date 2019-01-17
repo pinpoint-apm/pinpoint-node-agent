@@ -1,9 +1,9 @@
 const test = require('tape')
 const { log, fixture, util } = require('../test-helper')
 
-const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
-const TraceContext = require('context/trace-context')
-const ExpressMethodDescritpor = require('constant/method-descriptor').ExpressMethodDescritpor
+const ServiceTypeCode = require('../../src/constant/service-type').ServiceTypeCode
+const TraceContext = require('../../src/context/trace-context')
+const ExpressMethodDescritpor = require('../../src/constant/method-descriptor').ExpressMethodDescritpor
 
 test('Should create continued trace and add span info', function (t) {
   t.plan(2)
@@ -62,10 +62,10 @@ test('Should complete trace ', async function (t) {
   const traceId = fixture.getTraceId(transactionId)
   const traceContext = TraceContext.init(fixture.getAgentInfo())
 
-  traceContext.newTraceObject(traceId)
+  const trace = traceContext.newTraceObject(traceId)
 
   await util.sleep(501)
 
-  const trace = traceContext.completeTraceObject()
+  traceContext.completeTraceObject(trace)
   t.ok(trace.spanRecorder.span.elapsedTime > 500)
 })

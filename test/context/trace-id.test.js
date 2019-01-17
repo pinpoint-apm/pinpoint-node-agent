@@ -1,9 +1,9 @@
 const test = require('tape')
 const { log, fixture, util } = require('../test-helper')
 
-const TransactionId = require('context/transaction-id')
-const TraceId = require('context/trace-id')
-const IdGenerator = require('context/id-generator')
+const TransactionId = require('../../src/context/transaction-id')
+const TraceId = require('../../src/context/trace-id')
+const IdGenerator = require('../../src/context/id-generator')
 
 test('Should create', function (t) {
   t.plan(2)

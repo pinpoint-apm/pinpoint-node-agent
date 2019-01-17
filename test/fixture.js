@@ -1,9 +1,9 @@
-const TransactionId = require('context/transaction-id')
-const TraceId = require('context/trace-id')
-const IdGenerator = require('context/id-generator')
+const TransactionId = require('../src/context/transaction-id')
+const TraceId = require('../src/context/trace-id')
+const IdGenerator = require('../src/context/id-generator')
 
 const testConfig= require('./pinpoint-config-test')
-const config = require('config').get(testConfig)
+const config = require('../src/config').getConfig(testConfig)
 
 const getTransactionId = () => {
   const agentId = config.agentId

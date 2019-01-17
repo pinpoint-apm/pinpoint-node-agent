@@ -2,13 +2,13 @@
 
 const net = require('net')
 
-const TcpClient = require('sender/tcp-client')
-const UdpClient = require('sender/udp-client')
-const serialize = require('data/serializer').serialize
-const SendPacket = require('sender/packet/send-packet')
-const RequestPacket = require('sender/packet/request-packet')
-const TSpan = require('data/dto/Trace_types').TSpan
-const log = require('utils/logger')
+const TcpClient = require('./tcp-client')
+const UdpClient = require('./udp-client')
+const serialize = require('../data/serializer').serialize
+const SendPacket = require('./packet/send-packet')
+const RequestPacket = require('./packet/request-packet')
+const TSpan = require('../data/dto/Trace_types').TSpan
+const log = require('../utils/logger')
 
 class DataSender {
   constructor (config) {

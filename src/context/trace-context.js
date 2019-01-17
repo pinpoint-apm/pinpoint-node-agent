@@ -1,10 +1,10 @@
 'use strict'
 
-const contextManager = require('context/context-manager')
-const Trace = require('context/trace')
-const TransactionId = require('context/transaction-id')
-const TraceId = require('context/trace-id')
-const IdGenerator = require('context/id-generator')
+const contextManager = require('./context-manager')
+const Trace = require('./trace')
+const TransactionId = require('./transaction-id')
+const TraceId = require('./trace-id')
+const IdGenerator = require('./id-generator')
 
 class TraceContext {
   constructor () {

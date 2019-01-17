@@ -4,8 +4,8 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../test-helper')
 enableDataSending()
 
-const Trace = require('context/trace')
-const DataSender = require('sender/data-sender')
+const Trace = require('../../src/context/trace')
+const DataSender = require('../../src/sender/data-sender')
 const dataSender = new DataSender(fixture.config)
 
 test('Should send span', function (t) {
@@ -21,7 +21,9 @@ test('Should send span', function (t) {
 
   dataSender.sendSpan(span)
 
-  setTimeout(() => dataSender.closeClient(), 500)
-
   t.ok(dataSender)
+})
+
+test.onFinish(() => {
+  dataSender.closeClient()
 })

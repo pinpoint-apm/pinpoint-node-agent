@@ -2,8 +2,8 @@
 
 const semver = require('semver')
 const shimmer = require('shimmer')
-const log = require('utils/logger')
-const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
+const log = require('../../utils/logger')
+const ServiceTypeCode = require('../../constant/service-type').ServiceTypeCode
 
 module.exports = function(agent, version, router) {
   // if (!semver.satisfies(version, '>=5.2.0 <8')) {

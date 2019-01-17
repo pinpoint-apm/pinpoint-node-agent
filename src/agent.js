@@ -1,24 +1,25 @@
 'use strict'
 
 const os = require('os');
-const instManager = require('instrumentation/inst-manager')
-const traceContext = require('context/trace-context')
-const MethodDescriptors = require('constant/method-descriptor').MethodDescriptors
-const TAgentInfo = require('data/dto/Pinpoint_types').TAgentInfo
-const TApiMetaData = require('data/dto/Trace_types').TApiMetaData
-const networkUtils = require('utils/network');
-const DataSender = require('sender/data-sender')
-const log = require('utils/logger')
+const instManager = require('./instrumentation/inst-manager')
+const traceContext = require('./context/trace-context')
+const MethodDescriptors = require('./constant/method-descriptor').MethodDescriptors
+const TAgentInfo = require('./data/dto/Pinpoint_types').TAgentInfo
+const TApiMetaData = require('./data/dto/Trace_types').TApiMetaData
+const networkUtils = require('./utils/network');
+const DataSender = require('./sender/data-sender')
+const log = require('./utils/logger')
 const StringMetaCache = require('./context/string-meta-cache')
-const sampler = require('sampler/sampler')
-
-const getConfig = require('config').get
+const sampler = require('./sampler/sampler')
+const getConfig = require('./config').getConfig
 
 class Agent {
-  constructor (agentConfig) {
-    log.init(agentConfig.logLevel)
+  constructor (initOptions) {
+    this.config = getConfig(initOptions)
+    log.init(this.config.logLevel)
 
-    this.config = getConfig(agentConfig)
+    log.info('[Pinpoint] Agent Init Started')
+    log.debug('[Pinpoint] Configuration', this.config)
 
     this.agentId = this.config.agentId
     this.applicationName = this.config.applicationName
@@ -43,10 +44,11 @@ class Agent {
 
     this.sendAgentInfo()
     this.sendApiMetaInfo()
+    log.info('[Pinpoint] Agent Init Finished')
   }
 
   createTraceObject (requestData) {
-    if (requestData.isRoot) {
+    if (!requestData || requestData.isRoot) {
       return this.traceContext.newTraceObject(this.isSampling())
     } else {
       return this.traceContext.continueTraceObject(requestData)

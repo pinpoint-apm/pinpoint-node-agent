@@ -4,7 +4,7 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 enableDataSending()
 
-const Agent = require('agent')
+const Agent = require('../../../src/agent')
 const agent = new Agent(fixture.config)
 
 const mongoose = require('mongoose')
@@ -28,14 +28,6 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-// close client connection
-const testCompletions = new Map()
-setInterval(() => {
-  if (Array.from(testCompletions.values()).every(v => v)) {
-    agent.dataSender.closeClient()
-  }
-}, 2000)
-
 const mongoData = {
   title: 'NODE.js by Pinpoint',
   author: 'iforget',
@@ -45,7 +37,6 @@ const mongoData = {
 const testName1 = 'express'
 test(`${testName1} should Record the connections between express and mongodb.`, function (t) {
   const testName = testName1
-  testCompletions.set(testName, false)
 
   t.plan(3)
 
@@ -116,14 +107,12 @@ test(`${testName1} should Record the connections between express and mongodb.`, 
     t.ok(rstUpdate.status, 200)
 
     server.close()
-    testCompletions.set(testName, true)
   })
 })
 
 const testName2 = 'koa'
 test.only(`${testName2} should Record the connections between express and mongodb.`, function (t) {
   const testName = testName2
-  testCompletions.set(testName, false)
 
   t.plan(3)
   const app = new Koa()
@@ -200,6 +189,9 @@ test.only(`${testName2} should Record the connections between express and mongod
     t.ok(rstUpdate.status, 200)
 
     server.close()
-    testCompletions.set(testName, true)
   })
+})
+
+test.onFinish(() => {
+  agent.dataSender.closeClient()
 })

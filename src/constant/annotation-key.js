@@ -1,6 +1,6 @@
 'use strict'
 
-const AnnotationKey = require('context/annotation-key')
+const AnnotationKey = require('../context/annotation-key')
 
 const DefaultAnnotationKey = {
   API: new AnnotationKey(12, "API"),

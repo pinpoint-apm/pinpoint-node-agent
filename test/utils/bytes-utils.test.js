@@ -1,7 +1,7 @@
 const test = require('tape')
 const { log, fixture, util } = require('../test-helper')
 
-const bytesUtils = require('utils/bytes-utils')
+const bytesUtils = require('../../src/utils/bytes-utils')
 
 /*
  * bound 1->0

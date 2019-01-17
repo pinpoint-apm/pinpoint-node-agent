@@ -1,7 +1,7 @@
 'use strict'
 
 const dgram = require('dgram')
-const log = require('utils/logger')
+const log = require('../utils/logger')
 
 class UdpClient {
   constructor (host, port) {

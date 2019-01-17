@@ -1,7 +1,7 @@
 const test = require('tape')
 const { log, fixture, util } = require('../test-helper')
 
-const transactionIdUtils = require('utils/transaction-id-utils')
+const transactionIdUtils = require('../../src/utils/transaction-id-utils')
 
 test('Should create buffer from transaction id', function (t) {
   t.plan(1)

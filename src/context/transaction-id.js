@@ -1,6 +1,6 @@
 'use strict'
 
-const transactionIdGenerator = require('context/sequence-generator').transactionIdGenerator
+const transactionIdGenerator = require('./sequence-generator').transactionIdGenerator
 
 const DELIMETER = '^'
 

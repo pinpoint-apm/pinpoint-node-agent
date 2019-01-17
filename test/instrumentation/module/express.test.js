@@ -4,7 +4,7 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 enableDataSending()
 
-const Agent = require('agent')
+const Agent = require('../../../src/agent')
 const agent = new Agent(fixture.config)
 
 const express = require('express')
@@ -15,18 +15,9 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-// close client connection
-const testCompletions = new Map()
-setInterval(() => {
-  if (Array.from(testCompletions.values()).every(v => v)) {
-    agent.dataSender.closeClient()
-  }
-}, 2000)
-
 const testName1 = 'express1'
-test.only(`${testName1} Should record request in basic route`, function (t) {
+test(`${testName1} Should record request in basic route`, function (t) {
   const testName = testName1
-  testCompletions.set(testName, false)
 
   t.plan(3)
 
@@ -54,14 +45,12 @@ test.only(`${testName1} Should record request in basic route`, function (t) {
     t.ok(traceMap.size > 0)
 
     server.close()
-    testCompletions.set(testName, true)
   })
 })
 
 const testName2 = 'express2'
 test(`[${testName2}] Should record request in express.Router`, function (t) {
   const testName = testName2
-  testCompletions.set(testName, false)
 
   t.plan(3)
 
@@ -94,7 +83,6 @@ test(`[${testName2}] Should record request in express.Router`, function (t) {
     t.ok(traceMap.size > 0)
 
     server.close()
-    testCompletions.set(testName, true)
   })
 })
 
@@ -102,7 +90,6 @@ test(`[${testName2}] Should record request in express.Router`, function (t) {
 const testName3 = 'express3'
 test(`${testName3} Should record request taking more than 2 sec`, function (t) {
   const testName = testName3
-  testCompletions.set(testName, false)
 
   t.plan(2)
 
@@ -124,7 +111,6 @@ test(`${testName3} Should record request taking more than 2 sec`, function (t) {
     t.ok(traceMap.size > 0)
 
     server.close()
-    testCompletions.set(testName, true)
   })
 })
 
@@ -137,7 +123,6 @@ class MyError extends Error {
 const testName4 = 'express4'
 test(`${testName4} Should record internal error`, function (t) {
   const testName = testName4
-  testCompletions.set(testName, false)
 
   t.plan(2)
 
@@ -156,7 +141,7 @@ test(`${testName4} Should record internal error`, function (t) {
   })
   app.use((error, req, res, next) => {
     console.log('[app] error handler')
-    res.json({ message: error.message });
+    res.json({ message: error.message })
     res.status = 500
   });
 
@@ -168,14 +153,12 @@ test(`${testName4} Should record internal error`, function (t) {
     t.ok(traceMap.size > 0)
 
     server.close()
-    testCompletions.set(testName, true)
   })
 })
 
 const testName5 = 'express5'
 test(`${testName5} Should record middleware`, function (t) {
   const testName = testName5
-  testCompletions.set(testName, false)
 
   t.plan(2)
 
@@ -209,14 +192,12 @@ test(`${testName5} Should record middleware`, function (t) {
     t.ok(traceMap.size > 0)
 
     server.close()
-    testCompletions.set(testName, true)
   })
 })
 
 const testName6 = 'express6'
 test(`${testName6} Should record each http method`, function (t) {
   const testName = testName6
-  testCompletions.set(testName, false)
 
   t.plan(6)
 
@@ -261,8 +242,10 @@ test(`${testName6} Should record each http method`, function (t) {
     t.ok(traceMap.size > 0)
 
     server.close()
-    testCompletions.set(testName, true)
   })
 })
 
+test.onFinish(() => {
+  agent.dataSender.closeClient()
+})
 

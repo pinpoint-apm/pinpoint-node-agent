@@ -1,7 +1,7 @@
 'use strict'
 
 const net = require('net')
-const log = require('utils/logger')
+const log = require('../utils/logger')
 
 const DEFAULT_TIMEOUT = 3000
 
@@ -15,16 +15,17 @@ class TcpClient {
   }
 
   init () {
+    console.log('======== init')
     if (this.socket) {
       this.close()
     }
     this.socket = new net.Socket()
     this.socket.setTimeout(DEFAULT_TIMEOUT)
     this.socket.connect(this.port, this.host, () => {
-      log.info('[TDP] Socket Created')
+      log.info('[TCP] Socket Created')
     })
     this.socket.on('data', (data) => {
-      log.debug('[TDP] Data Received', data)
+      log.debug('[TCP] Data Received', data)
     })
   }
 
@@ -34,18 +35,17 @@ class TcpClient {
         this.init()
       }
       this.socket.write(msg)
-      log.debug('[TDP] Sent Successfully')
+      log.debug('[TCP] Sent Successfully')
       callback && callback.apply()
     } catch (err) {
-      log.error('[TDP] Data Send Error')
+      log.error('[TCP] Data Send Error')
     }
   }
 
   close () {
     if (this.socket) {
       this.socket.end()
-      this.socket = null
-      log.info('[TDP] Socket closed')
+      log.info('[TCP] Socket ended')
     }
   }
 }

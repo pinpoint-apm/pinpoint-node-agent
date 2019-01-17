@@ -1,7 +1,7 @@
 const test = require('tape')
 const { log, fixture, util } = require('../test-helper')
 
-const Trace = require('context/trace')
+const Trace = require('../../src/context/trace')
 
 test('Should begin/end trace block', async function (t) {
   t.plan(2)

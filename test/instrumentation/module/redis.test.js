@@ -4,7 +4,7 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 enableDataSending()
 
-const Agent = require('agent')
+const Agent = require('../../../src/agent')
 const agent = new Agent(fixture.config)
 
 const express = require('express')
@@ -20,14 +20,6 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-// close client connection
-const testCompletions = new Map()
-setInterval(() => {
-  if (Array.from(testCompletions.values()).every(v => v)) {
-    agent.dataSender.closeClient()
-  }
-}, 2000)
-
 const redisData = {
   name: 'jundol',
   job: 'bon developer',
@@ -37,7 +29,6 @@ const redisData = {
 const testName1 = 'express-redis'
 test(`${testName1} should Record the connections between express and redis.`, function (t) {
   const testName = testName1
-  testCompletions.set(testName, false)
 
   t.plan(3)
 
@@ -93,14 +84,12 @@ test(`${testName1} should Record the connections between express and redis.`, fu
     t.ok(traceMap.size > 0)
 
     server.close()
-    testCompletions.set(testName, true)
   })
 })
 
 const testName2 = 'express-ioredis'
 test(`${testName2} should Record the connections between express and ioredis.`, function (t) {
   const testName = testName2
-  testCompletions.set(testName, false)
 
   t.plan(3)
 
@@ -156,14 +145,12 @@ test(`${testName2} should Record the connections between express and ioredis.`, 
     t.ok(traceMap.size > 0)
 
     server.close()
-    testCompletions.set(testName, true)
   })
 })
 
 const testName3 = 'koa-redis'
 test(`${testName3} should Record the connections between koa and redis.`, function (t) {
   const testName = testName3
-  testCompletions.set(testName, false)
 
   t.plan(3)
 
@@ -215,14 +202,12 @@ test(`${testName3} should Record the connections between koa and redis.`, functi
     t.ok(traceMap.size > 0)
 
     server.close()
-    testCompletions.set(testName, true)
   })
 })
 
 const testName4 = 'koa-ioredis'
 test(`${testName4} should Record the connections between koa and ioredis.`, function (t) {
   const testName = testName4
-  testCompletions.set(testName, false)
 
   t.plan(3)
 
@@ -274,11 +259,9 @@ test(`${testName4} should Record the connections between koa and ioredis.`, func
     t.ok(traceMap.size > 0)
 
     server.close()
-    testCompletions.set(testName, true)
   })
 })
 
-
-
-
-
+test.onFinish(() => {
+  agent.dataSender.closeClient()
+})

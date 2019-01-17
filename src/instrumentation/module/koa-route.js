@@ -1,7 +1,7 @@
 'use strict'
 
 const shimmer = require('shimmer')
-const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
+const ServiceTypeCode = require('../../constant/service-type').ServiceTypeCode
 const methods = require('methods')
 
 module.exports = function(agent, version, route) {

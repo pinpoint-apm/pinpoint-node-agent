@@ -1,6 +1,10 @@
 'use strict'
 
+const path = require('path')
+const fs = require('fs')
 const defaultConfig = require('./pinpoint-config-default')
+
+const ROOT_PATH = path.dirname(require.main.filename || process.mainModule.filename)
 
 const ENV_MAP = {
   agentId: 'PINPOINT_AGENT_ID',
@@ -24,19 +28,21 @@ const CONFIG_FILE_MAP = {
   sampleRate: 'sampling.rate',
   httpStatusCodeErrors: 'http-status-code-errors',
   logLevel: 'log-level',
+  enabledDataSending: 'enabled-data-sending',
   express: 'express.enable',
   koa: 'koa.enable',
   mongo: 'mongo.enable',
   redis: 'redis.enable',
 }
 
-let conf = null
+let agentConfig = null
 
-const init = (agentConfig = {}) => {
-  conf = Object.assign({},
+const init = (initOptions = {}) => {
+  agentConfig = Object.assign({},
       readConfigJson(defaultConfig),
+      readConfigJson(readRootConfigFile()),
       readFromEnv(),
-      readConfigJson(agentConfig))
+      readConfigJson(initOptions))
 }
 
 const readFromEnv = () => {
@@ -58,23 +64,32 @@ const readConfigJson = (formattedConfig) => {
   }, {})
 }
 
+const readRootConfigFile = () => {
+  const fileName = 'pinpoint-config.json'
+  const fileFullPath = ROOT_PATH + '/' + fileName
+  if (fs.existsSync(fileFullPath)) {
+    return require(fileFullPath)
+  }
+  return {}
+}
+
 const getValue = (key, configFile) => {
   if (key) {
     return key.split('.').reduce((object, prop) => object && object[prop], configFile)
   }
 }
 
-const get = (agentConfig) => {
-  if (!conf) {
-    init(agentConfig)
+const getConfig = (initOptions) => {
+  if (!agentConfig) {
+    init(initOptions)
   }
-  return conf
+  return agentConfig
 }
 
-const clear = () => conf && (conf = null)
+const clear = () => agentConfig && (agentConfig = null)
 
 module.exports = {
- get,
+ getConfig,
  clear,
  readConfigJson
 }

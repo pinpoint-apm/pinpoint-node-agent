@@ -1,7 +1,7 @@
 const test = require('tape')
 const { log, fixture, util } = require('../test-helper')
 
-const contextManger = require('context/context-manager')
+const contextManger = require('../../src/context/context-manager')
 
 test('Should trace context in setTimeout', async function (t) {
   t.plan(1)

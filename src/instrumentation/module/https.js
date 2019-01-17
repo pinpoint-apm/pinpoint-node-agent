@@ -2,8 +2,8 @@
 
 const semver = require('semver')
 const shimmer = require('shimmer')
-const log = require('utils/logger')
-const httpShared = require('instrumentation/http-shared')
+const log = require('../../utils/logger')
+const httpShared = require('../http-shared')
 
 module.exports = function(agent, version, https) {
   log.debug('shimming https.Server.prototype.emit function')

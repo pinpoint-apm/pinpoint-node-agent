@@ -1,6 +1,6 @@
 'use strict'
 
-const MethodDescriptor = require('context/method-descriptor')
+const MethodDescriptor = require('../context/method-descriptor')
 
 const HttpMethodDescritpor = {
   SERVER_REQUEST: new MethodDescriptor("http.Server.request", "http.Server.request", 1),

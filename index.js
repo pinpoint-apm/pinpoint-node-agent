@@ -1,4 +1,5 @@
 'use strict'
 
-module.exports = require('./src/agent');
-
+const Agent = require('./src/agent')
+const agent = new Agent()
+module.exports = agent

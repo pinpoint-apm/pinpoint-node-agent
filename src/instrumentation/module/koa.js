@@ -2,9 +2,9 @@
 
 const shimmer = require('shimmer')
 const semver = require('semver')
-const log = require('utils/logger')
+const log = require('../../utils/logger')
 
-const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
+const ServiceTypeCode = require('../../constant/service-type').ServiceTypeCode
 
 module.exports = function(agent, version, koa) {
 

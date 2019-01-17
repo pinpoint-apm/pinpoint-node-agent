@@ -1,6 +1,6 @@
 'use strict'
 
-const MethodType = require('constant/method-type').MethodType
+const MethodType = require('../constant/method-type').MethodType
 
 class MethodDescriptor {
   constructor (fullName, descriptor, apiId, type) {

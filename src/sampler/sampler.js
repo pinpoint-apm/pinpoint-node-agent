@@ -1,6 +1,6 @@
 'use strict'
 
-const samplingCountGenerator = require('context/sequence-generator').samplingCountGenerator
+const samplingCountGenerator = require('../context/sequence-generator').samplingCountGenerator
 
 const getIsSampling = (sampling, sampleRate) => () => {
   if (sampling) {

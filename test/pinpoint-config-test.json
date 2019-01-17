@@ -13,7 +13,7 @@
     "rate": 1
   },
   "http-status-code-errors": ["5xx"],
-  "log-level": "DEBUG",
+  "log-level": "INFO",
   "modules": {
     "express": true,
     "koa": true,

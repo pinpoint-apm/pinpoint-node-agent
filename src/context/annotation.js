@@ -1,7 +1,7 @@
 'use strict'
 
-const annotationConstant = require('constant/annotation')
-const TypedValue = require('context/typed-value')
+const annotationConstant = require('../constant/annotation')
+const TypedValue = require('./typed-value')
 
 class Annotation {
   constructor (key, value) {

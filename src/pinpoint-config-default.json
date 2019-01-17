@@ -14,6 +14,7 @@
   },
   "http-status-code-errors": ["5xx"],
   "log-level": "WARN",
+  "enabled-data-sending": true,
   "express": {
     "enable": true
   },

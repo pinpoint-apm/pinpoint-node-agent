@@ -1,8 +1,8 @@
 'use strict'
 
 const shimmer = require('shimmer')
-const log = require('utils/logger')
-const httpShared = require('instrumentation/http-shared')
+const log = require('../../utils/logger')
+const httpShared = require('../http-shared')
 
 module.exports = function(agent, version, http) {
   log.debug('shimming http.Server.prototype.emit function')

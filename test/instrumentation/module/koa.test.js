@@ -4,7 +4,7 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 enableDataSending()
 
-const Agent = require('agent')
+const Agent = require('../../../src/agent')
 const agent = new Agent(fixture.config)
 
 const Koa = require('koa')
@@ -16,17 +16,9 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-const testCompletions = new Map()
-setInterval(() => {
-  if (Array.from(testCompletions.values()).every(v => v)) {
-    agent.dataSender.closeClient()
-  }
-}, 2000)
-
 const testName1 = 'koa-router1'
 test(`${testName1} Should record request in basic route`, function (t) {
   const testName = testName1
-  testCompletions.set(testName, false)
 
   t.plan(3)
 
@@ -55,14 +47,12 @@ test(`${testName1} Should record request in basic route`, function (t) {
     t.ok(traceMap.size > 0)
 
     server.close()
-    testCompletions.set(testName, true)
   })
 })
 
 const testName2 = 'koa-router2'
 test.only(`${testName2} Should record internal error`, function (t) {
   const testName = testName2
-  testCompletions.set(testName, false)
 
   t.plan(2)
 
@@ -134,9 +124,9 @@ test.only(`${testName2} Should record internal error`, function (t) {
     t.ok(traceMap.size > 0)
 
     server.close()
-    testCompletions.set(testName, true)
   })
-
-  testCompletions.set(testName, true)
 })
 
+test.onFinish(() => {
+  agent.dataSender.closeClient()
+})

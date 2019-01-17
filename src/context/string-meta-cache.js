@@ -1,7 +1,7 @@
 'use strict'
 
-const TStringMetaData = require('data/dto/Trace_types').TStringMetaData
-const cacheKeyGenerator = require('context/sequence-generator').cacheKeyGenerator
+const TStringMetaData = require('../data/dto/Trace_types').TStringMetaData
+const cacheKeyGenerator = require('../context/sequence-generator').cacheKeyGenerator
 
 class StringMetaCache {
   constructor() {

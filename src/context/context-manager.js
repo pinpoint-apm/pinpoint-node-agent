@@ -1,7 +1,7 @@
 'use strict'
 
 const async_hooks = require('async_hooks')
-const log = require('utils/logger')
+const log = require('../utils/logger')
 
 const traceObjectMap = new Map()
 

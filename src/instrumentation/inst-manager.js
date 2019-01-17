@@ -1,7 +1,7 @@
 'use strict'
 
 const shimmer = require('shimmer')
-const log = require('utils/logger')
+const log = require('../utils/logger')
 
 const MODULES = [
   'express',

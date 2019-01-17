@@ -2,11 +2,11 @@
 
 const endOfStream = require('end-of-stream')
 const url = require('url')
-const log = require('utils/logger')
-const IdGenerator = require('context/id-generator')
+const log = require('../utils/logger')
+const IdGenerator = require('../context/id-generator')
 
-const RequestHeaderUtils = require('instrumentation/request-header-utils')
-const HttpMethodDescritpor = require('constant/method-descriptor').HttpMethodDescritpor
+const RequestHeaderUtils = require('../instrumentation/request-header-utils')
+const HttpMethodDescritpor = require('../constant/method-descriptor').HttpMethodDescritpor
 
 exports.instrumentRequest = function (agent, moduleName) {
   return function(original) {
@@ -42,7 +42,7 @@ exports.instrumentRequest = function (agent, moduleName) {
     }
   }
 }
-const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
+const ServiceTypeCode = require('../constant/service-type').ServiceTypeCode
 
 exports.traceOutgoingRequest = function (agent, moduleName) {
   return function (original) {

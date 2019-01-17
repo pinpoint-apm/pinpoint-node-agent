@@ -1,11 +1,11 @@
 'use strict'
 
 const url = require('url')
-const log = require('utils/logger')
+const log = require('../utils/logger')
 
 const RequestData = require('./request-data')
-const PinpointHeader = require('constant/http-header').PinpointHeader
-const TransactionId = require('context/transaction-id')
+const PinpointHeader = require('../constant/http-header').PinpointHeader
+const TransactionId = require('../context/transaction-id')
 
 class RequestHeaderUtils {
   static read (request) {

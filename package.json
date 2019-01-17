@@ -6,8 +6,8 @@
   "main": "index.js",
   "scripts": {
     "clean": "rimraf build",
-    "test": "NODE_PATH=src node runTest.js",
-    "tape": "NODE_PATH=src tape",
+    "test": "node runTest.js",
+    "tape": "tape",
     "build:umdmin": "webpack --mode=production --output-library-target=umd",
     "build:umd": "webpack --mode=development --output-library-target=umd",
     "build:commonjs": "webpack --mode=development --output-library-target=commonjs2",

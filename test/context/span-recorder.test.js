@@ -1,14 +1,14 @@
 const test = require('tape')
 const { log, fixture, util } = require('../test-helper')
 
-const Span = require('context/span')
-const SpanRecorder = require('context/span-recorder')
+const Span = require('../../src/context/span')
+const SpanRecorder = require('../../src/context/span-recorder')
 
-const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
-const ServiceTypeProperty = require('constant/service-type').ServiceTypeProperty
-const ExpressMethodDescritpor = require('constant/method-descriptor').ExpressMethodDescritpor
+const ServiceTypeCode = require('../../src/constant/service-type').ServiceTypeCode
+const ServiceTypeProperty = require('../../src/constant/service-type').ServiceTypeProperty
+const ExpressMethodDescritpor = require('../../src/constant/method-descriptor').ExpressMethodDescritpor
 
-test('Should start ...', async function (t) {
+test('Should create span recorder', async function (t) {
   t.plan(2)
 
   const span = new Span(fixture.getTraceId(), fixture.getAgentInfo())

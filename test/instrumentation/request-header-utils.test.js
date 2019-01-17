@@ -5,10 +5,10 @@ const http = require('http')
 const { log, fixture, util, enableDataSending } = require('../test-helper')
 enableDataSending()
 
-const RequestHeaderUtils = require('instrumentation/request-header-utils')
-const Agent= require('agent')
+const RequestHeaderUtils = require('../../src/instrumentation/request-header-utils')
+const Agent= require('../../src/agent')
 const agent = new Agent(fixture.config)
-const PinpointHeader = require('constant/http-header').PinpointHeader
+const PinpointHeader = require('../../src/constant/http-header').PinpointHeader
 
 const headers = {
   'Pinpoint-TraceID': fixture.getTraceId(),
@@ -55,4 +55,8 @@ test('Should write pinpoint header', async function (t) {
 
   await axios.get(`http://${endPoint}${rpcName}?q=1`)
   server.close()
+})
+
+test.onFinish(() => {
+  agent.dataSender.closeClient()
 })

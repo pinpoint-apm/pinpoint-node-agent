@@ -1,8 +1,8 @@
 const test = require('tape')
 const { log, fixture, util } = require('../test-helper')
 
-const transactionIdGenerator = require('context/sequence-generator').transactionIdGenerator
-const TransactionId = require('context/transaction-id')
+const transactionIdGenerator = require('../../src/context/sequence-generator').transactionIdGenerator
+const TransactionId = require('../../src/context/transaction-id')
 
 test('Should create with sequence number', function (t) {
   t.plan(3)

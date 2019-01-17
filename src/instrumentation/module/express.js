@@ -3,7 +3,7 @@
 const shimmer = require('shimmer')
 
 const log = require('../../utils/logger')
-const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
+const ServiceTypeCode = require('../../constant/service-type').ServiceTypeCode
 
 const patchedLayerSet = new Set()
 
@@ -51,7 +51,7 @@ module.exports = function(agent, version, express) {
 
   function recordHandle (original, moduleName) {
     return function (req, res, next) {
-      log.info('recordHandle start', getApiDesc(moduleName, req))
+      log.debug('recordHandle start', getApiDesc(moduleName, req))
       const trace = agent.traceContext.currentTraceObject()
       let spanEventRecorder = null
       if (trace) {
@@ -63,14 +63,14 @@ module.exports = function(agent, version, express) {
       if (trace) {
         trace.traceBlockEnd(spanEventRecorder)
       }
-      log.info('recordHandle end', getApiDesc(moduleName, req))
+      log.debug('recordHandle end', getApiDesc(moduleName, req))
       return result
     }
   }
 
   function recordErrorHandle (original, moduleName) {
     return function (err, req, res, next) {
-      log.info('recordErrorHandle start', getApiDesc(moduleName, req))
+      log.debug('recordErrorHandle start', getApiDesc(moduleName, req))
       const trace = agent.traceContext.currentTraceObject()
       let spanEventRecorder = null
 
@@ -84,7 +84,7 @@ module.exports = function(agent, version, express) {
       if (trace) {
         trace.traceBlockEnd(spanEventRecorder)
       }
-      log.info('recordErrorHandle end', getApiDesc(moduleName, req))
+      log.debug('recordErrorHandle end', getApiDesc(moduleName, req))
       return result
     }
   }

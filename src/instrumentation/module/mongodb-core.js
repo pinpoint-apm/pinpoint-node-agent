@@ -2,8 +2,8 @@
 
 const shimmer = require('shimmer')
 const semver = require('semver')
-const ServiceTypeCode = require('constant/service-type').ServiceTypeCode
-const log = require('utils/logger')
+const ServiceTypeCode = require('../../constant/service-type').ServiceTypeCode
+const log = require('../../utils/logger')
 
 const SERVER_FNS = ['insert', 'update', 'remove', 'auth']
 const CURSOR_FNS_FIRST = ['_find', '_getmore']

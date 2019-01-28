@@ -6,12 +6,11 @@ const log = require('../../utils/logger')
 const ServiceTypeCode = require('../../constant/service-type').ServiceTypeCode
 
 module.exports = function(agent, version, router) {
-  // if (!semver.satisfies(version, '>=5.2.0 <8')) {
-  //   log.debug('koa-router version %s not supported - aborting...', version)
-  //   return Router
-  // // }
-  //
-  //todo. koa 미들웨어 스텍으로 옮겨도 될꺼 같긴 한데 검토해보기
+  if (!semver.satisfies(version, '>=5.2.0 <8')) {
+    log.debug('koa-router version %s not supported - aborting...', version)
+    return router
+  }
+
   shimmer.wrap(router.prototype, 'register', function(original) {
     return function (path, methods, middleware, opts) {
       const layer = original.apply(this, arguments)

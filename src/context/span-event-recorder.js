@@ -77,9 +77,16 @@ class SpanEventRecorder {
     }
   }
 
-  recordAttribute (key, value) {
+  recordApiArguments (key, desc, valueType) {
+    if (this.spanEvent && desc) {
+      this.recordAttribute(key, desc, valueType)
+      this.recordApiId(0)
+    }
+  }
+
+  recordAttribute (key, value, valueType) {
     if (this.spanEvent && key && value) {
-      this.spanEvent.annotations.push(new Annotation(key, value))
+      this.spanEvent.annotations.push(new Annotation(key, value, valueType))
     }
   }
 

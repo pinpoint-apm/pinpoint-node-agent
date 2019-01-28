@@ -6,6 +6,10 @@ const ServiceTypeCode = require('../../constant/service-type').ServiceTypeCode
 const log = require('../../utils/logger')
 
 module.exports = function (agent, version, redis) {
+  if (!semver.satisfies(version, '^2.0.0')) {
+    log.debug('redis version %s not supported - aborting...', version)
+    return redis
+  }
 
   const proto = redis.RedisClient && redis.RedisClient.prototype
   if (semver.satisfies(version, '>2.5.3')) {

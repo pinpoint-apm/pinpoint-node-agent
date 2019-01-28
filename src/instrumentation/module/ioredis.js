@@ -5,12 +5,17 @@ const semver = require('semver')
 const ServiceTypeCode = require('../../constant/service-type').ServiceTypeCode
 const log = require('../../utils/logger')
 
-module.exports = function (agent, version, redis) {
+module.exports = function (agent, version, ioredis) {
+  if (!semver.satisfies(version, '>=2.0.0 <5.0.0')) {
+    log.debug('ioredis version %s not supported - aborting...', version)
+    return ioredis
+  }
 
-  const proto = redis && redis.prototype
+
+  const proto = ioredis && ioredis.prototype
   shimmer.wrap(proto, 'sendCommand', wrapSendCommand)
 
-  return redis
+  return ioredis
 
   function makeWrappedCallback (cb, trace, spanEventRecorder) {
     if (trace) {

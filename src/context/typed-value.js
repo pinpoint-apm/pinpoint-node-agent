@@ -1,7 +1,9 @@
 'use strict'
 
+const ValuedType = require('../constant/valued-type').ValuedType
+
 class TypedValue {
-  constructor (value) {
+  constructor (value, valuedType) {
     switch (typeof value) {
       case 'number':
         this.intValue = value
@@ -11,6 +13,11 @@ class TypedValue {
         break;
       case 'string':
         this.stringValue = value
+        break;
+      case 'object':
+        if (valuedType === ValuedType.stringStringValue) {
+          this.stringStringValue = value
+        }
         break;
       case 'undefined':
         this.stringValue = value

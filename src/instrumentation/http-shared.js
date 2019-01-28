@@ -23,9 +23,7 @@ exports.instrumentRequest = function (agent, moduleName) {
           recordRequest(trace.spanRecorder, requestData)
           trace.spanRecorder.recordApiId(HttpMethodDescritpor.SERVER_REQUEST.apiId)
         }
-        // todo. emmiter
-        // ins.bindEmitter(req)
-        // ins.bindEmitter(res)
+
         endOfStream(res, function (err) {
           if (!err) {
             if (trace && trace.canSampled()) {

@@ -3,6 +3,9 @@
 const shimmer = require('shimmer')
 const semver = require('semver')
 const ServiceTypeCode = require('../../constant/service-type').ServiceTypeCode
+const ValueType = require('../../constant/valued-type').ValuedType
+const EventAnnotationKey = require('../../constant/annotation-key').EventAnnotationKey
+
 const log = require('../../utils/logger')
 
 const SERVER_FNS = ['insert', 'update', 'remove', 'auth']
@@ -47,7 +50,7 @@ module.exports = function(agent, version, mongodb) {
           spanEventRecorder = trace.traceBlockBegin()
           spanEventRecorder.recordServiceType(ServiceTypeCode.mongodb)
           spanEventRecorder.recordApiDesc(`db.mongodb.query [${ns}.${type}]`)
-          // Todo. arguments -> cmd
+          spanEventRecorder.recordApiArguments(EventAnnotationKey.MONGO_JSON_DATA, convertForStringString(cmd), ValueType.stringStringValue)
         }
       }
 
@@ -73,7 +76,7 @@ module.exports = function(agent, version, mongodb) {
           spanEventRecorder = trace.traceBlockBegin()
           spanEventRecorder.recordServiceType(ServiceTypeCode.mongodb)
           spanEventRecorder.recordApiDesc(`db.mongodb.query [${ns}.${name}]`)
-          // Todo. arguments -> cmd
+          spanEventRecorder.recordApiArguments(EventAnnotationKey.MONGO_JSON_DATA, convertForStringString(cmd), ValueType.stringStringValue)
         }
       }
       const result = orginal.apply(this, arguments)
@@ -98,7 +101,7 @@ module.exports = function(agent, version, mongodb) {
           spanEventRecorder = trace.traceBlockBegin()
           spanEventRecorder.recordServiceType(ServiceTypeCode.mongodb)
           spanEventRecorder.recordApiDesc(`db.mongodb.query [${id}]`)
-          // Todo. arguments -> this.cmd.query
+          spanEventRecorder.recordApiArguments(EventAnnotationKey.MONGO_JSON_DATA, convertForStringString(this.cmd.query), ValueType.stringStringValue)
         }
       }
       const result = orginal.apply(this, arguments)
@@ -109,4 +112,13 @@ module.exports = function(agent, version, mongodb) {
       return result
     }
   }
+
+  function convertForStringString(value) {
+    return {
+      stringValue1: JSON.stringify(value),
+      stringValue2: null,
+    }
+  }
 }
+
+

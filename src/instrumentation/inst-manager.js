@@ -1,6 +1,10 @@
 'use strict'
 
+const fs = require('fs')
+const path = require('path')
+const findNodeModules = require('find-node-modules');
 const shimmer = require('shimmer')
+
 const log = require('../utils/logger')
 
 const MODULES = [
@@ -14,20 +18,21 @@ const MODULES = [
   'request'
 ]
 
+const nodeModules = findNodeModules({relative: false })
+
 function init(agent) {
   try {
-    var Module = require('module')
+    const Module = require('module')
     shimmer.wrap(Module, '_load', function (original) {
       return function (name) {
         const m = original.apply(this, arguments)
         if (MODULES.includes(name) && agent.includedModules(name)) {
-          // todo. versioning Logic add On
-          const version = '2.5.6'
           try {
-            console.log('loader=>', name)
-
+            const version = _getModuleVersion(name)
             require('./module/' + name)(agent, version, m)
             agent.setModules(name)
+
+            log.info('loader ==> %s (%s)', name, version)
           } catch (e) {
             log.error('fail to load:', e)
           }
@@ -40,34 +45,25 @@ function init(agent) {
   }
 }
 
-
-function bindEmitter(emitter) {
-  const ins = this
-  const methods = [
-      'on',
-      'addListener',
-      'prependListener'
-  ]
-
-    // if (semver.satisfies(process.versions.node, '>=6')) {
-  //   methods.push('prependListener')
-  // }
-  shimmer.massWrap(emitter, methods, (original) => function(name, handler) {
-    return original.call(this, name, ins.bindFunction(handler))
+function _getModuleVersion(name) {
+  let version
+  nodeModules.some((nodePath) => {
+    const pkg = path.join(`${nodePath}/${name}/`, 'package.json')
+    try {
+      if (fs.existsSync(pkg)) {
+        const json = JSON.parse(fs.readFileSync(pkg))
+        version = json.version
+      }
+    } catch (e) {
+      log.error('error occurred', e)
+    }
   })
-}
-
-function bindFunction (original) {
-    if (typeof original !== 'function') return original
-    //
-    // const ins = this
-    //
-
-  return original
+  if (!version) {
+    version = process.versions.node
+  }
+  return version
 }
 
 module.exports = {
   init,
-  bindEmitter,
-  bindFunction,
 }

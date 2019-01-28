@@ -4,6 +4,8 @@ const endOfStream = require('end-of-stream')
 const url = require('url')
 const log = require('../utils/logger')
 const IdGenerator = require('../context/id-generator')
+const AsyncIdAccessor = require('../context/async-id-accessor')
+const DefaultAnnotationKey = require('../constant/annotation-key').DefaultAnnotationKey
 
 const RequestHeaderUtils = require('../instrumentation/request-header-utils')
 const HttpMethodDescritpor = require('../constant/method-descriptor').HttpMethodDescritpor
@@ -53,6 +55,20 @@ exports.traceOutgoingRequest = function (agent, moduleName) {
       if (!trace) return req
       // Fixme :  Trace id !?
 
+      let spanEventRecorder;
+      let asyncId;
+
+      // If request object has an asyncId, use request object's one
+      if (arguments && arguments[0] && AsyncIdAccessor.getAsyncId(arguments[0])) {
+        asyncId = AsyncIdAccessor.getAsyncId(arguments[0]);
+      } else {
+        spanEventRecorder = trace.traceBlockBegin();
+        spanEventRecorder.recordServiceType(ServiceTypeCode.ASYNC_HTTP_CLIENT_INTERNAL)
+        spanEventRecorder.recordApiDesc('http.request')
+        asyncId = spanEventRecorder.recordNextAsyncId()
+        trace.traceBlockEnd(spanEventRecorder);
+      }
+
       const id = 'TEST'   // ?
       const name = req.method + ' ' + req._headers.host + url.parse(req.path).pathname
 
@@ -60,11 +76,11 @@ exports.traceOutgoingRequest = function (agent, moduleName) {
       const nextSpanId = IdGenerator.next
       RequestHeaderUtils.write(req, agent, nextSpanId, destinationId)
 
-      const spanEventRecorder = trace.traceBlockBegin()
-      spanEventRecorder.recordServiceType(ServiceTypeCode.ASYNC_HTTP_CLIENT)
-      spanEventRecorder.recordApiDesc(name)
-      spanEventRecorder.recordNextSpanId(nextSpanId)
-      spanEventRecorder.recordDestinationId(destinationId)
+      const asyncEventRecorder = trace.traceAsyncBegin(asyncId)
+      asyncEventRecorder.recordServiceType(ServiceTypeCode.ASYNC_HTTP_CLIENT)
+      asyncEventRecorder.recordApiDesc(name)
+      asyncEventRecorder.recordNextSpanId(nextSpanId)
+      asyncEventRecorder.recordDestinationId(destinationId)
 
       req.on('response', onresponse)
 
@@ -92,7 +108,8 @@ exports.traceOutgoingRequest = function (agent, moduleName) {
       function onEnd () {
         log.debug('intercepted http.IncomingMessage end event %o', { id: id })
         if (trace) {
-          trace.traceBlockEnd(spanEventRecorder)
+          asyncEventRecorder.recordAttribute(DefaultAnnotationKey.HTTP_STATUS_CODE, this.statusCode)
+          trace.traceAsyncEnd(asyncEventRecorder);
         }
       }
     }

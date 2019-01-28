@@ -21,6 +21,8 @@ class SequenceGenerator{
 
 module.exports = {
   transactionIdGenerator: new SequenceGenerator(),
+  asyncIdGenerator: new SequenceGenerator(),
+  asyncSequenceGenerator: new SequenceGenerator(),
   cacheKeyGenerator: new SequenceGenerator(),
   samplingCountGenerator: new SequenceGenerator()
 }

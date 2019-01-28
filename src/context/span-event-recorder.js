@@ -4,6 +4,8 @@ const Annotation = require('./annotation')
 const ServiceType = require('./service-type')
 const DefaultAnnotationKey = require('../constant/annotation-key').DefaultAnnotationKey
 const StringMetaCache = require('./string-meta-cache')
+const AsyncId = require('./async-id')
+const asyncIdGenerator = require('./sequence-generator').asyncIdGenerator
 
 class SpanEventRecorder {
   constructor (spanEvent, span) {
@@ -38,6 +40,17 @@ class SpanEventRecorder {
     if (this.spanEvent && nextSpanId) {
       this.spanEvent.nextSpanId = nextSpanId
     }
+  }
+
+  recordNextAsyncId () {
+    let asyncId;
+    if (this.spanEvent.nextAsyncId === null) {
+      asyncId = asyncIdGenerator.next
+      this.spanEvent.nextAsyncId = asyncId
+    } else {
+      asyncId = this.spanEvent.nextAsyncId
+    }
+    return new AsyncId(asyncId)
   }
 
   recordApiId (apiId) {

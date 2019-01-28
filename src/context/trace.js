@@ -28,6 +28,7 @@ class Trace {
     spanEvent.depth = this.callStack.length + 1
     spanEvent.startTime = Date.now()
     spanEvent.startElapsed = spanEvent.startTime - this.span.startTime
+
     this.callStack.push(spanEvent)
     this.sequence++
 
@@ -37,6 +38,7 @@ class Trace {
 
   traceBlockEnd (spanEventRecorder) {
     const peekedItem = this.callStack[this.callStack.length - 1]
+
     if (peekedItem && spanEventRecorder && peekedItem === spanEventRecorder.spanEvent) {
       const spanEvent = this.callStack.pop()
       this.spanRecorder.recordSpanEvent(spanEvent)
@@ -49,6 +51,22 @@ class Trace {
         throw new Error("Invalid call stacks are removed.")
       }
     }
+  }
+
+  traceAsyncBegin (asyncId) {
+    const spanEvent = new SpanEvent(this.span, 0)
+    spanEvent.asyncId = asyncId.asyncId
+    spanEvent.asyncSequence = asyncId.nextAsyncSequence
+    spanEvent.startTime = Date.now()
+    spanEvent.startElapsed = spanEvent.startTime - this.span.startTime
+    spanEvent.depth = 1
+
+    return new SpanEventRecorder(spanEvent, this.span);
+  }
+
+  traceAsyncEnd (spanEventRecorder) {
+    this.spanRecorder.recordSpanEvent(spanEventRecorder.spanEvent)
+    spanEventRecorder.spanEvent.markElapsedTime()
   }
 
   canSampled () {

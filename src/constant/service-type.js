@@ -8,6 +8,7 @@ const ServiceTypeCode = {
   redis : 8200,
 
   ASYNC_HTTP_CLIENT : 9056,
+  ASYNC_HTTP_CLIENT_INTERNAL: 9057
 }
 
 const ServiceTypeProperty = {

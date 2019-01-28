@@ -11,6 +11,7 @@ const MODULES = [
   'redis',
   'ioredis',
   'mongodb-core',
+  'request'
 ]
 
 function init(agent) {

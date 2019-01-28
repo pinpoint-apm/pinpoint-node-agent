@@ -11,7 +11,7 @@ const express = require('express')
 
 const TEST_ENV = {
   host: 'localhost',
-  port: 5005,
+  port: 5006,
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
@@ -25,7 +25,8 @@ test(`${testName1} Should record request in basic route`, function (t) {
   const app = new express()
 
   app.get(PATH, async (req, res) => {
-    // await util.sleep(3000)
+    Math.random()
+    await util.sleep(3000)
     // await axios.get('http://***REMOVED***:9999/test/express')
     res.send('ok get')
   })
@@ -41,7 +42,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
     t.ok(result2.status, 200)
 
     const traceMap = agent.traceContext.getAllTraceObject()
-    log.debug(traceMap.size)
+    log.info(traceMap.size)
     t.ok(traceMap.size > 0)
 
     server.close()

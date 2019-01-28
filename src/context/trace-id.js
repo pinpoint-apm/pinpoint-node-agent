@@ -8,6 +8,10 @@ class TraceId {
     this.parentSpanId = parentSpanId || -1
     this.flag = flag || 0
   }
+
+  transactionSequence() {
+    return this.transactionId && this.transactionId.sequence
+  }
 }
 
 module.exports = TraceId

@@ -38,17 +38,18 @@ class Trace {
 
   traceBlockEnd (spanEventRecorder) {
     const peekedItem = this.callStack[this.callStack.length - 1]
-
-    if (peekedItem && spanEventRecorder && peekedItem === spanEventRecorder.spanEvent) {
-      const spanEvent = this.callStack.pop()
-      this.spanRecorder.recordSpanEvent(spanEvent)
-      spanEvent.markElapsedTime()
-      return spanEvent
-    } else {
-      const index = this.callStack.indexOf(spanEvent)
-      if (index) {
-        this.callStack.splice(index, Number.MAX_VALUE)
-        throw new Error("Invalid call stacks are removed.")
+    if (peekedItem && spanEventRecorder) {
+      if (peekedItem === spanEventRecorder.spanEvent) {
+        const spanEvent = this.callStack.pop()
+        this.spanRecorder.recordSpanEvent(spanEvent)
+        spanEvent.markElapsedTime()
+        return spanEvent
+      } else {
+        const index = this.callStack.indexOf(spanEventRecorder.spanEvent)
+        if (index) {
+          this.callStack.splice(index, Number.MAX_VALUE)
+          throw new Error("Invalid call stacks are removed.")
+        }
       }
     }
   }
@@ -71,6 +72,10 @@ class Trace {
 
   canSampled () {
     return this.sampling
+  }
+
+  getStartTime () {
+    return (this.span && this.span.startTime) || 0
   }
 }
 

@@ -8,6 +8,7 @@ const serialize = require('../data/serializer').serialize
 const SendPacket = require('./packet/send-packet')
 const RequestPacket = require('./packet/request-packet')
 const TSpan = require('../data/dto/Trace_types').TSpan
+const dataConvertor = require('../data/data-convertor')
 const log = require('../utils/logger')
 
 class DataSender {
@@ -24,6 +25,7 @@ class DataSender {
 
     this.tcpClient = new TcpClient(this.collectorIp, this.collectorTcpPort)
     this.spanUdpClient = new UdpClient(this.collectorIp, this.collectorSpanPort)
+    this.statUdpClient = new UdpClient(this.collectorIp, this.collectorStatPort)
   }
 
   send (tData) {
@@ -48,6 +50,15 @@ class DataSender {
       log.debug('>> SPAN DATA \n ', tSpan)
       const packet = serialize(tSpan)
       this.spanUdpClient.send(packet)
+    }
+  }
+
+  sendStats (stats) {
+    if (stats && this.enabledDataSending) {
+      const tAgentStat = dataConvertor.convertTAgentStat(stats)
+      log.info('>> stat data\n ', JSON.stringify(tAgentStat))
+      const packet = serialize(tAgentStat)
+      this.statUdpClient.send(packet)
     }
   }
 

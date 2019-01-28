@@ -11,6 +11,8 @@ const DataSender = require('./sender/data-sender')
 const log = require('./utils/logger')
 const StringMetaCache = require('./context/string-meta-cache')
 const sampler = require('./sampler/sampler')
+const Scheduler = require('./utils/scheduler')
+const AgentStatsMonitor = require('./metric/agent-stats-monitor')
 const getConfig = require('./config').getConfig
 
 class Agent {
@@ -38,6 +40,12 @@ class Agent {
     this.dataSender = new DataSender(this.config)
 
     this.isSampling = sampler.getIsSampling(this.config.sampling, this.config.sampleRate)
+
+    const agentStatsMonitor = new AgentStatsMonitor(this.dataSender, this.agentId, this.agentStartTime)
+
+    this.scheduler = new Scheduler(1000)
+    this.scheduler.addJob(() => agentStatsMonitor.run())
+    this.scheduler.start()
 
     StringMetaCache.init(this.agentId, this.agentStartTime, this.dataSender)
     instManager.init(this)

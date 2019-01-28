@@ -5,6 +5,8 @@ const Trace = require('./trace')
 const TransactionId = require('./transaction-id')
 const TraceId = require('./trace-id')
 const IdGenerator = require('./id-generator')
+const activeTrace = require('../metric/active-trace')
+const log = require('../utils/logger')
 
 class TraceContext {
   constructor () {
@@ -41,12 +43,14 @@ class TraceContext {
   createTraceObject (traceId, sampling, requestData) {
     const trace = new Trace(traceId, this.agentInfo, sampling, requestData)
     this.setCurrentTraceObject(trace)
+    activeTrace.register(trace)
     return trace
   }
 
   completeTraceObject (trace) {
     if (trace) {
       trace.spanRecorder.span.markElapsedTime()
+      activeTrace.remove(trace)
       return trace
     }
   }

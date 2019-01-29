@@ -3,6 +3,7 @@
 const TApiMetaData = require('../data/dto/Trace_types').TApiMetaData
 const apiMetaCacheKeyGenerator = require('../context/sequence-generator').apiMetaCacheKeyGenerator
 const SimpleCache = require('../utils/simple-cache')
+const GeneralMethodDescriptor = require('../constant/method-descriptor').GeneralMethodDescriptor
 
 class StringMetaCache {
   constructor() {
@@ -16,6 +17,10 @@ class StringMetaCache {
     this.dataSender = dataSender
     this.agentId = agentId
     this.agentStartTime = agentStartTime
+
+    Object.keys(GeneralMethodDescriptor).forEach(name => {
+      this.cacheApi(GeneralMethodDescriptor[name])
+    })
   }
 
   cacheApi (methodDescriptor) {
@@ -48,6 +53,7 @@ class StringMetaCache {
       agentStartTime: this.agentStartTime,
       apiId: methodDescriptor.apiId,
       apiInfo: methodDescriptor.apiDescriptor,
+      type: methodDescriptor.type,
     }
     return new TApiMetaData(info)
   }

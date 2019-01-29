@@ -8,7 +8,7 @@ const AsyncIdAccessor = require('../context/async-id-accessor')
 const DefaultAnnotationKey = require('../constant/annotation-key').DefaultAnnotationKey
 
 const RequestHeaderUtils = require('../instrumentation/request-header-utils')
-const HttpMethodDescritpor = require('../constant/method-descriptor').HttpMethodDescritpor
+const GeneralMethodDescriptor = require('../constant/method-descriptor').GeneralMethodDescriptor
 
 exports.instrumentRequest = function (agent, moduleName) {
   return function(original) {
@@ -21,7 +21,7 @@ exports.instrumentRequest = function (agent, moduleName) {
         const trace = agent.createTraceObject(requestData)
         if (trace && trace.canSampled()) {
           recordRequest(trace.spanRecorder, requestData)
-          trace.spanRecorder.recordApiId(HttpMethodDescritpor.SERVER_REQUEST.apiId)
+          trace.spanRecorder.recordApi(GeneralMethodDescriptor.SERVER_REQUEST)
         }
 
         endOfStream(res, function (err) {

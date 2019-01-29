@@ -3,14 +3,13 @@
 const MethodType = require('../constant/method-type').MethodType
 
 class MethodDescriptor {
-  constructor (moduleName, objectPath, methodName, apiId, type) {
+  constructor (moduleName, objectPath, methodName, type, apiDescriptor) {
     this.moduleName = moduleName
     this.objectPath = objectPath
     this.methodName = methodName
-    this.apiId = apiId || 0
     this.type = type || MethodType.DEFAULT
-
-    this.apiDescriptor = this.getDescriptor()
+    this.apiDescriptor = apiDescriptor || this.getDescriptor()
+    this.apiId = 0
   }
 
   static create (moduleName, objectPath, methodName) {

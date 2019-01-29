@@ -68,7 +68,7 @@ module.exports = function(agent, version, express) {
 
   function recordHandle (original, moduleName) {
     return function (req, res, next) {
-      log.debug('recordHandle start', getMethodDescriptor(moduleName, req))
+      log.debug('recordHandle start', getMethodDescriptor(moduleName, req.method))
       const trace = agent.traceContext.currentTraceObject()
       let spanEventRecorder = null
       if (trace) {

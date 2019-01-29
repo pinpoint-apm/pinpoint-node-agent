@@ -4,10 +4,27 @@ const shimmer = require('shimmer')
 
 const log = require('../../utils/logger')
 const ServiceTypeCode = require('../../constant/service-type').ServiceTypeCode
+const MethodDescriptor = require('../../context/method-descriptor')
+const apiMetaService = require('../../context/api-meta-service')
 
 const patchedLayerSet = new Set()
 
 module.exports = function(agent, version, express) {
+
+  const MODULE_NAME = 'express'
+  const OBJECT_NAME = 'route'
+  const methodNames = ['GET', 'POST', 'PUT', 'HEAD', 'DELETE', 'OPTIONS', 'PATCH', 'ALL']
+  const methodDescriptorMap = methodNames.reduce((map, methodName) => {
+    const descriptor = MethodDescriptor.create(MODULE_NAME, OBJECT_NAME, methodName)
+    apiMetaService.cacheApi(descriptor)
+    map[OBJECT_NAME + methodName] = descriptor
+    return map
+  }, {})
+
+  function getMethodDescriptor (objectPath, methodName) {
+    return methodDescriptorMap[objectPath + methodName] ||
+        MethodDescriptor.create(MODULE_NAME, OBJECT_NAME, methodName)
+  }
 
   // shimmer.wrap(express.application, 'use', function (original) {
   //   return function () {
@@ -51,50 +68,42 @@ module.exports = function(agent, version, express) {
 
   function recordHandle (original, moduleName) {
     return function (req, res, next) {
-      log.debug('recordHandle start', getApiDesc(moduleName, req))
+      log.debug('recordHandle start', getMethodDescriptor(moduleName, req))
       const trace = agent.traceContext.currentTraceObject()
       let spanEventRecorder = null
       if (trace) {
         spanEventRecorder = trace.traceBlockBegin()
         spanEventRecorder.recordServiceType(ServiceTypeCode.express)
-        spanEventRecorder.recordApiDesc(getApiDesc(moduleName, req))
+        spanEventRecorder.recordApi(getMethodDescriptor(moduleName, req.method))
       }
       const result = original.apply(this, arguments)
       if (trace) {
         trace.traceBlockEnd(spanEventRecorder)
       }
-      log.debug('recordHandle end', getApiDesc(moduleName, req))
+      log.debug('recordHandle end', getMethodDescriptor(moduleName, req.method))
       return result
     }
   }
 
   function recordErrorHandle (original, moduleName) {
     return function (err, req, res, next) {
-      log.debug('recordErrorHandle start', getApiDesc(moduleName, req))
+      log.debug('recordErrorHandle start', getMethodDescriptor(moduleName, req.method))
       const trace = agent.traceContext.currentTraceObject()
       let spanEventRecorder = null
 
       if (err && trace) {
         spanEventRecorder = trace.traceBlockBegin()
         spanEventRecorder.recordServiceType(ServiceTypeCode.express)
-        spanEventRecorder.recordApiDesc(getApiDesc(moduleName, req))
+        spanEventRecorder.recordApiDesc(getMethodDescriptor(moduleName, req.method))
         spanEventRecorder.recordException(err, true)
       }
       const result = original.apply(this, arguments)
       if (trace) {
         trace.traceBlockEnd(spanEventRecorder)
       }
-      log.debug('recordErrorHandle end', getApiDesc(moduleName, req))
+      log.debug('recordErrorHandle end', getMethodDescriptor(moduleName, req.method))
       return result
     }
-  }
-
-  function getApiDesc (moduleName, req) {
-    const apiDesc = ['express', moduleName]
-    if (moduleName === 'route' && req.method) {
-      apiDesc.push(req.method.toLowerCase())
-    }
-    return apiDesc.join('.')
   }
 
   return express

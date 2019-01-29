@@ -3,7 +3,7 @@
 const Annotation = require('./annotation')
 const ServiceType = require('./service-type')
 const DefaultAnnotationKey = require('../constant/annotation-key').DefaultAnnotationKey
-const StringMetaCache = require('./string-meta-cache')
+const StringMetaService = require('./string-meta-service')
 const AsyncId = require('./async-id')
 const asyncIdGenerator = require('./sequence-generator').asyncIdGenerator
 
@@ -92,7 +92,7 @@ class SpanEventRecorder {
 
   recordException (error, isError) {
     if (this.spanEvent && error) {
-      const metaInfo = StringMetaCache.get(error.name || 'Error')
+      const metaInfo = StringMetaService.get(error.name || 'Error')
       this.spanEvent.exceptionInfo = {
         intValue: metaInfo.stringId,
         stringValue: error.toString(),

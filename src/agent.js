@@ -3,13 +3,12 @@
 const os = require('os');
 const instManager = require('./instrumentation/inst-manager')
 const traceContext = require('./context/trace-context')
-const MethodDescriptors = require('./constant/method-descriptor').MethodDescriptors
 const TAgentInfo = require('./data/dto/Pinpoint_types').TAgentInfo
-const TApiMetaData = require('./data/dto/Trace_types').TApiMetaData
 const networkUtils = require('./utils/network');
 const DataSender = require('./sender/data-sender')
 const log = require('./utils/logger')
-const StringMetaCache = require('./context/string-meta-cache')
+const stringMetaService = require('./context/string-meta-service')
+const apiMetaService = require('./context/api-meta-service')
 const sampler = require('./sampler/sampler')
 const Scheduler = require('./utils/scheduler')
 const AgentStatsMonitor = require('./metric/agent-stats-monitor')
@@ -44,14 +43,14 @@ class Agent {
     const agentStatsMonitor = new AgentStatsMonitor(this.dataSender, this.agentId, this.agentStartTime)
 
     this.scheduler = new Scheduler(1000)
-    this.scheduler.addJob(() => agentStatsMonitor.run())
+    this.config.statsMonitorSending && this.scheduler.addJob(() => { agentStatsMonitor.run() })
     this.scheduler.start()
 
-    StringMetaCache.init(this.agentId, this.agentStartTime, this.dataSender)
+    stringMetaService.init(this.agentId, this.agentStartTime, this.dataSender)
+    apiMetaService.init(this.agentId, this.agentStartTime, this.dataSender)
     instManager.init(this)
 
     this.sendAgentInfo()
-    this.sendApiMetaInfo()
     log.info('[Pinpoint] Agent Init Finished')
   }
 
@@ -110,32 +109,6 @@ class Agent {
     return new TAgentInfo(info)
   }
 
-  sendApiMetaInfo () {
-    try {
-      MethodDescriptors.forEach(methodDescriptor => {
-        Object.keys(methodDescriptor)
-        .filter(key => methodDescriptor[key].apiId !== 0)
-        .forEach(key => {
-          const apiMetaInfo = this.createApiMetaInfo(methodDescriptor[key])
-          this.dataSender.sendMetaInfo(apiMetaInfo)
-        })
-      })
-    } catch (e) {
-      log.error(e)
-      throw new Error()
-    }
-    return true
-  }
-
-  createApiMetaInfo (methodDescriptor) {
-    const info = {
-      agentId: this.agentId,
-      agentStartTime: this.agentStartTime,
-      apiId: methodDescriptor.apiId,
-      apiInfo: methodDescriptor.apiInfo,
-    }
-    return new TApiMetaData(info)
-  }
 }
 
 module.exports = Agent

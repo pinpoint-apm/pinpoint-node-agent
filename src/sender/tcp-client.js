@@ -15,7 +15,6 @@ class TcpClient {
   }
 
   init () {
-    console.log('======== init')
     if (this.socket) {
       this.close()
     }

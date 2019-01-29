@@ -27,7 +27,6 @@ class Scheduler {
   }
 
   runJobs() {
-    console.log(this.jobList)
     this.jobList.forEach(job => job.apply())
   }
 

@@ -29,6 +29,7 @@ const CONFIG_FILE_MAP = {
   httpStatusCodeErrors: 'http-status-code-errors',
   logLevel: 'log-level',
   enabledDataSending: 'enabled-data-sending',
+  statsMonitorSending: 'stats-monitor-sending',
   express: 'express.enable',
   koa: 'koa.enable',
   mongo: 'mongo.enable',
@@ -57,7 +58,7 @@ const readFromEnv = () => {
 const readConfigJson = (formattedConfig) => {
   return Object.entries(CONFIG_FILE_MAP).reduce((acc, [key, propName]) => {
     const value = getValue(propName, formattedConfig)
-    if (value) {
+    if (value !== undefined) {
       acc[key] = value
     }
     return acc
@@ -75,7 +76,7 @@ const readRootConfigFile = () => {
 
 const getValue = (key, configFile) => {
   if (key) {
-    return key.split('.').reduce((object, prop) => object && object[prop], configFile)
+    return key.split('.').reduce((object, prop) => object !== undefined && object[prop], configFile)
   }
 }
 

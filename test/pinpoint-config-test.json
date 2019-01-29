@@ -13,6 +13,7 @@
     "rate": 1
   },
   "http-status-code-errors": ["5xx"],
+  "stats-monitor-sending": false,
   "log-level": "INFO",
   "modules": {
     "express": true,

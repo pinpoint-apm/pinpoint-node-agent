@@ -23,6 +23,7 @@ module.exports = {
   transactionIdGenerator: new SequenceGenerator(),
   asyncIdGenerator: new SequenceGenerator(),
   asyncSequenceGenerator: new SequenceGenerator(),
-  cacheKeyGenerator: new SequenceGenerator(),
+  stringMetaCacheKeyGenerator: new SequenceGenerator(1),
+  apiMetaCacheKeyGenerator: new SequenceGenerator(1),
   samplingCountGenerator: new SequenceGenerator()
 }

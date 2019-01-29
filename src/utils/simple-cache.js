@@ -27,6 +27,7 @@ class SimpleCache {
       this.deleteOldest()
     }
     this.cache.set(key, value)
+    return value
   }
 
   deleteOldest () {

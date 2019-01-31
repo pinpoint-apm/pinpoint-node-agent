@@ -94,7 +94,7 @@ module.exports = function(agent, version, express) {
       if (err && trace) {
         spanEventRecorder = trace.traceBlockBegin()
         spanEventRecorder.recordServiceType(ServiceTypeCode.express)
-        spanEventRecorder.recordApiDesc(getMethodDescriptor(moduleName, req.method))
+        spanEventRecorder.recordApi(getMethodDescriptor(moduleName, req.method))
         spanEventRecorder.recordException(err, true)
       }
       const result = original.apply(this, arguments)

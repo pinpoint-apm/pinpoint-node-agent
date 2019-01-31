@@ -76,7 +76,7 @@ const readRootConfigFile = () => {
 
 const getValue = (key, configFile) => {
   if (key) {
-    return key.split('.').reduce((object, prop) => object !== undefined && object[prop], configFile)
+    return key.split('.').reduce((object, prop) => object && object[prop], configFile)
   }
 }
 

@@ -1,8 +1,9 @@
 const test = require('tape')
 const axios = require('axios')
 
-const { log, fixture, util, enableDataSending } = require('../test-helper')
+const { log, fixture, util, enableDataSending, enableStatsMonitorSending } = require('../test-helper')
 enableDataSending()
+enableStatsMonitorSending()
 
 const Agent = require('../../src/agent')
 const agent = new Agent(fixture.config)

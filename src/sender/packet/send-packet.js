@@ -3,6 +3,7 @@
 const BasicPacket = require('./basic-packet')
 const PacketType = require('./packet-type').PacketType
 const appendPayload = require('./payload-packet').appendPayload
+const TypedBuffer = require('../../utils/typed-buffer')
 
 class SendPacket extends BasicPacket {
   getPacketType () {
@@ -10,9 +11,9 @@ class SendPacket extends BasicPacket {
   }
 
   toBuffer () {
-    var header = new Buffer(2 + 4)
-    header.writeInt16BE(this.getPacketType())
-    return appendPayload(header, this.payload, 2)
+    const header = TypedBuffer.alloc(2 + 4)
+    header.writeShort(this.getPacketType())
+    return appendPayload(header, this.payload)
   }
 }
 

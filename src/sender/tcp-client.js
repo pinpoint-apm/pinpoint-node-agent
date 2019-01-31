@@ -37,7 +37,7 @@ class TcpClient {
       log.debug('[TCP] Sent Successfully')
       callback && callback.apply()
     } catch (err) {
-      log.error('[TCP] Data Send Error')
+      log.error('[TCP] Data Send Error', err)
     }
   }
 

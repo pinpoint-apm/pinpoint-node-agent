@@ -7,9 +7,12 @@ const UdpClient = require('./udp-client')
 const serialize = require('../data/serializer').serialize
 const SendPacket = require('./packet/send-packet')
 const RequestPacket = require('./packet/request-packet')
+const PingPacket = require('./packet/ping-packet')
 const TSpan = require('../data/dto/Trace_types').TSpan
 const dataConvertor = require('../data/data-convertor')
 const log = require('../utils/logger')
+const SocketStateCode = require('../constant/socket-state-code').SocketStateCode
+const pingIdGenerator = require('../context/sequence-generator').pingIdGenerator
 
 class DataSender {
   constructor (config) {
@@ -24,6 +27,11 @@ class DataSender {
     this.enabledDataSending = config.enabledDataSending
 
     this.tcpClient = new TcpClient(this.collectorIp, this.collectorTcpPort)
+
+    if (this.tcpClient) {
+      this.socketStateCode = SocketStateCode.RUN_WITHOUT_HANDSHAKE
+    }
+
     this.spanUdpClient = new UdpClient(this.collectorIp, this.collectorSpanPort)
     this.statUdpClient = new UdpClient(this.collectorIp, this.collectorStatPort)
   }
@@ -31,16 +39,24 @@ class DataSender {
   send (tData) {
     if (tData && this.enabledDataSending) {
       log.debug('>> TDATA \n ', tData)
-      const packet = new SendPacket(serialize(tData)).toBuffer()
-      this.tcpClient.send(packet)
+      const packet = new SendPacket(serialize(tData))
+      this.tcpClient.send(packet.toBuffer())
     }
   }
 
   sendMetaInfo (tApiMetaInfo) {
     if (tApiMetaInfo && this.enabledDataSending) {
       log.debug('>> META INFO \n ', tApiMetaInfo)
-      const packet = new RequestPacket(tApiMetaInfo.apiId, serialize(tApiMetaInfo)).toBuffer()
-      this.tcpClient.send(packet)
+      const packet = new RequestPacket(tApiMetaInfo.apiId, serialize(tApiMetaInfo))
+      this.tcpClient.send(packet.toBuffer())
+    }
+  }
+
+  sendPing () {
+    if (this.enabledDataSending) {
+      log.debug('>> PING \n ')
+      const packet = new PingPacket(pingIdGenerator.next, 0, this.socketStateCode)
+      this.tcpClient.send(packet.toBuffer())
     }
   }
 

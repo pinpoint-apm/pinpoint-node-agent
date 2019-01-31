@@ -44,6 +44,7 @@ class Agent {
 
     this.scheduler = new Scheduler(1000)
     this.config.statsMonitorSending && this.scheduler.addJob(() => { agentStatsMonitor.run() })
+    this.scheduler.addJob(() => { this.dataSender.sendPing() })
     this.scheduler.start()
 
     stringMetaService.init(this.agentId, this.agentStartTime, this.dataSender)

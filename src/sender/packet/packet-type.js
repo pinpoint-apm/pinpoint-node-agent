@@ -6,6 +6,7 @@ const PacketType = {
   APPLICATION_TRACE_SEND_ACK : 3,
   APPLICATION_REQUEST : 5,
   APPLICATION_RESPONSE : 6,
+  CONTROL_PING_PAYLOAD : 211,
 }
 
 module.exports = {

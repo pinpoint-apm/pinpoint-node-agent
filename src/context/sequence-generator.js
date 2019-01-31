@@ -25,5 +25,6 @@ module.exports = {
   asyncSequenceGenerator: new SequenceGenerator(),
   stringMetaCacheKeyGenerator: new SequenceGenerator(1),
   apiMetaCacheKeyGenerator: new SequenceGenerator(1),
-  samplingCountGenerator: new SequenceGenerator()
+  samplingCountGenerator: new SequenceGenerator(),
+  pingIdGenerator: new SequenceGenerator(),
 }

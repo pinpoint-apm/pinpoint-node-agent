@@ -1,23 +1,21 @@
 'use strict'
 
-//fixme
-const appendPayload = (header, payload, offset) => {
+const appendPayload = (header, payload) => {
   if (payload === null) {
-    header.writeInt32BE(-1)
-    return header
+    header.writeInt(-1)
+    return header.buffer
   } else {
-    header.writeInt32BE(payload.length, offset)
-    return Buffer.concat([header, payload])
+    header.writeInt(payload.length)
+    return Buffer.concat([header.buffer, payload])
   }
 }
 
-//fixme
-const readPayload = (buffer) => {
-  const length = buffer.readInt()
-  if (length) {
-    return buffer.readByte(length)
+const readPayload = (header) => {
+  const length = header.readInt()
+  if (!length) {
+    return null
   }
-  return new Buffer()
+  return header.readBytes(length)
 }
 
 module.exports = {

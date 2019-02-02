@@ -1,5 +1,7 @@
 'use strict'
 
+const Int64BE = require("int64-buffer").Int64BE;
+
 class TypedBuffer {
   constructor(buffer, size) {
     this.buffer = null
@@ -16,6 +18,14 @@ class TypedBuffer {
     const typedBuffer = new TypedBuffer()
     typedBuffer.buffer = Buffer.from(buffer)
     return typedBuffer
+  }
+
+  trim () {
+    if (this.buffer.length > (this.offset + 1)) {
+      this.buffer = this.buffer.slice(0, this.offset)
+      return this.buffer
+    }
+    return this.buffer
   }
 
   writeByte (value) {
@@ -36,6 +46,26 @@ class TypedBuffer {
     if (this.buffer && value !== undefined) {
       this.buffer.writeInt32BE(value, this.offset)
       this.offset += 4
+    }
+  }
+
+  writeLong (value) {
+    const byteArray = new Int64BE(value).toArray()
+    byteArray.forEach(byte => {
+      this.buffer.writeUInt8(byte, this.offset)
+      this.offset += 1
+    })
+  }
+
+  writeString (value) {
+    if (this.buffer && value !== undefined) {
+      this.offset += this.buffer.write(value, this.offset)
+    }
+  }
+
+  writeChar (value) {
+    if (this.buffer && value !== undefined) {
+      this.writeByte(value.charCodeAt())
     }
   }
 

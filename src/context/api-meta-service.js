@@ -13,10 +13,10 @@ class StringMetaCache {
     this.agentStartTime = null
   }
 
-  init (agentId, agentStartTime, dataSender) {
+  init (agentInfo, dataSender) {
     this.dataSender = dataSender
-    this.agentId = agentId
-    this.agentStartTime = agentStartTime
+    this.agentId = agentInfo.agentId
+    this.agentStartTime = agentInfo.agentStartTime
 
     Object.keys(GeneralMethodDescriptor).forEach(name => {
       this.cacheApi(GeneralMethodDescriptor[name])

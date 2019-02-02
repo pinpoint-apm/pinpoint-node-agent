@@ -1,10 +1,10 @@
 const test = require('tape')
-const dgram = require('dgram')
+const net = require('net')
 
 const { log, fixture, util, enableDataSending } = require('../test-helper')
 enableDataSending()
 
-const UdpClient = require('../../src/sender/udp-client')
+const TcpClient = require('../../src/client/tcp-client')
 
 const HOST = '127.0.0.1'
 const PORT = 5000
@@ -12,15 +12,14 @@ const PORT = 5000
 let server = null
 const createServer = () => {
   log.debug('start creating server !!')
-  server = dgram.createSocket('udp4')
+  server = net.createServer((socket) => {
+    socket.on('data', (chunk) => {
+      log.debug('received chunk :', chunk.toString())
+    })
+  })
 
   server.on('listening', () => {
     log.debug('listening')
-  })
-
-  server.on('message', (msg, info) => {
-    log.debug('message : ', msg.toString())
-    log.debug('message info : ', info)
   })
 
   server.on('error', (err) => {
@@ -32,27 +31,25 @@ const createServer = () => {
     log.debug('close')
   })
 
-  server.bind(PORT)
+  server.listen(PORT)
 }
 
 const closeServer = () => {
   server.close()
 }
 
-test('Should send udp message', function (t) {
+test('Should send tcp message', function (t) {
   t.plan(1)
 
   createServer()
 
-  const udpClient = new UdpClient(HOST, PORT)
+  const tcpClient = new TcpClient(HOST, PORT)
+  tcpClient.send('test message')
 
-  const buffer = new Buffer('test message')
-  udpClient.send(buffer)
-
-  t.ok(udpClient)
+  t.ok(tcpClient)
 
   setTimeout(() => {
-    udpClient.close()
+    tcpClient.close()
     closeServer()
   }, 2000)
 })

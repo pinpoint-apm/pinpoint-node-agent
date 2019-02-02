@@ -3,7 +3,7 @@
 class BasicPacket {
   constructor (payload) {
     if (!payload) {
-      throw new Error()
+      throw new Error('payload is necessary')
     }
     this.payload = payload
   }

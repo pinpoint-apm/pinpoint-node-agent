@@ -8,6 +8,7 @@ const serialize = require('../data/serializer').serialize
 const SendPacket = require('./packet/send-packet')
 const RequestPacket = require('./packet/request-packet')
 const PingPacket = require('./packet/ping-packet')
+const ControlHandshakePacket = require('./packet/control-handshake-packet')
 const TSpan = require('../data/dto/Trace_types').TSpan
 const dataConvertor = require('../data/data-convertor')
 const log = require('../utils/logger')
@@ -36,10 +37,11 @@ class DataSender {
     this.statUdpClient = new UdpClient(this.collectorIp, this.collectorStatPort)
   }
 
-  send (tData) {
-    if (tData && this.enabledDataSending) {
-      log.debug('>> TDATA \n ', tData)
-      const packet = new SendPacket(serialize(tData))
+  sendAgentInfo (agentInfo) {
+    if (agentInfo && this.enabledDataSending) {
+      const tAgentInfo = dataConvertor.convertAgentInfo(agentInfo)
+      log.debug('send TAgentInfo \n ', tAgentInfo)
+      const packet = new SendPacket(serialize(tAgentInfo))
       this.tcpClient.send(packet.toBuffer())
     }
   }
@@ -52,9 +54,17 @@ class DataSender {
     }
   }
 
+  sendControlHandshake (params) {
+    if (this.enabledDataSending) {
+      log.debug('>> CONTROL HANDSHAKE \n ')
+      const packet = new ControlHandshakePacket(0, params)
+      this.tcpClient.send(packet.toBuffer())
+    }
+  }
+
   sendPing () {
     if (this.enabledDataSending) {
-      log.debug('>> PING \n ')
+      log.debug('send PING \n ')
       const packet = new PingPacket(pingIdGenerator.next, 0, this.socketStateCode)
       this.tcpClient.send(packet.toBuffer())
     }

@@ -1,6 +1,7 @@
 'use strict'
 
 const TAgentStat = require('./dto/Pinpoint_types').TAgentStat
+const TAgentInfo = require('./dto/Pinpoint_types').TAgentInfo
 
 const createTActiveTrace = (statsInfo) => {
   if (!statsInfo || !statsInfo.activeTrace) return
@@ -42,6 +43,11 @@ const convertTAgentStat = (statsInfo) => {
   })
 }
 
+const convertAgentInfo = (agentInfo) => {
+  return new TAgentInfo(agentInfo)
+}
+
 module.exports = {
   convertTAgentStat,
+  convertAgentInfo,
 }

@@ -5,7 +5,7 @@ const { log, fixture, util, enableDataSending } = require('../test-helper')
 enableDataSending()
 
 const Trace = require('../../src/context/trace')
-const DataSender = require('../../src/sender/data-sender')
+const DataSender = require('../../src/client/data-sender')
 const dataSender = new DataSender(fixture.config)
 
 test('Should send span', function (t) {

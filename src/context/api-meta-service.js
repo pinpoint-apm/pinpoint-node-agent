@@ -1,6 +1,5 @@
 'use strict'
 
-const TApiMetaData = require('../data/dto/Trace_types').TApiMetaData
 const apiMetaCacheKeyGenerator = require('../context/sequence-generator').apiMetaCacheKeyGenerator
 const SimpleCache = require('../utils/simple-cache')
 const GeneralMethodDescriptor = require('../constant/method-descriptor').GeneralMethodDescriptor
@@ -40,7 +39,7 @@ class StringMetaCache {
   sendApiMetaInfo (methodDescriptor) {
     try {
       const stringMetaInfo = this.createApiMetaInfo(methodDescriptor)
-      this.dataSender.sendMetaInfo(stringMetaInfo)
+      this.dataSender.sendApiMetaInfo(stringMetaInfo)
     } catch (e) {
       throw new Error()
     }
@@ -48,14 +47,13 @@ class StringMetaCache {
   }
 
   createApiMetaInfo (methodDescriptor) {
-    const info = {
+    return {
       agentId: this.agentId,
       agentStartTime: this.agentStartTime,
       apiId: methodDescriptor.apiId,
       apiInfo: methodDescriptor.apiDescriptor,
       type: methodDescriptor.type,
     }
-    return new TApiMetaData(info)
   }
 }
 

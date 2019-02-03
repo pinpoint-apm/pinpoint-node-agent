@@ -12,8 +12,6 @@ const serialize = (tData) => {
     throw new Error()
   }
 
-  // console.log('header : ', header, '\ndata', tData)
-
   const transport = new TFramedTransport()
   const protocol = new TCompactProtocol(transport)
   tData.write(protocol)

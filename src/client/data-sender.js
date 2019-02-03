@@ -1,7 +1,5 @@
 'use strict'
 
-const net = require('net')
-
 const TcpClient = require('./tcp-client')
 const UdpClient = require('./udp-client')
 const serialize = require('../data/serializer').serialize
@@ -9,7 +7,6 @@ const SendPacket = require('./packet/send-packet')
 const RequestPacket = require('./packet/request-packet')
 const PingPacket = require('./packet/ping-packet')
 const ControlHandshakePacket = require('./packet/control-handshake-packet')
-const TSpan = require('../data/dto/Trace_types').TSpan
 const dataConvertor = require('../data/data-convertor')
 const log = require('../utils/logger')
 const SocketStateCode = require('../constant/socket-state-code').SocketStateCode
@@ -39,24 +36,34 @@ class DataSender {
 
   sendAgentInfo (agentInfo) {
     if (agentInfo && this.enabledDataSending) {
-      const tAgentInfo = dataConvertor.convertAgentInfo(agentInfo)
-      log.debug('send TAgentInfo \n ', tAgentInfo)
+      const tAgentInfo = dataConvertor.convertTAgentInfo(agentInfo)
+      log.debug('send AgentInfo \n ', tAgentInfo)
       const packet = new SendPacket(serialize(tAgentInfo))
       this.tcpClient.send(packet.toBuffer())
     }
   }
 
-  sendMetaInfo (tApiMetaInfo) {
-    if (tApiMetaInfo && this.enabledDataSending) {
-      log.debug('>> META INFO \n ', tApiMetaInfo)
-      const packet = new RequestPacket(tApiMetaInfo.apiId, serialize(tApiMetaInfo))
+  sendStringMetaInfo (stringMetaInfo) {
+    const tStringMetaData = dataConvertor.convertTStringMetaData(stringMetaInfo)
+    this.sendMetaInfo(tStringMetaData)
+  }
+
+  sendApiMetaInfo (apiMetaInfo) {
+    const tStringMetaData = dataConvertor.convertTApiMetaData()
+    this.sendMetaInfo(tStringMetaData)
+  }
+
+  sendMetaInfo (tMetaInfo) {
+    if (tMetaInfo && this.enabledDataSending) {
+      log.debug('send MetaInfo \n ', tMetaInfo)
+      const packet = new RequestPacket(tMetaInfo.apiId, serialize(tMetaInfo))
       this.tcpClient.send(packet.toBuffer())
     }
   }
 
   sendControlHandshake (params) {
     if (this.enabledDataSending) {
-      log.debug('>> CONTROL HANDSHAKE \n ')
+      log.debug('send Handshake \n ')
       const packet = new ControlHandshakePacket(0, params)
       this.tcpClient.send(packet.toBuffer())
     }
@@ -64,7 +71,7 @@ class DataSender {
 
   sendPing () {
     if (this.enabledDataSending) {
-      log.debug('send PING \n ')
+      log.debug('send Ping \n ')
       const packet = new PingPacket(pingIdGenerator.next, 0, this.socketStateCode)
       this.tcpClient.send(packet.toBuffer())
     }
@@ -72,8 +79,8 @@ class DataSender {
 
   sendSpan (span) {
     if (span && this.enabledDataSending) {
-      const tSpan = new TSpan(span)
-      log.debug('>> SPAN DATA \n ', tSpan)
+      const tSpan = dataConvertor.convertTSpan(span)
+      log.debug('send Span \n ', tSpan)
       const packet = serialize(tSpan)
       this.spanUdpClient.send(packet)
     }
@@ -82,7 +89,7 @@ class DataSender {
   sendStats (stats) {
     if (stats && this.enabledDataSending) {
       const tAgentStat = dataConvertor.convertTAgentStat(stats)
-      log.info('>> stat data\n ', JSON.stringify(tAgentStat))
+      log.info('send Stats\n ', JSON.stringify(tAgentStat))
       const packet = serialize(tAgentStat)
       this.statUdpClient.send(packet)
     }

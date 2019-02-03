@@ -2,21 +2,25 @@
 
 const TAgentStat = require('./dto/Pinpoint_types').TAgentStat
 const TAgentInfo = require('./dto/Pinpoint_types').TAgentInfo
+const TStringMetaData = require('./dto/Trace_types').TStringMetaData
+const TApiMetaData = require('./dto/Trace_types').TApiMetaData
+const TSpan = require('./dto/Trace_types').TSpan
 
-const createTActiveTrace = (statsInfo) => {
-  if (!statsInfo || !statsInfo.activeTrace) return
-  return {
-    histogram: {
-      version: 0,
-      histogramSchemaType: statsInfo.activeTrace.typeCode,
-      activeTraceCount: [
-        statsInfo.activeTrace.fastCount,
-        statsInfo.activeTrace.normalCount,
-        statsInfo.activeTrace.slowCount,
-        statsInfo.activeTrace.verySlowCount,
-      ],
-    }
-  }
+
+const convertTAgentInfo = (agentInfo) => {
+  return new TAgentInfo(agentInfo)
+}
+
+const convertTStringMetaData = (metaInfo) => {
+  return new TStringMetaData(metaInfo)
+}
+
+const convertTApiMetaData = (metaInfo) => {
+  return new TApiMetaData(metaInfo)
+}
+
+const convertTSpan= (span) => {
+  return new TSpan(span)
 }
 
 const convertTAgentStat = (statsInfo) => {
@@ -43,11 +47,26 @@ const convertTAgentStat = (statsInfo) => {
   })
 }
 
-const convertAgentInfo = (agentInfo) => {
-  return new TAgentInfo(agentInfo)
+const createTActiveTrace = (statsInfo) => {
+  if (!statsInfo || !statsInfo.activeTrace) return
+  return {
+    histogram: {
+      version: 0,
+      histogramSchemaType: statsInfo.activeTrace.typeCode,
+      activeTraceCount: [
+        statsInfo.activeTrace.fastCount,
+        statsInfo.activeTrace.normalCount,
+        statsInfo.activeTrace.slowCount,
+        statsInfo.activeTrace.verySlowCount,
+      ],
+    }
+  }
 }
 
 module.exports = {
   convertTAgentStat,
-  convertAgentInfo,
+  convertTAgentInfo,
+  convertTStringMetaData,
+  convertTApiMetaData,
+  convertTSpan,
 }

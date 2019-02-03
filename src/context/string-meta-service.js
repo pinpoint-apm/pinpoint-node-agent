@@ -1,6 +1,5 @@
 'use strict'
 
-const TStringMetaData = require('../data/dto/Trace_types').TStringMetaData
 const stringMetaCacheKeyGenerator = require('../context/sequence-generator').stringMetaCacheKeyGenerator
 const SimpleCache = require('../utils/simple-cache')
 
@@ -37,7 +36,7 @@ class StringMetaService {
   sendStringMetaInfo (metaInfo) {
     try {
       const stringMetaInfo = this.createStringMetaInfo(metaInfo)
-      this.dataSender.sendMetaInfo(stringMetaInfo)
+      this.dataSender.sendStringMetaInfo(stringMetaInfo)
     } catch (e) {
       throw new Error()
     }
@@ -45,13 +44,12 @@ class StringMetaService {
   }
 
   createStringMetaInfo (metaInfo){
-    const info = {
+    return {
       agentId: this.agentId,
       agentStartTime: this.agentStartTime,
       stringId: metaInfo.stringId,
       stringValue: metaInfo.stringValue,
     }
-    return new TStringMetaData(info)
   }
 }
 

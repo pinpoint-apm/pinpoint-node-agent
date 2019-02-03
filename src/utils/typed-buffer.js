@@ -50,11 +50,13 @@ class TypedBuffer {
   }
 
   writeLong (value) {
-    const byteArray = new Int64BE(value).toArray()
-    byteArray.forEach(byte => {
-      this.buffer.writeUInt8(byte, this.offset)
-      this.offset += 1
-    })
+    if (this.buffer && value != undefined) {
+      const byteArray = new Int64BE(value).toArray()
+      byteArray.forEach(byte => {
+        this.buffer.writeUInt8(byte, this.offset)
+        this.offset += 1
+      })
+    }
   }
 
   writeString (value) {

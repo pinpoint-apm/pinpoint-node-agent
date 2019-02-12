@@ -2,6 +2,7 @@
 
 const net = require('net')
 const log = require('../utils/logger')
+const deserialize = require('../data/serialization-util').deserialize
 
 const DEFAULT_TIMEOUT = 3000
 
@@ -20,11 +21,15 @@ class TcpClient {
     }
     this.socket = new net.Socket()
     this.socket.setTimeout(DEFAULT_TIMEOUT)
-    this.socket.connect(this.port, this.host, () => {
+    this.socket.connect(this.port, this.host, (data) => {
       log.info('[TCP] Socket Created')
     })
     this.socket.on('data', (data) => {
       log.debug('[TCP] Data Received', data)
+      deserialize(data)
+    })
+    this.socket.on('error', (e) => {
+      log.debug('[TCP] Error Occurred', e)
     })
   }
 

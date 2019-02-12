@@ -2,7 +2,7 @@
 
 const TcpClient = require('./tcp-client')
 const UdpClient = require('./udp-client')
-const serialize = require('../data/serializer').serialize
+const serialize = require('../data/serialization-util').serialize
 const SendPacket = require('./packet/send-packet')
 const RequestPacket = require('./packet/request-packet')
 const PingPacket = require('./packet/ping-packet')
@@ -49,7 +49,7 @@ class DataSender {
   }
 
   sendApiMetaInfo (apiMetaInfo) {
-    const tStringMetaData = dataConvertor.convertTApiMetaData()
+    const tStringMetaData = dataConvertor.convertTApiMetaData(apiMetaInfo)
     this.sendMetaInfo(tStringMetaData)
   }
 

@@ -48,7 +48,6 @@ test.only(`Should send stats in every 1 sec`, function (t) {
   const server = app.listen(TEST_ENV.port, async function () {
     const timer = setInterval(async () => {
       axios.get(getServerUrl(PATH))
-      count++
     }, 4000)
 
     // server.close()

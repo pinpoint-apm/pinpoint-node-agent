@@ -23,8 +23,8 @@ class PinpointClient {
       pid: agentInfo.pid,
       version: agentInfo.agentVersion,
       socketId: 1,
-      supportServer: false,
-      supportCommandList: [730],
+      supportServer: true,
+      supportCommandList: [710, 730],
     }
 
     const encodedHandshakeParams = controlMessageEncoder.encode(this.handshakeParams)

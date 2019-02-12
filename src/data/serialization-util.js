@@ -3,6 +3,9 @@
 const thrift = require('thrift');
 const TCompactProtocol = thrift.TCompactProtocol
 const TFramedTransport = thrift.TFramedTransport
+const TypedBuffer = require('../utils/typed-buffer')
+const pinpointClient = require('../client/pinpoint-client')
+const PacketType = require('../client/packet/packet-type').PacketType
 
 const headerLookup = require('./type-locator').headerLookup
 
@@ -26,6 +29,15 @@ const writeHeader = (header) => {
   return buffer
 }
 
+// TODO
+const deserialize = (data) => {
+  const buffer = TypedBuffer.from(data)
+  const packetType = buffer.readShort()
+
+  console.log('[TCP] deserialize packet type', TypedBuffer.from(data).readShort())
+}
+
 module.exports = {
-  serialize
+  serialize,
+  deserialize
 }

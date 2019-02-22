@@ -4,15 +4,16 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 enableDataSending()
 
-const Agent = require('../../../src/agent')
+const Agent = require('../../../lib/agent')
 const agent = new Agent(fixture.config)
 
 const express = require('express')
-const ioRedis = require('ioredis');
-const Redis = require('redis');
+const ioRedis = require('ioredis')
+const Redis = require('redis')
 const Koa = require('koa')
 const Router = require('koa-router')
 const koaBodyParser = require('koa-bodyparser')
+const rq = require('request')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -137,8 +138,8 @@ test(`${testName2} should Record the connections between express and ioredis.`, 
     const rstPush = await axios.post(getServerUrl(PATH), redisData)
     t.ok(rstPush.status, 200)
 
-    const rstGet = await axios.get(getServerUrl(`${PATH}/jundol`))
-    t.ok(rstGet.status, 200)
+    // const rstGet = await axios.get(getServerUrl(`${PATH}/jundol`))
+    // t.ok(rstGet.status, 200)
 
     const traceMap = agent.traceContext.getAllTraceObject()
     log.debug(traceMap.size)
@@ -206,7 +207,7 @@ test(`${testName3} should Record the connections between koa and redis.`, functi
 })
 
 const testName4 = 'koa-ioredis'
-test(`${testName4} should Record the connections between koa and ioredis.`, function (t) {
+test.only(`${testName4} should Record the connections between koa and ioredis.`, function (t) {
   const testName = testName4
 
   t.plan(3)
@@ -214,43 +215,40 @@ test(`${testName4} should Record the connections between koa and ioredis.`, func
   const app = new Koa()
   const router = new Router()
   const redis = new ioRedis(6379,'***REMOVED***')
-  const PATH = `/${testName}`
 
+  const PATH = `/${testName}`
   app.use(koaBodyParser())
   router.post(PATH, async function(ctx, next) {
-    console.log(ctx.request.body)
     const key = ctx.request.body.name
     const value = JSON.stringify(ctx.request.body)
-
-    redis.set(key, value, function(err, data) {
-      if(err){
-        console.log(err)
-        ctx.body = `error :: ${err}`
-        return
-      }
-      redis.expire(key, 10)
-      ctx.body = JSON.parse(value)
-    });
+    await redis.set(key, value)
+    ctx.body = 'test'
   });
 
   router.get(`${PATH}/:name`, async (ctx, next) => {
     const key = ctx.params.name
-    console.log(key)
-    redis.get(key, async function(err ,data){
-      if(err){
-        console.log(err)
-        ctx.body = `error :: ${err}`
-        return
-      }
-      ctx.body = JSON.parse(data)
-    });
+    // await Promise.all([
+    //   redis.get(key),
+    //   redis.get(key),
+    //   redis.get(key)
+    // ])
+
+
+    redis.get(key)
+
+    redis.get(key)
+    redis.get(key)
+
+    ctx.body = 'test'
   });
+
   app.use(router.routes()).use(router.allowedMethods())
 
   const server = app.listen(TEST_ENV.port, async () => {
-    const rstPush = await axios.post(getServerUrl(PATH), redisData)
-    t.ok(rstPush.status, 200)
-
+    console.log('Step1.')
+    // const rstPush = await axios.post(getServerUrl(PATH), redisData)
+    // t.ok(rstPush.status, 200)
+    console.log('Step2.')
     const rstGet = await axios.get(getServerUrl(`${PATH}/jundol`))
     t.ok(rstGet.status, 200)
 
@@ -263,5 +261,5 @@ test(`${testName4} should Record the connections between koa and ioredis.`, func
 })
 
 test.onFinish(() => {
-  agent.dataSender.closeClient()
+  agent.pinpointClient.dataSender.closeClient()
 })

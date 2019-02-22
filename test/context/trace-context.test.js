@@ -1,9 +1,9 @@
 const test = require('tape')
 const { log, fixture, util } = require('../test-helper')
 
-const ServiceTypeCode = require('../../src/constant/service-type').ServiceTypeCode
-const TraceContext = require('../../src/context/trace-context')
-const ExpressMethodDescritpor = require('../../src/constant/method-descriptor').ExpressMethodDescritpor
+const ServiceTypeCode = require('../../lib/constant/service-type').ServiceTypeCode
+const TraceContext = require('../../lib/context/trace-context')
+const ExpressMethodDescritpor = require('../../lib/constant/method-descriptor').ExpressMethodDescritpor
 
 test('Should create continued trace and add span info', function (t) {
   t.plan(2)

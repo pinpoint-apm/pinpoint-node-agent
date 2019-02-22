@@ -1,4 +1,4 @@
-const Agent = require('../src/agent')
+const Agent = require('../lib/agent')
 new Agent({
   agentId: 'dev-agent-app-test',
   applicationName: 'dev.agent.app.test',

@@ -14,7 +14,7 @@
   },
   "http-status-code-errors": ["5xx"],
   "stats-monitor-sending": false,
-  "log-level": "DEBUG",
+  "log-level": "INFO",
   "modules": {
     "express": true,
     "koa": true,

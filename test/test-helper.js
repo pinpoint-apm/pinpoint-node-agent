@@ -1,7 +1,7 @@
 const fixture = require('./fixture')
 const util = require('./util')
 
-const log = require('../src/utils/logger')
+const log = require('../lib/utils/logger')
 log.init(fixture.config.logLevel)
 
 const enableDataSending = () => {

@@ -4,7 +4,7 @@ const dgram = require('dgram')
 const { log, fixture, util, enableDataSending } = require('../test-helper')
 enableDataSending()
 
-const UdpClient = require('../../src/client/udp-client')
+const UdpClient = require('../../lib/client/udp-client')
 
 const HOST = '127.0.0.1'
 const PORT = 5000

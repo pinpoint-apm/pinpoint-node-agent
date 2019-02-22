@@ -5,10 +5,10 @@ const http = require('http')
 const { log, fixture, util, enableDataSending } = require('../test-helper')
 enableDataSending()
 
-const RequestHeaderUtils = require('../../src/instrumentation/request-header-utils')
-const Agent= require('../../src/agent')
+const RequestHeaderUtils = require('../../lib/instrumentation/request-header-utils')
+const Agent= require('../../lib/agent')
 const agent = new Agent(fixture.config)
-const PinpointHeader = require('../../src/constant/http-header').PinpointHeader
+const PinpointHeader = require('../../lib/constant/http-header').PinpointHeader
 
 const headers = {
   'Pinpoint-TraceID': fixture.getTraceId(),

@@ -4,7 +4,7 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 enableDataSending()
 
-const Agent = require('../../../src/agent')
+const Agent = require('../../../lib/agent')
 const agent = new Agent(fixture.config)
 
 const Koa = require('koa')
@@ -22,7 +22,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
   t.plan(3)
 
-  const PATH = `/${testName1}`
+  const PATH = `/${testName}`
   const app = new Koa()
   const router = new Router()
 
@@ -56,11 +56,11 @@ test.only(`${testName2} Should record internal error`, function (t) {
 
   t.plan(2)
 
-  const PATH = `/${testName2}`
+  const PATH = `/${testName}`
   const app = new Koa()
   const router = new Router()
 
-  const naverAuthParser = async (ctx, next) => {
+  const initError = async (ctx, next) => {
     console.log('[app] before ')
     try {
       const foo = null
@@ -71,14 +71,7 @@ test.only(`${testName2} Should record internal error`, function (t) {
     ctx.body = 'ok. hello world'
   }
 
-  router.get(PATH, naverAuthParser)
-
-  router.get('/test3', async (ctx, next) => {
-    ctx.body = 'ok. hello world'
-  })
-
-
-
+  router.get(PATH, initError)
   app
       .use(async (ctx, next) => {
           try {
@@ -91,9 +84,7 @@ test.only(`${testName2} Should record internal error`, function (t) {
           } catch (err) {
             console.log('[app] error handler')
             ctx.status = err.status || 500
-            console.log(ctx.status )
             ctx.body = err.message
-            console.log(err.message)
             // ctx.app.emit('error', err, ctx);
           }
       })
@@ -103,20 +94,7 @@ test.only(`${testName2} Should record internal error`, function (t) {
       })
   .use(router.routes()).use(router.allowedMethods())
 
-
-
-
-
-  // app.use(async (ctx, next) =>{
-  //   console.log('test')
-  // })
-  // app.on('error', (ctx, err) => {
-  //   console.log('!@#?!@#')
-  // })
-  //app
-
   const server = app.listen(TEST_ENV.port, async () => {
-    //const result = await axios.get(getServerUrl('/test3'))
     const result = await axios.get(getServerUrl(PATH))
     t.equal(result.status, 500)
 
@@ -128,5 +106,5 @@ test.only(`${testName2} Should record internal error`, function (t) {
 })
 
 test.onFinish(() => {
-  agent.dataSender.closeClient()
+  agent.pinpointClient.dataSender.closeClient()
 })

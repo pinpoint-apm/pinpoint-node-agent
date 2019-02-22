@@ -5,9 +5,9 @@ const { log, fixture, util, enableDataSending, enableStatsMonitorSending } = req
 enableDataSending()
 enableStatsMonitorSending()
 
-const Agent = require('../../src/agent')
+const Agent = require('../../lib/agent')
 const agent = new Agent(fixture.config)
-const AgentStatsMonitor = require('../../src/metric/agent-stats-monitor')
+const AgentStatsMonitor = require('../../lib/metric/agent-stats-monitor')
 
 const express = require('express')
 

@@ -4,7 +4,7 @@ const net = require('net')
 const { log, fixture, util, enableDataSending } = require('../test-helper')
 enableDataSending()
 
-const TcpClient = require('../../src/client/tcp-client')
+const TcpClient = require('../../lib/client/tcp-client')
 
 const HOST = '127.0.0.1'
 const PORT = 5000

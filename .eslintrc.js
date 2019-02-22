@@ -3,7 +3,7 @@
   "settings": {
     "import/resolver": {
       "node": {
-        "paths": ["src"]
+        "paths": ["lib"]
       }
     }
   }

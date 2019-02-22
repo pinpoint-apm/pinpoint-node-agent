@@ -29,7 +29,7 @@ module.exports = {
         umdNamedDefine: true
     },
     resolve: {
-        modules: [`${__dirname}/src`, 'node_modules']
+        modules: [`${__dirname}/lib`, 'node_modules']
     },
     target: 'node',
     plugins: plugins,

@@ -6,7 +6,7 @@ enableDataSending()
 test('Should initialize agent', function (t) {
   t.plan(1)
 
-  const Agent = require('../src/agent')
+  const Agent = require('../lib/agent')
   const agent = new Agent(fixture.config)
 
   t.ok(agent)

@@ -1,7 +1,7 @@
 const test = require('tape')
 const { log, fixture, util } = require('./test-helper')
 
-const config = require('../src/config')
+const config = require('../lib/config')
 
 test('Should be configured with default', function (t) {
   t.plan(1)

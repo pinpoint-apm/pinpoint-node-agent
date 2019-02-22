@@ -4,7 +4,7 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 enableDataSending()
 
-const Agent = require('../../../src/agent')
+const Agent = require('../../../lib/agent')
 const agent = new Agent(fixture.config)
 
 const mongoose = require('mongoose')
@@ -35,7 +35,7 @@ const mongoData = {
 }
 
 const testName1 = 'express'
-test(`${testName1} should Record the connections between express and mongodb.`, function (t) {
+test.only(`${testName1} should Record the connections between express and mongodb.`, function (t) {
   const testName = testName1
 
   t.plan(3)
@@ -44,20 +44,20 @@ test(`${testName1} should Record the connections between express and mongodb.`, 
   const PATH = `/${testName}/api/books`
 
   app.use(express.json())
-  app.get(PATH, async (req, res) => {
-    await Book.find((err, books) => {
+  app.get(PATH, (req, res) => {
+    Book.find((err, books) => {
       if (err) return res.status(500).send({error:'failure'})
       res.json(books)
     })
   })
-  app.get(`${PATH}/:author`, async function(req, res){
-    await Book.findOne({author: req.params.author}, function(err, book){
+  app.get(`${PATH}/:author`, function(req, res){
+    Book.findOne({author: req.params.author}, function(err, book){
       if(err) return res.status(500).json({error: err})
       if(!book) return res.status(404).json({error: 'book not found'})
       res.json(book)
     })
   })
-  app.post(PATH, async function(req, res){
+  app.post(PATH, function(req, res){
     const { title, author, published_date } = req.body
     const book = new Book({
       title,
@@ -73,8 +73,8 @@ test(`${testName1} should Record the connections between express and mongodb.`, 
       res.json({result: 1})
     })
   })
-  app.put(`${PATH}/:author`, async function(req, res){
-    await Book.update({ author: req.params.author }, { $set: req.body }, function(err, output){
+  app.put(`${PATH}/:author`, function(req, res){
+    Book.update({ author: req.params.author }, { $set: req.body }, function(err, output){
       if(err) res.status(500).json({ error: 'database failure' })
       console.log(output)
       if(!output.n) return res.status(404).json({ error: 'book not found' })
@@ -111,7 +111,7 @@ test(`${testName1} should Record the connections between express and mongodb.`, 
 })
 
 const testName2 = 'koa'
-test.only(`${testName2} should Record the connections between express and mongodb.`, function (t) {
+test(`${testName2} should Record the connections between express and mongodb.`, function (t) {
   const testName = testName2
 
   t.plan(3)
@@ -193,5 +193,5 @@ test.only(`${testName2} should Record the connections between express and mongod
 })
 
 test.onFinish(() => {
-  agent.dataSender.closeClient()
+  agent.pinpointClient.dataSender.closeClient()
 })

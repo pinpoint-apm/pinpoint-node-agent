@@ -4,10 +4,10 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../test-helper')
 enableDataSending()
 
-const Agent = require('../../src/agent')
+const Agent = require('../../lib/agent')
 const agent = new Agent(fixture.config)
-const activeTrace = require('../../src/metric/active-trace')
-const AgentStatsMonitor = require('../../src/metric/agent-stats-monitor')
+const activeTrace = require('../../lib/metric/active-trace')
+const AgentStatsMonitor = require('../../lib/metric/agent-stats-monitor')
 
 const express = require('express')
 

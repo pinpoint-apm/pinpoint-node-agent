@@ -4,7 +4,7 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 enableDataSending()
 
-const Agent = require('../../../src/agent')
+const Agent = require('../../../lib/agent')
 const agent = new Agent(fixture.config)
 
 const express = require('express')
@@ -247,6 +247,6 @@ test(`${testName6} Should record each http method`, function (t) {
 })
 
 test.onFinish(() => {
-  agent.dataSender.closeClient()
+  agent.pinpointClient.dataSender.closeClient()
 })
 

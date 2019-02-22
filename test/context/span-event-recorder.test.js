@@ -1,12 +1,12 @@
 const test = require('tape')
 const { log, fixture, util } = require('../test-helper')
 
-const Span = require('../../src/context/span')
-const SpanEvent = require('../../src/context/span-event')
-const SpanEventRecorder = require('../../src/context/span-event-recorder')
+const Span = require('../../lib/context/span')
+const SpanEvent = require('../../lib/context/span-event')
+const SpanEventRecorder = require('../../lib/context/span-event-recorder')
 
-const ServiceTypeCode = require('../../src/constant/service-type').ServiceTypeCode
-const ExpressMethodDescritpor = require('../../src/constant/method-descriptor').ExpressMethodDescritpor
+const ServiceTypeCode = require('../../lib/constant/service-type').ServiceTypeCode
+const ExpressMethodDescritpor = require('../../lib/constant/method-descriptor').ExpressMethodDescritpor
 
 test('Should create span event recorder', async function (t) {
   t.plan(2)

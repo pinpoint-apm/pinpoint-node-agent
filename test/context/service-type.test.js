@@ -1,10 +1,10 @@
 const test = require('tape')
 const { log, fixture, util } = require('../test-helper')
 
-const serviceTypeConstant = require('../../src/constant/service-type')
+const serviceTypeConstant = require('../../lib/constant/service-type')
 const ServiceTypeProperty = serviceTypeConstant.ServiceTypeProperty
 
-const ServiceType = require('../../src/context/service-type')
+const ServiceType = require('../../lib/context/service-type')
 
 test('Should create with properties', function (t) {
   t.plan(3)

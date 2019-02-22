@@ -1,10 +1,10 @@
 const test = require('tape')
 const { log, fixture, util } = require('../test-helper')
 
-const annotationConstant = require('../../src/constant/annotation')
+const annotationConstant = require('../../lib/constant/annotation')
 const AnnotationKeyProperty = annotationConstant.AnnotationKeyProperty
 
-const AnnotationKey = require('../../src/context/annotation-key')
+const AnnotationKey = require('../../lib/context/annotation-key')
 
 test('Should create AnnotationKey with properties', function (t) {
   t.plan(2)

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BASE_DIR=src/data
+BASE_DIR=lib/data
 TARGET_DIR=${BASE_DIR}/thrift
 OUT_DIR=${BASE_DIR}/dto
 

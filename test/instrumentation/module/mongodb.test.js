@@ -43,18 +43,19 @@ test.only(`${testName1} should Record the connections between express and mongod
   const app = new express()
   const PATH = `/${testName}/api/books`
 
-  app.use(express.json())
+  // app.use(express.json())
   app.get(PATH, (req, res) => {
     Book.find((err, books) => {
       if (err) return res.status(500).send({error:'failure'})
-      res.json(books)
+      //res.json(books)
+      res.send('ok')
     })
   })
   app.get(`${PATH}/:author`, function(req, res){
     Book.findOne({author: req.params.author}, function(err, book){
       if(err) return res.status(500).json({error: err})
       if(!book) return res.status(404).json({error: 'book not found'})
-      res.json(book)
+      res.send('ok')
     })
   })
   app.post(PATH, function(req, res){
@@ -90,21 +91,21 @@ test.only(`${testName1} should Record the connections between express and mongod
     })
 
     await mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint')
-
-    console.log('step1. Insert')
-    const rstInsert = await axios.post(getServerUrl(PATH), mongoData)
-    t.ok(rstInsert.status, 200)
+    //
+    // console.log('step1. Insert')
+    // const rstInsert = await axios.post(getServerUrl(PATH), mongoData)
+    // t.ok(rstInsert.status, 200)
 
     // console.log('step2. Find')
     const rstFind = await axios.get(getServerUrl(PATH))
     t.ok(rstFind.status, 200)
 
-    // console.log('step3. Update')
-    const rstUpdate = await axios.put(getServerUrl(`${PATH}/iforget`), {
-      title: 'SpringBoot by WebFlux',
-      published_date: new Date()
-    })
-    t.ok(rstUpdate.status, 200)
+    // // console.log('step3. Update')
+    // const rstUpdate = await axios.put(getServerUrl(`${PATH}/iforget`), {
+    //   title: 'SpringBoot by WebFlux',
+    //   published_date: new Date()
+    // })
+    // t.ok(rstUpdate.status, 200)
 
     server.close()
   })

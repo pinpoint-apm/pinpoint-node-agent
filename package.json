@@ -1,31 +1,58 @@
 {
   "name": "pinpoint-node-agent",
   "version": "0.0.1",
-  "description": "Pinpoint node agent provided by NAVER",
-  "license": "MIT",
   "main": "index.js",
   "scripts": {
     "clean": "rimraf build",
     "test": "node runTest.js",
-    "tape": "tape",
-    "build:umdmin": "webpack --mode=production --output-library-target=umd",
-    "build:umd": "webpack --mode=development --output-library-target=umd",
-    "build:commonjs": "webpack --mode=development --output-library-target=commonjs2",
-    "build": "npm-run-all build:*",
-    "dev:umd": "webpack --progress --colors --watch --mode=development --output-library-target=umd",
-    "dev:commonjs": "webpack --progress --colors --watch --mode=development --output-library-target=commonjs2",
-    "dev": "npm-run-all --parallel dev:*"
+    "tape": "tape"
   },
+  "description": "Pinpoint node agent provided by NAVER",
   "repository": {
     "type": "git",
-    "url": "git+https://***REMOVED***.git"
+    "url": "https://***REMOVED***.git"
   },
-  "homepage": "https://***REMOVED***/issues",
-  "keywords": [],
-  "author": "NAVER <a@naver.com>",
+  "author" : "NAVER Developers <dl_valhalla@navercorp.com> (https://www.navercorp.com)",
+  "license": "Apache-2.0",
+  "licenses": [
+    {
+      "type": "Apache-2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0"
+    }
+  ],
+  "bugs": {
+    "mail": "dl_valhalla@navercorp.com",
+    "url": "https://oss.navercorp.com/valhalla/-pinpoint_node_agent/issues"
+  },
+  "homepage": "https://***REMOVED***",
   "engines": {
     "node": ">=8.0.0"
   },
+  "keywords": [
+    "pinpoint",
+    "log",
+    "logging",
+    "bug",
+    "bugs",
+    "error",
+    "errors",
+    "exception",
+    "exceptions",
+    "catch",
+    "monitor",
+    "monitoring",
+    "alert",
+    "alerts",
+    "performance",
+    "apm",
+    "ops",
+    "devops",
+    "stacktrace",
+    "trace",
+    "tracing",
+    "distributedtracing",
+    "distributed-tracing"
+  ],
   "dependencies": {
     "bufferutil": "^4.0.1",
     "end-of-stream": "^1.4.1",
@@ -56,10 +83,6 @@
     "request": "^2.88.0",
     "rimraf": "^2.6.2",
     "tap-spec": "^5.0.0",
-    "tape": "^4.9.1",
-    "webpack": "^4.28.2",
-    "webpack-cli": "^3.1.2",
-    "webpack-node-externals": "^1.7.2",
-    "yargs": "^12.0.5"
+    "tape": "^4.9.1"
   }
 }

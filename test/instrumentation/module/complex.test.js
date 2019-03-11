@@ -77,7 +77,7 @@ test(`${testName1} should Record the connections between koa and mongodb and red
 })
 
 const testName2 = 'express-complex'
-test.only(`${testName2} should Record the connections between express and redis.`, function (t) {
+test(`${testName2} should Record the connections between express and redis.`, function (t) {
   const testName = testName2
 
   t.plan(2)
@@ -129,10 +129,6 @@ test.only(`${testName2} should Record the connections between express and redis.
     console.log('Test1. Find and Cache')
     const rstGet = await axios.get(getServerUrl(`${PATH}/iforget`))
     t.ok(rstGet.status, 200)
-
-    // console.log('step1. Insert')
-    // const rstInsert = await axios.post(getServerUrl(PATH), mongoData)
-    // t.ok(rstInsert.status, 200)
 
     const traceMap = agent.traceContext.getAllTraceObject()
     log.debug(traceMap.size)

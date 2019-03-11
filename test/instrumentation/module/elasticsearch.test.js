@@ -85,7 +85,6 @@ test.only(`${testName2} should Record the connections between koa and ioredis.`,
   });
 
   router.get(`${PATH}/:name`, async (ctx, next) => {
-    console.log('TEST?')
     // const response = await client.search({
     //   index: 'classes',
     //   type: 'class',

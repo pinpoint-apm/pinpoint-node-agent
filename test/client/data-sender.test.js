@@ -24,6 +24,14 @@ test('Should send span', function (t) {
   t.ok(dataSender)
 })
 
+test.only('Should send agent info', function (t) {
+  t.plan(1)
+
+  dataSender.sendAgentInfo(fixture.getAgentInfo())
+
+  t.ok(dataSender)
+})
+
 test.onFinish(() => {
   dataSender.closeClient()
 })

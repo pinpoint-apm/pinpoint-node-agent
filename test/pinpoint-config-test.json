@@ -1,7 +1,7 @@
 {
   "agent-id": "node.test.app",
   "application-name": "node.test.app",
-  "application-type": 1000,
+  "application-type": 1400,
   "collector": {
     "ip": "***REMOVED***",
     "span-port": 9996,
@@ -14,7 +14,7 @@
   },
   "http-status-code-errors": ["5xx"],
   "stats-monitor-sending": false,
-  "log-level": "INFO",
+  "log-level": "DEBUG",
   "modules": {
     "express": true,
     "koa": true,

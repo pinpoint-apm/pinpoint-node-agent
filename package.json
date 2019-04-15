@@ -1,6 +1,6 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "main": "index.js",
   "scripts": {
     "clean": "rimraf build",
@@ -12,7 +12,7 @@
     "type": "git",
     "url": "https://***REMOVED***.git"
   },
-  "author" : "NAVER Developers <dl_valhalla@navercorp.com> (https://www.navercorp.com)",
+  "author": "NAVER Developers <dl_valhalla@navercorp.com> (https://www.navercorp.com)",
   "license": "Apache-2.0",
   "licenses": [
     {
@@ -68,6 +68,7 @@
   },
   "devDependencies": {
     "axios": "^0.18.0",
+    "bluebird": "^3.5.3",
     "elasticsearch": "^15.4.1",
     "eslint-config-airbnb": "^17.1.0",
     "eslint-config-prettier": "^3.1.0",

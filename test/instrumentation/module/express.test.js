@@ -122,7 +122,7 @@ class MyError extends Error {
   }
 }
 const testName4 = 'express4'
-test.only(`${testName4} Should record internal error`, function (t) {
+test(`${testName4} Should record internal error`, function (t) {
   const testName = testName4
 
   t.plan(2)

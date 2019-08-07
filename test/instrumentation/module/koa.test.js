@@ -51,7 +51,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
 })
 
 const testName2 = 'koa-router2'
-test(`${testName2} Should record internal error`, function (t) {
+test.only(`${testName2} Should record internal error`, function (t) {
   const testName = testName2
 
   t.plan(2)

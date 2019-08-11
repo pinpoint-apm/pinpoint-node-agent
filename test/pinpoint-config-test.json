@@ -1,9 +1,10 @@
 {
+  "enable": true,
   "agent-id": "node.test.app",
   "application-name": "node.test.app",
   "application-type": 1400,
   "collector": {
-    "ip": "***REMOVED***",
+    "ip": "10.112.184.159",
     "span-port": 9996,
     "stat-port": 9995,
     "tcp-port": 9994

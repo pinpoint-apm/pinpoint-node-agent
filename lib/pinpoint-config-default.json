@@ -15,7 +15,8 @@
   "http-status-code-errors": ["5xx"],
   "log-level": "WARN",
   "enabled-data-sending": true,
-  "stats-monitor-sending": true,
+  "enabled-stats-monitor-sending": true,
+  "enabled-active-thread-count": true,
   "express": {
     "enable": true
   },

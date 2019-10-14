@@ -17,6 +17,7 @@
   "enabled-data-sending": true,
   "enabled-stats-monitor-sending": true,
   "enabled-active-thread-count": true,
+  "container": false,
   "express": {
     "enable": true
   },

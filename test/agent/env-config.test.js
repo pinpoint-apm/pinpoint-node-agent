@@ -45,3 +45,39 @@ test('should return the number value when the env value is number type', functio
     config.clear()
     t.end()
 })
+
+test('should return the true value when the env value is boolean type', function(t) {
+    process.env['PINPOINT_SAMPLING'] = "true"
+    process.env['PINPOINT_ENABLE'] = "true"
+    process.env['PINPOINT_CONTAINER'] = "true"
+
+    const given = config.getConfig()
+    t.equal(given.sampling, true, 'given PINPOINT_SAMPLING env, should equal config')
+    t.equal(given.enable, true, 'given PINPOINT_ENABLE env, should equal config')
+    t.equal(given.container, true, 'given PINPOINT_CONTAINER env, should equal config')
+
+    delete process.env.PINPOINT_SAMPLING
+    delete process.env.PINPOINT_ENABLE
+    delete process.env.PINPOINT_CONTAINER
+
+    config.clear()
+    t.end()
+})
+
+test('should return the false value when the env value is boolean type', function(t) {
+    process.env['PINPOINT_SAMPLING'] = "false"
+    process.env['PINPOINT_ENABLE'] = "false"
+    process.env['PINPOINT_CONTAINER'] = "false"
+
+    const given = config.getConfig()
+    t.equal(given.sampling, false, 'given PINPOINT_SAMPLING env, should equal config')
+    t.equal(given.enable, false, 'given PINPOINT_ENABLE env, should equal config')
+    t.equal(given.container, false, 'given PINPOINT_CONTAINER env, should equal config')
+
+    delete process.env.PINPOINT_SAMPLING
+    delete process.env.PINPOINT_ENABLE
+    delete process.env.PINPOINT_CONTAINER
+
+    config.clear()
+    t.end()
+})

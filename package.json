@@ -5,7 +5,7 @@
   "scripts": {
     "clean": "rimraf build",
     "test": "node runTest.js",
-    "tape": "tape"
+    "tape": "tape ./test/agent/**/*.test.js"
   },
   "description": "Pinpoint node agent provided by NAVER",
   "repository": {

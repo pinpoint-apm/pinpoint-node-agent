@@ -1,7 +1,7 @@
 const test = require('tape')
 const config = require('../../lib/config')
 
-/*
+
 test('should return the string value when the env value is string type', function(t) {
     process.env['PINPOINT_AGENT_ID'] = "agentId"
     process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
@@ -82,7 +82,7 @@ test('should return the false value when the env value is boolean type', functio
     config.clear()
     t.end()
 })
-*/
+
 test('should not exist in the process.env property when you do not set an environment variable', function(t) {
     delete process.env.PINPOINT_AGENT_ID
     delete process.env.PINPOINT_APPLICATION_NAME
@@ -93,6 +93,12 @@ test('should not exist in the process.env property when you do not set an enviro
     delete process.env.PINPOINT_ENABLE
     delete process.env.PINPOINT_CONTAINER
 
+    delete process.env.PINPOINT_SERVICE_TYPE
+    delete process.env.PINPOINT_COLLECTOR_TCP_PORT
+    delete process.env.PINPOINT_COLLECTOR_STAT_PORT
+    delete process.env.PINPOINT_COLLECTOR_SPAN_PORT
+    delete process.env.PINPOINT_SAMPLING_RATE
+
     const given = config.getConfig()
     t.equal(given.agentId, "node.app.id", "No set PINPOINT_AGENT_ID env, should equal default config")
     t.equal(given.applicationName, "node.app.name", "No set PINPOINT_APPLICATION_NAME env, should equal default config")
@@ -102,6 +108,12 @@ test('should not exist in the process.env property when you do not set an enviro
     t.equal(given.sampling, true, 'No set PINPOINT_SAMPLING env, should equal default config')
     t.equal(given.enable, true, 'No set PINPOINT_ENABLE env, should equal default config')
     t.equal(given.container, false, 'No set PINPOINT_CONTAINER env, should equal default config')
+
+    t.equal(given.serviceType, 1400, 'No set PINPOINT_SERVICE_TYPE env, should equal default config')
+    t.equal(given.collectorTcpPort, 9994, 'No set PINPOINT_COLLECTOR_TCP_PORT env, should equal default config')
+    t.equal(given.collectorStatPort, 9995, 'No set PINPOINT_COLLECTOR_STAT_PORT env, should equal default config')
+    t.equal(given.collectorSpanPort, 9996, 'No set PINPOINT_COLLECTOR_SPAN_PORT env, should equal default config')
+    t.equal(given.sampleRate, 1, 'No set PINPOINT_SAMPLING_RATE env, should equal default config')
 
     config.clear()
     t.end()

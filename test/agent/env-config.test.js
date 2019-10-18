@@ -81,3 +81,19 @@ test('should return the false value when the env value is boolean type', functio
     config.clear()
     t.end()
 })
+
+test('should not exist in the process.env property when you do not set an environment variable', function(t) {
+    delete process.env.PINPOINT_AGENT_ID
+    delete process.env.PINPOINT_APPLICATION_NAME
+    delete process.env.PINPOINT_COLLECTOR_IP
+    delete process.env.PINPOINT_LOG_LEVEL
+
+    const given = config.getConfig()
+    t.equal(given.agentId, "node.app.id", "No set PINPOINT_AGENT_ID env, should equal default config")
+    t.equal(given.applicationName, "node.app.name", "No set PINPOINT_APPLICATION_NAME env, should equal default config")
+    t.equal(given.collectorIp, "***REMOVED***", "No set PINPOINT_COLLECTOR_IP env, should equal default config")
+    t.equal(given.logLevel, "WARN", "No set PINPOINT_LOG_LEVEL env, should equal default config")
+
+    config.clear()
+    t.end()
+})

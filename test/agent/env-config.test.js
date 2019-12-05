@@ -23,6 +23,18 @@ test('should return the string value when the env value is string type', functio
     t.end()
 })
 
+const givenDefaultIdAndName = () => {
+    process.env['PINPOINT_AGENT_ID'] = "agentId"
+    process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
+
+    const given = config.getConfig()
+
+    delete process.env.PINPOINT_AGENT_ID
+    delete process.env.PINPOINT_APPLICATION_NAME
+
+    return given
+}
+
 test('should return the number value when the env value is number type', function(t) {
     process.env['PINPOINT_SERVICE_TYPE'] = "1400"
     process.env['PINPOINT_COLLECTOR_TCP_PORT'] = "9894"
@@ -30,7 +42,7 @@ test('should return the number value when the env value is number type', functio
     process.env['PINPOINT_COLLECTOR_SPAN_PORT'] = "9896"
     process.env['PINPOINT_SAMPLING_RATE'] = "10"
 
-    const given = config.getConfig()
+    const given = givenDefaultIdAndName()
     t.equal(given.serviceType, 1400, 'given PINPOINT_SERVICE_TYPE env, should equal config')
     t.equal(given.collectorTcpPort, 9894, 'given PINPOINT_COLLECTOR_TCP_PORT env, should equal config')
     t.equal(given.collectorStatPort, 9895, 'given PINPOINT_COLLECTOR_STAT_PORT env, should equal config')
@@ -52,7 +64,7 @@ test('should return the true value when the env value is boolean type', function
     process.env['PINPOINT_ENABLE'] = "true"
     process.env['PINPOINT_CONTAINER'] = "true"
 
-    const given = config.getConfig()
+    const given = givenDefaultIdAndName()
     t.equal(given.sampling, true, 'given PINPOINT_SAMPLING env, should equal config')
     t.equal(given.enable, true, 'given PINPOINT_ENABLE env, should equal config')
     t.equal(given.container, true, 'given PINPOINT_CONTAINER env, should equal config')
@@ -84,8 +96,6 @@ test('should return the false value when the env value is boolean type', functio
 })
 
 test('should not exist in the process.env property when you do not set an environment variable', function(t) {
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_APPLICATION_NAME
     delete process.env.PINPOINT_COLLECTOR_IP
     delete process.env.PINPOINT_LOG_LEVEL
 
@@ -99,9 +109,9 @@ test('should not exist in the process.env property when you do not set an enviro
     delete process.env.PINPOINT_COLLECTOR_SPAN_PORT
     delete process.env.PINPOINT_SAMPLING_RATE
 
-    const given = config.getConfig()
-    t.equal(given.agentId, "node.app.id", "No set PINPOINT_AGENT_ID env, should equal default config")
-    t.equal(given.applicationName, "node.app.name", "No set PINPOINT_APPLICATION_NAME env, should equal default config")
+    const given = givenDefaultIdAndName()
+    t.equal(given.agentId, "agentId", "No set PINPOINT_AGENT_ID env, should equal default config")
+    t.equal(given.applicationName, "appication name", "No set PINPOINT_APPLICATION_NAME env, should equal default config")
     t.equal(given.collectorIp, "***REMOVED***", "No set PINPOINT_COLLECTOR_IP env, should equal default config")
     t.equal(given.logLevel, "WARN", "No set PINPOINT_LOG_LEVEL env, should equal default config")
 

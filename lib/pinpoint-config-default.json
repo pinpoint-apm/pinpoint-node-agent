@@ -1,6 +1,4 @@
 {
-  "agent-id": "node.app.id",
-  "application-name": "node.app.name",
   "application-type": 1400,
   "collector": {
     "ip": "***REMOVED***",

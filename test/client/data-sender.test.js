@@ -7,7 +7,8 @@ enableDataSending()
 
 const Trace = require('../../lib/context/trace')
 const DataSender = require('../../lib/client/data-sender')
-const dataSender = new DataSender(fixture.config)
+const AgentInfo = require('../../lib/data/dto/agent-info')
+const dataSenderFactory = require('../../lib/client/data-sender-factory')
 
 
 test('Should send span', function (t) {
@@ -29,9 +30,11 @@ test('Should send span', function (t) {
 test.only('Should send agent info', function (t) {
   t.plan(1)
 
-  dataSender.sendAgentInfo(fixture.getAgentInfo())
+  const agentInfo = AgentInfo.create(fixture.config, Date.now())
+  const dataSender = dataSenderFactory.create(fixture.config, agentInfo)
+  dataSender.send(agentInfo)
 
-  t.ok(dataSender)
+  t.ok(true)
 })
 
 test('Should send string meta info', function (t) {

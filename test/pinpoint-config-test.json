@@ -1,7 +1,7 @@
 {
   "enable": true,
-  "agent-id": "node.test.app2",
-  "application-name": "node.test.app2",
+  "agent-id": "node.test.app",
+  "application-name": "node.test.app",
   "application-type": 1400,
   "collector": {
     "ip": "***REMOVED***",

@@ -22,5 +22,14 @@
     "koa": true,
     "mongodb": true,
     "redis": true
+  },
+  "grpc": {
+    "enable": true,
+    "collector": {
+      "ip": "***REMOVED***",
+      "span-port": 9993,
+      "stat-port": 9992,
+      "tcp-port": 9991
+    }
   }
 }

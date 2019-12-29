@@ -1,38 +1,20 @@
 const test = require('tape')
 const axios = require('axios')
 
-const os = require('os');
-const internalIp = require('internal-ip');
-
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 enableDataSending()
 
-const GrpcSender = require('../../../lib/client/grpc/grpc-sender')
-const grpcSender = new GrpcSender(fixture.config)
+const AgentInfo = require('../../../lib/data/dto/agent-info')
+const GrpcSender = require('../../../lib/client/grpc-data-sender')
+const dataSenderFactory = require('../../../lib/client/data-sender-factory')
 
 test('Should send agent info', function (t) {
   t.plan(1)
 
-  const createAgentInfo = (config, agentStartTime) => {
-    return {
-      agentId: config.agentId,
-      applicationName: config.applicationName,
-      serviceType: config.serviceType,
-      applicationServiceType: config.serviceType,
-      startTimestamp: agentStartTime,
-      agentStartTime: agentStartTime,
-      agentVersion: { version : "1.8.5" },
-      hostname: os.hostname(),
-      ip: internalIp.v4.sync(),
-      pid: process.pid,
-      ports: '',
-      vmVerson: '',
-      container: config.container,
-    }
-  }
+  const agentInfo = AgentInfo.create(fixture.config, Date.now())
+  const dataSender = dataSenderFactory.create(fixture.config, agentInfo)
+  dataSender.send(agentInfo)
 
-  grpcSender.sendAgentInfo(createAgentInfo(fixture.config, Date.now()))
-
-  t.ok(grpcSender)
+  t.ok(true)
 })
 

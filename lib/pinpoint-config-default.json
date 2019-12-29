@@ -28,5 +28,14 @@
   },
   "redis": {
     "enable": true
+  },
+  "grpc": {
+    "collector": {
+      "enable": false,
+      "ip": "***REMOVED***",
+      "span-port": 9993,
+      "stat-port": 9992,
+      "tcp-port": 9991
+    }
   }
 }

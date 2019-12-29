@@ -26,7 +26,7 @@ test('Should send span', function (t) {
   t.ok(dataSender)
 })
 
-test('Should send agent info', function (t) {
+test.only('Should send agent info', function (t) {
   t.plan(1)
 
   dataSender.sendAgentInfo(fixture.getAgentInfo())
@@ -34,7 +34,7 @@ test('Should send agent info', function (t) {
   t.ok(dataSender)
 })
 
-test.only('Should send string meta info', function (t) {
+test('Should send string meta info', function (t) {
   t.plan(1)
 
   const metaInfo = {

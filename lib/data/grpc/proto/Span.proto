@@ -3,12 +3,6 @@ syntax = "proto3";
 import "google/protobuf/empty.proto";
 import "Annotation.proto";
 
-
-option java_multiple_files = true;
-option java_package = "com.navercorp.pinpoint.grpc.trace";
-option java_outer_classname = "SpanProto";
-//option objc_class_prefix = "PIN";
-
 package v1;
 
 message PSpanMessage {

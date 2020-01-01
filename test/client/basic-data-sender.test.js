@@ -11,7 +11,7 @@ const MethodDescriptor = require('../../lib/context/method-descriptor')
 const MethodType = require('../../lib/constant/method-type').MethodType
 const dataSenderFactory = require('../../lib/client/data-sender-factory')
 
-const GRPC_ENABLE = true
+const GRPC_ENABLE = false
 fixture.config['grpcEnable'] = GRPC_ENABLE
 const agentInfo = AgentInfo.create(fixture.config, Date.now())
 const dataSender = dataSenderFactory.create(fixture.config, agentInfo)

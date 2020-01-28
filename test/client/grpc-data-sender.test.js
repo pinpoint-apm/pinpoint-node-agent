@@ -4,6 +4,7 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../test-helper')
 enableDataSending()
 
+const Trace = require('../../lib/context/trace')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
@@ -39,6 +40,22 @@ test('Should send string meta info', function (t) {
 
   const stringMetaInfo = StringMetaInfo.create('1', 'test string')
   dataSender.send(stringMetaInfo)
+
+  t.ok(true)
+})
+
+test.only('Should send span ', function (t) {
+  t.plan(1)
+
+  const traceId = fixture.getTraceId()
+  const agentInfo = fixture.getAgentInfo()
+  const trace = new Trace(traceId, agentInfo, dataSender)
+  const spanEventRecorder = trace.traceBlockBegin()
+
+  trace.traceBlockEnd(spanEventRecorder)
+  const span = trace.span
+
+  dataSender.send(span)
 
   t.ok(true)
 })

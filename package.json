@@ -54,7 +54,6 @@
     "distributed-tracing"
   ],
   "dependencies": {
-    "@grpc/proto-loader": "^0.5.3",
     "bufferutil": "^4.0.1",
     "end-of-stream": "^1.4.1",
     "find-node-modules": "^1.0.4",

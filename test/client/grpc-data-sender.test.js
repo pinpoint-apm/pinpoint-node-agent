@@ -44,7 +44,7 @@ test('Should send string meta info', function (t) {
   t.ok(true)
 })
 
-test.only('Should send span ', function (t) {
+test('Should send span ', function (t) {
   t.plan(1)
 
   const traceId = fixture.getTraceId()

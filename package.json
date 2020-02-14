@@ -12,7 +12,7 @@
     "type": "git",
     "url": "https://***REMOVED***"
   },
-  "author": "NAVER Developers <dl_valhalla@navercorp.com> (https://www.navercorp.com)",
+  "author": "NAVER Developers <dl_pinpoint_node.js@navercorp.com> (https://www.navercorp.com)",
   "license": "Apache-2.0",
   "licenses": [
     {
@@ -21,7 +21,7 @@
     }
   ],
   "bugs": {
-    "mail": "dl_valhalla@navercorp.com",
+    "mail": "dl_pinpoint_node.js@navercorp.com",
     "url": "https://***REMOVED***/issues"
   },
   "homepage": "https://***REMOVED***",

@@ -10,7 +10,7 @@
   "description": "Pinpoint node agent provided by NAVER",
   "repository": {
     "type": "git",
-    "url": "https://***REMOVED***.git"
+    "url": "https://***REMOVED***"
   },
   "author": "NAVER Developers <dl_valhalla@navercorp.com> (https://www.navercorp.com)",
   "license": "Apache-2.0",
@@ -22,7 +22,7 @@
   ],
   "bugs": {
     "mail": "dl_valhalla@navercorp.com",
-    "url": "https://oss.navercorp.com/valhalla/-pinpoint_node_agent/issues"
+    "url": "https://***REMOVED***/issues"
   },
   "homepage": "https://***REMOVED***",
   "engines": {

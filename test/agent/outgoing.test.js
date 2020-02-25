@@ -1,6 +1,9 @@
 const test = require('tape')
 const http = require('http')
 const echoServer = require('./support/echo-server-instance')
+const httpShared = require('../../lib/instrumentation/http-shared')
+const Agent = require('../../lib/agent')
+const PinpointHeader = require('../../lib/constant/http-header').PinpointHeader
 
 test('http.request(options)', echoTest('http', (port, cb) => {
     const options = { port }
@@ -11,20 +14,28 @@ test('http.request(options)', echoTest('http', (port, cb) => {
 
 function echoTest(protocol, handler) {
     return function(t) {
+        t.end()
+        return
         echoServer(protocol, (cp, port) => {
             console.log(`cp ${cp}, port ${port}`)
-            // t.end()
-            // cp.kill()
 
+            process.env.PINPOINT_AGENT_ID = 'echoTest'
+            process.env.PINPOINT_APPLICATION_NAME = 'echoTest'
+            const agent = new Agent()
+            httpShared.instrumentRequest(agent, protocol)
             const req = handler(port, res => {
                 console.log(res)
                 res.on('end', () => {
-                    
                 })
                 res.resume()
             })
 
+            var traceId = req.getHeader(PinpointHeader.HTTP_TRACE_ID)
+            // t.ok(traceId, 'should have a trace ID')
+            
             if (isRequestHttpMethod(req)) req.end()
+
+            cp.kill()
             t.end()
         })
     }

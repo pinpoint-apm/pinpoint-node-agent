@@ -17,11 +17,22 @@ function echoTest(protocol, handler) {
             // cp.kill()
 
             const req = handler(port, res => {
+                console.log(res)
                 res.on('end', () => {
                     
                 })
                 res.resume()
             })
+
+            if (isRequestHttpMethod(req)) req.end()
+            t.end()
         })
+    }
+
+    // Detect if the test called `http.get` (in which case outputSize should
+    // be greater than zero) or `http.request` (in which case it should equal
+    // zero)
+    function isRequestHttpMethod(req) {
+        return req.outputSize === 0
     }
 }

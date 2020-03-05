@@ -5,19 +5,17 @@ const httpShared = require('../../lib/instrumentation/http-shared')
 const Agent = require('../../lib/agent')
 const PinpointHeader = require('../../lib/constant/http-header').PinpointHeader
 
-test('http.request(options)', echoTest('http', (port, cb) => {
-    const options = { port }
-    const req = http.request(options)
-    req.on('response', cb)
-    return req
-}))
+// test('http.request(options)', echoTest('http', (port, cb) => {
+//     const options = { port }
+//     const req = http.request(options)
+//     req.on('response', cb)
+//     return req
+// }))
 
 function echoTest(protocol, handler) {
     return function(t) {
-        t.end()
-        return
         echoServer(protocol, (cp, port) => {
-            console.log(`cp ${cp}, port ${port}`)
+            console.log(`cp ${cp}, port ${port}`)        
 
             process.env.PINPOINT_AGENT_ID = 'echoTest'
             process.env.PINPOINT_APPLICATION_NAME = 'echoTest'

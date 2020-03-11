@@ -3,7 +3,7 @@ const { log, fixture, util } = require('../test-helper')
 
 const ServiceTypeCode = require('../../lib/constant/service-type').ServiceTypeCode
 const TraceContext = require('../../lib/context/trace-context')
-const ExpressMethodDescritpor = require('../../lib/constant/method-descriptor').ExpressMethodDescritpor
+const GeneralMethodDescriptor = require('../../lib/constant/method-descriptor').GeneralMethodDescriptor
 
 test('Should create continued trace and add span info', function (t) {
   t.plan(2)
@@ -17,7 +17,7 @@ test('Should create continued trace and add span info', function (t) {
   t.equal(traceContext.currentTraceObject().traceId.transactionId.toString(), transactionId.toString())
 
   trace.spanRecorder.recordServiceType(ServiceTypeCode.express)
-  trace.spanRecorder.recordApi(ExpressMethodDescritpor.HANDLE)
+  trace.spanRecorder.recordApi(GeneralMethodDescriptor.SERVER_REQUEST)
 
   t.equal(traceContext.currentTraceObject().span.serviceType, ServiceTypeCode.express)
 })
@@ -34,7 +34,7 @@ test('Should begin/end trace block asynchronously', async function (t) {
   const currentTrace = traceContext.currentTraceObject()
   const spanEventRecorder = currentTrace.traceBlockBegin()
   spanEventRecorder.recordServiceType(ServiceTypeCode.express)
-  spanEventRecorder.recordApi(ExpressMethodDescritpor.HANDLE)
+  spanEventRecorder.recordApi(GeneralMethodDescriptor.SERVER_REQUEST)
 
   t.equal(traceContext.currentTraceObject().callStack.length, 1)
 

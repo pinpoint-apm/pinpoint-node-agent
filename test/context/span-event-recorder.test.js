@@ -6,7 +6,7 @@ const SpanEvent = require('../../lib/context/span-event')
 const SpanEventRecorder = require('../../lib/context/span-event-recorder')
 
 const ServiceTypeCode = require('../../lib/constant/service-type').ServiceTypeCode
-const ExpressMethodDescritpor = require('../../lib/constant/method-descriptor').ExpressMethodDescritpor
+const GeneralMethodDescriptor = require('../../lib/constant/method-descriptor').GeneralMethodDescriptor
 
 test('Should create span event recorder', async function (t) {
   t.plan(2)
@@ -15,7 +15,7 @@ test('Should create span event recorder', async function (t) {
   const spanEvent = new SpanEvent(span.spanId, 0)
   const spanEventRecorder = new SpanEventRecorder(spanEvent, span)
   spanEventRecorder.recordServiceType(ServiceTypeCode.express)
-  spanEventRecorder.recordApi(ExpressMethodDescritpor.HANDLE)
+  spanEventRecorder.recordApi(GeneralMethodDescriptor.SERVER_REQUEST)
   t.ok(spanEventRecorder.spanEvent)
 
   spanEventRecorder.spanEvent.startTime = Date.now()

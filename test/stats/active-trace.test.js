@@ -45,7 +45,7 @@ test(`Should record active trace in multiple call`, function (t) {
   })
 })
 
-test.only(`Should get histogram`, function (t) {
+test(`Should get histogram`, function (t) {
   t.plan(4)
 
   const PATH = '/active-trace'
@@ -96,5 +96,5 @@ test.only(`Should get histogram`, function (t) {
 })
 
 test.onFinish(() => {
-  agent.dataSender.closeClient()
+  agent.pinpointClient.dataSender.closeClient()
 })

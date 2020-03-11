@@ -58,5 +58,5 @@ test('Should write pinpoint header', async function (t) {
 })
 
 test.onFinish(() => {
-  agent.dataSender.closeClient()
+  agent.pinpointClient.dataSender.closeClient()
 })

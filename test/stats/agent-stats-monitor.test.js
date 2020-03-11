@@ -26,7 +26,7 @@ test('Should collect and send stats one', function (t) {
   t.ok(statsMonitor)
 })
 
-test.only(`Should send stats in every 1 sec`, function (t) {
+test(`Should send stats in every 1 sec`, function (t) {
   t.plan(1)
 
   const PATH = '/active-trace'
@@ -55,5 +55,5 @@ test.only(`Should send stats in every 1 sec`, function (t) {
 })
 
 test.onFinish(() => {
-  agent.dataSender.closeClient()
+  agent.pinpointClient.dataSender.closeClient()
 })

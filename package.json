@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "clean": "rimraf build",
-    "test": "node runTest.js",
+    "test": "./node_modules/.bin/tape ./test/**/*.test.js",
     "tape": "./node_modules/.bin/tape ./test/agent/**/*.test.js"
   },
   "description": "Pinpoint node agent provided by NAVER",

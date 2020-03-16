@@ -28,6 +28,7 @@ test(`Should record active trace in multiple call`, function (t) {
     await util.sleep(2000)
     res.send('ok get')
   })
+
   app.get(LASTONE_PATH, async (req, res) => {
     t.equal(activeTrace.getAllTraces().length, 3)
     res.send('ok get')
@@ -90,8 +91,8 @@ test(`Should get histogram`, function (t) {
       await util.sleep(2000)
     }, 3000)
 
-    // await util.sleep(3000)
-    // server.close()
+    await util.sleep(3000)
+    server.close()
   })
 })
 

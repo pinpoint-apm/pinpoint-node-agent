@@ -6,8 +6,13 @@ enableDataSending()
 
 const Agent = require('../../lib/agent')
 class MockAgent extends Agent {
-  registerSchedulingJobs(agentId) {
+  createAgentInfo(config, agentStartTime) {
+    this.mockAgentInfo = super.createAgentInfo(config, agentStartTime)
+    return this.mockAgentInfo
+  }
+  registerSchedulingJobs(agentId, agentStartTime) {
     this.mockAgentId = agentId
+    this.mockAgentStartTime = agentStartTime
   }
 }
 const agent = new MockAgent(fixture.config)
@@ -28,7 +33,7 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 test(`Should record active trace in multiple call`, function (t) {
-  t.plan(3)
+  t.plan(4)
 
   const PATH = '/active-trace'
   const LASTONE_PATH = '/active-trace/lastone'
@@ -41,7 +46,7 @@ test(`Should record active trace in multiple call`, function (t) {
   })
 
   app.get(LASTONE_PATH, async (req, res) => {
-    t.equal(activeTrace.getAllTraces().length, 3)
+    t.equal(activeTrace.getAllTraces().length, 3, "input request equals")
     res.send('ok get')
   })
 
@@ -57,6 +62,7 @@ test(`Should record active trace in multiple call`, function (t) {
     ])
 
     t.equal(activeTrace.getAllTraces().length, 0)
+    t.equal(agent.mockAgentStartTime, agent.mockAgentInfo.startTimestamp, "startTimestamp equals")
     await axios.get(getServerUrl(SHUTDOWN))
   })
 

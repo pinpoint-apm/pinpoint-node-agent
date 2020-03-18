@@ -16,7 +16,7 @@
   "http-status-code-errors": ["5xx"],
   "enabled-stats-monitor-sending": false,
   "enabled-active-thread-count": false,
-  "log-level": "DEBUG",
+  "log-level": "INFO",
   "modules": {
     "express": true,
     "koa": true,

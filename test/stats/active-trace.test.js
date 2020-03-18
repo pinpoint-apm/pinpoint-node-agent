@@ -5,7 +5,7 @@ const { log, fixture, util, enableDataSending } = require('../test-helper')
 enableDataSending()
 
 const Agent = require('../../lib/agent')
-const agent = new Agent(fixture.config)
+const PinpointClient = require('../../lib/client/pinpoint-client')
 const activeTrace = require('../../lib/metric/active-trace')
 const AgentStatsMonitor = require('../../lib/metric/agent-stats-monitor')
 
@@ -16,6 +16,13 @@ const TEST_ENV = {
   port: 5005,
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
+
+class MockAgent extends Agent {
+}
+const agent = new MockAgent(fixture.config)
+
+class MockPinpointClient {
+}
 
 test(`Should record active trace in multiple call`, function (t) {
   t.plan(2)

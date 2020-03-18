@@ -18,6 +18,9 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 class MockAgent extends Agent {
+  registerSchedulingJobs(agentId) {
+    this.agentId = agentId
+  }
 }
 const agent = new MockAgent(fixture.config)
 
@@ -25,7 +28,7 @@ class MockPinpointClient {
 }
 
 test(`Should record active trace in multiple call`, function (t) {
-  t.plan(2)
+  t.plan(3)
 
   const PATH = '/active-trace'
   const LASTONE_PATH = '/active-trace/lastone'
@@ -56,6 +59,8 @@ test(`Should record active trace in multiple call`, function (t) {
     t.equal(activeTrace.getAllTraces().length, 0)
     await axios.get(getServerUrl(SHUTDOWN))
   })
+
+  t.equal(agent.agentId, fixture.config.agentId)
 })
 
 // test(`Should get histogram`, function (t) {

@@ -25,9 +25,13 @@ test('Should create continued trace and add span info', function (t) {
 test('Should begin/end trace block asynchronously', async function (t) {
   t.plan(4)
 
+  const dataSender = {
+
+  }
+
   // start trace and write span info
-  const traceContext = TraceContext.init(fixture.getAgentInfo())
-  const startedTrace = traceContext.newTraceObject()
+  const traceContext = TraceContext.init(fixture.getAgentInfo(), dataSender)
+  const startedTrace = traceContext.newTraceObject(true)
   const spanRecorder = startedTrace.spanRecorder
   spanRecorder.recordServiceType(ServiceTypeCode.express)
 

@@ -3,6 +3,8 @@ const config = require('../../lib/config')
 
 
 test('should return the string value when the env value is string type', function(t) {
+    config.clear()
+
     process.env['PINPOINT_AGENT_ID'] = "agentId"
     process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
     process.env['PINPOINT_COLLECTOR_IP'] = "***REMOVED***"
@@ -36,6 +38,8 @@ const givenDefaultIdAndName = () => {
 }
 
 test('should return the number value when the env value is number type', function(t) {
+    config.clear()
+
     process.env['PINPOINT_SERVICE_TYPE'] = "1400"
     process.env['PINPOINT_COLLECTOR_TCP_PORT'] = "9894"
     process.env['PINPOINT_COLLECTOR_STAT_PORT'] = "9895"
@@ -60,6 +64,8 @@ test('should return the number value when the env value is number type', functio
 })
 
 test('should return the true value when the env value is boolean type', function(t) {
+    config.clear()
+
     process.env['PINPOINT_SAMPLING'] = "true"
     process.env['PINPOINT_ENABLE'] = "true"
     process.env['PINPOINT_CONTAINER'] = "true"
@@ -78,6 +84,8 @@ test('should return the true value when the env value is boolean type', function
 })
 
 test('should return the false value when the env value is boolean type', function(t) {
+    config.clear()
+
     process.env['PINPOINT_SAMPLING'] = "false"
     process.env['PINPOINT_ENABLE'] = "false"
     process.env['PINPOINT_CONTAINER'] = "false"
@@ -96,6 +104,8 @@ test('should return the false value when the env value is boolean type', functio
 })
 
 test('should not exist in the process.env property when you do not set an environment variable', function(t) {
+    config.clear()
+    
     delete process.env.PINPOINT_COLLECTOR_IP
     delete process.env.PINPOINT_LOG_LEVEL
 

@@ -68,9 +68,6 @@ test(`Should record active trace in multiple call`, function (t) {
     res.send('ok get')
   })
 
-  app.get(SHUTDOWN, async(req, res) => {
-    server.close()
-  })
 
   const server = app.listen(TEST_ENV.port, async function () {
     await Promise.all([
@@ -81,7 +78,7 @@ test(`Should record active trace in multiple call`, function (t) {
 
     t.equal(activeTrace.getAllTraces().length, 0)
     t.equal(agent.mockAgentStartTime, agent.mockAgentInfo.startTimestamp, "startTimestamp equals")
-    await axios.get(getServerUrl(SHUTDOWN))
+    server.close()
   })
 
   t.equal(agent.mockAgentId, fixture.config.agentId, "Agent ID equals")

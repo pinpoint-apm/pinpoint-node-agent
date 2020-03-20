@@ -10,7 +10,7 @@ class MockAgent extends Agent {
     this.mockAgentInfo = super.createAgentInfo(config, agentStartTime)
     return this.mockAgentInfo
   }
-  registerSchedulingJobs(agentId, agentStartTime) {
+  startSchedule(agentId, agentStartTime) {
     this.mockAgentId = agentId
     this.mockAgentStartTime = agentStartTime
   }

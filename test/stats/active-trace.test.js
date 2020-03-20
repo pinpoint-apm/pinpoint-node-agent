@@ -5,20 +5,38 @@ const { log, fixture, util, enableDataSending } = require('../test-helper')
 enableDataSending()
 
 const Agent = require('../../lib/agent')
+
+class MockPinpointClient {
+  constructor(config, agentInfo) {
+    this.mockConfig = config
+    this.mockAgentInfo = agentInfo
+    this.dataSender = {
+      sendApiMetaInfo: function() {
+
+      },
+      sendSpan: function() {
+
+      }
+    }
+  }
+}
+
 class MockAgent extends Agent {
   createAgentInfo(config, agentStartTime) {
     this.mockAgentInfo = super.createAgentInfo(config, agentStartTime)
     return this.mockAgentInfo
   }
+  
   startSchedule(agentId, agentStartTime) {
     this.mockAgentId = agentId
     this.mockAgentStartTime = agentStartTime
   }
+
+  initializePinpointClient(agentInfo) {
+    this.pinpointClient = new MockPinpointClient(this.config, agentInfo)
+  }
 }
 const agent = new MockAgent(fixture.config)
-
-class MockPinpointClient {
-}
 
 const PinpointClient = require('../../lib/client/pinpoint-client')
 const activeTrace = require('../../lib/metric/active-trace')
@@ -33,7 +51,7 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 test(`Should record active trace in multiple call`, function (t) {
-  t.plan(4)
+  t.plan(5)
 
   const PATH = '/active-trace'
   const LASTONE_PATH = '/active-trace/lastone'
@@ -67,6 +85,7 @@ test(`Should record active trace in multiple call`, function (t) {
   })
 
   t.equal(agent.mockAgentId, fixture.config.agentId, "Agent ID equals")
+  t.equal(agent.mockAgentInfo, agent.pinpointClient.mockAgentInfo, "AgentInfo equals")
 })
 
 // test(`Should get histogram`, function (t) {
@@ -118,7 +137,3 @@ test(`Should record active trace in multiple call`, function (t) {
 //     server.close()
 //   })
 // })
-
-test.onFinish(() => {
-  agent.pinpointClient.dataSender.closeClient()
-})

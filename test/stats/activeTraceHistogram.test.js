@@ -43,7 +43,6 @@ test(`Should get histogram`, function (t) {
       const agentStatsMonitor = new AgentStatsMonitor(agent.dataSender, agent.agentId, agent.agentStartTime)
       axios.get(getServerUrl(PATH))
       axios.get(getServerUrl(LASTONE_PATH))
-      agentStatsMonitor.send()
       await util.sleep(2000)
       server.close()
     })

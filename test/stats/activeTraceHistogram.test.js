@@ -1,7 +1,16 @@
 const test = require('tape')
 const axios = require('axios')
+const { util } = require('../test-helper')
 const AgentStatsMonitor = require('../../lib/metric/agent-stats-monitor')
+const agent = require('./agent-mock')()
+const express = require('express')
 
+const TEST_ENV = {
+    host: 'localhost',
+    port: 5005,
+}
+const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
+  
 test(`Should get histogram`, function (t) {
     t.plan(4)
   

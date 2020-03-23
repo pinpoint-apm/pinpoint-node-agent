@@ -24,9 +24,9 @@ test(`Should get histogram`, function (t) {
     })
 
     app.get(LASTONE_PATH, async (req, res) => {
+      await util.sleep(500)
       const histogram = activeTrace.getCurrentActiveTraceHistogram()
-      log.info(histogram)
-      t.equals(histogram.fastCount, 1)
+      t.equals(histogram.fastCount, 1, 'should fastCount 1 is LASTONE_PATH')
       t.equals(histogram.normalCount, 1)
       t.equals(histogram.slowCount, 1)
       t.equals(histogram.verySlowCount, 1)
@@ -35,9 +35,9 @@ test(`Should get histogram`, function (t) {
   
     const server = app.listen(TEST_ENV.port, async function () {
       await Promise.all([
-        axios.get(getServerUrl(PATH)),
-        axios.get(getServerUrl(PATH)),
-        axios.get(getServerUrl(PATH)),
+        // axios.get(getServerUrl(PATH)),
+        // axios.get(getServerUrl(PATH)),
+        // axios.get(getServerUrl(PATH)),
         axios.get(getServerUrl(LASTONE_PATH))
       ])
       server.close()

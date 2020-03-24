@@ -10,7 +10,7 @@ const agent = require('../stats/agent-mock')()
 const PinpointHeader = require('../../lib/constant/http-header').PinpointHeader
 
 const headers = {
-  'Pinpoint-TraceID': fixture.getTraceId(),
+  'Pinpoint-TraceID': fixture.getTraceId().transactionId.toString(),
   'Pinpoint-SpanID': 2,
   'Pinpoint-pSpanID': 3,
 }

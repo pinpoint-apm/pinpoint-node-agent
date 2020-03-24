@@ -6,8 +6,7 @@ const { log, fixture, util, enableDataSending } = require('../test-helper')
 enableDataSending()
 
 const RequestHeaderUtils = require('../../lib/instrumentation/request-header-utils')
-const Agent= require('../../lib/agent')
-const agent = new Agent(fixture.config)
+const agent = require('../stats/agent-mock')()
 const PinpointHeader = require('../../lib/constant/http-header').PinpointHeader
 
 const headers = {
@@ -57,6 +56,3 @@ test('Should write pinpoint header', async function (t) {
   server.close()
 })
 
-test.onFinish(() => {
-  agent.pinpointClient.dataSender.closeClient()
-})

@@ -54,4 +54,3 @@ test('Should write pinpoint header', async function (t) {
   await axios.get(`http://${endPoint}${rpcName}?q=1`)
   server.close()
 })
-

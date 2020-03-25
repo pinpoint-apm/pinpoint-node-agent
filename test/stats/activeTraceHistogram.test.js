@@ -39,4 +39,4 @@ test(`Should get histogram`, function (t) {
       ])
       server.close()
     })
-  })
+})

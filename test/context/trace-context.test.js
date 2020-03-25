@@ -42,21 +42,16 @@ test('Should begin/end trace block asynchronously', async function (t) {
 
   t.equal(traceContext.currentTraceObject().callStack.length, 1)
 
-  await new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const anotherContext = traceContext.currentTraceObject()
-      t.equal(anotherContext.traceId, currentTrace.traceId)
+  const anotherContext = traceContext.currentTraceObject()
+  t.equal(anotherContext.traceId, currentTrace.traceId)
 
-      const spanEventRecorder2 = anotherContext.traceBlockBegin()
-      t.equal(traceContext.currentTraceObject().callStack.length, 2)
+  const spanEventRecorder2 = anotherContext.traceBlockBegin()
+  t.equal(traceContext.currentTraceObject().callStack.length, 2)
 
-      anotherContext.traceBlockEnd(spanEventRecorder2)
-      resolve()
-    }, 300)
-  })
+  anotherContext.traceBlockEnd(spanEventRecorder2)
 
   currentTrace.traceBlockEnd(spanEventRecorder)
-  t.equal(traceContext.currentTraceObject().callStack.length, 0)
+  t.equal(traceContext.currentTraceObject().callStack.length, 0, "traceBolckEnd callstack length is zero")
 })
 
 test('Should complete trace ', async function (t) {

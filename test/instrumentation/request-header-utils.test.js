@@ -2,8 +2,7 @@ const test = require('tape')
 const axios = require('axios')
 const http = require('http')
 
-const { log, fixture, util, enableDataSending } = require('../test-helper')
-enableDataSending()
+const { log, fixture, util } = require('../test-helper')
 
 const RequestHeaderUtils = require('../../lib/instrumentation/request-header-utils')
 const agent = require('../stats/agent-mock')()
@@ -48,7 +47,7 @@ test('Should write pinpoint header', async function (t) {
 
     const writtenReq = RequestHeaderUtils.write(req, agent)
 
-    t.equal(writtenReq.headers[PinpointHeader.HTTP_TRACE_ID], trace.traceId.transactionId.toString())
+    t.equal(writtenReq.headers[PinpointHeader.HTTP_TRACE_ID], trace.traceId.transactionId.toString(), "trace ID new ID was added in Header")
   })
   .listen(5005)
 

@@ -14,7 +14,7 @@ module.exports = () => {
           },
           sendSpan: function() {
     
-          }
+          },
         }
       }
     }

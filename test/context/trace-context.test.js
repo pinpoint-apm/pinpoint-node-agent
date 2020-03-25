@@ -22,12 +22,15 @@ test('Should create continued trace and add span info', function (t) {
   t.equal(traceContext.currentTraceObject().span.serviceType, ServiceTypeCode.express)
 })
 
+const dataSender = {
+  sendSpan: function() {
+    
+  }
+}
+
+
 test('Should begin/end trace block asynchronously', async function (t) {
   t.plan(4)
-
-  const dataSender = {
-
-  }
 
   // start trace and write span info
   const traceContext = TraceContext.init(fixture.getAgentInfo(), dataSender)
@@ -59,7 +62,7 @@ test('Should complete trace ', async function (t) {
 
   const transactionId = fixture.getTransactionId()
   const traceId = fixture.getTraceId(transactionId)
-  const traceContext = TraceContext.init(fixture.getAgentInfo())
+  const traceContext = TraceContext.init(fixture.getAgentInfo(), dataSender)
 
   const trace = traceContext.newTraceObject(traceId)
 

@@ -24,8 +24,8 @@ test('Should create continued trace and add span info', function (t) {
 
 const dataSender = {
   sendSpan: function() {
-    
-  }
+
+  },
 }
 
 

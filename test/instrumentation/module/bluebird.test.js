@@ -5,24 +5,17 @@ const request = require('supertest')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 enableDataSending()
 
-const Agent = require('../../../lib/agent')
-const agent = new Agent(fixture.config)
+const agent = require('../../stats/agent-mock')()
 
 const Koa = require('koa')
 const Router = require('koa-router')
 const Promise = require("bluebird");
 
-const TEST_ENV = {
-  host: 'localhost',
-  port: 5006,
-}
-const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
-
 const testName1 = 'koa-router1'
 test(`${testName1} Should record request in basic route`, async function (t) {
   const testName = testName1
 
-  t.plan(3)
+  t.plan(1)
 
   const PATH = `/${testName}`
   const app = new Koa()
@@ -37,14 +30,10 @@ test(`${testName1} Should record request in basic route`, async function (t) {
 
   app.use(router.routes()).use(router.allowedMethods())
   request(app.callback())
-      .post(PATH)
-      .expect(200)
-      .end(() => {});
-
-  // const result2 = await axios.post(getServerUrl(PATH))
-  // t.ok(result2.status, 200)
-
-  // const traceMap = agent.traceContext.getAllTraceObject()
-  // log.debug(traceMap.size)
-  // t.ok(traceMap.size > 0)
+    .post(PATH)
+    .expect(200)
+    .end(() => {
+      const traceMap = agent.traceContext.getAllTraceObject()
+      t.ok(traceMap.size > 0)
+    })
 })

@@ -2,10 +2,9 @@ const test = require('tape')
 const axios = require('axios')
 
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
-enableDataSending()
 
-const Agent = require('../../../lib/agent')
-const agent = new Agent(fixture.config)
+const agent = require('../../stats/agent-mock')()
+
 const elasticsearch = require('elasticsearch')
 
 const express = require('express')

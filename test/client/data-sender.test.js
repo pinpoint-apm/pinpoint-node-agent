@@ -1,14 +1,19 @@
 const test = require('tape')
 const axios = require('axios')
 
-
-const { log, fixture, util, enableDataSending } = require('../test-helper')
-enableDataSending()
-
+const { fixture } = require('../test-helper')
 const Trace = require('../../lib/context/trace')
-const DataSender = require('../../lib/client/data-sender')
-const dataSender = new DataSender(fixture.config)
-
+const dataSender = {
+  sendSpan: function(span) {
+    this.mockSpan = span
+  },
+  sendAgentInfo: function(agentInfo) {
+    this.mockAgentInfo = agentInfo
+  },
+  sendStringMetaInfo: function(metaInfo) {
+    this.mockMetaInfo = metaInfo
+  }
+}
 
 test('Should send span', function (t) {
   t.plan(1)
@@ -23,7 +28,7 @@ test('Should send span', function (t) {
 
   dataSender.sendSpan(span)
 
-  t.ok(dataSender)
+  t.equal(dataSender.mockSpan, span, "span is equal in datasender")
 })
 
 test('Should send agent info', function (t) {
@@ -31,7 +36,7 @@ test('Should send agent info', function (t) {
 
   dataSender.sendAgentInfo(fixture.getAgentInfo())
 
-  t.ok(dataSender)
+  t.deepEqual(dataSender.mockAgentInfo, fixture.getAgentInfo(), "agentInfo is equal in datasender")
 })
 
 test('Should send string meta info', function (t) {
@@ -47,6 +52,6 @@ test('Should send string meta info', function (t) {
   dataSender.sendStringMetaInfo(metaInfo)
 
 
-  t.ok(dataSender)
+  t.equal(dataSender.mockMetaInfo, metaInfo, "metaInfo is equal in datasender")
 })
 

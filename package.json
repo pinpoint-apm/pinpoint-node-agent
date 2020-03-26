@@ -85,6 +85,7 @@
     "request": "^2.88.0",
     "rewire": "^4.0.1",
     "rimraf": "^2.6.2",
+    "supertest": "^4.0.2",
     "tap-spec": "^5.0.0",
     "tape": "^4.9.1"
   }

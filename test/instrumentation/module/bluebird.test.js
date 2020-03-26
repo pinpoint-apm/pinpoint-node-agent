@@ -1,5 +1,6 @@
 const test = require('tape')
 const axios = require('axios')
+const request = require('supertest')
 
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 enableDataSending()
@@ -18,7 +19,7 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 const testName1 = 'koa-router1'
-test(`${testName1} Should record request in basic route`, function (t) {
+test(`${testName1} Should record request in basic route`, async function (t) {
   const testName = testName1
 
   t.plan(3)
@@ -35,19 +36,15 @@ test(`${testName1} Should record request in basic route`, function (t) {
   })
 
   app.use(router.routes()).use(router.allowedMethods())
+  request(app.callback())
+      .post(PATH)
+      .expect(200)
+      .end(() => {});
 
-  co
+  // const result2 = await axios.post(getServerUrl(PATH))
+  // t.ok(result2.status, 200)
 
-
-  t.ok(result1.status, 200)
-
-    const result2 = await axios.post(getServerUrl(PATH))
-    t.ok(result2.status, 200)
-
-    const traceMap = agent.traceContext.getAllTraceObject()
-    log.debug(traceMap.size)
-    t.ok(traceMap.size > 0)
-
-    server.close()
-  })
+  // const traceMap = agent.traceContext.getAllTraceObject()
+  // log.debug(traceMap.size)
+  // t.ok(traceMap.size > 0)
 })

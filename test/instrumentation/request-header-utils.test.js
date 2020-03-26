@@ -29,14 +29,14 @@ test('Should read pinpoint header', async function (t) {
     t.equal(requestData.rpcName, rpcName)
     t.ok(requestData.transactionId)
   })
-  .listen(5005)
-
-  await axios.get(`http://${endPoint}${rpcName}?q=1`, { headers })
-  server.close()
+  .listen(5005, async function() {
+    await axios.get(`http://${endPoint}${rpcName}?q=1`, { headers })
+    server.close()
+  })
 })
 
 test('Should write pinpoint header', async function (t) {
-  t.plan(1)
+  t.plan(3)
 
   const server = http.createServer((req, res) => {
     res.writeHead(200, {'Content-Type': 'text/plain'})
@@ -48,9 +48,11 @@ test('Should write pinpoint header', async function (t) {
     const writtenReq = RequestHeaderUtils.write(req, agent)
 
     t.equal(writtenReq.headers[PinpointHeader.HTTP_TRACE_ID], trace.traceId.transactionId.toString(), "trace ID new ID was added in Header")
+    t.deepEqual(agent.loadedModule, [], "agent loadModule should clean up")
+    t.equal(agent.loadedModule.length, 0, "when server is shutdown, loadModule length is zero")
   })
-  .listen(5005)
-
-  await axios.get(`http://${endPoint}${rpcName}?q=1`)
-  server.close()
+  .listen(5005, async function() {
+    await axios.get(`http://${endPoint}${rpcName}?q=1`)
+    server.close()
+  })
 })

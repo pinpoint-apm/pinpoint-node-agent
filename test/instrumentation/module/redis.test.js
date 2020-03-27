@@ -90,7 +90,7 @@ const testName2 = 'express-ioredis'
 test(`${testName2} should Record the connections between express and ioredis.`, function (t) {
   const testName = testName2
 
-  t.plan(3)
+  t.plan(2)
 
   const app = new express()
   const redis = new ioRedis()
@@ -155,7 +155,7 @@ test(`${testName3} should Record the connections between koa and redis.`, functi
 
   const app = new Koa()
   const router = new Router()
-  const client = Redis.createClient(6379,'***REMOVED***')
+  const client = Redis.createClient()
   const PATH = `/${testName}`
 
   app.use(koaBodyParser())
@@ -170,7 +170,7 @@ test(`${testName3} should Record the connections between koa and redis.`, functi
         ctx.body = `error :: ${err}`
         return
       }
-      redis.expire(key, 10)
+      client.expire(key, 10)
       ctx.body = JSON.parse(value)
     });
   });
@@ -212,7 +212,7 @@ test(`${testName4} should Record the connections between koa and ioredis.`, func
 
   const app = new Koa()
   const router = new Router()
-  const redis = new ioRedis(6379,'***REMOVED***')
+  const redis = new ioRedis()
 
   const PATH = `/${testName}`
   app.use(koaBodyParser())

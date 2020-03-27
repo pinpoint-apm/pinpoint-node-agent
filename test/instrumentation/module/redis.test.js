@@ -148,7 +148,7 @@ test(`${testName2} should Record the connections between express and ioredis.`, 
 })
 
 const testName3 = 'koa-redis'
-test.only(`${testName3} should Record the connections between koa and redis.`, function (t) {
+test(`${testName3} should Record the connections between koa and redis.`, function (t) {
   const testName = testName3
 
   t.plan(2)

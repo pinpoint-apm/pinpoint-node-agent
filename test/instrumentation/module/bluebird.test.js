@@ -3,7 +3,6 @@ const axios = require('axios')
 const request = require('supertest')
 
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
-enableDataSending()
 
 const agent = require('../../stats/agent-mock')()
 

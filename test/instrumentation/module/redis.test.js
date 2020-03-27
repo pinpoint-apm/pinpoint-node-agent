@@ -2,14 +2,12 @@ const test = require('tape')
 const axios = require('axios')
 
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
-enableDataSending()
 
-const Agent = require('../../../lib/agent')
-const agent = new Agent(fixture.config)
+const agent = require('../../stats/agent-mock')()
 
 const express = require('express')
-const ioRedis = require('ioredis')
-const Redis = require('redis')
+const ioRedis = require('ioredis-mock')
+const Redis = require('redis-mock')
 const Koa = require('koa')
 const Router = require('koa-router')
 const koaBodyParser = require('koa-bodyparser')
@@ -34,7 +32,7 @@ test(`${testName1} should Record the connections between express and redis.`, fu
   t.plan(3)
 
   const app = new express()
-  const client = Redis.createClient(6379,'***REMOVED***')
+  const client = Redis.createClient()
   const PATH = `/${testName}`
 
   app.use(express.json())
@@ -95,7 +93,7 @@ test(`${testName2} should Record the connections between express and ioredis.`, 
   t.plan(3)
 
   const app = new express()
-  const redis = new ioRedis(6379, '***REMOVED***')
+  const redis = new ioRedis()
   const PATH = `/${testName}`
 
   app.use(express.json())
@@ -207,7 +205,7 @@ test(`${testName3} should Record the connections between koa and redis.`, functi
 })
 
 const testName4 = 'koa-ioredis'
-test.only(`${testName4} should Record the connections between koa and ioredis.`, function (t) {
+test(`${testName4} should Record the connections between koa and ioredis.`, function (t) {
   const testName = testName4
 
   t.plan(3)

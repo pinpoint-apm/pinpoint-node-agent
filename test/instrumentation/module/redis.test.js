@@ -147,68 +147,68 @@ test(`${testName2} should Record the connections between express and ioredis.`, 
   })
 })
 
-const testName3 = 'koa-redis'
-test(`${testName3} should Record the connections between koa and redis.`, function (t) {
-  const testName = testName3
+// const testName3 = 'koa-redis'
+// test(`${testName3} should Record the connections between koa and redis.`, function (t) {
+//   const testName = testName3
 
-  t.plan(3)
+//   t.plan(3)
 
-  const app = new Koa()
-  const router = new Router()
-  const client = Redis.createClient()
-  const PATH = `/${testName}`
+//   const app = new Koa()
+//   const router = new Router()
+//   const client = Redis.createClient()
+//   const PATH = `/${testName}`
 
-  app.use(koaBodyParser())
-  router.post(PATH, async function(ctx, next) {
-    console.log(ctx.request.body)
-    const key = ctx.request.body.name
-    const value = JSON.stringify(ctx.request.body)
+//   app.use(koaBodyParser())
+//   router.post(PATH, async function(ctx, next) {
+//     console.log(ctx.request.body)
+//     const key = ctx.request.body.name
+//     const value = JSON.stringify(ctx.request.body)
 
-    client.set(key, value, function(err, data) {
-      if(err){
-        console.log(err)
-        ctx.body = `error :: ${err}`
-        return
-      }
-      client.expire(key, 10)
-      ctx.body = JSON.parse(value)
-    });
-  });
+//     client.set(key, value, function(err, data) {
+//       if(err){
+//         console.log(err)
+//         ctx.body = `error :: ${err}`
+//         return
+//       }
+//       client.expire(key, 10)
+//       ctx.body = JSON.parse(value)
+//     });
+//   });
 
-  router.get(`${PATH}/:name`, async (ctx, next) => {
-    const key = ctx.params.name
-    console.log(key)
-    client.get(key, async function(err ,data){
-      if(err){
-        console.log(err)
-        ctx.body = `error :: ${err}`
-        return
-      }
-      ctx.body = JSON.parse(data)
-    })
-  })
-  app.use(router.routes()).use(router.allowedMethods())
+//   router.get(`${PATH}/:name`, async (ctx, next) => {
+//     const key = ctx.params.name
+//     console.log(key)
+//     client.get(key, async function(err ,data){
+//       if(err){
+//         console.log(err)
+//         ctx.body = `error :: ${err}`
+//         return
+//       }
+//       ctx.body = JSON.parse(data)
+//     })
+//   })
+//   app.use(router.routes()).use(router.allowedMethods())
 
-  const server = app.listen(TEST_ENV.port, async () => {
-    const rstPush = await axios.post(getServerUrl(PATH), redisData)
-    t.ok(rstPush.status, 200)
+//   const server = app.listen(TEST_ENV.port, async () => {
+//     const rstPush = await axios.post(getServerUrl(PATH), redisData)
+//     t.ok(rstPush.status, 200)
 
-    const rstGet = await axios.get(getServerUrl(`${PATH}/jundol`))
-    t.ok(rstGet.status, 200)
+//     const rstGet = await axios.get(getServerUrl(`${PATH}/jundol`))
+//     t.ok(rstGet.status, 200)
 
-    const traceMap = agent.traceContext.getAllTraceObject()
-    log.debug(traceMap.size)
-    t.ok(traceMap.size > 0)
+//     const traceMap = agent.traceContext.getAllTraceObject()
+//     log.debug(traceMap.size)
+//     t.ok(traceMap.size > 0)
 
-    server.close()
-  })
-})
+//     server.close()
+//   })
+// })
 
 const testName4 = 'koa-ioredis'
 test(`${testName4} should Record the connections between koa and ioredis.`, function (t) {
   const testName = testName4
 
-  t.plan(3)
+  t.plan(2)
 
   const app = new Koa()
   const router = new Router()
@@ -256,8 +256,4 @@ test(`${testName4} should Record the connections between koa and ioredis.`, func
 
     server.close()
   })
-})
-
-test.onFinish(() => {
-  agent.pinpointClient.dataSender.closeClient()
 })

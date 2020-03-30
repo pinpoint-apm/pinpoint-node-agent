@@ -34,6 +34,9 @@ module.exports = () => {
         this.pinpointClient = new MockPinpointClient(this.config, agentInfo)
       }
 
+      initailizeSupportModules() {
+        this.loadedModule = [];
+      }
     }
     return new MockAgent(fixture.config)
   }

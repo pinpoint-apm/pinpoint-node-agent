@@ -125,8 +125,16 @@ test(`${testName2} should Record the connections between express and redis.`, fu
 
   const server = app.listen(TEST_ENV.port, async function () {
     console.log('Test1. Find and Cache')
-    const rstGet = await axios.get(getServerUrl(`${PATH}/iforget`))
-    t.ok(rstGet.status, 200)
+    var rstGet;
+    try {
+      rstGet = await axios.get(getServerUrl(`${PATH}/iforget`))
+    } catch(e) {
+      t.ok(e.response.status, 404)
+    }
+
+    // console.log('step1. Insert')
+    // const rstInsert = await axios.post(getServerUrl(PATH), mongoData)
+    // t.ok(rstInsert.status, 200)
 
     const traceMap = agent.traceContext.getAllTraceObject()
     log.debug(traceMap.size)
@@ -134,9 +142,4 @@ test(`${testName2} should Record the connections between express and redis.`, fu
 
     server.close()
   })
-})
-
-
-test.onFinish(() => {
-  agent.pinpointClient.dataSender.closeClient()
 })

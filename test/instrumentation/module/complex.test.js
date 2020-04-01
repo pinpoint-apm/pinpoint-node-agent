@@ -4,8 +4,10 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 const agent = require('../../stats/agent-mock')()
 
-const ioRedis = require('ioredis')
+const ioRedis = require('ioredis-mock')
 const mongoose = require('mongoose')
+const MockMongoose = require('mock-mongoose').MockMongoose;
+const mockMongoose = new MockMongoose(mongoose);
 
 const Schema = mongoose.Schema
 const bookSchema = new Schema({
@@ -20,12 +22,14 @@ const mongoData = {
 }
 const Book = mongoose.model('book', bookSchema)
 
-const db = mongoose.connection
-db.on('error', console.error)
-db.once('open', function () {
-  console.log("Connected to mongod server")
+mockMongoose.prepareStorage().then(() => {
+  const db = mongoose.connection
+  db.on('error', console.error)
+  db.once('open', function () {
+    console.log("Connected to mongod server")
+  })
+  mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint')
 })
-mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint')
 
 const express = require('express')
 const Koa = require('koa')
@@ -47,7 +51,7 @@ test(`${testName1} should Record the connections between koa and mongodb and red
   const app = new Koa()
   const router = new Router()
   const PATH = `/${testName}/api/books`
-  const redis = new ioRedis(6379,'***REMOVED***')
+  const redis = new ioRedis()
 
   router.get(`${PATH}/:author`, async (ctx, next) => {
     const key = ctx.params.author
@@ -63,7 +67,9 @@ test(`${testName1} should Record the connections between koa and mongodb and red
   app.use(router.routes()).use(router.allowedMethods())
 
   const server = app.listen(TEST_ENV.port, async () => {
-    await mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint')
+    mockMongoose.prepareStorage().then(() => {
+      mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint')
+    })
 
     console.log('Test1. Find and Cache')
     const rstFind = await axios.get(`${getServerUrl(PATH)}/iforget`)
@@ -80,7 +86,7 @@ test(`${testName2} should Record the connections between express and redis.`, fu
   t.plan(2)
 
   const app = new express()
-  const redis = new ioRedis(6379, '***REMOVED***')
+  const redis = new ioRedis()
   const PATH = `/${testName}`
 
   app.use(express.json())

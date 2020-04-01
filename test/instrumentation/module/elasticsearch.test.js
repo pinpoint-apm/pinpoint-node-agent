@@ -20,7 +20,7 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 const testName2 = 'koa-elastic'
-test(`${testName2} should Record the connections between koa and ioredis.`, function (t) {
+test.skip(`${testName2} should Record the connections between koa and ioredis.`, function (t) {
   const testName = testName2
 
   t.plan(3)
@@ -66,8 +66,4 @@ test(`${testName2} should Record the connections between koa and ioredis.`, func
 
     server.close()
   })
-})
-
-test.onFinish(() => {
-  agent.pinpointClient.dataSender.closeClient()
 })

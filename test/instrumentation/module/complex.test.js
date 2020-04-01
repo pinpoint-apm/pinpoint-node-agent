@@ -28,7 +28,8 @@ mockMongoose.prepareStorage().then(() => {
   db.once('open', function () {
     console.log("Connected to mongod server")
   })
-  mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint')
+  mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint', function(err) {
+  })
 })
 
 const express = require('express')
@@ -56,10 +57,8 @@ test(`${testName1} should Record the connections between koa and mongodb and red
   router.get(`${PATH}/:author`, async (ctx, next) => {
     const key = ctx.params.author
 
-    await Promise.all([
-      Book.findOne({author: key}).exec(),
-      redis.get(key)
-    ])
+    await Book.findOne({author: key}).exec()
+    await redis.get(key)
 
     ctx.body = 'good'
   })
@@ -67,10 +66,6 @@ test(`${testName1} should Record the connections between koa and mongodb and red
   app.use(router.routes()).use(router.allowedMethods())
 
   const server = app.listen(TEST_ENV.port, async () => {
-    mockMongoose.prepareStorage().then(() => {
-      mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint')
-    })
-
     console.log('Test1. Find and Cache')
     const rstFind = await axios.get(`${getServerUrl(PATH)}/iforget`)
     t.ok(rstFind.status, 200)

@@ -20,6 +20,11 @@ const mongoData = {
   author: 'iforget',
   published_date: new Date()
 }
+const db = mongoose.connection
+db.on('error', console.error)
+db.once('open', function () {
+  console.log("Connected to mongod server")
+})
 
 const express = require('express')
 const Koa = require('koa')
@@ -46,9 +51,14 @@ test.skip(`${testName1} should Record the connections between koa and mongodb an
   router.get(`${PATH}/:author`, async (ctx, next) => {
     const key = ctx.params.author
 
-    await Book.findOne({author: key}).exec()
-    await redis.get(key)
-
+    await mockMongoose.prepareStorage().then(async () => {
+      const Book = mongoose.model('book', bookSchema)      
+      await mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint', async function(err) {
+        await Book.findOne({author: key}).exec()
+        await redis.get(key)    
+        console.log('Test!?')
+      })
+    })
     ctx.body = 'good'
   })
 
@@ -60,6 +70,7 @@ test.skip(`${testName1} should Record the connections between koa and mongodb an
     t.ok(rstFind.status, 200)
 
     server.close()
+    t.end()
   })
 })
 
@@ -82,13 +93,7 @@ test(`${testName2} should Record the connections between express and redis.`, fu
     var key = req.params.name
 
     await mockMongoose.prepareStorage().then(async () => {
-      const Book = mongoose.model('book', bookSchema)
-      
-      const db = mongoose.connection
-      db.on('error', console.error)
-      db.once('open', function () {
-        console.log("Connected to mongod server")
-      })
+      const Book = mongoose.model('book', bookSchema)      
       await mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint', function(err) {
         Book.findOne({ author: key }, function(err, book) {
           if (err) return res.status(500).json({ error: err })

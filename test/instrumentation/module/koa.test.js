@@ -71,8 +71,7 @@ test(`${testName2} Should record internal error in koa.test.js`, function (t) {
   }
 
   router.get(PATH, initError)
-  app
-      .use(async (ctx, next) => {
+  app.use(async (ctx, next) => {
           try {
             await next()
 
@@ -91,7 +90,7 @@ test(`${testName2} Should record internal error in koa.test.js`, function (t) {
         console.log('TEST USE')
         await next()
       })
-  .use(router.routes()).use(router.allowedMethods())
+      .use(router.routes()).use(router.allowedMethods())
 
   const server = app.listen(TEST_ENV.port, async () => {
     const result = await axios.get(getServerUrl(PATH))

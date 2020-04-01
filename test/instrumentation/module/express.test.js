@@ -243,8 +243,3 @@ test(`${testName6} Should record each http method`, function (t) {
     server.close()
   })
 })
-
-test.onFinish(() => {
-  agent.pinpointClient.dataSender.closeClient()
-})
-

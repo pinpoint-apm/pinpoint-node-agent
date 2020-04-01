@@ -16,7 +16,7 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 const testName1 = 'koa-router1'
-test(`${testName1} Should record request in basic route`, function (t) {
+test(`${testName1} Should record request in basic route koa.test.js`, function (t) {
   const testName = testName1
 
   t.plan(3)
@@ -50,7 +50,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
 })
 
 const testName2 = 'koa-router2'
-test(`${testName2} Should record internal error`, function (t) {
+test(`${testName2} Should record internal error in koa.test.js`, function (t) {
   const testName = testName2
 
   t.plan(2)

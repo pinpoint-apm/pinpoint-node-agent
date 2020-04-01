@@ -1,4 +1,7 @@
 const { fixture, util } = require('../test-helper')
+const instManager = require('../../lib/instrumentation/inst-manager')
+
+var enabledHook = false
 module.exports = () => {
     const enableDataSending = require('../test-helper').enableDataSending
     enableDataSending()
@@ -36,6 +39,13 @@ module.exports = () => {
 
       initailizeSupportModules() {
         this.loadedModule = [];
+      }
+
+      enableHook() {
+        if (enabledHook == false) {
+          instManager.init(this);
+          enabledHook = true;
+        }
       }
     }
     return new MockAgent(fixture.config)

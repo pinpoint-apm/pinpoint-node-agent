@@ -11,7 +11,7 @@ const Router = require('koa-router')
 const Promise = require("bluebird");
 
 const testName1 = 'koa-router1'
-test(`${testName1} Should record request in basic route`, async function (t) {
+test(`${testName1} Should record request in basic route in bluebird.test.js`, async function (t) {
   const testName = testName1
 
   t.plan(1)

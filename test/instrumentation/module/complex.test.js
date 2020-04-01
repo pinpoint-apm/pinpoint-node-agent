@@ -78,10 +78,10 @@ test(`${testName2} should Record the connections between express and redis.`, fu
     req.cache = redis
     next()
   })
-  app.get(`${PATH}/:name`, function(req, res, next){
+  app.get(`${PATH}/:name`, async function(req, res, next){
     var key = req.params.name
 
-    mockMongoose.prepareStorage().then(() => {
+    await mockMongoose.prepareStorage().then(async () => {
       const Book = mongoose.model('book', bookSchema)
       
       const db = mongoose.connection
@@ -89,7 +89,7 @@ test(`${testName2} should Record the connections between express and redis.`, fu
       db.once('open', function () {
         console.log("Connected to mongod server")
       })
-      mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint', function(err) {
+      await mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint', function(err) {
         Book.findOne({ author: key }, function(err, book) {
           if (err) return res.status(500).json({ error: err })
           if (!book) return res.status(404).json({ error: 'book not found' })

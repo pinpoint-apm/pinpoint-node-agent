@@ -1,25 +1,18 @@
+'use strict'
+
 const { fixture, util } = require('../test-helper')
 const instManager = require('../../lib/instrumentation/inst-manager')
 
 const enableDataSending = require('../test-helper').enableDataSending
 enableDataSending()
 const Agent = require('../../lib/agent')
+const dataSenderMock = require('./data-sender-mock')
 
 class MockPinpointClient {
     constructor(config, agentInfo) {
         this.mockConfig = config
         this.mockAgentInfo = agentInfo
-        this.dataSender = {
-            sendApiMetaInfo: function() {
-
-            },
-            sendSpan: function() {
-
-            },
-            sendSpanChunk: function() {
-
-            }
-        }
+        this.dataSender = dataSenderMock()
     }
 }
 

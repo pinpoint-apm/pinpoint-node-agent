@@ -3,6 +3,7 @@ const axios = require('axios')
 
 const { fixture } = require('../test-helper')
 const Trace = require('../../lib/context/trace')
+const dataSenderMock = require('../support/data-sender-mock')
 const dataSender = {
   sendSpan: function(span) {
     this.mockSpan = span

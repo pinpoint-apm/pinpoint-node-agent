@@ -5,19 +5,13 @@ module.exports = () => {
   const enableDataSending = require('../test-helper').enableDataSending
   enableDataSending()
   const Agent = require('../../lib/agent')
+  const dataSenderMock = require('../support/data-sender-mock')
   
   class MockPinpointClient {
     constructor(config, agentInfo) {
       this.mockConfig = config
       this.mockAgentInfo = agentInfo
-      this.dataSender = {
-        sendApiMetaInfo: function() {
-  
-        },
-        sendSpan: function() {
-  
-        },
-      }
+      this.dataSender = dataSenderMock()
     }
   }
   

@@ -4,6 +4,7 @@ const { log, fixture, util } = require('../test-helper')
 const ServiceTypeCode = require('../../lib/constant/service-type').ServiceTypeCode
 const TraceContext = require('../../lib/context/trace-context')
 const GeneralMethodDescriptor = require('../../lib/constant/method-descriptor').GeneralMethodDescriptor
+const dataSenderMock = require('../support/data-sender-mock')
 
 test('Should create continued trace and add span info', function (t) {
   t.plan(2)
@@ -22,18 +23,11 @@ test('Should create continued trace and add span info', function (t) {
   t.equal(traceContext.currentTraceObject().span.serviceType, ServiceTypeCode.express)
 })
 
-const dataSender = {
-  sendSpan: function() {
-
-  },
-}
-
-
 test('Should begin/end trace block asynchronously', async function (t) {
   t.plan(4)
 
   // start trace and write span info
-  const traceContext = TraceContext.init(fixture.getAgentInfo(), dataSender)
+  const traceContext = TraceContext.init(fixture.getAgentInfo(), dataSenderMock())
   const startedTrace = traceContext.newTraceObject(true)
   const spanRecorder = startedTrace.spanRecorder
   spanRecorder.recordServiceType(ServiceTypeCode.express)
@@ -62,7 +56,7 @@ test('Should complete trace ', async function (t) {
 
   const transactionId = fixture.getTransactionId()
   const traceId = fixture.getTraceId(transactionId)
-  const traceContext = TraceContext.init(fixture.getAgentInfo(), dataSender)
+  const traceContext = TraceContext.init(fixture.getAgentInfo(), dataSenderMock())
 
   const trace = traceContext.newTraceObject(traceId)
 

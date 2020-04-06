@@ -3,7 +3,7 @@ const axios = require('axios')
 
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 
-const agent = require('../../stats/agent-mock')()
+const agent = require('../../support/agent-singleton-mock')
 
 const express = require('express')
 
@@ -97,7 +97,11 @@ test(`${testName3} Should record request taking more than 2 sec`, function (t) {
 
   app.get(PATH, async (req, res) => {
     // slow outgoing call
-    await axios.get('http://dummy.restapiexample.com/api/v1/employees')
+    try {
+      await axios.get('http://dummy.restapiexample.com/api/v1/employees')
+    } catch (error) {
+      log.error(error)
+    }
     res.send('hello')
   })
 

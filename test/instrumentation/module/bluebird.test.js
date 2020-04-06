@@ -4,7 +4,7 @@ const request = require('supertest')
 
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 
-const agent = require('../../stats/agent-mock')()
+const agent = require('../../support/agent-singleton-mock')
 
 const Koa = require('koa')
 const Router = require('koa-router')

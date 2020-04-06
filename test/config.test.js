@@ -3,13 +3,13 @@ const { log, fixture, util } = require('./test-helper')
 
 const config = require('../lib/config')
 
-test('Should be configured with default', function (t) {
+test('Agent ID required field', function (t) {
   t.plan(1)
 
   config.clear()
   const conf = config.getConfig()
 
-  t.ok(conf.agentId)
+  t.ok(conf.agentId == undefined)
 })
 
 test('Should be configured with environment variable', function (t) {

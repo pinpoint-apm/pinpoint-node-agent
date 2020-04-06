@@ -2,9 +2,7 @@ const test = require('tape')
 const axios = require('axios')
 const { fixture, util } = require('../test-helper')
 const activeTrace = require('../../lib/metric/active-trace')
-
-const agent = require('./agent-mock')()
-
+const agent = require('../support/agent-singleton-mock')
 const express = require('express')
 
 const TEST_ENV = {

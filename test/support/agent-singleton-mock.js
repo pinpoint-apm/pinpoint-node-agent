@@ -10,12 +10,15 @@ class MockPinpointClient {
         this.mockConfig = config
         this.mockAgentInfo = agentInfo
         this.dataSender = {
-            sendApiMetaInfo: function () {
+            sendApiMetaInfo: function() {
 
             },
-            sendSpan: function () {
+            sendSpan: function() {
 
             },
+            sendSpanChunk: function() {
+
+            }
         }
     }
 }

@@ -30,7 +30,8 @@ test(`Should record active trace in multiple call`, function (t) {
   })
 
   const server = app.listen(TEST_ENV.port, async function () {
-    t.true(activeTrace.getAllTraces().length == 0, "all traces cleaned")
+    agent.bindEmitHttpModule()
+    t.equal(activeTrace.getAllTraces().length, 0, "all traces cleaned")
 
     Promise.all([
       axios.get(getServerUrl(PATH)),

@@ -36,7 +36,5 @@ test(`${testName1} Should record request in basic route in bluebird.test.js`, as
     .end(() => {
       const traceMap = agent.traceContext.getAllTraceObject()
       t.ok(traceMap.size > 0)
-
-      agent.cleanup()
     })
 })

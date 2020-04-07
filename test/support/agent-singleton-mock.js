@@ -42,16 +42,26 @@ class MockAgent extends Agent {
       
         log.debug('shimming http.request function')
         shimmer.wrap(http, 'request', httpShared.traceOutgoingRequest(agent, 'http'))
+
+        const traces = this.traceContext.getAllTraceObject()
+        traces.forEach((trace) => {
+            this.traceContext.completeTraceObject(trace)
+        })
     }
 
-    cleanHttp() {
+    cleanHttp() {        
         const http = require('http')
         shimmer.unwrap(http && http.Server && http.Server.prototype, 'emit')
         shimmer.unwrap(http, 'request')
+
+        const traces = this.traceContext.getAllTraceObject()
+        traces.forEach((trace) => {
+            this.traceContext.completeTraceObject(trace)
+        })
+
     }
 
     cleanup() {
-        // const traces = this.traceContext.getAllTraceObject()
     }
 
     bindEmitHttpModule() {

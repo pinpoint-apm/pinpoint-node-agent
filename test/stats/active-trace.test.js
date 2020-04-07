@@ -42,12 +42,8 @@ test(`Should record active trace in multiple call`, function (t) {
       t.equal(activeTrace.getAllTraces().length, 0)
       t.equal(agent.mockAgentStartTime, agent.mockAgentInfo.startTimestamp, "startTimestamp equals")
       server.close()
-
-      agent.cleanup()
     }).catch((error) => {
       server.close()
-
-      agent.cleanup()
     })
   })
 

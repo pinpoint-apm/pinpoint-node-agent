@@ -85,8 +85,6 @@ test(`${testName1} should Record the connections between express and redis.`, fu
     t.ok(traceMap.size > 0)
 
     server.close()
-
-    agent.cleanup()
   })
 })
 
@@ -150,8 +148,6 @@ test(`${testName2} should Record the connections between express and ioredis.`, 
     t.ok(traceMap.size > 0)
 
     server.close()
-
-    agent.cleanup()
   })
 })
 
@@ -208,8 +204,6 @@ test(`${testName3} should Record the connections between koa and redis.`, functi
     t.ok(traceMap.size > 0)
 
     server.close()
-
-    agent.cleanup()
   })
 })
 
@@ -266,7 +260,5 @@ test(`${testName4} should Record the connections between koa and ioredis.`, func
     t.ok(traceMap.size > 0)
 
     server.close()
-
-    agent.cleanup()
   })
 })

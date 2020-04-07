@@ -46,8 +46,6 @@ test(`${testName1} Should record request in basic route`, function (t) {
     t.ok(traceMap.size > 0)
 
     server.close()
-
-    agent.cleanup()
   })
 })
 
@@ -88,8 +86,6 @@ test(`[${testName2}] Should record request in express.Router`, function (t) {
     t.ok(traceMap.size > 0)
 
     server.close()
-
-    agent.cleanup()
   })
 })
 
@@ -124,8 +120,6 @@ test(`${testName3} Should record request taking more than 2 sec`, function (t) {
     t.ok(traceMap.size > 0)
 
     server.close()
-
-    agent.cleanup()
   })
 })
 
@@ -170,8 +164,6 @@ test(`${testName4} Should record internal error in express.test.js`, function (t
     t.ok(traceMap.size > 0)
 
     server.close()
-
-    agent.cleanup()
   })
 })
 
@@ -213,8 +205,6 @@ test(`${testName5} Should record middleware`, function (t) {
     t.ok(traceMap.size > 0)
 
     server.close()
-
-    agent.cleanup()
   })
 })
 
@@ -267,7 +257,5 @@ test(`${testName6} Should record each http method`, function (t) {
     t.ok(traceMap.size > 0)
 
     server.close()
-
-    agent.cleanup()
   })
 })

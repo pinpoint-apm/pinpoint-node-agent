@@ -3,7 +3,6 @@ const axios = require('axios')
 const { fixture, util } = require('../test-helper')
 const activeTrace = require('../../lib/metric/active-trace')
 const agent = require('../support/agent-singleton-mock')
-agent.bindEmitHttpModule()
 const express = require('express')
 
 const TEST_ENV = {
@@ -13,6 +12,8 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 test(`Should record active trace in multiple call`, function (t) {
+  agent.bindEmitHttpModule()
+  
   t.plan(6)
 
   const PATH = '/active-trace'
@@ -41,15 +42,15 @@ test(`Should record active trace in multiple call`, function (t) {
       t.equal(activeTrace.getAllTraces().length, 0)
       t.equal(agent.mockAgentStartTime, agent.mockAgentInfo.startTimestamp, "startTimestamp equals")
       server.close()
+
+      agent.cleanup()
     }).catch((error) => {
       server.close()
+
+      agent.cleanup()
     })
   })
 
   t.equal(agent.mockAgentId, fixture.config.agentId, "Agent ID equals")
   t.equal(agent.mockAgentInfo, agent.pinpointClient.mockAgentInfo, "AgentInfo equals")
-})
-
-test.onFinish(() => {
-  agent.cleanup()
 })

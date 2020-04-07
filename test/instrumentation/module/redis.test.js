@@ -4,7 +4,6 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 
 const agent = require('../../support/agent-singleton-mock')
-agent.bindHttp()
 
 const express = require('express')
 const ioRedis = require('ioredis-mock')
@@ -28,6 +27,8 @@ const redisData = {
 
 const testName1 = 'express-redis'
 test(`${testName1} should Record the connections between express and redis.`, function (t) {
+  agent.bindHttp()
+
   const testName = testName1
 
   t.plan(3)
@@ -84,11 +85,15 @@ test(`${testName1} should Record the connections between express and redis.`, fu
     t.ok(traceMap.size > 0)
 
     server.close()
+
+    agent.cleanup()
   })
 })
 
 const testName2 = 'express-ioredis'
 test(`${testName2} should Record the connections between express and ioredis.`, function (t) {
+  agent.bindHttp()
+
   const testName = testName2
 
   t.plan(2)
@@ -145,11 +150,15 @@ test(`${testName2} should Record the connections between express and ioredis.`, 
     t.ok(traceMap.size > 0)
 
     server.close()
+
+    agent.cleanup()
   })
 })
 
 const testName3 = 'koa-redis'
 test(`${testName3} should Record the connections between koa and redis.`, function (t) {
+  agent.bindHttp()
+
   const testName = testName3
 
   t.plan(2)
@@ -199,11 +208,15 @@ test(`${testName3} should Record the connections between koa and redis.`, functi
     t.ok(traceMap.size > 0)
 
     server.close()
+
+    agent.cleanup()
   })
 })
 
 const testName4 = 'koa-ioredis'
 test(`${testName4} should Record the connections between koa and ioredis.`, function (t) {
+  agent.bindHttp()
+  
   const testName = testName4
 
   t.plan(2)
@@ -253,9 +266,7 @@ test(`${testName4} should Record the connections between koa and ioredis.`, func
     t.ok(traceMap.size > 0)
 
     server.close()
-  })
-})
 
-test.onFinish(() => {
-  agent.cleanup()
+    agent.cleanup()
+  })
 })

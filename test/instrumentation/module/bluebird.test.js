@@ -5,6 +5,7 @@ const request = require('supertest')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 
 const agent = require('../../support/agent-singleton-mock')
+agent.bindHttp()
 
 const Koa = require('koa')
 const Router = require('koa-router')
@@ -35,4 +36,8 @@ test(`${testName1} Should record request in basic route in bluebird.test.js`, as
       const traceMap = agent.traceContext.getAllTraceObject()
       t.ok(traceMap.size > 0)
     })
+})
+
+test.onFinish(() => {
+  agent.cleanup()
 })

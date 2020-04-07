@@ -4,6 +4,7 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 
 const agent = require('../../support/agent-singleton-mock')
+agent.bindHttp()
 
 const express = require('express')
 const ioRedis = require('ioredis-mock')
@@ -253,4 +254,8 @@ test(`${testName4} should Record the connections between koa and ioredis.`, func
 
     server.close()
   })
+})
+
+test.onFinish(() => {
+  agent.cleanup()
 })

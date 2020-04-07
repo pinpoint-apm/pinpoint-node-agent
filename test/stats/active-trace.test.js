@@ -12,7 +12,7 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 test(`Should record active trace in multiple call`, function (t) {
-  t.plan(5)
+  t.plan(6)
 
   const PATH = '/active-trace'
   const LASTONE_PATH = '/active-trace/lastone'
@@ -29,17 +29,20 @@ test(`Should record active trace in multiple call`, function (t) {
     res.send('ok get')
   })
 
-
   const server = app.listen(TEST_ENV.port, async function () {
-    await Promise.all([
+    t.true(activeTrace.getAllTraces().length == 0, "all traces cleaned")
+
+    Promise.all([
       axios.get(getServerUrl(PATH)),
       axios.get(getServerUrl(PATH)),
       axios.get(getServerUrl(LASTONE_PATH)),
-    ])
-
-    t.equal(activeTrace.getAllTraces().length, 0)
-    t.equal(agent.mockAgentStartTime, agent.mockAgentInfo.startTimestamp, "startTimestamp equals")
-    server.close()
+    ]).then((result) => {
+      t.equal(activeTrace.getAllTraces().length, 0)
+      t.equal(agent.mockAgentStartTime, agent.mockAgentInfo.startTimestamp, "startTimestamp equals")
+      server.close()
+    }).catch((error) => {
+      server.close()
+    })
   })
 
   t.equal(agent.mockAgentId, fixture.config.agentId, "Agent ID equals")

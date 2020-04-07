@@ -34,8 +34,6 @@ class MockAgent extends Agent {
     }
 
     bindHttp() {
-        this.cleanHttp()
-
         const http = require('http')
         log.debug('shimming http.Server.prototype.emit function')
         shimmer.wrap(http && http.Server && http.Server.prototype, 'emit', httpShared.instrumentRequest(agent, 'http'))
@@ -56,8 +54,6 @@ class MockAgent extends Agent {
     }
 
     bindEmitHttpModule() {
-        this.cleanHttp()
-
         const http = require('http')
         log.debug('shimming http.Server.prototype.emit function')
         shimmer.wrap(http && http.Server && http.Server.prototype, 'emit', httpShared.instrumentRequest(agent, 'http'))      

@@ -4,6 +4,7 @@ const axios = require('axios')
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 
 const agent = require('../../support/agent-singleton-mock')
+agent.bindHttp()
 
 const express = require('express')
 
@@ -246,4 +247,8 @@ test(`${testName6} Should record each http method`, function (t) {
 
     server.close()
   })
+})
+
+test.onFinish(() => {
+  agent.cleanup()
 })

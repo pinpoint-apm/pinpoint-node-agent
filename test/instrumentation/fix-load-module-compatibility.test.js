@@ -2,8 +2,8 @@
 
 const test = require('tape')
 
-// test(`load async module`, (t) => {
-//     t.plan(1)
+test(`load async module`, (t) => {
+    // t.plan(1)
 
-
-// })
+    t.end()
+})

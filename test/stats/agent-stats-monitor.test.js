@@ -5,8 +5,7 @@ const { log, fixture, util, enableDataSending, enableStatsMonitorSending } = req
 enableDataSending()
 enableStatsMonitorSending()
 
-const Agent = require('../../lib/agent')
-const agent = new Agent(fixture.config)
+const agent = require('./agent-mock')()
 const AgentStatsMonitor = require('../../lib/metric/agent-stats-monitor')
 
 const express = require('express')
@@ -26,34 +25,18 @@ test('Should collect and send stats one', function (t) {
   t.ok(statsMonitor)
 })
 
-test.only(`Should send stats in every 1 sec`, function (t) {
-  t.plan(1)
+test(`Should send stats in every 1 sec`, function (t) {
 
   const PATH = '/active-trace'
   const app = new express()
 
   app.get(PATH, async (req, res) => {
-    const randomMillis = util.randomBetween(1, 6) * 1000
-    log.info('randomMillis', randomMillis)
-    await util.sleep(randomMillis)
-
-    // give cpu load
-    // for (i=0; i< 1000; i++ ) {
-    //   JSON.parse(res)
-    // }
-
     res.send('ok get')
   })
 
   const server = app.listen(TEST_ENV.port, async function () {
-    const timer = setInterval(async () => {
-      axios.get(getServerUrl(PATH))
-    }, 4000)
-
-    // server.close()
+    await axios.get(getServerUrl(PATH))
+    server.close()
+    t.end()
   })
-})
-
-test.onFinish(() => {
-  agent.dataSender.closeClient()
 })

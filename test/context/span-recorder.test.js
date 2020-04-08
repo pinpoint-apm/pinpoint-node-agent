@@ -6,7 +6,7 @@ const SpanRecorder = require('../../lib/context/span-recorder')
 
 const ServiceTypeCode = require('../../lib/constant/service-type').ServiceTypeCode
 const ServiceTypeProperty = require('../../lib/constant/service-type').ServiceTypeProperty
-const ExpressMethodDescritpor = require('../../lib/constant/method-descriptor').ExpressMethodDescritpor
+const GeneralMethodDescriptor = require('../../lib/constant/method-descriptor').GeneralMethodDescriptor
 
 test('Should create span recorder', async function (t) {
   t.plan(2)
@@ -14,7 +14,7 @@ test('Should create span recorder', async function (t) {
   const span = new Span(fixture.getTraceId(), fixture.getAgentInfo())
   const spanRecorder = new SpanRecorder(span)
   spanRecorder.recordServiceType(ServiceTypeCode.express, ServiceTypeProperty.TERMINAL, ServiceTypeProperty.RECORD_STATISTICS)
-  spanRecorder.recordApi(ExpressMethodDescritpor.HANDLE)
+  spanRecorder.recordApi(GeneralMethodDescriptor.SERVER_REQUEST)
   spanRecorder.recordRpc('/test/url')
   t.ok(spanRecorder.span)
 

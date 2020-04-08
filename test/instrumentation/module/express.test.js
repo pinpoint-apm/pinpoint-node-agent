@@ -2,10 +2,8 @@ const test = require('tape')
 const axios = require('axios')
 
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
-enableDataSending()
 
-const Agent = require('../../../lib/agent')
-const agent = new Agent(fixture.config)
+const agent = require('../../support/agent-singleton-mock')
 
 const express = require('express')
 
@@ -17,6 +15,8 @@ const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 const testName1 = 'express1'
 test(`${testName1} Should record request in basic route`, function (t) {
+  agent.bindHttp()
+
   const testName = testName1
 
   t.plan(3)
@@ -51,6 +51,8 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
 const testName2 = 'express2'
 test(`[${testName2}] Should record request in express.Router`, function (t) {
+  agent.bindHttp()
+
   const testName = testName2
 
   t.plan(3)
@@ -90,6 +92,8 @@ test(`[${testName2}] Should record request in express.Router`, function (t) {
 
 const testName3 = 'express3'
 test(`${testName3} Should record request taking more than 2 sec`, function (t) {
+  agent.bindHttp()
+
   const testName = testName3
 
   t.plan(2)
@@ -99,7 +103,11 @@ test(`${testName3} Should record request taking more than 2 sec`, function (t) {
 
   app.get(PATH, async (req, res) => {
     // slow outgoing call
-    await axios.get('http://dummy.restapiexample.com/api/v1/employees')
+    try {
+      await axios.get('http://dummy.restapiexample.com/api/v1/employees')
+    } catch (error) {
+      log.error(error)
+    }
     res.send('hello')
   })
 
@@ -122,7 +130,9 @@ class MyError extends Error {
   }
 }
 const testName4 = 'express4'
-test(`${testName4} Should record internal error`, function (t) {
+test(`${testName4} Should record internal error in express.test.js`, function (t) {
+  agent.bindHttp()
+
   const testName = testName4
 
   t.plan(2)
@@ -159,6 +169,8 @@ test(`${testName4} Should record internal error`, function (t) {
 
 const testName5 = 'express5'
 test(`${testName5} Should record middleware`, function (t) {
+  agent.bindHttp()
+
   const testName = testName5
 
   t.plan(2)
@@ -198,6 +210,8 @@ test(`${testName5} Should record middleware`, function (t) {
 
 const testName6 = 'express6'
 test(`${testName6} Should record each http method`, function (t) {
+  agent.bindHttp()
+  
   const testName = testName6
 
   t.plan(6)
@@ -245,8 +259,3 @@ test(`${testName6} Should record each http method`, function (t) {
     server.close()
   })
 })
-
-test.onFinish(() => {
-  agent.pinpointClient.dataSender.closeClient()
-})
-

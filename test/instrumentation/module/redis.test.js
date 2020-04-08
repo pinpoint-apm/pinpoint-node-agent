@@ -2,14 +2,12 @@ const test = require('tape')
 const axios = require('axios')
 
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
-enableDataSending()
 
-const Agent = require('../../../lib/agent')
-const agent = new Agent(fixture.config)
+const agent = require('../../support/agent-singleton-mock')
 
 const express = require('express')
-const ioRedis = require('ioredis')
-const Redis = require('redis')
+const ioRedis = require('ioredis-mock')
+const Redis = require('redis-mock')
 const Koa = require('koa')
 const Router = require('koa-router')
 const koaBodyParser = require('koa-bodyparser')
@@ -29,12 +27,14 @@ const redisData = {
 
 const testName1 = 'express-redis'
 test(`${testName1} should Record the connections between express and redis.`, function (t) {
+  agent.bindHttp()
+
   const testName = testName1
 
   t.plan(3)
 
   const app = new express()
-  const client = Redis.createClient(6379,'***REMOVED***')
+  const client = Redis.createClient()
   const PATH = `/${testName}`
 
   app.use(express.json())
@@ -90,12 +90,14 @@ test(`${testName1} should Record the connections between express and redis.`, fu
 
 const testName2 = 'express-ioredis'
 test(`${testName2} should Record the connections between express and ioredis.`, function (t) {
+  agent.bindHttp()
+
   const testName = testName2
 
-  t.plan(3)
+  t.plan(2)
 
   const app = new express()
-  const redis = new ioRedis(6379, '***REMOVED***')
+  const redis = new ioRedis()
   const PATH = `/${testName}`
 
   app.use(express.json())
@@ -151,15 +153,17 @@ test(`${testName2} should Record the connections between express and ioredis.`, 
 
 const testName3 = 'koa-redis'
 test(`${testName3} should Record the connections between koa and redis.`, function (t) {
+  agent.bindHttp()
+
   const testName = testName3
 
-  t.plan(3)
+  t.plan(2)
 
   const app = new Koa()
   const router = new Router()
-  const client = Redis.createClient(6379,'***REMOVED***')
-  const PATH = `/${testName}`
+  const client = Redis.createClient()
 
+  const PATH = `/${testName}`
   app.use(koaBodyParser())
   router.post(PATH, async function(ctx, next) {
     console.log(ctx.request.body)
@@ -172,28 +176,25 @@ test(`${testName3} should Record the connections between koa and redis.`, functi
         ctx.body = `error :: ${err}`
         return
       }
-      redis.expire(key, 10)
+      // ctx.req.cache.expire(key, 10)
       ctx.body = JSON.parse(value)
     });
   });
 
   router.get(`${PATH}/:name`, async (ctx, next) => {
     const key = ctx.params.name
-    console.log(key)
-    client.get(key, async function(err ,data){
-      if(err){
-        console.log(err)
-        ctx.body = `error :: ${err}`
-        return
-      }
-      ctx.body = JSON.parse(data)
-    })
+
+    client.get(key)
+    client.get(key)
+    client.get(key)
+
+    ctx.body = 'test'
   })
   app.use(router.routes()).use(router.allowedMethods())
 
   const server = app.listen(TEST_ENV.port, async () => {
-    const rstPush = await axios.post(getServerUrl(PATH), redisData)
-    t.ok(rstPush.status, 200)
+    // const rstPush = await axios.post(getServerUrl(PATH), redisData)
+    // t.ok(rstPush.status, 200)
 
     const rstGet = await axios.get(getServerUrl(`${PATH}/jundol`))
     t.ok(rstGet.status, 200)
@@ -207,14 +208,16 @@ test(`${testName3} should Record the connections between koa and redis.`, functi
 })
 
 const testName4 = 'koa-ioredis'
-test.only(`${testName4} should Record the connections between koa and ioredis.`, function (t) {
+test(`${testName4} should Record the connections between koa and ioredis.`, function (t) {
+  agent.bindHttp()
+  
   const testName = testName4
 
-  t.plan(3)
+  t.plan(2)
 
   const app = new Koa()
   const router = new Router()
-  const redis = new ioRedis(6379,'***REMOVED***')
+  const redis = new ioRedis()
 
   const PATH = `/${testName}`
   app.use(koaBodyParser())
@@ -258,8 +261,4 @@ test.only(`${testName4} should Record the connections between koa and ioredis.`,
 
     server.close()
   })
-})
-
-test.onFinish(() => {
-  agent.pinpointClient.dataSender.closeClient()
 })

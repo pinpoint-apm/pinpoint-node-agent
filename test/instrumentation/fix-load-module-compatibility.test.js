@@ -51,7 +51,7 @@ test(`all modules for require-in-the-middle learning test`, (t) => {
     t.equal(n, 3)
 })
 
-test.only(`hook`, (t) => {
+test(`hook`, (t) => {
     t.plan(1)
 
     instManager.init(mockAgent)

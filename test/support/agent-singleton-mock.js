@@ -71,6 +71,10 @@ class MockAgent extends Agent {
         log.debug('shimming http.Server.prototype.emit function')
         shimmer.wrap(http && http.Server && http.Server.prototype, 'emit', httpShared.instrumentRequest(agent, 'http'))      
     }
+
+    resetAgent(callback) {
+        this.pinpointClient = new MockPinpointClient(this.config, this.mockAgentInfo)
+    }
 }
 
 const agent = new MockAgent(fixture.config)

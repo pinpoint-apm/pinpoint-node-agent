@@ -42,6 +42,7 @@ test("ioredis destination id", async function (t) {
 
     t.plan(2)
 
+    const trace = agent.createTraceObject()
     const Redis = require('ioredis')
     const redis = new Redis(
         container.getMappedPort(6379),
@@ -58,7 +59,7 @@ test("ioredis destination id", async function (t) {
         t.equal(data, "value", "redis value validation")
 
         redis.quit()
-        // agent.completeTraceObject(trace)
+        agent.completeTraceObject(trace)
         await container.stop()
     })
 })

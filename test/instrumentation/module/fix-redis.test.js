@@ -1,6 +1,7 @@
 const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
 const { GenericContainer } = require("testcontainers")
+const axios = require('axios')
 
 test(`redis destination id`, async (t) => {
     const container = await new GenericContainer("redis")
@@ -12,6 +13,9 @@ test(`redis destination id`, async (t) => {
     t.plan(1)
 
     const redis = require('redis')
+    const express = require('express')
+
+    const app = new express()
     const client = redis.createClient(
         container.getMappedPort(6379),
         container.getContainerIpAddress(),

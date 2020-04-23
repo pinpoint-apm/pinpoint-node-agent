@@ -22,7 +22,9 @@ test(`redis destination id`, async (t) => {
     })
 
     client.set("key", "value", redis.print)
-    client.get("key", redis.print)
+    client.get("key", function(error, data) {
+        t.equal(data, "value", "redis value validation")
+    })
 
     await client.quit()
     await container.stop()

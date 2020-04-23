@@ -9,7 +9,10 @@ test(`redis destination id`, async (t) => {
 
     agent.bindHttp()
 
-    t.plan(1)
+    t.plan(2)
+
+    const trace = agent.traceContext.currentTraceObject()
+    t.true(trace === undefined)
 
     const redis = require('redis')
     const client = redis.createClient(

@@ -11,6 +11,7 @@ test(`redis destination id`, async (t) => {
 
     t.plan(1)
 
+    // const trace = agent.createTraceObject()
     const redis = require('redis')
 
     const client = redis.createClient(
@@ -25,7 +26,9 @@ test(`redis destination id`, async (t) => {
     client.set("key", "value", redis.print)
     client.get("key", async function(error, data) {
         t.equal(data, "value", "redis value validation")
+
         client.quit()
+        // agent.completeTraceObject(trace)
         await container.stop()
     })
 })

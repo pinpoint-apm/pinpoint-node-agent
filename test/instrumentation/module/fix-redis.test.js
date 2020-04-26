@@ -23,9 +23,9 @@ test(`redis destination id`, async (t) => {
         console.error(error);
     })
 
-    client.set("key", "value", async function(error) {
+    client.set("key", "value", async function (error) {
         t.true(error == null, "error is null")
-        
+
         const trace = agent.traceContext.currentTraceObject()
         t.equal(trace.callStack.length, 0, "callStack is 0")
 

@@ -27,7 +27,7 @@ test(`redis destination id`, async (t) => {
         t.true(error == null, "error is null")
 
         const trace = agent.traceContext.currentTraceObject()
-        t.equal(trace.callStack.length, 2, "callStack is 0")
+        t.equal(trace.callStack.length, 1, "callStack is 0")
     })
     t.equal(agent.traceContext.currentTraceObject().callStack.length, 1, "set spanevent callstack")
 

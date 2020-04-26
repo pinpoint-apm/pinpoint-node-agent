@@ -2,7 +2,7 @@ const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
 const { GenericContainer } = require("testcontainers")
 
-test.skip(`redis destination id`, async (t) => {
+test(`redis destination id`, async (t) => {
     const container = await new GenericContainer("redis")
         .withExposedPorts(6379)
         .start()
@@ -11,7 +11,7 @@ test.skip(`redis destination id`, async (t) => {
 
     t.plan(1)
 
-    // const trace = agent.createTraceObject()
+    const trace = agent.createTraceObject()
     const redis = require('redis')
 
     const client = redis.createClient(
@@ -28,7 +28,7 @@ test.skip(`redis destination id`, async (t) => {
         t.equal(data, "value", "redis value validation")
 
         client.quit()
-        // agent.completeTraceObject(trace)
+        agent.completeTraceObject(trace)
         await container.stop()
     })
 })

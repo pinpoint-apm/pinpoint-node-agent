@@ -9,7 +9,7 @@ test(`redis destination id`, async (t) => {
 
     agent.bindHttp()
 
-    t.plan(3)
+    t.plan(6)
 
     const trace = agent.createTraceObject()
     const redis = require('redis')
@@ -27,24 +27,24 @@ test(`redis destination id`, async (t) => {
         t.true(error == null, "error is null")
 
         const trace = agent.traceContext.currentTraceObject()
+        t.equal(trace.callStack.length, 2, "callStack is 0")
+    })
+    t.equal(agent.traceContext.currentTraceObject().callStack.length, 1, "set spanevent callstack")
+
+    client.get("key", async function (error, data) {
+        t.equal(data, "value", "redis value validation")
+
+        const trace = agent.traceContext.currentTraceObject()
         t.equal(trace.callStack.length, 0, "callStack is 0")
 
         client.quit()
         agent.completeTraceObject(trace)
         await container.stop()
     })
-    t.equal(agent.traceContext.currentTraceObject().callStack.length, 1, "set spanevent callstack")
-
-    // client.get("key", async function (error, data) {
-    //     t.equal(data, "value", "redis value validation")
-
-    //     client.quit()
-    //     agent.completeTraceObject(trace)
-    //     await container.stop()
-    // })
+    t.equal(agent.traceContext.currentTraceObject().callStack.length, 2, "get spanevent callstack")
 })
 
-test("ioredis destination id", async function (t) {
+test.skip("ioredis destination id", async function (t) {
     const container = await new GenericContainer("redis")
         .withExposedPorts(6379)
         .start()

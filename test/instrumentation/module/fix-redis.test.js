@@ -9,7 +9,7 @@ test(`redis destination id`, async (t) => {
 
     agent.bindHttp()
 
-    t.plan(1)
+    t.plan(3)
 
     const trace = agent.createTraceObject()
     const redis = require('redis')
@@ -23,14 +23,25 @@ test(`redis destination id`, async (t) => {
         console.error(error);
     })
 
-    client.set("key", "value", redis.print)
-    client.get("key", async function (error, data) {
-        t.equal(data, "value", "redis value validation")
+    client.set("key", "value", async function(error) {
+        t.true(error == null, "error is null")
+        
+        const trace = agent.traceContext.currentTraceObject()
+        t.equal(trace.callStack.length, 0, "callStack is 0")
 
         client.quit()
         agent.completeTraceObject(trace)
         await container.stop()
     })
+    t.equal(agent.traceContext.currentTraceObject().callStack.length, 1, "set spanevent callstack")
+
+    // client.get("key", async function (error, data) {
+    //     t.equal(data, "value", "redis value validation")
+
+    //     client.quit()
+    //     agent.completeTraceObject(trace)
+    //     await container.stop()
+    // })
 })
 
 test("ioredis destination id", async function (t) {

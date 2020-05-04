@@ -91,6 +91,7 @@
     "rimraf": "^2.6.2",
     "supertest": "^4.0.2",
     "tap-spec": "^5.0.0",
-    "tape": "^4.9.1"
+    "tape": "^4.9.1",
+    "testcontainers": "^2.8.0"
   }
 }

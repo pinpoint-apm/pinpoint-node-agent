@@ -17,10 +17,16 @@
   "enabled-stats-monitor-sending": false,
   "enabled-active-thread-count": false,
   "log-level": "DEBUG",
-  "modules": {
-    "express": true,
-    "koa": true,
-    "mongodb": true,
-    "redis": true
+  "express": {
+    "enable": true
+  },
+  "koa": {
+    "enable": true
+  },
+  "mongo": {
+    "enable": true
+  },
+  "redis": {
+    "enable": true
   }
 }

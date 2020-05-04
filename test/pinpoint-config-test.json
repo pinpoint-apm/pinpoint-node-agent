@@ -16,11 +16,17 @@
   "http-status-code-errors": ["5xx"],
   "enabled-stats-monitor-sending": false,
   "enabled-active-thread-count": false,
-  "log-level": "INFO",
-  "modules": {
-    "express": true,
-    "koa": true,
-    "mongodb": true,
-    "redis": true
+  "log-level": "DEBUG",
+  "express": {
+    "enable": true
+  },
+  "koa": {
+    "enable": true
+  },
+  "mongo": {
+    "enable": true
+  },
+  "redis": {
+    "enable": true
   }
 }

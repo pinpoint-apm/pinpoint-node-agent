@@ -53,12 +53,13 @@ test("ioredis destination id", async function (t) {
 
     agent.bindHttp()
 
-    t.plan(4)
+    t.plan(5)
 
     const trace = agent.createTraceObject()
     const Redis = require('ioredis')
+    const port = container.getMappedPort(6379)
     const redis = new Redis(
-        container.getMappedPort(6379),
+        port,
         container.getContainerIpAddress(),
     )
     redis.on("error", function (error) {
@@ -75,6 +76,7 @@ test("ioredis destination id", async function (t) {
 
         const spanevent = agent.pinpointClient.dataSender.mockSpanChunk.spanEventList[0]
         t.equal(spanevent.destinationId, "Redis", "Redis destionation ID check")
+        t.equal(spanevent.endPoint, `localhost:${port}`)
 
         redis.quit()
         agent.completeTraceObject(trace)

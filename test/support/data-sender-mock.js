@@ -5,13 +5,13 @@ const { fixture, util, log } = require('../test-helper')
 const dataSender = () => {
     return {
         sendApiMetaInfo: function(apiMetaInfo) {
-          // log.debug(apiMetaInfo)
+          this.mockAPIMetaInfo = apiMetaInfo
         },
         sendSpan: function(span) {
-          // log.debug(span)
+          this.mockSpan = span
         },
         sendSpanChunk: function(spanChunk) {
-          // log.debug(spanChunk)
+          this.mockSpanChunk = spanChunk
         },
         sendStringMetaInfo: function(metaInfo) {
           this.mockMetaInfo = metaInfo

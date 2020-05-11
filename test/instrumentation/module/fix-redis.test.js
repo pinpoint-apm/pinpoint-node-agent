@@ -2,7 +2,7 @@ const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
 const { GenericContainer } = require("testcontainers")
 
-test(`redis destination id`, async (t) => {
+test.skip(`redis destination id`, async (t) => {
     const container = await new GenericContainer("redis")
         .withExposedPorts(6379)
         .start()
@@ -44,6 +44,7 @@ test(`redis destination id`, async (t) => {
     t.equal(agent.traceContext.currentTraceObject().callStack.length, 2, "get spanevent callstack")
 })
 
+// https://***REMOVED***/issues/109
 test("ioredis destination id", async function (t) {
     const container = await new GenericContainer("redis")
         .withExposedPorts(6379)
@@ -51,7 +52,7 @@ test("ioredis destination id", async function (t) {
 
     agent.bindHttp()
 
-    t.plan(2)
+    t.plan(3)
 
     const trace = agent.createTraceObject()
     const Redis = require('ioredis')
@@ -69,6 +70,7 @@ test("ioredis destination id", async function (t) {
     redis.get("key", async function (error, data) {
         t.equal(data, "value", "redis value validation")
 
+        t.true(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList.length > 0, "a spanEventList should has one chunk")
         redis.quit()
         agent.completeTraceObject(trace)
         await container.stop()

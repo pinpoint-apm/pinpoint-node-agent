@@ -52,7 +52,7 @@ test("ioredis destination id", async function (t) {
 
     agent.bindHttp()
 
-    t.plan(3)
+    t.plan(4)
 
     const trace = agent.createTraceObject()
     const Redis = require('ioredis')
@@ -71,6 +71,10 @@ test("ioredis destination id", async function (t) {
         t.equal(data, "value", "redis value validation")
 
         t.true(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList.length > 0, "a spanEventList should has one chunk")
+
+        const spanevent = agent.pinpointClient.dataSender.mockSpanChunk.spanEventList[0]
+        t.equal(spanevent.destinationId, "Redis", "Redis destionation ID check")
+
         redis.quit()
         agent.completeTraceObject(trace)
         await container.stop()

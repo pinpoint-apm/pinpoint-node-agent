@@ -1,6 +1,7 @@
 const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
 const { GenericContainer } = require("testcontainers")
+const { addressStringOf } = require('../../../lib/utils/convert-utils')
 
 test.skip(`redis destination id`, async (t) => {
     const container = await new GenericContainer("redis")
@@ -79,4 +80,20 @@ test("ioredis destination id", async function (t) {
         agent.completeTraceObject(trace)
         await container.stop()
     })
+})
+
+test(`addressStringOf`, (t) => {
+    t.plan(4)
+
+    let value = addressStringOf(null, null)
+    t.true(value == null)
+
+    value = addressStringOf(undefined, undefined)
+    t.true(value == null)
+
+    value = addressStringOf("localhost", 8980)
+    t.equal(value, "localhost:8980")
+
+    value = addressStringOf("***REMOVED***", 8000)
+    t.equal(value, "***REMOVED***:8000")
 })

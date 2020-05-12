@@ -3,7 +3,7 @@ const agent = require('../../support/agent-singleton-mock')
 const { GenericContainer } = require("testcontainers")
 const { addressStringOf } = require('../../../lib/utils/convert-utils')
 
-test.skip(`redis destination id`, async (t) => {
+test(`redis destination id`, async (t) => {
     const container = await new GenericContainer("redis")
         .withExposedPorts(6379)
         .start()
@@ -28,9 +28,9 @@ test.skip(`redis destination id`, async (t) => {
         t.true(error == null, "error is null")
 
         const trace = agent.traceContext.currentTraceObject()
-        t.equal(trace.callStack.length, 1, "callStack is 0")
+        t.equal(trace.callStack.length, 0, "callStack is 0")
     })
-    t.equal(agent.traceContext.currentTraceObject().callStack.length, 1, "set spanevent callstack")
+    t.equal(agent.traceContext.currentTraceObject().callStack.length, 0, "set spanevent callstack")
 
     client.get("key", async function (error, data) {
         t.equal(data, "value", "redis value validation")
@@ -42,7 +42,7 @@ test.skip(`redis destination id`, async (t) => {
         agent.completeTraceObject(trace)
         await container.stop()
     })
-    t.equal(agent.traceContext.currentTraceObject().callStack.length, 2, "get spanevent callstack")
+    t.equal(agent.traceContext.currentTraceObject().callStack.length, 0, "get spanevent callstack")
 })
 
 // https://***REMOVED***/issues/109

@@ -10,8 +10,9 @@ test(`outgoing request URL escape a bug`, async (t) => {
     const trace = agent.createTraceObject()
     t.true(trace)
 
-    const result = await axios.get(`https://eonet.sci.gsfc.nasa.gov/api/v2.1/categories`)
-    t.true(result.status == 200)
-
-    agent.completeTraceObject(trace)
+    axios.get(`https://eonet.sci.gsfc.nasa.gov/api/v2.1/categories`)
+        .then(function (response) {
+            t.true(response.status == 200)
+            agent.completeTraceObject(trace)
+        })
 })

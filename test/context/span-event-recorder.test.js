@@ -23,3 +23,15 @@ test('Should create span event recorder', async function (t) {
   spanEventRecorder.spanEvent.markElapsedTime()
   t.ok(spanEventRecorder.spanEvent.endElapsed > 100)
 })
+
+const agent = require('../support/agent-singleton-mock')
+const axios = require('axios')
+
+test.skip(`spanevent with async_hooks`, async function (t) {
+  agent.bindHttp()
+
+  t.plan(0)
+
+  const trace = agent.createTraceObject()
+  // trace.startSpanEvent()
+})

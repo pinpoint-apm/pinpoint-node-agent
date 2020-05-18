@@ -33,5 +33,5 @@ test.skip(`spanevent with async_hooks`, async function (t) {
   t.plan(0)
 
   const trace = agent.createTraceObject()
-  // trace.startSpanEvent()
+  trace.startSpanEvent()
 })

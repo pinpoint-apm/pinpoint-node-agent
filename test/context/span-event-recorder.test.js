@@ -25,8 +25,6 @@ test('Should create span event recorder', async function (t) {
 })
 
 const agent = require('../support/agent-singleton-mock')
-const axios = require('axios')
-
 test(`spanevent with async_hooks`, async function (t) {
   agent.bindHttp()
 

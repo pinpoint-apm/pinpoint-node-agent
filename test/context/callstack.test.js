@@ -49,7 +49,6 @@ test(`fix express call stack depth`, async (t) => {
     const server = app.listen(TEST_ENV.port, async function () {
         const result1 = await axios.get(getServerUrl(`/router1${path}`))
         t.ok(result1.status, 200)
-
         t.true(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList.length == 1, `a spanEventList`)
         t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList.length, 3, `span has 3 spanevents`)
 

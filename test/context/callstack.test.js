@@ -29,7 +29,7 @@ const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 test(`fix express call stack depth`, async (t) => {
     agent.bindHttp()
 
-    t.plan(5)
+    t.plan(9)
 
     const app = new express()
     const path = `/`
@@ -53,6 +53,10 @@ test(`fix express call stack depth`, async (t) => {
         t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList.length, 3, `span has 3 spanevents`)
         t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[2].annotations[0].value.stringValue, "express.middleware.jsonParser", "first spanevent json parser")
         t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[2].depth, 1, "express.middleware.jsonParser depth is one")
+        t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[1].annotations[0].value.stringValue, 'express.middleware.urlencodedParser', "url encoding")
+        t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[1].depth, 1, "express.middleware.urlencodedParser depth is one")
+        t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[0].sequence, 2, "express get")
+        t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[0].depth, 1, "express get depth is one")
 
         server.close()
     })

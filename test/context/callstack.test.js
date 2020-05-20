@@ -53,9 +53,9 @@ test(`fix express call stack depth`, async (t) => {
         t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[2].annotations[0].value.stringValue, "express.middleware.jsonParser", "first spanevent json parser")
         t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[2].depth, 1, "express.middleware.jsonParser depth is one")
         t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[1].annotations[0].value.stringValue, 'express.middleware.urlencodedParser', "url encoding")
-        t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[1].depth, 1, "express.middleware.urlencodedParser depth is one")
+        t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[1].depth, 2, "express.middleware.urlencodedParser depth is one")
         t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[0].sequence, 2, "express get")
-        t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[0].depth, 1, "express get depth is one")
+        t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[0].depth, 3, "express get depth is one")
 
         server.close()
     })

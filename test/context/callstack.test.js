@@ -5,7 +5,7 @@ const axios = require('axios')
 test(`span and spanEvent call stack`, async (t) => {
     agent.bindHttp()
 
-    t.plan(4)
+    t.plan(11)
 
     const trace = agent.createTraceObject()
     t.equal(trace.callStack.length, 0, "callstack is 0")
@@ -15,7 +15,13 @@ test(`span and spanEvent call stack`, async (t) => {
         .then(function (response) {
             t.true(response.status == 200)
             t.equal(agent.traceContext.currentTraceObject(), trace, "current trace is current asyncId trace object")
-
+            t.equal(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList.length, 1, "spanEventList length")
+            t.equal(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList[0].annotations[0].key, 12, "APIDesc key")
+            t.equal(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList[0].annotations[0].value.stringValue, "GET", "APIDesc stringValue")
+            t.equal(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList[0].annotations[1].key, 40, "HTTP.URL key")
+            t.equal(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList[0].annotations[1].value.stringValue, 'eonet.sci.gsfc.nasa.gov/api/v2.1/categories', "HTTP.URL stringValue")
+            t.equal(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList[0].annotations[2].key, 46, "HTTP.status.code")
+            t.equal(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList[0].annotations[2].value.intValue, 200, "HTTP.status.code stringValue")
             agent.completeTraceObject(trace)
         })
 })

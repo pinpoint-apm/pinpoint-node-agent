@@ -29,7 +29,7 @@ const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 test(`fix express call stack depth`, async (t) => {
     agent.bindHttp()
 
-    t.plan(1)
+    t.plan(3)
 
     const app = new express()
     const path = `/`
@@ -51,6 +51,7 @@ test(`fix express call stack depth`, async (t) => {
         t.ok(result1.status, 200)
 
         t.true(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList.length == 1, `a spanEventList`)
+        t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList.length, 3, `span has 3 spanevents`)
 
         server.close()
     })

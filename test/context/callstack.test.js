@@ -26,7 +26,6 @@ const TEST_ENV = {
     port: 5006,
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
-//https://***REMOVED***/issues/135
 test(`fix express call stack depth`, async (t) => {
     agent.bindHttp()
 
@@ -50,6 +49,9 @@ test(`fix express call stack depth`, async (t) => {
     const server = app.listen(TEST_ENV.port, async function () {
         const result1 = await axios.get(getServerUrl(`/router1${path}`))
         t.ok(result1.status, 200)
+
+        t.true(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList.length == 1, `a spanEventList`)
+
         server.close()
     })
 })

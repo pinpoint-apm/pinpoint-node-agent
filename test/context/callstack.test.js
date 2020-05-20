@@ -29,7 +29,7 @@ const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 test(`fix express call stack depth`, async (t) => {
     agent.bindHttp()
 
-    t.plan(8)
+    t.plan(9)
 
     const app = new express()
     const path = `/`
@@ -40,7 +40,9 @@ test(`fix express call stack depth`, async (t) => {
     }))
 
     const router1 = express.Router()
-    router1.get(path, (req, res) => {
+    router1.get(path, async (req, res) => {
+        const result = await axios.get(`https://eonet.sci.gsfc.nasa.gov/api/v2.1/categories`)
+        t.equal(result.status, 200)
         res.send('ok router1')
     })
 
@@ -49,7 +51,7 @@ test(`fix express call stack depth`, async (t) => {
     const server = app.listen(TEST_ENV.port, async function () {
         const result1 = await axios.get(getServerUrl(`/router1${path}`))
         t.ok(result1.status, 200)
-        t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList.length, 3, `span has 3 spanevents`)
+        t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList.length, 4, `span has 3 spanevents`)
         t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[2].annotations[0].value.stringValue, "express.middleware.jsonParser", "first spanevent json parser")
         t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[2].depth, 1, "express.middleware.jsonParser depth is one")
         t.equal(agent.pinpointClient.dataSender.mockSpan.spanEventList[1].annotations[0].value.stringValue, 'express.middleware.urlencodedParser', "url encoding")

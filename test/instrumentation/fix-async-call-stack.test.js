@@ -2,8 +2,6 @@ const test = require('tape')
 const agent = require('../support/agent-singleton-mock')
 const { GenericContainer } = require("testcontainers")
 
-// https://***REMOVED***/issues/130
-// https://***REMOVED***/issues/109
 test(`fix redis call stack depth`, async (t) => {
     const container = await new GenericContainer("redis")
         .withExposedPorts(6379)

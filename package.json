@@ -10,7 +10,7 @@
   "description": "Pinpoint node agent provided by NAVER",
   "repository": {
     "type": "git",
-    "url": "https://***REMOVED***"
+    "url": "https://github.com/naver/pinpoint-node-agent"
   },
   "author": "NAVER Developers <dl_pinpoint_node.js@navercorp.com> (https://www.navercorp.com)",
   "license": "Apache-2.0",
@@ -22,9 +22,9 @@
   ],
   "bugs": {
     "mail": "dl_pinpoint_node.js@navercorp.com",
-    "url": "https://***REMOVED***/issues"
+    "url": "https://github.com/naver/pinpoint-node-agent/issues"
   },
-  "homepage": "https://***REMOVED***",
+  "homepage": "https://github.com/naver/pinpoint-node-agent",
   "engines": {
     "node": ">=8.0.0"
   },

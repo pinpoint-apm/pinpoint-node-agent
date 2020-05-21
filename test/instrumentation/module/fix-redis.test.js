@@ -45,7 +45,6 @@ test(`redis destination id`, async (t) => {
     t.equal(agent.traceContext.currentTraceObject().callStack.length, 0, "get spanevent callstack")
 })
 
-// https://***REMOVED***/issues/109
 test("ioredis destination id", async function (t) {
     const container = await new GenericContainer("redis")
         .withExposedPorts(6379)

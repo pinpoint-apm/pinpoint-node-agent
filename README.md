@@ -6,7 +6,7 @@ Please be careful to use it because there are performance degradation depending 
 This is the official Node.js agent for [Pinpoint](https://github.com/naver/pinpoint).
 
 If you have any feedback or questions,
-please post them on the [Discuss issues](https://***REMOVED***/issues).
+please post them on the [Discuss issues](https://github.com/naver/pinpoint-node-agent/issues).
 
 
 ## Installation

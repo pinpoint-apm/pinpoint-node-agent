@@ -3,16 +3,18 @@
   "version": "0.5.0",
   "main": "index.js",
   "scripts": {
-    "clean": "rimraf build",
-    "test": "./node_modules/.bin/tape ./test/**/*.test.js",
-    "tape": "./node_modules/.bin/tape ./test/agent/**/*.test.js"
+    "test": "./node_modules/.bin/tape ./test/**/*.test.js"
   },
   "description": "Pinpoint node agent provided by NAVER",
   "repository": {
     "type": "git",
     "url": "https://github.com/naver/pinpoint-node-agent"
   },
-  "contributors": ["Lee Jun Hee <jundol.lee@navercorp.com> (https://github.com/intojun)", "Bae Keun Bae <keunbae.bae@navercorp.com> (https://github.com/withearth)", "Yongseok Kang <feelform@gmail.com> (https://github.com/feelform)"],
+  "contributors": [
+    "Lee Jun Hee <jundol.lee@navercorp.com> (https://github.com/intojun)",
+    "Bae Keun Bae <with.earth.u@gmail.com> (https://github.com/withearth)",
+    "Yongseok Kang <feelform@gmail.com> (https://github.com/feelform)"
+  ],
   "license": "Apache-2.0",
   "licenses": [
     {

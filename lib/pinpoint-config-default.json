@@ -8,7 +8,7 @@
   },
   "sampling": {
     "enable": true,
-    "rate": 1
+    "rate": 10
   },
   "http-status-code-errors": ["5xx"],
   "log-level": "WARN",

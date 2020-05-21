@@ -12,7 +12,7 @@
     "type": "git",
     "url": "https://github.com/naver/pinpoint-node-agent"
   },
-  "author": "NAVER Developers <dl_pinpoint_node.js@navercorp.com> (https://www.navercorp.com)",
+  "contributors": ["Lee Jun Hee <jundol.lee@navercorp.com> (https://github.com/intojun)", "Bae Keun Bae <keunbae.bae@navercorp.com> (https://github.com/withearth)", "Yongseok Kang <feelform@gmail.com> (https://github.com/feelform)"],
   "license": "Apache-2.0",
   "licenses": [
     {
@@ -21,7 +21,6 @@
     }
   ],
   "bugs": {
-    "mail": "dl_pinpoint_node.js@navercorp.com",
     "url": "https://github.com/naver/pinpoint-node-agent/issues"
   },
   "homepage": "https://github.com/naver/pinpoint-node-agent",
@@ -70,7 +69,6 @@
   },
   "devDependencies": {
     "axios": "^0.18.0",
-    "bluebird": "^3.5.3",
     "elasticsearch": "^15.4.1",
     "eslint-config-airbnb": "^17.1.0",
     "eslint-config-prettier": "^3.1.0",

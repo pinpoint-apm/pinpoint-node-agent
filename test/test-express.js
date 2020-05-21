@@ -3,7 +3,7 @@ new Agent({
   agentId: 'dev-agent-app-test',
   applicationName: 'dev.agent.app.test',
   serviceType: 1000,
-  collectorIp: '***REMOVED***',
+  collectorIp: '127.0.0.1',
   collectorTcpPort: 9994,
   collectorStatPort: 9995,
   collectorSpanPort: 9996,

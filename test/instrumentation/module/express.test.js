@@ -27,7 +27,6 @@ test(`${testName1} Should record request in basic route`, function (t) {
   app.get(PATH, async (req, res) => {
     Math.random()
     await util.sleep(3000)
-    // await axios.get('http://***REMOVED***:9999/test/express')
     res.send('ok get')
   })
   app.post(PATH, (req, res) => {

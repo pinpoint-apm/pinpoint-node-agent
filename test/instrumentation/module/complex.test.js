@@ -53,7 +53,7 @@ test.skip(`${testName1} should Record the connections between koa and mongodb an
 
     await mockMongoose.prepareStorage().then(async () => {
       const Book = mongoose.model('book', bookSchema)      
-      await mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint', async function(err) {
+      await mongoose.connect('mongodb://127.0.0.1/mongodb_pinpoint', async function(err) {
         await Book.findOne({author: key}).exec()
         await redis.get(key)    
         console.log('Test!?')
@@ -94,7 +94,7 @@ test(`${testName2} should Record the connections between express and redis.`, fu
 
     await mockMongoose.prepareStorage().then(async () => {
       const Book = mongoose.model('book', bookSchema)      
-      await mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint', function(err) {
+      await mongoose.connect('mongodb://127.0.0.1/mongodb_pinpoint', function(err) {
         Book.findOne({ author: key }, function(err, book) {
           if (err) return res.status(500).json({ error: err })
           if (!book) return res.status(404).json({ error: 'book not found' })

@@ -7,7 +7,7 @@ $ node runTest.js agent
     [Pinpoint Agent] Configuration { agentId: 'node.test.app',
       applicationName: 'node.test.app',
       serviceType: 1400,
-      collectorIp: '***REMOVED***',
+      collectorIp: '10.112.185.143',
       collectorTcpPort: 9994,
       collectorStatPort: 9995,
       collectorSpanPort: 9996,

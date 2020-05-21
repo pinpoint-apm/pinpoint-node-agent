@@ -7,13 +7,13 @@ test('should return the string value when the env value is string type', functio
 
     process.env['PINPOINT_AGENT_ID'] = "agentId"
     process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
-    process.env['PINPOINT_COLLECTOR_IP'] = "***REMOVED***"
+    process.env['PINPOINT_COLLECTOR_IP'] = "192.168.78.79"
     process.env['PINPOINT_LOG_LEVEL'] = "Debug"
 
     const given = config.getConfig()
     t.equal(given.agentId, "agentId", "given PINPOINT_AGENT_ID env, should equal config")
     t.equal(given.applicationName, "appication name", "given PINPOINT_APPLICATION_NAME env, should equal config")
-    t.equal(given.collectorIp, "***REMOVED***", "given PINPOINT_COLLECTOR_IP env, should equal config")
+    t.equal(given.collectorIp, "192.168.78.79", "given PINPOINT_COLLECTOR_IP env, should equal config")
     t.equal(given.logLevel, "Debug", "given PINPOINT_LOG_LEVEL env, should equal config")
 
     delete process.env.PINPOINT_AGENT_ID
@@ -133,7 +133,7 @@ test('should not exist in the process.env property when you do not set an enviro
     t.equal(given.collectorTcpPort, 9994, 'No set PINPOINT_COLLECTOR_TCP_PORT env, should equal default config')
     t.equal(given.collectorStatPort, 9995, 'No set PINPOINT_COLLECTOR_STAT_PORT env, should equal default config')
     t.equal(given.collectorSpanPort, 9996, 'No set PINPOINT_COLLECTOR_SPAN_PORT env, should equal default config')
-    t.equal(given.sampleRate, 1, 'No set PINPOINT_SAMPLING_RATE env, should equal default config')
+    t.equal(given.sampleRate, 10, 'No set PINPOINT_SAMPLING_RATE env, should equal default config')
 
     config.clear()
     t.end()

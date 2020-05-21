@@ -95,6 +95,6 @@ test(`addressStringOf`, (t) => {
     value = addressStringOf("localhost", 8980)
     t.equal(value, "localhost:8980")
 
-    value = addressStringOf("***REMOVED***", 8000)
-    t.equal(value, "***REMOVED***:8000")
+    value = addressStringOf("127.0.0.1", 8000)
+    t.equal(value, "127.0.0.1:8000")
 })

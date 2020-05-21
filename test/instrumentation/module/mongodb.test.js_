@@ -88,7 +88,7 @@ test.only(`${testName1} should Record the connections between express and mongod
       console.log("Connected to mongod server")
     })
 
-    await mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint')
+    await mongoose.connect('mongodb://127.0.0.1/mongodb_pinpoint')
     //
     // console.log('step1. Insert')
     // const rstInsert = await axios.post(getServerUrl(PATH), mongoData)
@@ -170,7 +170,7 @@ test(`${testName2} should Record the connections between express and mongodb.`, 
       console.log("Connected to mongod server")
     })
 
-    await mongoose.connect('mongodb://***REMOVED***/mongodb_pinpoint')
+    await mongoose.connect('mongodb://127.0.0.1/mongodb_pinpoint')
 
     console.log('step1. Insert')
     const rstInsert = await axios.post(getServerUrl(PATH), mongoData)

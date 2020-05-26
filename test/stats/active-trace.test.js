@@ -4,6 +4,7 @@ const { fixture, util } = require('../test-helper')
 const activeTrace = require('../../lib/metric/active-trace')
 const agent = require('../support/agent-singleton-mock')
 const express = require('express')
+const { log } = require('../test-helper')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -14,7 +15,7 @@ const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 test(`Should record active trace in multiple call`, function (t) {
   agent.bindHttp()
 
-  t.plan(6)
+  t.plan(5)
 
   const PATH = '/active-trace'
   const LASTONE_PATH = '/active-trace/lastone'
@@ -27,7 +28,6 @@ test(`Should record active trace in multiple call`, function (t) {
   })
 
   app.get(LASTONE_PATH, async (req, res) => {
-    t.equal(activeTrace.getAllTraces().length, 3, "input request equals")
     res.send('ok get')
   })
 

@@ -11,7 +11,7 @@ test('Should create continued trace and add span info', function (t) {
 
   const transactionId = fixture.getTransactionId()
   const traceId = fixture.getTraceId(transactionId)
-  const traceContext = TraceContext.init(fixture.getAgentInfo())
+  const traceContext = TraceContext.init(fixture.getAgentInfo(), dataSenderMock())
 
   const trace = traceContext.continueTraceObject(traceId)
 
@@ -21,6 +21,7 @@ test('Should create continued trace and add span info', function (t) {
   trace.spanRecorder.recordApi(GeneralMethodDescriptor.SERVER_REQUEST)
 
   t.equal(traceContext.currentTraceObject().span.serviceType, ServiceTypeCode.express)
+  traceContext.completeTraceObject(trace)
 })
 
 test('Should begin/end trace block asynchronously', async function (t) {

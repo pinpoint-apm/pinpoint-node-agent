@@ -70,14 +70,14 @@ test(`[${testName2}] Should record request in express.Router`, function (t) {
     res.send('ok router2')
   })
 
-  app.use('/router1', router1)
-  app.use('/router2', router2)
+  app.use('/express.router1', router1)
+  app.use('/express.router2', router2)
 
   const server = app.listen(TEST_ENV.port, async function () {
-    const result1 = await axios.get(getServerUrl(`/router1${PATH}`))
+    const result1 = await axios.get(getServerUrl(`/express.router1${PATH}`))
     t.ok(result1.status, 200)
 
-    const result2 = await axios.get(getServerUrl(`/router2${PATH}`))
+    const result2 = await axios.get(getServerUrl(`/express.router2${PATH}`))
     t.ok(result2.status, 200)
 
     const traceMap = agent.traceContext.getAllTraceObject()

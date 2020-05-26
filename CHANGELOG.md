@@ -3,8 +3,8 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 
 ## [0.5.1] - 2020-5-27
 ### Fixed
-- Fixed the endpoint and destinationId of SpanEvent were missing
-- Fixed a compatibility bug with network matrix in PM2 and Sentry
+- Disable Active thread count default configuration
+- Fixed incoming trace sampling bug
 
 ## [0.5.0] - 2020-5-21
 ### Added

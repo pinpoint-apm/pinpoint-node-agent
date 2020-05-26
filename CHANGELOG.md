@@ -1,8 +1,15 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [0.0.16] - 2020-5-21
+### Added
+- Support async hook outgoing request in HTTPS module
+
+### Fixed
+- Fixed the endpoint and destinationId of SpanEvent were missing
+- Fixed a compatibility bug with network matrix in PM2 and Sentry
+- Fixed wrong outgoing request annotations type
+- Fixed redis module call stack depth and wrong get data
 
 ## [0.0.16] - 2019-11-12
 ### Changed

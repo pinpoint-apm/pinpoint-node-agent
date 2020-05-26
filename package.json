@@ -27,7 +27,7 @@
   },
   "homepage": "https://github.com/naver/pinpoint-node-agent",
   "engines": {
-    "node": ">=8.0.0"
+    "node": ">=8.2.0"
   },
   "keywords": [
     "pinpoint",

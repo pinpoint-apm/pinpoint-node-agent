@@ -1,8 +1,4 @@
 # Pinpoint Node.js Agent
-
-> Currently these modules are registered for testing. 
-Please be careful to use it because there are performance degradation depending on use.
-
 This is the official Node.js agent for [Pinpoint](https://github.com/naver/pinpoint).
 
 If you have any feedback or questions,

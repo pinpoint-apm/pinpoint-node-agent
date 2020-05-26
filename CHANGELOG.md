@@ -1,7 +1,12 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
-## [0.0.16] - 2020-5-21
+## [0.5.1] - 2020-5-27
+### Fixed
+- Fixed the endpoint and destinationId of SpanEvent were missing
+- Fixed a compatibility bug with network matrix in PM2 and Sentry
+
+## [0.5.0] - 2020-5-21
 ### Added
 - Support async hook outgoing request in HTTPS module
 

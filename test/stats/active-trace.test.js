@@ -12,7 +12,7 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 test(`Should record active trace in multiple call`, function (t) {
-  agent.bindEmitHttpModule()
+  agent.bindHttp()
 
   t.plan(6)
 

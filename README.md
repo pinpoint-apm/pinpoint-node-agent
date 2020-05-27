@@ -29,3 +29,9 @@ CommonJs
   require('pinpoint-node-agent')
 ```
 
+## Documentation
+
+## Contributing
+
+## License
+[Apache License 2.0](LICENSE)

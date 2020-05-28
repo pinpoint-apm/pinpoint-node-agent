@@ -138,3 +138,12 @@ test('should not exist in the process.env property when you do not set an enviro
     config.clear()
     t.end()
 })
+
+test(`default config`, (t) => {
+    config.clear()
+
+    const given = givenDefaultIdAndName()
+    t.equal(given.enabledActiveThreadCount, false, 'No set activeThreadCount')
+
+    t.end()
+})

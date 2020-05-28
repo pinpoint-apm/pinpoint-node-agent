@@ -29,8 +29,11 @@ CommonJs
   require('pinpoint-node-agent')
 ```
 
+## Environment variables
 
-## Documentation
+name | default | description
+-----|---------|------------
+`PINPOINT_AGENT_ID` | | It is a string type. The maximum length is 24.
 
 ## Contributing
 

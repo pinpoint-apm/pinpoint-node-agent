@@ -34,6 +34,10 @@ CommonJs
 
 ## Contributing
 
+We are looking forward to your contributions via pull requests.
+
+To contribute to Pinpoint Node JS agent, you should pass all test suites and your unit tests.
+
 ## License
 
 ```

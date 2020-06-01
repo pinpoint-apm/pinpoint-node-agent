@@ -5,7 +5,7 @@ const axios = require('axios')
 test(`outgoing request URL escape a bug`, async (t) => {
     agent.bindHttp()
 
-    t.plan(4)
+    t.plan(5)
 
     const trace = agent.createTraceObject()
     t.true(trace)
@@ -18,7 +18,8 @@ test(`outgoing request URL escape a bug`, async (t) => {
 
             const spanEvent = agent.pinpointClient.dataSender.mockSpanChunk.spanEventList[0]
             
-            t.equal(spanEvent.annotations[0].value.stringValue, "GET eonet.sci.gsfc.nasa.gov/api/v2.1/categories", "URL")
+            t.equal(spanEvent.annotations[0].value.stringValue, "GET", "URL")
+            t.equal(spanEvent.annotations[1].value.stringValue, "eonet.sci.gsfc.nasa.gov/api/v2.1/categories", "URL")
             agent.completeTraceObject(trace)
         })
 })

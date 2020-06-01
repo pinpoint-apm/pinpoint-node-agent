@@ -1,8 +1,4 @@
 # Pinpoint Node.js Agent
-
-> Currently these modules are registered for testing. 
-Please be careful to use it because there are performance degradation depending on use.
-
 This is the official Node.js agent for [Pinpoint](https://github.com/naver/pinpoint).
 
 If you have any feedback or questions,
@@ -33,3 +29,32 @@ CommonJs
   require('pinpoint-node-agent')
 ```
 
+## Environment variables
+
+name | default | description
+-----|---------|------------
+`PINPOINT_AGENT_ID` | | It is a string type. The maximum length is 24.
+
+## Contributing
+
+We are looking forward to your contributions via pull requests.
+
+To contribute to Pinpoint Node JS agent, you should pass all test suites and your unit tests.
+
+## License
+
+```
+   Copyright 2020-present NAVER Corp.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+```

@@ -12,4 +12,5 @@ test(`send ping interval`, async (t) => {
     })
     client.dataSender = dataSenderMock()
     t.true(client.dataSender.pingCount > 0, `agent ping schedule`)
+    client.ping.scheduler.stop()
 })

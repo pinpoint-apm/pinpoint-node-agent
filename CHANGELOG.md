@@ -6,6 +6,8 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 - Pinpoint ping feature implementation
 ### Fixed
 - Fixed agent version from package.json
+### Breaking Changes
+- Fixed a bug where the server list was not displayed in the Inspector when container=true because Pinpoint Ping was not implemented.
 
 ## [0.5.1] - 2020-5-27
 ### Fixed

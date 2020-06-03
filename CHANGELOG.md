@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [0.5.2] - 2020-6-3
+### Added
+- Pinpoint ping feature implementation
+### Fixed
+- Fixed agent version from package.json
+
 ## [0.5.1] - 2020-5-27
 ### Fixed
 - Disable Active thread count default configuration

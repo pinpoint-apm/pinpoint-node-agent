@@ -4,6 +4,7 @@ const { fixture, util, log } = require('../test-helper')
 
 const dataSender = () => {
     return {
+        pingCount: 1,
         sendApiMetaInfo: function(apiMetaInfo) {
           this.mockAPIMetaInfo = apiMetaInfo
         },
@@ -15,6 +16,9 @@ const dataSender = () => {
         },
         sendStringMetaInfo: function(metaInfo) {
           this.mockMetaInfo = metaInfo
+        },
+        sendPing () {
+          this.ping++
         }
     }
 }

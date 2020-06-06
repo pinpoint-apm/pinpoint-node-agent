@@ -22,7 +22,7 @@ test(`sendStringMetaInfo, sendAgentInfo, sendApiMetaInfo`, (t) => {
     
     const config = fixture.config
     const dataSender = new DataSender(config)
-    t.plan(2)
+    t.plan(3)
 
     dataSender.tcpClient.send = () => {
         t.true(true, `sendAgentInfo use send method`)
@@ -33,4 +33,9 @@ test(`sendStringMetaInfo, sendAgentInfo, sendApiMetaInfo`, (t) => {
         t.true(true, `sendStringMetaInfo use send method`)
     }
     dataSender.sendStringMetaInfo({})
+
+    dataSender.tcpClient.send = () => {
+        t.true(true, `sendApiMetaInfo use send method`)
+    }
+    dataSender.sendApiMetaInfo({})
 })

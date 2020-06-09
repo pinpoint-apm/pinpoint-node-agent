@@ -26,8 +26,8 @@ module.exports = () => {
       this.mockAgentStartTime = agentStartTime
     }
   
-    initializePinpointClient(agentInfo) {
-      this.pinpointClient = new MockPinpointClient(this.config, agentInfo)
+    initializePinpointClient() {
+      this.pinpointClient = new MockPinpointClient(this.config, this.agentInfo)
     }
 
     initailizeSupportModules() {

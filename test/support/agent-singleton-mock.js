@@ -29,6 +29,11 @@ class MockAgent extends Agent {
         this.mockAgentStartTime = agentStartTime
     }
 
+    initializeDataSender() {
+        this.dataSender = dataSenderMock()
+        this.dataSender.send(this.agentInfo)
+    }
+
     initializePinpointClient() {
         this.pinpointClient = new MockPinpointClient(this.config, this.mockAgentInfo)
     }

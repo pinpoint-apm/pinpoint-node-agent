@@ -21,7 +21,7 @@ const dataSender = () => {
       this.mockMetaInfo = metaInfo
     },
     sendAgentInfo: function(agentInfo) {
-      this.agentInfo = agentInfo
+      this.mockAgentInfo = agentInfo
     },
     send: function (data) {
       if (data instanceof AgentInfo) {

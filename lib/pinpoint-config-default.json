@@ -30,8 +30,8 @@
     "enable": true
   },
   "grpc": {
+    "enable": false,
     "collector": {
-      "enable": false,
       "ip": "localhost",
       "span-port": 9993,
       "stat-port": 9992,

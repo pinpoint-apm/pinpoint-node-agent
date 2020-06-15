@@ -67,7 +67,7 @@ test('sendSpanChunk', function(t) {
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
-    sendSpanChunk: function(spanChunk) {
+    sendSpan: function(spanChunk) {
       grpcDataSender.mockSpanChunk = spanChunk
     }
   }

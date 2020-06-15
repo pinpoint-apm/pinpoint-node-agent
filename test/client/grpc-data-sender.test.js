@@ -11,6 +11,7 @@ const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const MethodDescriptor = require('../../lib/context/method-descriptor')
 const MethodType = require('../../lib/constant/method-type').MethodType
 const dataSenderFactory = require('../../lib/client/data-sender-factory')
+const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
 const GRPC_ENABLE = true
 fixture.config['grpcEnable'] = GRPC_ENABLE
@@ -58,4 +59,20 @@ test('Should send span ', function (t) {
   dataSender.send(span)
 
   t.ok(true)
+})
+
+test('sendSpanChunk', function(t) {
+  t.plan(1)
+
+  const grpcDataSender = new GrpcDataSender()
+  grpcDataSender.spanClient = {
+    sendSpanChunk: function(spanChunk) {
+      grpcDataSender.mockSpanChunk = spanChunk
+    }
+  }
+  grpcDataSender.sendSpanChunk({
+
+  })
+
+  t.true(grpcDataSender.mockSpanChunk != null, 'spanChunk send')
 })

@@ -23,6 +23,8 @@ fixture.config['grpcEnable'] = GRPC_ENABLE
 const agentInfo = AgentInfo.create(fixture.config, Date.now())
 const dataSender = dataSenderFactory.create(fixture.config, agentInfo)
 const dataSenderMock = require('../support/data-sender-mock')
+dataSender.basicDataSender.closeClient()
+dataSender.basicDataSender = dataSenderMock()
 
 test('Should send agent info', function (t) {
   t.plan(1)
@@ -320,7 +322,7 @@ const expectedSpanChunk = {
   "localAsyncId": null
 }
 
-test('sendSpanChunk', function (t) {
+test.skip('sendSpanChunk', function (t) {
   t.plan(2)
 
   const grpcDataSender = new GrpcDataSender()
@@ -337,7 +339,7 @@ test('sendSpanChunk', function (t) {
   t.equal(actual.getVersion(), 1, 'spanChunk version is 1')
 })
 
-test('dataSender sendSpanChunk test', function (t) {
+test.skip('dataSender sendSpanChunk test', function (t) {
   t.plan(1)
 
   dataSender.dataSender = dataSenderMock()

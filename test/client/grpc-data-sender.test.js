@@ -116,19 +116,25 @@ const expectedSpan = {
 }
 
 test('Should send span ', function (t) {
-  t.plan(1)
+  t.plan(5)
 
-  const traceId = fixture.getTraceId()
-  const agentInfo = fixture.getAgentInfo()
-  const trace = new Trace(traceId, agentInfo, dataSender)
-  const spanEventRecorder = trace.traceBlockBegin()
+  const grpcDataSender = new GrpcDataSender()
+  grpcDataSender.spanClient = {
+    sendSpan: function (span) {
+      grpcDataSender.actualSpan = span
+    }
+  }
 
-  trace.traceBlockEnd(spanEventRecorder)
-  const span = trace.span
+  grpcDataSender.sendSpan(expectedSpan)
 
-  dataSender.send(span)
+  const actual = grpcDataSender.actualSpan
+  t.true(actual != null, 'spanChunk send')
+  t.equal(actual.getVersion(), 1, 'spanChunk version is 1')
 
-  t.ok(true)
+  const actualTransactionId = actual.getTransactionid()
+  t.equal(actualTransactionId.getAgentid(), 'express-node-sample-id', 'gRPC agentId')
+  t.equal(actualTransactionId.getAgentstarttime(), 1592284996948)
+  t.equal(actualTransactionId.getSequence(), 22)
 })
 
 const expectedSpanChunk = {

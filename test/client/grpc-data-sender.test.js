@@ -67,6 +67,258 @@ test('Should send span ', function (t) {
   t.ok(true)
 })
 
+const actualSpanChunk = {
+  "agentId": "express-node-sample-id",
+  "applicationName": "express-node-sample-name",
+  "agentStartTime": 1592271260001,
+  "serviceType": 1400,
+  "spanId": 8912358811565729,
+  "parentSpanId": -1,
+  "transactionId": {
+    "type": "Buffer",
+    "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 225, 146, 141, 214, 171, 46, 0]
+  },
+  "spanEventList": [{
+    "spanId": 8912358811565729,
+    "sequence": 4,
+    "startTime": 1592271264503,
+    "elapsedTime": 1,
+    "startElapsed": 12,
+    "serviceType": 6600,
+    "endPoint": "localhost:3000",
+    "annotations": [{
+      "key": 12,
+      "value": {
+        "stringValue": "express.middleware.serveStatic"
+      }
+    }],
+    "depth": 5,
+    "nextSpanId": -1,
+    "destinationId": "localhost:3000",
+    "apiId": 0,
+    "exceptionInfo": null,
+    "asyncId": null,
+    "nextAsyncId": null,
+    "asyncSequence": null,
+    "dummyId": null,
+    "nextDummyId": null
+  }, {
+    "spanId": 8912358811565729,
+    "sequence": 3,
+    "startTime": 1592271264500,
+    "elapsedTime": 5,
+    "startElapsed": 9,
+    "serviceType": 6600,
+    "endPoint": "localhost:3000",
+    "annotations": [{
+      "key": 12,
+      "value": {
+        "stringValue": "express.middleware.cookieParser"
+      }
+    }],
+    "depth": 4,
+    "nextSpanId": -1,
+    "destinationId": "localhost:3000",
+    "apiId": 0,
+    "exceptionInfo": null,
+    "asyncId": null,
+    "nextAsyncId": null,
+    "asyncSequence": null,
+    "dummyId": null,
+    "nextDummyId": null
+  }, {
+    "spanId": 8912358811565729,
+    "sequence": 2,
+    "startTime": 1592271264499,
+    "elapsedTime": 7,
+    "startElapsed": 8,
+    "serviceType": 6600,
+    "endPoint": "localhost:3000",
+    "annotations": [{
+      "key": 12,
+      "value": {
+        "stringValue": "express.middleware.urlencodedParser"
+      }
+    }],
+    "depth": 3,
+    "nextSpanId": -1,
+    "destinationId": "localhost:3000",
+    "apiId": 0,
+    "exceptionInfo": null,
+    "asyncId": null,
+    "nextAsyncId": null,
+    "asyncSequence": null,
+    "dummyId": null,
+    "nextDummyId": null
+  }, {
+    "spanId": 8912358811565729,
+    "sequence": 1,
+    "startTime": 1592271264497,
+    "elapsedTime": 10,
+    "startElapsed": 6,
+    "serviceType": 6600,
+    "endPoint": "localhost:3000",
+    "annotations": [{
+      "key": 12,
+      "value": {
+        "stringValue": "express.middleware.jsonParser"
+      }
+    }],
+    "depth": 2,
+    "nextSpanId": -1,
+    "destinationId": "localhost:3000",
+    "apiId": 0,
+    "exceptionInfo": null,
+    "asyncId": null,
+    "nextAsyncId": null,
+    "asyncSequence": null,
+    "dummyId": null,
+    "nextDummyId": null
+  }, {
+    "spanId": 8912358811565729,
+    "sequence": 0,
+    "startTime": 1592271264494,
+    "elapsedTime": 14,
+    "startElapsed": 3,
+    "serviceType": 6600,
+    "endPoint": "localhost:3000",
+    "annotations": [{
+      "key": 12,
+      "value": {
+        "stringValue": "express.middleware.logger"
+      }
+    }],
+    "depth": 1,
+    "nextSpanId": -1,
+    "destinationId": "localhost:3000",
+    "apiId": 0,
+    "exceptionInfo": null,
+    "asyncId": null,
+    "nextAsyncId": null,
+    "asyncSequence": null,
+    "dummyId": null,
+    "nextDummyId": null
+  }, {
+    "spanId": 8912358811565729,
+    "sequence": 6,
+    "startTime": 1592271264512,
+    "elapsedTime": 0,
+    "startElapsed": 21,
+    "serviceType": 8200,
+    "endPoint": "127.0.0.1:6379",
+    "annotations": [{
+      "key": 12,
+      "value": {
+        "stringValue": "redis.set.call"
+      }
+    }],
+    "depth": 2,
+    "nextSpanId": -1,
+    "destinationId": "Redis",
+    "apiId": 0,
+    "exceptionInfo": null,
+    "asyncId": null,
+    "nextAsyncId": 1,
+    "asyncSequence": null,
+    "dummyId": null,
+    "nextDummyId": null
+  }, {
+    "spanId": 8912358811565729,
+    "sequence": 7,
+    "startTime": 1592271264513,
+    "elapsedTime": 0,
+    "startElapsed": 22,
+    "serviceType": 8200,
+    "endPoint": "127.0.0.1:6379",
+    "annotations": [{
+      "key": 12,
+      "value": {
+        "stringValue": "redis.get.call"
+      }
+    }],
+    "depth": 2,
+    "nextSpanId": -1,
+    "destinationId": "Redis",
+    "apiId": 0,
+    "exceptionInfo": null,
+    "asyncId": null,
+    "nextAsyncId": 2,
+    "asyncSequence": null,
+    "dummyId": null,
+    "nextDummyId": null
+  }, {
+    "spanId": 8912358811565729,
+    "sequence": 8,
+    "startTime": 1592271264515,
+    "elapsedTime": 0,
+    "startElapsed": 24,
+    "serviceType": 9057,
+    "endPoint": "localhost:6379",
+    "annotations": [{
+      "key": 12,
+      "value": {
+        "stringValue": "redis.SET.call"
+      }
+    }],
+    "depth": 2,
+    "nextSpanId": -1,
+    "destinationId": "Redis",
+    "apiId": 0,
+    "exceptionInfo": null,
+    "asyncId": null,
+    "nextAsyncId": 3,
+    "asyncSequence": null,
+    "dummyId": null,
+    "nextDummyId": null
+  }, {
+    "spanId": 8912358811565729,
+    "sequence": 9,
+    "startTime": 1592271264516,
+    "elapsedTime": 0,
+    "startElapsed": 25,
+    "serviceType": 9057,
+    "endPoint": "localhost:6379",
+    "annotations": [{
+      "key": 12,
+      "value": {
+        "stringValue": "redis.GET.call"
+      }
+    }],
+    "depth": 2,
+    "nextSpanId": -1,
+    "destinationId": "Redis",
+    "apiId": 0,
+    "exceptionInfo": null,
+    "asyncId": null,
+    "nextAsyncId": 4,
+    "asyncSequence": null,
+    "dummyId": null,
+    "nextDummyId": null
+  }, {
+    "spanId": 8912358811565729,
+    "sequence": 5,
+    "startTime": 1592271264511,
+    "elapsedTime": 6,
+    "startElapsed": 20,
+    "serviceType": 6600,
+    "endPoint": "localhost:3000",
+    "annotations": [],
+    "depth": 1,
+    "nextSpanId": -1,
+    "destinationId": "localhost:3000",
+    "apiId": 2,
+    "exceptionInfo": null,
+    "asyncId": null,
+    "nextAsyncId": null,
+    "asyncSequence": null,
+    "dummyId": null,
+    "nextDummyId": null
+  }],
+  "endPoint": null,
+  "applicationServiceType": 1400,
+  "localAsyncId": null
+}
+
 test('sendSpanChunk', function (t) {
   t.plan(1)
 
@@ -77,257 +329,7 @@ test('sendSpanChunk', function (t) {
     }
   }
 
-  grpcDataSender.sendSpanChunk({
-    "agentId": "express-node-sample-id",
-    "applicationName": "express-node-sample-name",
-    "agentStartTime": 1592271260001,
-    "serviceType": 1400,
-    "spanId": 8912358811565729,
-    "parentSpanId": -1,
-    "transactionId": {
-      "type": "Buffer",
-      "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 225, 146, 141, 214, 171, 46, 0]
-    },
-    "spanEventList": [{
-      "spanId": 8912358811565729,
-      "sequence": 4,
-      "startTime": 1592271264503,
-      "elapsedTime": 1,
-      "startElapsed": 12,
-      "serviceType": 6600,
-      "endPoint": "localhost:3000",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "express.middleware.serveStatic"
-        }
-      }],
-      "depth": 5,
-      "nextSpanId": -1,
-      "destinationId": "localhost:3000",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": null,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }, {
-      "spanId": 8912358811565729,
-      "sequence": 3,
-      "startTime": 1592271264500,
-      "elapsedTime": 5,
-      "startElapsed": 9,
-      "serviceType": 6600,
-      "endPoint": "localhost:3000",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "express.middleware.cookieParser"
-        }
-      }],
-      "depth": 4,
-      "nextSpanId": -1,
-      "destinationId": "localhost:3000",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": null,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }, {
-      "spanId": 8912358811565729,
-      "sequence": 2,
-      "startTime": 1592271264499,
-      "elapsedTime": 7,
-      "startElapsed": 8,
-      "serviceType": 6600,
-      "endPoint": "localhost:3000",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "express.middleware.urlencodedParser"
-        }
-      }],
-      "depth": 3,
-      "nextSpanId": -1,
-      "destinationId": "localhost:3000",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": null,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }, {
-      "spanId": 8912358811565729,
-      "sequence": 1,
-      "startTime": 1592271264497,
-      "elapsedTime": 10,
-      "startElapsed": 6,
-      "serviceType": 6600,
-      "endPoint": "localhost:3000",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "express.middleware.jsonParser"
-        }
-      }],
-      "depth": 2,
-      "nextSpanId": -1,
-      "destinationId": "localhost:3000",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": null,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }, {
-      "spanId": 8912358811565729,
-      "sequence": 0,
-      "startTime": 1592271264494,
-      "elapsedTime": 14,
-      "startElapsed": 3,
-      "serviceType": 6600,
-      "endPoint": "localhost:3000",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "express.middleware.logger"
-        }
-      }],
-      "depth": 1,
-      "nextSpanId": -1,
-      "destinationId": "localhost:3000",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": null,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }, {
-      "spanId": 8912358811565729,
-      "sequence": 6,
-      "startTime": 1592271264512,
-      "elapsedTime": 0,
-      "startElapsed": 21,
-      "serviceType": 8200,
-      "endPoint": "127.0.0.1:6379",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "redis.set.call"
-        }
-      }],
-      "depth": 2,
-      "nextSpanId": -1,
-      "destinationId": "Redis",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": 1,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }, {
-      "spanId": 8912358811565729,
-      "sequence": 7,
-      "startTime": 1592271264513,
-      "elapsedTime": 0,
-      "startElapsed": 22,
-      "serviceType": 8200,
-      "endPoint": "127.0.0.1:6379",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "redis.get.call"
-        }
-      }],
-      "depth": 2,
-      "nextSpanId": -1,
-      "destinationId": "Redis",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": 2,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }, {
-      "spanId": 8912358811565729,
-      "sequence": 8,
-      "startTime": 1592271264515,
-      "elapsedTime": 0,
-      "startElapsed": 24,
-      "serviceType": 9057,
-      "endPoint": "localhost:6379",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "redis.SET.call"
-        }
-      }],
-      "depth": 2,
-      "nextSpanId": -1,
-      "destinationId": "Redis",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": 3,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }, {
-      "spanId": 8912358811565729,
-      "sequence": 9,
-      "startTime": 1592271264516,
-      "elapsedTime": 0,
-      "startElapsed": 25,
-      "serviceType": 9057,
-      "endPoint": "localhost:6379",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "redis.GET.call"
-        }
-      }],
-      "depth": 2,
-      "nextSpanId": -1,
-      "destinationId": "Redis",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": 4,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }, {
-      "spanId": 8912358811565729,
-      "sequence": 5,
-      "startTime": 1592271264511,
-      "elapsedTime": 6,
-      "startElapsed": 20,
-      "serviceType": 6600,
-      "endPoint": "localhost:3000",
-      "annotations": [],
-      "depth": 1,
-      "nextSpanId": -1,
-      "destinationId": "localhost:3000",
-      "apiId": 2,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": null,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }],
-    "endPoint": null,
-    "applicationServiceType": 1400,
-    "localAsyncId": null
-  })
+  grpcDataSender.sendSpanChunk(actualSpanChunk)
 
   t.true(grpcDataSender.mockSpanChunk != null, 'spanChunk send')
 })

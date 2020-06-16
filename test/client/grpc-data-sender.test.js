@@ -53,6 +53,68 @@ test('Should send string meta info', function (t) {
   t.ok(true)
 })
 
+
+const expectedSpan = {
+  "traceId": {
+    "transactionId": {
+      "agentId": "express-node-sample-id",
+      "agentStartTime": 1592284996948,
+      "sequence": 22
+    },
+    "spanId": 8571592404731205,
+    "parentSpanId": -1,
+    "flag": 0
+  },
+  "agentId": "express-node-sample-id",
+  "applicationName": "express-node-sample-name",
+  "agentStartTime": 1592284996948,
+  "serviceType": 1400,
+  "spanId": 8571592404731205,
+  "parentSpanId": -1,
+  "transactionId": {
+    "type": "Buffer",
+    "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 212, 202, 211, 220, 171, 46, 22]
+  },
+  "startTime": 1592285050727,
+  "elapsedTime": 103,
+  "rpc": "/",
+  "endPoint": "localhost:3000",
+  "remoteAddr": "::1",
+  "annotations": [],
+  "flag": 0,
+  "err": null,
+  "spanEventList": [{
+    "spanId": 8571592404731205,
+    "sequence": 10,
+    "startTime": 1592285050762,
+    "elapsedTime": 0,
+    "startElapsed": 35,
+    "serviceType": 9057,
+    "endPoint": "localhost:3000",
+    "annotations": [{
+      "key": 12,
+      "value": {
+        "stringValue": "http.request"
+      }
+    }],
+    "depth": 1,
+    "nextSpanId": -1,
+    "destinationId": "localhost:3000",
+    "apiId": 0,
+    "exceptionInfo": null,
+    "asyncId": null,
+    "nextAsyncId": 60,
+    "asyncSequence": null,
+    "dummyId": null,
+    "nextDummyId": null
+  }],
+  "apiId": 1,
+  "exceptionInfo": null,
+  "applicationServiceType": 1400,
+  "loggingTransactionInfo": null,
+  "version": 1
+}
+
 test('Should send span ', function (t) {
   t.plan(1)
 

@@ -70,18 +70,19 @@ test('Should send span ', function (t) {
 const expectedSpanChunk = {
   "agentId": "express-node-sample-id",
   "applicationName": "express-node-sample-name",
-  "agentStartTime": 1592271260001,
+  "agentStartTime": 1592276292544,
   "serviceType": 1400,
-  "spanId": 8912358811565729,
+  "spanId": 1677942532546313,
   "parentSpanId": -1,
   "transactionId": {
-    "type": "Buffer",
-    "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 225, 146, 141, 214, 171, 46, 0]
+    "agentId": "express-node-sample-id",
+    "agentStartTime": 1592276292544,
+    "sequence": 0
   },
   "spanEventList": [{
-    "spanId": 8912358811565729,
+    "spanId": 1677942532546313,
     "sequence": 4,
-    "startTime": 1592271264503,
+    "startTime": 1592276298216,
     "elapsedTime": 1,
     "startElapsed": 12,
     "serviceType": 6600,
@@ -103,9 +104,9 @@ const expectedSpanChunk = {
     "dummyId": null,
     "nextDummyId": null
   }, {
-    "spanId": 8912358811565729,
+    "spanId": 1677942532546313,
     "sequence": 3,
-    "startTime": 1592271264500,
+    "startTime": 1592276298213,
     "elapsedTime": 5,
     "startElapsed": 9,
     "serviceType": 6600,
@@ -127,11 +128,11 @@ const expectedSpanChunk = {
     "dummyId": null,
     "nextDummyId": null
   }, {
-    "spanId": 8912358811565729,
+    "spanId": 1677942532546313,
     "sequence": 2,
-    "startTime": 1592271264499,
-    "elapsedTime": 7,
-    "startElapsed": 8,
+    "startTime": 1592276298211,
+    "elapsedTime": 8,
+    "startElapsed": 7,
     "serviceType": 6600,
     "endPoint": "localhost:3000",
     "annotations": [{
@@ -151,9 +152,9 @@ const expectedSpanChunk = {
     "dummyId": null,
     "nextDummyId": null
   }, {
-    "spanId": 8912358811565729,
+    "spanId": 1677942532546313,
     "sequence": 1,
-    "startTime": 1592271264497,
+    "startTime": 1592276298210,
     "elapsedTime": 10,
     "startElapsed": 6,
     "serviceType": 6600,
@@ -175,10 +176,10 @@ const expectedSpanChunk = {
     "dummyId": null,
     "nextDummyId": null
   }, {
-    "spanId": 8912358811565729,
+    "spanId": 1677942532546313,
     "sequence": 0,
-    "startTime": 1592271264494,
-    "elapsedTime": 14,
+    "startTime": 1592276298207,
+    "elapsedTime": 13,
     "startElapsed": 3,
     "serviceType": 6600,
     "endPoint": "localhost:3000",
@@ -199,11 +200,11 @@ const expectedSpanChunk = {
     "dummyId": null,
     "nextDummyId": null
   }, {
-    "spanId": 8912358811565729,
+    "spanId": 1677942532546313,
     "sequence": 6,
-    "startTime": 1592271264512,
+    "startTime": 1592276298224,
     "elapsedTime": 0,
-    "startElapsed": 21,
+    "startElapsed": 20,
     "serviceType": 8200,
     "endPoint": "127.0.0.1:6379",
     "annotations": [{
@@ -223,11 +224,11 @@ const expectedSpanChunk = {
     "dummyId": null,
     "nextDummyId": null
   }, {
-    "spanId": 8912358811565729,
+    "spanId": 1677942532546313,
     "sequence": 7,
-    "startTime": 1592271264513,
+    "startTime": 1592276298225,
     "elapsedTime": 0,
-    "startElapsed": 22,
+    "startElapsed": 21,
     "serviceType": 8200,
     "endPoint": "127.0.0.1:6379",
     "annotations": [{
@@ -247,11 +248,11 @@ const expectedSpanChunk = {
     "dummyId": null,
     "nextDummyId": null
   }, {
-    "spanId": 8912358811565729,
+    "spanId": 1677942532546313,
     "sequence": 8,
-    "startTime": 1592271264515,
+    "startTime": 1592276298227,
     "elapsedTime": 0,
-    "startElapsed": 24,
+    "startElapsed": 23,
     "serviceType": 9057,
     "endPoint": "localhost:6379",
     "annotations": [{
@@ -271,11 +272,11 @@ const expectedSpanChunk = {
     "dummyId": null,
     "nextDummyId": null
   }, {
-    "spanId": 8912358811565729,
+    "spanId": 1677942532546313,
     "sequence": 9,
-    "startTime": 1592271264516,
+    "startTime": 1592276298228,
     "elapsedTime": 0,
-    "startElapsed": 25,
+    "startElapsed": 24,
     "serviceType": 9057,
     "endPoint": "localhost:6379",
     "annotations": [{
@@ -295,11 +296,11 @@ const expectedSpanChunk = {
     "dummyId": null,
     "nextDummyId": null
   }, {
-    "spanId": 8912358811565729,
+    "spanId": 1677942532546313,
     "sequence": 5,
-    "startTime": 1592271264511,
-    "elapsedTime": 6,
-    "startElapsed": 20,
+    "startTime": 1592276298223,
+    "elapsedTime": 7,
+    "startElapsed": 19,
     "serviceType": 6600,
     "endPoint": "localhost:3000",
     "annotations": [],

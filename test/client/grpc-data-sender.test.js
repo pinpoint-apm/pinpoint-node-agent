@@ -127,7 +127,7 @@ test('Should send span ', function (t) {
 
   grpcDataSender.sendSpan(expectedSpan)
 
-  const actual = grpcDataSender.actualSpan
+  const actual = grpcDataSender.actualSpan.getSpan()
   t.true(actual != null, 'spanChunk send')
   t.equal(actual.getVersion(), 1, 'spanChunk version is 1')
 

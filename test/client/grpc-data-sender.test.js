@@ -67,7 +67,7 @@ test('Should send span ', function (t) {
   t.ok(true)
 })
 
-const actualSpanChunk = {
+const expectedSpanChunk = {
   "agentId": "express-node-sample-id",
   "applicationName": "express-node-sample-name",
   "agentStartTime": 1592271260001,
@@ -325,13 +325,13 @@ test('sendSpanChunk', function (t) {
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
     sendSpan: function (spanChunk) {
-      grpcDataSender.mockSpanChunk = spanChunk
+      grpcDataSender.actualSpanChunk = spanChunk
     }
   }
 
-  grpcDataSender.sendSpanChunk(actualSpanChunk)
+  grpcDataSender.sendSpanChunk(expectedSpanChunk)
 
-  t.true(grpcDataSender.mockSpanChunk != null, 'spanChunk send')
+  t.true(grpcDataSender.actualSpanChunk != null, 'spanChunk send')
 })
 
 test('dataSender sendSpanChunk test', function (t) {

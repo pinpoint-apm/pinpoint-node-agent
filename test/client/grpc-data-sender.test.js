@@ -320,7 +320,7 @@ const expectedSpanChunk = {
 }
 
 test('sendSpanChunk', function (t) {
-  t.plan(1)
+  t.plan(2)
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -331,7 +331,9 @@ test('sendSpanChunk', function (t) {
 
   grpcDataSender.sendSpanChunk(expectedSpanChunk)
 
-  t.true(grpcDataSender.actualSpanChunk != null, 'spanChunk send')
+  const actual = grpcDataSender.actualSpanChunk
+  t.true(actual != null, 'spanChunk send')
+  t.equal(actual.getVersion(), 1, 'spanChunk version is 1')
 })
 
 test('dataSender sendSpanChunk test', function (t) {

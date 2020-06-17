@@ -93,7 +93,7 @@ const expectedSpan = {
 }
 
 test('Should send span ', function (t) {
-  t.plan(12)
+  t.plan(14)
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -131,6 +131,10 @@ test('Should send span ', function (t) {
 
   const actualAcceptEvent = actual.getAcceptevent()
   t.equal(actualAcceptEvent.getRpc(), '/', 'rpc')
+  t.equal(actualAcceptEvent.getEndpoint(), 'localhost:3000', 'endPoint')
+  t.equal(actualAcceptEvent.getRemoteaddr(), '::1', 'remoteAddr')
+
+
 })
 
 const expectedSpanChunk = {

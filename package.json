@@ -77,6 +77,7 @@
     "eslint-config-airbnb": "^17.1.0",
     "eslint-config-prettier": "^3.1.0",
     "express": "^4.16.4",
+    "grpc-mock": "^0.7.0",
     "grpc-tools": "^1.8.0",
     "install": "^0.13.0",
     "ioredis": "^4.3.0",

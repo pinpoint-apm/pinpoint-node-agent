@@ -122,8 +122,15 @@ test('Should send span ', function (t) {
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
-    sendSpan: function (span) {
-      grpcDataSender.actualSpan = span
+    sendSpan: function () {
+      return {
+        write: function (span) {
+          grpcDataSender.actualSpan = span
+        },
+        end: function () {
+
+        }
+      }
     }
   }
 
@@ -137,18 +144,6 @@ test('Should send span ', function (t) {
   t.equal(actualTransactionId.getAgentid(), 'express-node-sample-id', 'gRPC agentId')
   t.equal(actualTransactionId.getAgentstarttime(), 1592284996948)
   t.equal(actualTransactionId.getSequence(), 22)
-})
-
-test.skip('gRPC Span match', (t) => {
-  const mockServer = createMockServer({
-    protoPath: "lib/data/grpc/spec/Service.proto",
-    packageName: "v1",
-    serviceName: "Span",
-    rules: [
-      { method: "hello", input: { message: "Hi" }, output: { message: "Hello" } }
-    ]
-  });
-  mockServer.listen("0.0.0.0:50051");
 })
 
 const expectedSpanChunk = {

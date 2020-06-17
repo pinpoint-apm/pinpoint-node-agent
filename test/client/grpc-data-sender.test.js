@@ -80,11 +80,20 @@ const expectedSpan = {
   "flag": 0,
   "err": null,
   "spanEventList": [
-    { "spanId": 378129597723425, "sequence": 10, "startTime": 1592407115002, "elapsedTime": 0, "startElapsed": 13413630, "serviceType": 9057, "endPoint": "localhost:3000", "annotations": [{ "key": 12, "value": { "stringValue": "http.request" } }], "depth": 1, "nextSpanId": -1, "destinationId": "localhost:3000", "apiId": 0, "exceptionInfo": null, "asyncId": null, "nextAsyncId": 20, "asyncSequence": null, "dummyId": null, "nextDummyId": null }], "apiId": 1, "exceptionInfo": null, "applicationServiceType": 1400, "loggingTransactionInfo": null, "version": 1
+    {
+      "spanId": 378129597723425, "sequence": 10, "startTime": 1592407115002, "elapsedTime": 0, "startElapsed": 13413630, "serviceType": 9057, "endPoint": "localhost:3000",
+      "annotations": [{ "key": 12, "value": { "stringValue": "http.request" } }],
+      "depth": 1, "nextSpanId": -1, "destinationId": "localhost:3000", "apiId": 0, "exceptionInfo": null, "asyncId": null, "nextAsyncId": 20, "asyncSequence": null, "dummyId": null, "nextDummyId": null
+    }],
+  "apiId": 1, 
+  "exceptionInfo": null, 
+  "applicationServiceType": 1400, 
+  "loggingTransactionInfo": null, 
+  "version": 1
 }
 
 test('Should send span ', function (t) {
-  t.plan(9)
+  t.plan(10)
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -115,6 +124,7 @@ test('Should send span ', function (t) {
   t.equal(actual.getParentspanid(), -1, 'parent span ID')
   t.equal(actual.getStarttime(), 1592393701372, 'startTimeStamp')
   t.equal(actual.getElapsed(), 13418060, 'elapsed time')
+  t.equal(actual.getApiid(), 1, 'api ID')
 })
 
 const expectedSpanChunk = {

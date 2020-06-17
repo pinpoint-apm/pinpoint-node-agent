@@ -84,7 +84,7 @@ const expectedSpan = {
 }
 
 test('Should send span ', function (t) {
-  t.plan(5)
+  t.plan(6)
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -110,6 +110,8 @@ test('Should send span ', function (t) {
   t.equal(actualTransactionId.getAgentid(), 'express-node-sample-id', 'gRPC agentId')
   t.equal(actualTransactionId.getAgentstarttime(), 1592393592551)
   t.equal(actualTransactionId.getSequence(), 6)
+
+  t.equal(actual.getSpanid(), 378129597723425, 'span ID')
 })
 
 const expectedSpanChunk = {

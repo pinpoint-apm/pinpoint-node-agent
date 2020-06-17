@@ -93,7 +93,7 @@ const expectedSpan = {
 }
 
 test('Should send span ', function (t) {
-  t.plan(10)
+  t.plan(12)
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -122,9 +122,15 @@ test('Should send span ', function (t) {
 
   t.equal(actual.getSpanid(), 378129597723425, 'span ID')
   t.equal(actual.getParentspanid(), -1, 'parent span ID')
+
   t.equal(actual.getStarttime(), 1592393701372, 'startTimeStamp')
   t.equal(actual.getElapsed(), 13418060, 'elapsed time')
   t.equal(actual.getApiid(), 1, 'api ID')
+
+  t.equal(actual.getServicetype(), 1400, 'service type')
+
+  const actualAcceptEvent = actual.getAcceptevent()
+  t.equal(actualAcceptEvent.getRpc(), '/', 'rpc')
 })
 
 const expectedSpanChunk = {

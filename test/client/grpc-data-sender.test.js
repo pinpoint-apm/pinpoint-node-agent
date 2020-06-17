@@ -26,6 +26,8 @@ const dataSenderMock = require('../support/data-sender-mock')
 dataSender.basicDataSender.closeClient()
 dataSender.basicDataSender = dataSenderMock()
 
+const { createMockServer } = require("grpc-mock")
+
 test('Should send agent info', function (t) {
   t.plan(1)
 
@@ -135,6 +137,18 @@ test('Should send span ', function (t) {
   t.equal(actualTransactionId.getAgentid(), 'express-node-sample-id', 'gRPC agentId')
   t.equal(actualTransactionId.getAgentstarttime(), 1592284996948)
   t.equal(actualTransactionId.getSequence(), 22)
+})
+
+test.skip('gRPC Span match', (t) => {
+  const mockServer = createMockServer({
+    protoPath: "lib/data/grpc/spec/Service.proto",
+    packageName: "v1",
+    serviceName: "Span",
+    rules: [
+      { method: "hello", input: { message: "Hi" }, output: { message: "Hello" } }
+    ]
+  });
+  mockServer.listen("0.0.0.0:50051");
 })
 
 const expectedSpanChunk = {

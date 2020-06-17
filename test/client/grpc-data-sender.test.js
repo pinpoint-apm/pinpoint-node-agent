@@ -108,7 +108,7 @@ const expectedSpan = {
 }
 
 test('Should send span ', function (t) {
-  t.plan(16)
+  t.plan(17)
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -151,6 +151,11 @@ test('Should send span ', function (t) {
 
   t.equal(actual.getFlag(), 0, 'flag')
   t.equal(actual.getErr(), 0, 'Error')
+
+  const actualSpanEvents = actual.getSpaneventList()
+  actualSpanEvents.forEach(pSpanEvent => {
+    t.equal(pSpanEvent.getSequence(), 10, 'sequence')
+  })
 })
 
 const expectedSpanChunk = {

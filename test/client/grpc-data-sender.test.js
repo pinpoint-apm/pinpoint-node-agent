@@ -84,7 +84,7 @@ const expectedSpan = {
 }
 
 test('Should send span ', function (t) {
-  t.plan(6)
+  t.plan(7)
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -112,6 +112,7 @@ test('Should send span ', function (t) {
   t.equal(actualTransactionId.getSequence(), 6)
 
   t.equal(actual.getSpanid(), 378129597723425, 'span ID')
+  t.equal(actual.getParentspanid(), -1, 'parent span ID')
 })
 
 const expectedSpanChunk = {

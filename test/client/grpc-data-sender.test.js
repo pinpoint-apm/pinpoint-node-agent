@@ -81,9 +81,24 @@ const expectedSpan = {
   "err": null,
   "spanEventList": [
     {
-      "spanId": 378129597723425, "sequence": 10, "startTime": 1592407115002, "elapsedTime": 0, "startElapsed": 13413630, "serviceType": 9057, "endPoint": "localhost:3000",
+      "spanId": 378129597723425, 
+      "sequence": 10, 
+      "startTime": 1592407115002, 
+      "elapsedTime": 0, 
+      "startElapsed": 13413630, 
+      "serviceType": 9057, 
+      "endPoint": "localhost:3000",
       "annotations": [{ "key": 12, "value": { "stringValue": "http.request" } }],
-      "depth": 1, "nextSpanId": -1, "destinationId": "localhost:3000", "apiId": 0, "exceptionInfo": null, "asyncId": null, "nextAsyncId": 20, "asyncSequence": null, "dummyId": null, "nextDummyId": null
+      "depth": 1, 
+      "nextSpanId": -1, 
+      "destinationId": "localhost:3000", 
+      "apiId": 0, 
+      "exceptionInfo": null, 
+      "asyncId": null, 
+      "nextAsyncId": 20, 
+      "asyncSequence": null, 
+      "dummyId": null, 
+      "nextDummyId": null
     }],
   "apiId": 1, 
   "exceptionInfo": null, 
@@ -93,7 +108,7 @@ const expectedSpan = {
 }
 
 test('Should send span ', function (t) {
-  t.plan(14)
+  t.plan(16)
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -134,7 +149,8 @@ test('Should send span ', function (t) {
   t.equal(actualAcceptEvent.getEndpoint(), 'localhost:3000', 'endPoint')
   t.equal(actualAcceptEvent.getRemoteaddr(), '::1', 'remoteAddr')
 
-
+  t.equal(actual.getFlag(), 0, 'flag')
+  t.equal(actual.getErr(), 0, 'Error')
 })
 
 const expectedSpanChunk = {

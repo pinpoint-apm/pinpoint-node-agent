@@ -396,7 +396,10 @@ const expectedSpanChunk = {
   }],
   "endPoint": null,
   "applicationServiceType": 1400,
-  "localAsyncId": null
+  "localAsyncId": {
+    "asyncId": 1,
+    "nextAsyncSequence": 1
+  }
 }
 
 test.skip('sendSpanChunk', function (t) {

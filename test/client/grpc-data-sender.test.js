@@ -115,7 +115,7 @@ const expectedSpan = {
 }
 
 test('Should send span ', function (t) {
-  t.plan(22)
+  t.plan(23)
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -172,6 +172,8 @@ test('Should send span ', function (t) {
     const pAnnotations = pSpanEvent.getAnnotationList()
     pAnnotations.forEach(annotation => {
       t.equal(annotation.getKey(), 12, 'annotation key')
+      const pAnnotationValue = annotation.getValue()
+      t.equal(pAnnotationValue.getStringvalue(), "http.request", 'annotation string value')
     })
   })
 })

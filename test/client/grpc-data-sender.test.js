@@ -54,59 +54,69 @@ test('Should send string meta info', function (t) {
 })
 
 const expectedSpan = {
-  "traceId":
-  {
-    "transactionId":
-      { "agentId": "express-node-sample-id", "agentStartTime": 1592393592551, "sequence": 6 },
-    "spanId": 378129597723425,
+  "traceId": {
+    "transactionId": {
+      "agentId": "express-node-sample-id",
+      "agentStartTime": 1592446918393,
+      "sequence": 0
+    },
+    "spanId": 2052625127828467,
     "parentSpanId": -1,
     "flag": 0
   },
   "agentId": "express-node-sample-id",
   "applicationName": "express-node-sample-name",
-  "agentStartTime": 1592393592551,
+  "agentStartTime": 1592446918393,
   "serviceType": 1400,
-  "spanId": 378129597723425,
+  "spanId": 2052625127828467,
   "parentSpanId": -1,
-  "transactionId": { "type": "Buffer", "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 231, 221, 183, 144, 172, 46, 6] },
-  "startTime": 1592393701372,
-  "elapsedTime": 13418060,
+  "transactionId": {
+    "type": "Buffer",
+    "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 249, 189, 238, 169, 172, 46, 0]
+  },
+  "startTime": 1592446920106,
+  "elapsedTime": 629,
   "rpc": "/",
   "endPoint": "localhost:3000",
   "remoteAddr": "::1",
   "annotations": [],
   "flag": 0,
   "err": null,
-  "spanEventList": [
-    {
-      "spanId": 378129597723425, 
-      "sequence": 10, 
-      "startTime": 1592407115002, 
-      "elapsedTime": 0, 
-      "startElapsed": 13413630, 
-      "serviceType": 9057, 
-      "endPoint": "localhost:3000",
-      "annotations": [{ "key": 12, "value": { "stringValue": "http.request" } }],
-      "depth": 1, 
-      "nextSpanId": -1, 
-      "destinationId": "localhost:3000", 
-      "apiId": 0, 
-      "exceptionInfo": null, 
-      "asyncId": null, 
-      "nextAsyncId": 20, 
-      "asyncSequence": null, 
-      "dummyId": null, 
-      "nextDummyId": null
+  "spanEventList": [{
+    "spanId": 2052625127828467,
+    "sequence": 10,
+    "startTime": 1592446920178,
+    "elapsedTime": 0,
+    "startElapsed": 72,
+    "serviceType": 9057,
+    "endPoint": "localhost:3000",
+    "endElapsed": 0,
+    "annotations": [{
+      "key": 12,
+      "value": {
+        "stringValue": "http.request"
+      }
     }],
-  "apiId": 1, 
-  "exceptionInfo": null, 
-  "applicationServiceType": 1400, 
-  "loggingTransactionInfo": null, 
+    "depth": 1,
+    "nextSpanId": -1,
+    "destinationId": "localhost:3000",
+    "apiId": 0,
+    "exceptionInfo": null,
+    "asyncId": null,
+    "nextAsyncId": 5,
+    "asyncSequence": null,
+    "dummyId": null,
+    "nextDummyId": null
+  }],
+  "apiId": 1,
+  "exceptionInfo": null,
+  "applicationServiceType": 1400,
+  "loggingTransactionInfo": null,
   "version": 1
 }
 
 test('Should send span ', function (t) {
-  t.plan(18)
+  t.plan(21)
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -130,14 +140,14 @@ test('Should send span ', function (t) {
 
   const actualTransactionId = actual.getTransactionid()
   t.equal(actualTransactionId.getAgentid(), 'express-node-sample-id', 'gRPC agentId')
-  t.equal(actualTransactionId.getAgentstarttime(), 1592393592551)
-  t.equal(actualTransactionId.getSequence(), 6)
+  t.equal(actualTransactionId.getAgentstarttime(), 1592446918393, 'agent start time')
+  t.equal(actualTransactionId.getSequence(), 0)
 
-  t.equal(actual.getSpanid(), 378129597723425, 'span ID')
+  t.equal(actual.getSpanid(), 2052625127828467, 'span ID')
   t.equal(actual.getParentspanid(), -1, 'parent span ID')
 
-  t.equal(actual.getStarttime(), 1592393701372, 'startTimeStamp')
-  t.equal(actual.getElapsed(), 13418060, 'elapsed time')
+  t.equal(actual.getStarttime(), 1592446920106, 'startTimeStamp')
+  t.equal(actual.getElapsed(), 629, 'elapsed time')
   t.equal(actual.getApiid(), 1, 'api ID')
 
   t.equal(actual.getServicetype(), 1400, 'service type')
@@ -154,6 +164,11 @@ test('Should send span ', function (t) {
   actualSpanEvents.forEach(pSpanEvent => {
     t.equal(pSpanEvent.getSequence(), 10, 'sequence')
     t.equal(pSpanEvent.getDepth(), 1, 'depth')
+
+    t.equal(pSpanEvent.getStartelapsed(), 72, 'startElapsed')
+    t.equal(pSpanEvent.getEndelapsed(), 0, 'endElapsed')
+
+    t.equal(pSpanEvent.getServicetype(), 9057, 'serviceType')
   })
 })
 

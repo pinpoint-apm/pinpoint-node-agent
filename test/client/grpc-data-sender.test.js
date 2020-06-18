@@ -169,6 +169,11 @@ test('Should send span ', function (t) {
     t.equal(pSpanEvent.getEndelapsed(), 0, 'endElapsed')
 
     t.equal(pSpanEvent.getServicetype(), 9057, 'serviceType')
+
+    const pAnnotations = pSpanEvent.getAnnotationList()
+    pAnnotations.forEach(annotation => {
+      
+    })
   })
 })
 

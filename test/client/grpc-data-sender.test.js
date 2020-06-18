@@ -26,8 +26,6 @@ const dataSenderMock = require('../support/data-sender-mock')
 dataSender.basicDataSender.closeClient()
 dataSender.basicDataSender = dataSenderMock()
 
-const { createMockServer } = require("grpc-mock")
-
 test('Should send agent info', function (t) {
   t.plan(1)
 
@@ -108,7 +106,7 @@ const expectedSpan = {
 }
 
 test('Should send span ', function (t) {
-  t.plan(17)
+  t.plan(18)
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -155,6 +153,7 @@ test('Should send span ', function (t) {
   const actualSpanEvents = actual.getSpaneventList()
   actualSpanEvents.forEach(pSpanEvent => {
     t.equal(pSpanEvent.getSequence(), 10, 'sequence')
+    t.equal(pSpanEvent.getDepth(), 1, 'depth')
   })
 })
 

@@ -115,7 +115,7 @@ const expectedSpan = {
 }
 
 test('Should send span ', function (t) {
-  t.plan(23)
+  t.plan(25)
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -176,6 +176,9 @@ test('Should send span ', function (t) {
       t.equal(pAnnotationValue.getStringvalue(), "http.request", 'annotation string value')
     })
   })
+
+  t.equal(actual.getApiid(), 1, 'API ID')
+  t.equal(actual.getExceptioninfo(), null, 'span exceptionInfo')
 })
 
 const expectedSpanChunk = {

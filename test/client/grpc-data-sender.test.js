@@ -23,8 +23,12 @@ fixture.config['grpcEnable'] = GRPC_ENABLE
 const agentInfo = AgentInfo.create(fixture.config, Date.now())
 const dataSender = dataSenderFactory.create(fixture.config, agentInfo)
 const dataSenderMock = require('../support/data-sender-mock')
+const TypedValue = require('../../lib/data/typed-value')
 dataSender.basicDataSender.closeClient()
 dataSender.basicDataSender = dataSenderMock()
+
+const Annotation = require('../../lib/context/annotation')
+const {DefaultAnnotationKey} = require('../../lib/constant/annotation-key')
 
 test('Should send agent info', function (t) {
   t.plan(1)
@@ -91,12 +95,7 @@ const expectedSpan = {
     "serviceType": 9057,
     "endPoint": "localhost:3000",
     "endElapsed": 0,
-    "annotations": [{
-      "key": 12,
-      "value": {
-        "stringValue": "http.request"
-      }
-    }],
+    "annotations": [new Annotation(DefaultAnnotationKey.API, "http.request")],
     "depth": 1,
     "nextSpanId": -1,
     "destinationId": "localhost:3000",
@@ -116,7 +115,7 @@ const expectedSpan = {
 }
 
 test('Should send span ', function (t) {
-  t.plan(21)
+  t.plan(22)
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -172,7 +171,7 @@ test('Should send span ', function (t) {
 
     const pAnnotations = pSpanEvent.getAnnotationList()
     pAnnotations.forEach(annotation => {
-      
+      t.equal(annotation.getKey(), 12, 'annotation key')
     })
   })
 })

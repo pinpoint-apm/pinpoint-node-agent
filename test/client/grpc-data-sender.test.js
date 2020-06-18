@@ -115,7 +115,7 @@ const expectedSpan = {
 }
 
 test('Should send span ', function (t) {
-  t.plan(25)
+  t.plan(27)
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -179,6 +179,9 @@ test('Should send span ', function (t) {
 
   t.equal(actual.getApiid(), 1, 'API ID')
   t.equal(actual.getExceptioninfo(), null, 'span exceptionInfo')
+
+  t.equal(actual.getApplicationservicetype(), 1400, 'applicaiton service type')
+  t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
 })
 
 const expectedSpanChunk = {

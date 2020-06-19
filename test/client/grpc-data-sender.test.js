@@ -28,7 +28,9 @@ dataSender.basicDataSender.closeClient()
 dataSender.basicDataSender = dataSenderMock()
 
 const Annotation = require('../../lib/context/annotation')
-const {  DefaultAnnotationKey } = require('../../lib/constant/annotation-key')
+const {
+  DefaultAnnotationKey
+} = require('../../lib/constant/annotation-key')
 
 test('Should send agent info', function (t) {
   t.plan(1)

@@ -25,7 +25,12 @@ const dataSender = dataSenderFactory.create(fixture.config, agentInfo)
 const dataSenderMock = require('../support/data-sender-mock')
 const TypedValue = require('../../lib/data/typed-value')
 dataSender.basicDataSender.closeClient()
+dataSender.basicDataSender.statUdpClient.close()
 dataSender.basicDataSender = dataSenderMock()
+dataSender.dataSender.agentClient.close()
+dataSender.dataSender.metadataClient.close()
+dataSender.dataSender.spanClient.close()
+dataSender.dataSender = dataSenderMock()
 
 const Annotation = require('../../lib/context/annotation')
 const {
@@ -167,7 +172,7 @@ test('Should send span ', function (t) {
 })
 
 test('sendSpanChunk', function (t) {
-  t.plan(5)
+  t.plan(6)
 
   let expectedSpanChunk = {
     "agentId": "express-node-sample-id",
@@ -234,7 +239,10 @@ test('sendSpanChunk', function (t) {
   const actualTransactionId = actual.getTransactionid()
   t.equal(actualTransactionId.getAgentid(), 'express-node-sample-id', 'gRPC agentId')
   t.equal(actualTransactionId.getAgentstarttime(), 1592572771026, 'agent start time')
-  t.equal(actualTransactionId.getSequence(), 5)
+  t.equal(actualTransactionId.getSequence(), 5, 'sequence')
+
+  t.equal(actual.getSpanid(), 2894367178713953, 'span ID')
+  
 })
 
 // expectedSpanChunk = {

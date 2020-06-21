@@ -166,125 +166,51 @@ test('Should send span ', function (t) {
   t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
 })
 
-let expectedSpanChunk = {
-  "agentId": "express-node-sample-id",
-  "applicationName": "express-node-sample-name",
-  "agentStartTime": 1592461533378,
-  "serviceType": 1400,
-  "spanId": 8804880746752761,
-  "parentSpanId": -1,
-  "transactionId": {
-    "type": "Buffer",
-    "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 194, 193, 234, 176, 172, 46, 0]
-  },
-  "transactionIdObject": {
-    "agentId": "express-node-sample-id",
-    "agentStartTime": 1592461533378,
-    "sequence": 0
-  },
-  "spanEventList": [{
-    "spanId": 8804880746752761,
-    "sequence": 4,
-    "startTime": 1592461546500,
-    "elapsedTime": 2,
-    "startElapsed": 13,
-    "serviceType": 6600,
-    "endPoint": "localhost:3000",
-    "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.serveStatic")],
-    "depth": 5,
-    "nextSpanId": -1,
-    "destinationId": "localhost:3000",
-    "apiId": 0,
-    "exceptionInfo": null,
-    "asyncId": null,
-    "nextAsyncId": null,
-    "asyncSequence": null,
-    "dummyId": null,
-    "nextDummyId": null
-  }, {
-    "spanId": 8804880746752761,
-    "sequence": 3,
-    "startTime": 1592461546497,
-    "elapsedTime": 6,
-    "startElapsed": 10,
-    "serviceType": 6600,
-    "endPoint": "localhost:3000",
-    "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.cookieParser")],
-    "depth": 4,
-    "nextSpanId": -1,
-    "destinationId": "localhost:3000",
-    "apiId": 0,
-    "exceptionInfo": null,
-    "asyncId": null,
-    "nextAsyncId": null,
-    "asyncSequence": null,
-    "dummyId": null,
-    "nextDummyId": null
-  }, {
-    "spanId": 8804880746752761,
-    "sequence": 2,
-    "startTime": 1592461546495,
-    "elapsedTime": 9,
-    "startElapsed": 8,
-    "serviceType": 6600,
-    "endPoint": "localhost:3000",
-    "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.urlencodedParser")],
-    "depth": 3,
-    "nextSpanId": -1,
-    "destinationId": "localhost:3000",
-    "apiId": 0,
-    "exceptionInfo": null,
-    "asyncId": null,
-    "nextAsyncId": null,
-    "asyncSequence": null,
-    "dummyId": null,
-    "nextDummyId": null
-  }, {
-    "spanId": 8804880746752761,
-    "sequence": 1,
-    "startTime": 1592461546493,
-    "elapsedTime": 12,
-    "startElapsed": 6,
-    "serviceType": 6600,
-    "endPoint": "localhost:3000",
-    "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.jsonParser")],
-    "depth": 2,
-    "nextSpanId": -1,
-    "destinationId": "localhost:3000",
-    "apiId": 0,
-    "exceptionInfo": null,
-    "asyncId": null,
-    "nextAsyncId": null,
-    "asyncSequence": null,
-    "dummyId": null,
-    "nextDummyId": null
-  }, {
-    "spanId": 8804880746752761,
-    "sequence": 0,
-    "startTime": 1592461546491,
-    "elapsedTime": 15,
-    "startElapsed": 4,
-    "serviceType": 6600,
-    "endPoint": "localhost:3000",
-    "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.logger")],
-    "depth": 1,
-    "nextSpanId": -1,
-    "destinationId": "localhost:3000",
-    "apiId": 0,
-    "exceptionInfo": null,
-    "asyncId": null,
-    "nextAsyncId": null,
-    "asyncSequence": null,
-    "dummyId": null,
-    "nextDummyId": null
-  }],
-  "endPoint": null,
-  "applicationServiceType": 1400,
-  "localAsyncId": null
-}
-
 test('sendSpanChunk', function (t) {
   t.plan(2)
+
+  let expectedSpanChunk = {
+    "agentId": "express-node-sample-id",
+    "applicationName": "express-node-sample-name",
+    "agentStartTime": 1592572771026,
+    "serviceType": 1400,
+    "spanId": 2894367178713953,
+    "parentSpanId": -1,
+    "transactionId": {
+      "type": "Buffer",
+      "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 210, 245, 239, 229, 172, 46, 5]
+    },
+    "transactionIdObject": {
+      "agentId": "express-node-sample-id",
+      "agentStartTime": 1592572771026,
+      "sequence": 5
+    },
+    "spanEventList": [{
+      "spanId": 2894367178713953,
+      "sequence": 0,
+      "startTime": 1592574173364,
+      "elapsedTime": 0,
+      "startElapsed": 14,
+      "serviceType": 8200,
+      "endPoint": "localhost:6379",
+      "annotations": [new Annotation(DefaultAnnotationKey.API, "redis.SET.end")],
+      "depth": 1,
+      "nextSpanId": 553246505726269,
+      "destinationId": "Redis",
+      "apiId": 0,
+      "exceptionInfo": null,
+      "asyncId": null,
+      "nextAsyncId": null,
+      "asyncSequence": null,
+      "dummyId": null,
+      "nextDummyId": null
+    }],
+    "endPoint": null,
+    "applicationServiceType": 1400,
+    "localAsyncId": {
+      "asyncId": 7
+    }
+  }
 
   const grpcDataSender = new GrpcDataSender()
   grpcDataSender.spanClient = {
@@ -306,53 +232,6 @@ test('sendSpanChunk', function (t) {
   t.equal(actual.getVersion(), 1, 'spanChunk version is 1')
 })
 
-// expectedSpanChunk = {
-//   "agentId": "express-node-sample-id",
-//   "applicationName": "express-node-sample-name",
-//   "agentStartTime": 1592572771026,
-//   "serviceType": 1400,
-//   "spanId": 2894367178713953,
-//   "parentSpanId": -1,
-//   "transactionId": {
-//     "type": "Buffer",
-//     "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 210, 245, 239, 229, 172, 46, 5]
-//   },
-//   "transactionIdObject": {
-//     "agentId": "express-node-sample-id",
-//     "agentStartTime": 1592572771026,
-//     "sequence": 5
-//   },
-//   "spanEventList": [{
-//     "spanId": 2894367178713953,
-//     "sequence": 0,
-//     "startTime": 1592574173364,
-//     "elapsedTime": 0,
-//     "startElapsed": 14,
-//     "serviceType": 8200,
-//     "endPoint": "localhost:6379",
-//     "annotations": [{
-//       "key": 12,
-//       "value": {
-//         "stringValue": "redis.SET.end"
-//       }
-//     }],
-//     "depth": 1,
-//     "nextSpanId": 553246505726269,
-//     "destinationId": "Redis",
-//     "apiId": 0,
-//     "exceptionInfo": null,
-//     "asyncId": null,
-//     "nextAsyncId": null,
-//     "asyncSequence": null,
-//     "dummyId": null,
-//     "nextDummyId": null
-//   }],
-//   "endPoint": null,
-//   "applicationServiceType": 1400,
-//   "localAsyncId": {
-//     "asyncId": 7
-//   }
-// }
 // expectedSpanChunk = {
 //   "agentId": "express-node-sample-id",
 //   "applicationName": "express-node-sample-name",

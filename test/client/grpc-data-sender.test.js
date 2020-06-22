@@ -172,7 +172,7 @@ test('Should send span ', function (t) {
 })
 
 test('sendSpanChunk', function (t) {
-  t.plan(6)
+  t.plan(7)
 
   let expectedSpanChunk = {
     "agentId": "express-node-sample-id",
@@ -242,7 +242,7 @@ test('sendSpanChunk', function (t) {
   t.equal(actualTransactionId.getSequence(), 5, 'sequence')
 
   t.equal(actual.getSpanid(), 2894367178713953, 'span ID')
-  
+  t.equal(actual.getEndpoint(), '', 'endpoint')
 })
 
 // expectedSpanChunk = {

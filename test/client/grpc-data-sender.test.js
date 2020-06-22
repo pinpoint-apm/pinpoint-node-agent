@@ -309,7 +309,7 @@ test('sendSpanChunk redis.GET.end', (t) => {
   grpcDataSender.sendSpanChunk(expectedSpanChunk)
   const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
 
-  t.plan(9)
+  t.plan(15)
   t.equal(actual.getVersion(), 1, 'version')
 
   const actualTransactionId = actual.getTransactionid()
@@ -324,6 +324,23 @@ test('sendSpanChunk redis.GET.end', (t) => {
   const actualLocalAsyncId = actual.getLocalasyncid()
   t.equal(actualLocalAsyncId.getAsyncid(), 8, 'local async id')
   t.equal(actualLocalAsyncId.getSequence(), 1, 'local async id sequence')
+
+  const actualSpanEvents = actual.getSpaneventList()
+  actualSpanEvents.forEach(pSpanEvent => {
+    t.equal(pSpanEvent.getSequence(), 0, 'sequence')
+    t.equal(pSpanEvent.getDepth(), 1, 'depth')
+
+    t.equal(pSpanEvent.getStartelapsed(), 16, 'startElapsed')
+
+    t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
+
+    const pAnnotations = pSpanEvent.getAnnotationList()
+    pAnnotations.forEach(annotation => {
+      t.equal(annotation.getKey(), 12, 'annotation key')
+      const pAnnotationValue = annotation.getValue()
+      t.equal(pAnnotationValue.getStringvalue(), "redis.GET.end", 'annotation string value')
+    })
+  })
 })
 
 // expectedSpanChunk = {

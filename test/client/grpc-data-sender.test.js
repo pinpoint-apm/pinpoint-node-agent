@@ -619,8 +619,16 @@ test('sendSpanChunk', (t) => {
   grpcDataSender.sendSpanChunk(spanChunk)
   const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
 
-  t.plan(2)
+  t.plan(7)
   t.equal(actual.getVersion(), 1, 'version')
+
+  const actualTransactionId = actual.getTransactionid()
+  t.equal(actualTransactionId.getAgentid(), 'express-node-sample-id', 'gRPC agentId')
+  t.equal(actualTransactionId.getAgentstarttime(), 1592572771026, 'agent start time')
+  t.equal(actualTransactionId.getSequence(), 5, 'sequence')
+
+  t.equal(actual.getSpanid(), 2894367178713953, 'span ID')
+  t.equal(actual.getEndpoint(), '', 'endpoint')
 
   const actualSpanEvents = actual.getSpaneventList()
   actualSpanEvents.forEach(pSpanEvent => {

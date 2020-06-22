@@ -33,9 +33,8 @@ dataSender.dataSender.spanClient.close()
 dataSender.dataSender = dataSenderMock()
 
 const Annotation = require('../../lib/context/annotation')
-const {
-  DefaultAnnotationKey
-} = require('../../lib/constant/annotation-key')
+const { DefaultAnnotationKey } = require('../../lib/constant/annotation-key')
+const AsyncId = require('../../lib/context/async-id')
 
 test('Should send agent info', function (t) {
   t.plan(1)
@@ -172,7 +171,7 @@ test('Should send span ', function (t) {
 })
 
 test('sendSpanChunk', function (t) {
-  t.plan(8)
+  t.plan(10)
 
   let expectedSpanChunk = {
     "agentId": "express-node-sample-id",
@@ -212,9 +211,7 @@ test('sendSpanChunk', function (t) {
     }],
     "endPoint": null,
     "applicationServiceType": 1400,
-    "localAsyncId": {
-      "asyncId": 7
-    }
+    "localAsyncId": new AsyncId(7)
   }
 
   const grpcDataSender = new GrpcDataSender()
@@ -244,6 +241,10 @@ test('sendSpanChunk', function (t) {
   t.equal(actual.getSpanid(), 2894367178713953, 'span ID')
   t.equal(actual.getEndpoint(), '', 'endpoint')
   t.equal(actual.getApplicationservicetype(), 1400, 'application service type')
+
+  const actualLocalAsyncId = actual.getLocalasyncid()
+  t.equal(actualLocalAsyncId.getAsyncid(), 7, 'local async id')
+  t.equal(actualLocalAsyncId.getSequence(), 1, 'local async id sequence')
 })
 
 // expectedSpanChunk = {

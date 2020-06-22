@@ -647,7 +647,7 @@ test('sendSpanChunk', (t) => {
   grpcDataSender.sendSpanChunk(spanChunk)
   const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
 
-  t.plan(10)
+  t.plan(11)
   t.equal(actual.getVersion(), 1, 'version')
 
   const actualTransactionId = actual.getTransactionid()
@@ -666,7 +666,10 @@ test('sendSpanChunk', (t) => {
   t.equal(actual.getKeytime(), 1592574173352, 'keytime')
 
   const actualSpanEvents = actual.getSpaneventList()
-  actualSpanEvents.forEach(pSpanEvent => {
+  actualSpanEvents.forEach((pSpanEvent, index) => {
+    if (index == 0) {
+      t.equal(pSpanEvent.getSequence(), 0, 'sort span events')
+    }
     if (pSpanEvent.getSequence() == 6) {
       t.equal(pSpanEvent.getAsyncevent(), 7, 'async event')
     }

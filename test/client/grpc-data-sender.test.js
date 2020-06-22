@@ -265,7 +265,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
   })
 })
 
-test.skip('sendSpanChunk redis.GET.end', (t) => {
+test('sendSpanChunk redis.GET.end', (t) => {
   const expectedSpanChunk = {
     "agentId": "express-node-sample-id",
     "applicationName": "express-node-sample-name",
@@ -290,12 +290,7 @@ test.skip('sendSpanChunk redis.GET.end', (t) => {
       "startElapsed": 16,
       "serviceType": 8200,
       "endPoint": "localhost:6379",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "redis.GET.end"
-        }
-      }],
+      "annotations": [new Annotation(DefaultAnnotationKey.API, "redis.GET.end")],
       "depth": 1,
       "nextSpanId": 3704047662997471,
       "destinationId": "Redis",
@@ -309,11 +304,26 @@ test.skip('sendSpanChunk redis.GET.end', (t) => {
     }],
     "endPoint": null,
     "applicationServiceType": 1400,
-    "localAsyncId": {
-      "asyncId": 8
-    }
+    "localAsyncId": new AsyncId(8)
   }
+  grpcDataSender.sendSpanChunk(expectedSpanChunk)
+  const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
 
+  t.plan(9)
+  t.equal(actual.getVersion(), 1, 'version')
+
+  const actualTransactionId = actual.getTransactionid()
+  t.equal(actualTransactionId.getAgentid(), 'express-node-sample-id', 'gRPC agentId')
+  t.equal(actualTransactionId.getAgentstarttime(), 1592572771026, 'agent start time')
+  t.equal(actualTransactionId.getSequence(), 5, 'sequence')
+
+  t.equal(actual.getSpanid(), 2894367178713953, 'span ID')
+  t.equal(actual.getEndpoint(), '', 'endpoint')
+  t.equal(actual.getApplicationservicetype(), 1400, 'application service type')
+
+  const actualLocalAsyncId = actual.getLocalasyncid()
+  t.equal(actualLocalAsyncId.getAsyncid(), 8, 'local async id')
+  t.equal(actualLocalAsyncId.getSequence(), 1, 'local async id sequence')
 })
 
 // expectedSpanChunk = {

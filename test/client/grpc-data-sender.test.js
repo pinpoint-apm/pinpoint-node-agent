@@ -231,7 +231,21 @@ test('sendSpanChunk redis.SET.end', function (t) {
     "applicationServiceType": 1400,
     "localAsyncId": new AsyncId(7)
   }
-  grpcDataSender.sendSpanChunk(expectedSpanChunk)
+  const spanChunk = Object.assign(new SpanChunk({
+    spanId: 2894367178713953,
+    parentSpanId: -1,
+    transactionId: {
+      "agentId": "express-node-sample-id",
+      "agentStartTime": 1592572771026,
+      "sequence": 5
+    }
+  }, {
+    agentId: "express-node-sample-id",
+    applicationName: "express-node-sample-name",
+    agentStartTime: 1592572771026
+  }), expectedSpanChunk)
+
+  grpcDataSender.sendSpanChunk(spanChunk)
 
   const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
   t.true(actual != null, 'spanChunk send')
@@ -309,7 +323,21 @@ test('sendSpanChunk redis.GET.end', (t) => {
     "applicationServiceType": 1400,
     "localAsyncId": new AsyncId(8)
   }
-  grpcDataSender.sendSpanChunk(expectedSpanChunk)
+
+  const spanChunk = Object.assign(new SpanChunk({
+    spanId: 2894367178713953,
+    parentSpanId: -1,
+    transactionId: {
+      "agentId": "express-node-sample-id",
+      "agentStartTime": 1592572771026,
+      "sequence": 5
+    }
+  }, {
+    agentId: "express-node-sample-id",
+    applicationName: "express-node-sample-name",
+    agentStartTime: 1592572771026
+  }), expectedSpanChunk)
+  grpcDataSender.sendSpanChunk(spanChunk)
   const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
 
   t.plan(15)
@@ -619,7 +647,7 @@ test('sendSpanChunk', (t) => {
   grpcDataSender.sendSpanChunk(spanChunk)
   const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
 
-  t.plan(9)
+  t.plan(10)
   t.equal(actual.getVersion(), 1, 'version')
 
   const actualTransactionId = actual.getTransactionid()
@@ -634,6 +662,8 @@ test('sendSpanChunk', (t) => {
 
   const actualLocalAsyncId = actual.getLocalasyncid()
   t.equal(actualLocalAsyncId, null, 'local async id')
+
+  t.equal(actual.getKeytime(), 1592574173352, 'keytime')
 
   const actualSpanEvents = actual.getSpaneventList()
   actualSpanEvents.forEach(pSpanEvent => {

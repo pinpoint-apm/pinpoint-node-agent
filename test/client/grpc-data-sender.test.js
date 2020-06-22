@@ -37,6 +37,7 @@ const {
   DefaultAnnotationKey
 } = require('../../lib/constant/annotation-key')
 const AsyncId = require('../../lib/context/async-id')
+const SpanChunk = require('../../lib/context/span-chunk')
 
 test('Should send agent info', function (t) {
   t.plan(1)
@@ -368,12 +369,7 @@ test('sendSpanChunk', (t) => {
       "startElapsed": 8,
       "serviceType": 6600,
       "endPoint": "localhost:3000",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "express.middleware.serveStatic"
-        }
-      }],
+      "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.serveStatic")],
       "depth": 5,
       "nextSpanId": -1,
       "destinationId": "localhost:3000",
@@ -392,12 +388,7 @@ test('sendSpanChunk', (t) => {
       "startElapsed": 6,
       "serviceType": 6600,
       "endPoint": "localhost:3000",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "express.middleware.cookieParser"
-        }
-      }],
+      "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.cookieParser")],
       "depth": 4,
       "nextSpanId": -1,
       "destinationId": "localhost:3000",
@@ -416,12 +407,7 @@ test('sendSpanChunk', (t) => {
       "startElapsed": 4,
       "serviceType": 6600,
       "endPoint": "localhost:3000",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "express.middleware.urlencodedParser"
-        }
-      }],
+      "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.urlencodedParser")],
       "depth": 3,
       "nextSpanId": -1,
       "destinationId": "localhost:3000",
@@ -440,12 +426,7 @@ test('sendSpanChunk', (t) => {
       "startElapsed": 3,
       "serviceType": 6600,
       "endPoint": "localhost:3000",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "express.middleware.jsonParser"
-        }
-      }],
+      "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.jsonParser")],
       "depth": 2,
       "nextSpanId": -1,
       "destinationId": "localhost:3000",
@@ -464,12 +445,7 @@ test('sendSpanChunk', (t) => {
       "startElapsed": 2,
       "serviceType": 6600,
       "endPoint": "localhost:3000",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "express.middleware.logger"
-        }
-      }],
+      "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.logger")],
       "depth": 1,
       "nextSpanId": -1,
       "destinationId": "localhost:3000",
@@ -488,12 +464,7 @@ test('sendSpanChunk', (t) => {
       "startElapsed": 14,
       "serviceType": 9057,
       "endPoint": "localhost:6379",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "redis.SET.call"
-        }
-      }],
+      "annotations": [new Annotation(DefaultAnnotationKey.API, "redis.SET.call")],
       "depth": 2,
       "nextSpanId": -1,
       "destinationId": "Redis",
@@ -512,12 +483,7 @@ test('sendSpanChunk', (t) => {
       "startElapsed": 16,
       "serviceType": 9057,
       "endPoint": "localhost:6379",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "redis.GET.call"
-        }
-      }],
+      "annotations": [new Annotation(DefaultAnnotationKey.API, "redis.GET.call")],
       "depth": 2,
       "nextSpanId": -1,
       "destinationId": "Redis",
@@ -555,12 +521,7 @@ test('sendSpanChunk', (t) => {
       "startElapsed": 18,
       "serviceType": 9057,
       "endPoint": "localhost:3000",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "http.request"
-        }
-      }],
+      "annotations": [new Annotation(DefaultAnnotationKey.API, "http.request")],
       "depth": 1,
       "nextSpanId": -1,
       "destinationId": "localhost:3000",
@@ -579,19 +540,14 @@ test('sendSpanChunk', (t) => {
       "startElapsed": 19092,
       "serviceType": 6600,
       "endPoint": "localhost:3000",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "express.middleware.[anonymous]"
-        }
-      }],
+      "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.[anonymous]")],
       "depth": 1,
       "nextSpanId": -1,
       "destinationId": "localhost:3000",
       "apiId": 0,
       "exceptionInfo": {
         "intValue": 1,
-        "stringValue": "SequelizeConnectionError: connect ETIMEDOUT"
+        "stringValue": 'SequelizeConnectionError: connect ETIMEDOUT'
       },
       "asyncId": null,
       "nextAsyncId": null,
@@ -603,4 +559,23 @@ test('sendSpanChunk', (t) => {
     "applicationServiceType": 1400,
     "localAsyncId": null
   }
+
+  const spanChunk = Object.assign(new SpanChunk({
+    spanId: 2894367178713953,
+    parentSpanId: -1,
+    transactionId: {
+      "agentId": "express-node-sample-id",
+      "agentStartTime": 1592572771026,
+      "sequence": 5
+    }
+  }, {
+    agentId: "express-node-sample-id",
+    applicationName: "express-node-sample-name",
+    agentStartTime: ""
+  }), expectedSpanChunk)
+  grpcDataSender.sendSpanChunk(spanChunk)
+  const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
+
+  t.plan(1)
+  t.equal(actual.getVersion(), 1, 'version')
 })

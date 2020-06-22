@@ -619,7 +619,7 @@ test('sendSpanChunk', (t) => {
   grpcDataSender.sendSpanChunk(spanChunk)
   const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
 
-  t.plan(7)
+  t.plan(9)
   t.equal(actual.getVersion(), 1, 'version')
 
   const actualTransactionId = actual.getTransactionid()
@@ -629,6 +629,11 @@ test('sendSpanChunk', (t) => {
 
   t.equal(actual.getSpanid(), 2894367178713953, 'span ID')
   t.equal(actual.getEndpoint(), '', 'endpoint')
+
+  t.equal(actual.getApplicationservicetype(), 1400, 'application service type')
+
+  const actualLocalAsyncId = actual.getLocalasyncid()
+  t.equal(actualLocalAsyncId, null, 'local async id')
 
   const actualSpanEvents = actual.getSpaneventList()
   actualSpanEvents.forEach(pSpanEvent => {

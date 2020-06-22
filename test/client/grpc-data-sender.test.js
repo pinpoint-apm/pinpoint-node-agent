@@ -38,6 +38,8 @@ const {
 } = require('../../lib/constant/annotation-key')
 const AsyncId = require('../../lib/context/async-id')
 const SpanChunk = require('../../lib/context/span-chunk')
+const Span = require('../../lib/context/span')
+const SpanEvent = require('../../lib/context/span-event')
 
 test('Should send agent info', function (t) {
   t.plan(1)
@@ -361,26 +363,27 @@ test('sendSpanChunk', (t) => {
       "agentStartTime": 1592572771026,
       "sequence": 5
     },
-    "spanEventList": [{
-      "spanId": 2894367178713953,
-      "sequence": 4,
-      "startTime": 1592574173358,
-      "elapsedTime": 0,
-      "startElapsed": 8,
-      "serviceType": 6600,
-      "endPoint": "localhost:3000",
-      "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.serveStatic")],
-      "depth": 5,
-      "nextSpanId": -1,
-      "destinationId": "localhost:3000",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": null,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }, {
+    "spanEventList": [
+      Object.assign(new SpanEvent({spanId: 2894367178713953, endPoint: "localhost:3000"}, 4), {
+        "spanId": 2894367178713953,
+        "sequence": 4,
+        "startTime": 1592574173358,
+        "elapsedTime": 0,
+        "startElapsed": 8,
+        "serviceType": 6600,
+        "endPoint": "localhost:3000",
+        "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.serveStatic")],
+        "depth": 5,
+        "nextSpanId": -1,
+        "destinationId": "localhost:3000",
+        "apiId": 0,
+        "exceptionInfo": null,
+        "asyncId": null,
+        "nextAsyncId": null,
+        "asyncSequence": null,
+        "dummyId": null,
+        "nextDummyId": null
+      }), {
       "spanId": 2894367178713953,
       "sequence": 3,
       "startTime": 1592574173356,

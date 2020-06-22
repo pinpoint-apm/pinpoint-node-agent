@@ -171,7 +171,7 @@ test('Should send span ', function (t) {
 })
 
 test('sendSpanChunk', function (t) {
-  t.plan(10)
+  t.plan(16)
 
   let expectedSpanChunk = {
     "agentId": "express-node-sample-id",
@@ -245,6 +245,24 @@ test('sendSpanChunk', function (t) {
   const actualLocalAsyncId = actual.getLocalasyncid()
   t.equal(actualLocalAsyncId.getAsyncid(), 7, 'local async id')
   t.equal(actualLocalAsyncId.getSequence(), 1, 'local async id sequence')
+
+  const actualSpanEvents = actual.getSpaneventList()
+  actualSpanEvents.forEach(pSpanEvent => {
+    t.equal(pSpanEvent.getSequence(), 0, 'sequence')
+    t.equal(pSpanEvent.getDepth(), 1, 'depth')
+
+    t.equal(pSpanEvent.getStartelapsed(), 14, 'startElapsed')
+
+    t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
+
+    const pAnnotations = pSpanEvent.getAnnotationList()
+    pAnnotations.forEach(annotation => {
+      t.equal(annotation.getKey(), 12, 'annotation key')
+      const pAnnotationValue = annotation.getValue()
+      t.equal(pAnnotationValue.getStringvalue(), "redis.SET.end", 'annotation string value')
+    })
+  })
+
 })
 
 // expectedSpanChunk = {

@@ -248,7 +248,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
 
   const actualLocalAsyncId = actual.getLocalasyncid()
   t.equal(actualLocalAsyncId.getAsyncid(), 7, 'local async id')
-  t.equal(actualLocalAsyncId.getSequence(), 1, 'local async id sequence')
+  t.equal(actualLocalAsyncId.getSequence(), 0, 'local async id sequence')
 
   const actualSpanEvents = actual.getSpaneventList()
   actualSpanEvents.forEach(pSpanEvent => {
@@ -326,7 +326,7 @@ test('sendSpanChunk redis.GET.end', (t) => {
 
   const actualLocalAsyncId = actual.getLocalasyncid()
   t.equal(actualLocalAsyncId.getAsyncid(), 8, 'local async id')
-  t.equal(actualLocalAsyncId.getSequence(), 1, 'local async id sequence')
+  t.equal(actualLocalAsyncId.getSequence(), 0, 'local async id sequence')
 
   const actualSpanEvents = actual.getSpaneventList()
   actualSpanEvents.forEach(pSpanEvent => {
@@ -619,6 +619,13 @@ test('sendSpanChunk', (t) => {
   grpcDataSender.sendSpanChunk(spanChunk)
   const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
 
-  t.plan(1)
+  t.plan(2)
   t.equal(actual.getVersion(), 1, 'version')
+
+  const actualSpanEvents = actual.getSpaneventList()
+  actualSpanEvents.forEach(pSpanEvent => {
+    if (pSpanEvent.getSequence() == 6) {
+      t.equal(pSpanEvent.getAsyncevent(), 7, 'async event')
+    }
+  })
 })

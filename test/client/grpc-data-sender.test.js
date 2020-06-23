@@ -690,7 +690,7 @@ test('sendSpan', (t) => {
       t.equal(pSpanEvent.getSequence(), 0, 'sort span events')
       t.equal(pSpanEvent.getDepth(), 1, 'depth')
 
-      t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
+      t.equal(pSpanEvent.getStartelapsed(), 3, 'startElapsed')
     }
     if (pSpanEvent.getSequence() == 6) {
       t.equal(pSpanEvent.getAsyncevent(), 1, 'async event')

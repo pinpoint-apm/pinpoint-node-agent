@@ -129,7 +129,7 @@ test('Should send span ', function (t) {
           grpcDataSender.actualSpan = span
         },
         end: function () {
-          
+
         }
       }
     }
@@ -244,8 +244,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
       "asyncSequence": null,
       "dummyId": null,
       "nextDummyId": null
-    })
-    ],
+    })],
     "endPoint": null,
     "applicationServiceType": 1400,
     "localAsyncId": new AsyncId(1)

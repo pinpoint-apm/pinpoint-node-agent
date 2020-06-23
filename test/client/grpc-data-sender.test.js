@@ -428,190 +428,190 @@ test('sendSpanChunk', (t) => {
         "dummyId": null,
         "nextDummyId": null
       }),
-    Object.assign(new SpanEvent({
-      spanId: 7056897257955935,
-      endPoint: "localhost:3000"
-    }, 3), {
-      "spanId": 7056897257955935,
-      "sequence": 3,
-      "startTime": 1592872091540,
-      "elapsedTime": 1,
-      "startElapsed": 4,
-      "serviceType": 6600,
-      "endPoint": "localhost:3000",
-      "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.cookieParser")],
-      "depth": 4,
-      "nextSpanId": -1,
-      "destinationId": "localhost:3000",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": null,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }),
-    Object.assign(new SpanEvent({
-      spanId: 7056897257955935,
-      endPoint: "localhost:3000"
-    }, 2), {
-      "spanId": 7056897257955935,
-      "sequence": 2,
-      "startTime": 1592872091540,
-      "elapsedTime": 1,
-      "startElapsed": 4,
-      "serviceType": 6600,
-      "endPoint": "localhost:3000",
-      "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.urlencodedParser")],
-      "depth": 3,
-      "nextSpanId": -1,
-      "destinationId": "localhost:3000",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": null,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }),
-    Object.assign(new SpanEvent({
-      spanId: 7056897257955935,
-      endPoint: "localhost:3000"
-    }, 1), {
-      "spanId": 7056897257955935,
-      "sequence": 1,
-      "startTime": 1592872091540,
-      "elapsedTime": 1,
-      "startElapsed": 4,
-      "serviceType": 6600,
-      "endPoint": "localhost:3000",
-      "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.jsonParser")],
-      "depth": 2,
-      "nextSpanId": -1,
-      "destinationId": "localhost:3000",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": null,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }),
-    Object.assign(new SpanEvent({
-      spanId: 7056897257955935,
-      endPoint: "localhost:3000"
-    }, 0), {
-      "spanId": 7056897257955935,
-      "sequence": 0,
-      "startTime": 1592872091539,
-      "elapsedTime": 2,
-      "startElapsed": 3,
-      "serviceType": 6600,
-      "endPoint": "localhost:3000",
-      "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.logger")],
-      "depth": 1,
-      "nextSpanId": -1,
-      "destinationId": "localhost:3000",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": null,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }), 
-    Object.assign(new SpanEvent({
-      spanId: 7056897257955935,
-      endPoint: "localhost:3000"
-    }, 6), {
-      "spanId": 7056897257955935,
-      "sequence": 6,
-      "startTime": 1592872091543,
-      "elapsedTime": 0,
-      "startElapsed": 7,
-      "serviceType": 9057,
-      "endPoint": "localhost:6379",
-      "annotations": [new Annotation(DefaultAnnotationKey.API, "redis.SET.call")],
-      "depth": 2,
-      "nextSpanId": -1,
-      "destinationId": "Redis",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": 1,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }), 
-    Object.assign(new SpanEvent({
-      spanId: 7056897257955935,
-      endPoint: "localhost:3000"
-    }, 7), {
-      "spanId": 7056897257955935,
-      "sequence": 7,
-      "startTime": 1592872091543,
-      "elapsedTime": 0,
-      "startElapsed": 7,
-      "serviceType": 9057,
-      "endPoint": "localhost:6379",
-      "annotations": [new Annotation(DefaultAnnotationKey.API, "redis.GET.call")],
-      "depth": 2,
-      "nextSpanId": -1,
-      "destinationId": "Redis",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": 2,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }), 
-    Object.assign(new SpanEvent({
-      spanId: 7056897257955935,
-      endPoint: "localhost:3000"
-    }, 5), {
-      "spanId": 7056897257955935,
-      "sequence": 5,
-      "startTime": 1592872091542,
-      "elapsedTime": 3,
-      "startElapsed": 6,
-      "serviceType": 6600,
-      "endPoint": "localhost:3000",
-      "annotations": [],
-      "depth": 1,
-      "nextSpanId": -1,
-      "destinationId": "localhost:3000",
-      "apiId": 2,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": null,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }), 
-    Object.assign(new SpanEvent({
-      spanId: 7056897257955935,
-      endPoint: "localhost:3000"
-    }, 8), {
-      "spanId": 7056897257955935,
-      "sequence": 8,
-      "startTime": 1592872091558,
-      "elapsedTime": 0,
-      "startElapsed": 22,
-      "serviceType": 9057,
-      "endPoint": "localhost:3000",
-      "annotations": [new Annotation(DefaultAnnotationKey.API, "http.request")],
-      "depth": 1,
-      "nextSpanId": -1,
-      "destinationId": "localhost:3000",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": 3,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    })
+      Object.assign(new SpanEvent({
+        spanId: 7056897257955935,
+        endPoint: "localhost:3000"
+      }, 3), {
+        "spanId": 7056897257955935,
+        "sequence": 3,
+        "startTime": 1592872091540,
+        "elapsedTime": 1,
+        "startElapsed": 4,
+        "serviceType": 6600,
+        "endPoint": "localhost:3000",
+        "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.cookieParser")],
+        "depth": 4,
+        "nextSpanId": -1,
+        "destinationId": "localhost:3000",
+        "apiId": 0,
+        "exceptionInfo": null,
+        "asyncId": null,
+        "nextAsyncId": null,
+        "asyncSequence": null,
+        "dummyId": null,
+        "nextDummyId": null
+      }),
+      Object.assign(new SpanEvent({
+        spanId: 7056897257955935,
+        endPoint: "localhost:3000"
+      }, 2), {
+        "spanId": 7056897257955935,
+        "sequence": 2,
+        "startTime": 1592872091540,
+        "elapsedTime": 1,
+        "startElapsed": 4,
+        "serviceType": 6600,
+        "endPoint": "localhost:3000",
+        "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.urlencodedParser")],
+        "depth": 3,
+        "nextSpanId": -1,
+        "destinationId": "localhost:3000",
+        "apiId": 0,
+        "exceptionInfo": null,
+        "asyncId": null,
+        "nextAsyncId": null,
+        "asyncSequence": null,
+        "dummyId": null,
+        "nextDummyId": null
+      }),
+      Object.assign(new SpanEvent({
+        spanId: 7056897257955935,
+        endPoint: "localhost:3000"
+      }, 1), {
+        "spanId": 7056897257955935,
+        "sequence": 1,
+        "startTime": 1592872091540,
+        "elapsedTime": 1,
+        "startElapsed": 4,
+        "serviceType": 6600,
+        "endPoint": "localhost:3000",
+        "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.jsonParser")],
+        "depth": 2,
+        "nextSpanId": -1,
+        "destinationId": "localhost:3000",
+        "apiId": 0,
+        "exceptionInfo": null,
+        "asyncId": null,
+        "nextAsyncId": null,
+        "asyncSequence": null,
+        "dummyId": null,
+        "nextDummyId": null
+      }),
+      Object.assign(new SpanEvent({
+        spanId: 7056897257955935,
+        endPoint: "localhost:3000"
+      }, 0), {
+        "spanId": 7056897257955935,
+        "sequence": 0,
+        "startTime": 1592872091539,
+        "elapsedTime": 2,
+        "startElapsed": 3,
+        "serviceType": 6600,
+        "endPoint": "localhost:3000",
+        "annotations": [new Annotation(DefaultAnnotationKey.API, "express.middleware.logger")],
+        "depth": 1,
+        "nextSpanId": -1,
+        "destinationId": "localhost:3000",
+        "apiId": 0,
+        "exceptionInfo": null,
+        "asyncId": null,
+        "nextAsyncId": null,
+        "asyncSequence": null,
+        "dummyId": null,
+        "nextDummyId": null
+      }),
+      Object.assign(new SpanEvent({
+        spanId: 7056897257955935,
+        endPoint: "localhost:3000"
+      }, 6), {
+        "spanId": 7056897257955935,
+        "sequence": 6,
+        "startTime": 1592872091543,
+        "elapsedTime": 0,
+        "startElapsed": 7,
+        "serviceType": 9057,
+        "endPoint": "localhost:6379",
+        "annotations": [new Annotation(DefaultAnnotationKey.API, "redis.SET.call")],
+        "depth": 2,
+        "nextSpanId": -1,
+        "destinationId": "Redis",
+        "apiId": 0,
+        "exceptionInfo": null,
+        "asyncId": null,
+        "nextAsyncId": 1,
+        "asyncSequence": null,
+        "dummyId": null,
+        "nextDummyId": null
+      }),
+      Object.assign(new SpanEvent({
+        spanId: 7056897257955935,
+        endPoint: "localhost:3000"
+      }, 7), {
+        "spanId": 7056897257955935,
+        "sequence": 7,
+        "startTime": 1592872091543,
+        "elapsedTime": 0,
+        "startElapsed": 7,
+        "serviceType": 9057,
+        "endPoint": "localhost:6379",
+        "annotations": [new Annotation(DefaultAnnotationKey.API, "redis.GET.call")],
+        "depth": 2,
+        "nextSpanId": -1,
+        "destinationId": "Redis",
+        "apiId": 0,
+        "exceptionInfo": null,
+        "asyncId": null,
+        "nextAsyncId": 2,
+        "asyncSequence": null,
+        "dummyId": null,
+        "nextDummyId": null
+      }),
+      Object.assign(new SpanEvent({
+        spanId: 7056897257955935,
+        endPoint: "localhost:3000"
+      }, 5), {
+        "spanId": 7056897257955935,
+        "sequence": 5,
+        "startTime": 1592872091542,
+        "elapsedTime": 3,
+        "startElapsed": 6,
+        "serviceType": 6600,
+        "endPoint": "localhost:3000",
+        "annotations": [],
+        "depth": 1,
+        "nextSpanId": -1,
+        "destinationId": "localhost:3000",
+        "apiId": 2,
+        "exceptionInfo": null,
+        "asyncId": null,
+        "nextAsyncId": null,
+        "asyncSequence": null,
+        "dummyId": null,
+        "nextDummyId": null
+      }),
+      Object.assign(new SpanEvent({
+        spanId: 7056897257955935,
+        endPoint: "localhost:3000"
+      }, 8), {
+        "spanId": 7056897257955935,
+        "sequence": 8,
+        "startTime": 1592872091558,
+        "elapsedTime": 0,
+        "startElapsed": 22,
+        "serviceType": 9057,
+        "endPoint": "localhost:3000",
+        "annotations": [new Annotation(DefaultAnnotationKey.API, "http.request")],
+        "depth": 1,
+        "nextSpanId": -1,
+        "destinationId": "localhost:3000",
+        "apiId": 0,
+        "exceptionInfo": null,
+        "asyncId": null,
+        "nextAsyncId": 3,
+        "asyncSequence": null,
+        "dummyId": null,
+        "nextDummyId": null
+      })
     ],
     "apiId": 1,
     "exceptionInfo": null,
@@ -636,7 +636,7 @@ test('sendSpanChunk', (t) => {
   grpcDataSender.sendSpanChunk(spanChunk)
   const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
 
-  t.plan(11)
+  t.plan(12)
   t.equal(actual.getVersion(), 1, 'version')
 
   const actualTransactionId = actual.getTransactionid()
@@ -658,9 +658,77 @@ test('sendSpanChunk', (t) => {
   actualSpanEvents.forEach((pSpanEvent, index) => {
     if (index == 0) {
       t.equal(pSpanEvent.getSequence(), 0, 'sort span events')
+      t.equal(pSpanEvent.getDepth(), 1, 'depth')
+
+      t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
     }
     if (pSpanEvent.getSequence() == 6) {
       t.equal(pSpanEvent.getAsyncevent(), 1, 'async event')
     }
   })
+})
+
+test('outgoing request', (t) => {
+  const exprected = {
+    "agentId": "express-node-sample-id",
+    "applicationName": "express-node-sample-name",
+    "agentStartTime": 1592872080170,
+    "serviceType": 1400,
+    "spanId": 7056897257955935,
+    "parentSpanId": -1,
+    "transactionId": {
+      "type": "Buffer",
+      "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 170, 166, 204, 244, 173, 46, 0]
+    },
+    "transactionIdObject": {
+      "agentId": "express-node-sample-id",
+      "agentStartTime": 1592872080170,
+      "sequence": 0
+    },
+    "spanEventList": [{
+      "spanId": 7056897257955935,
+      "sequence": 0,
+      "startTime": 1592872091558,
+      "elapsedTime": 0,
+      "startElapsed": 22,
+      "serviceType": 9056,
+      "endPoint": "localhost:3000",
+      "annotations": [{
+        "key": 12,
+        "value": {
+          "stringValue": "GET"
+        }
+      }, {
+        "key": 40,
+        "value": {
+          "stringValue": "eonet.sci.gsfc.nasa.gov/api/v2.1/categories"
+        }
+      }, {
+        "key": 46,
+        "value": {
+          "intValue": 200
+        }
+      }],
+      "depth": 1,
+      "nextSpanId": 4845473726792547,
+      "destinationId": "eonet.sci.gsfc.nasa.gov",
+      "apiId": 0,
+      "exceptionInfo": null,
+      "asyncId": null,
+      "nextAsyncId": null,
+      "asyncSequence": null,
+      "dummyId": null,
+      "nextDummyId": null
+    }],
+    "endPoint": null,
+    "applicationServiceType": 1400,
+    "localAsyncId": {
+      "asyncId": 3,
+      "sequenceGenerator": {
+        "initValue": 0,
+        "maxValue": 9007199254740991,
+        "sequence": 0
+      }
+    }
+  }
 })

@@ -655,7 +655,7 @@ test('sendSpan', (t) => {
   grpcDataSender.sendSpan(span)
   const actual = grpcDataSender.actualSpanChunk.getSpan()
 
-  t.plan(10)
+  t.plan(18)
   t.equal(actual.getVersion(), 1, 'version')
 
   const actualTransactionId = actual.getTransactionid()
@@ -664,6 +664,18 @@ test('sendSpan', (t) => {
   t.equal(actualTransactionId.getSequence(), 0, 'sequence')
 
   t.equal(actual.getSpanid(), 7056897257955935, 'span ID')
+  t.equal(actual.getParentspanid(), -1, 'span.parentspanid')
+
+  t.equal(actual.getStarttime(), 1592872091536, 'span.startTime')
+  t.equal(actual.getElapsed(), 412, 'span.elapsed')
+  t.equal(actual.getApiid(), 1, 'span.apiid')
+
+  t.equal(actual.getServicetype(), 1400, 'span.servicetype')
+
+  const actualAcceptEvent = actual.getAcceptevent()
+  t.equal(actualAcceptEvent.getRpc(), '/', 'rpc')
+  t.equal(actualAcceptEvent.getEndpoint(), 'localhost:3000', 'endPoint')
+  t.equal(actualAcceptEvent.getRemoteaddr(), '::1', 'remoteAddr')
 
   t.equal(actual.getApplicationservicetype(), 1400, 'application service type')
 

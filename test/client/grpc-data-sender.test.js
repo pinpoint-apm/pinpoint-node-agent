@@ -284,21 +284,23 @@ test('sendSpanChunk redis.SET.end', function (t) {
 
   t.equal(actual.getKeytime(), 1592872091543, 'keytime')
   const actualSpanEvents = actual.getSpaneventList()
-  actualSpanEvents.forEach(pSpanEvent => {
-    t.equal(pSpanEvent.getSequence(), 0, 'sequence')
-    t.equal(pSpanEvent.getDepth(), 1, 'depth')
-
-    t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
-    t.equal(pSpanEvent.getEndelapsed(), 2, 'endElapsed')
-
-    t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
-
-    const pAnnotations = pSpanEvent.getAnnotationList()
-    pAnnotations.forEach(annotation => {
-      t.equal(annotation.getKey(), 12, 'annotation key')
-      const pAnnotationValue = annotation.getValue()
-      t.equal(pAnnotationValue.getStringvalue(), "redis.SET.end", 'annotation string value')
-    })
+  actualSpanEvents.forEach((pSpanEvent, index) => {
+    if (index == 1) {      
+      t.equal(pSpanEvent.getSequence(), 0, 'sequence')
+      t.equal(pSpanEvent.getDepth(), 1, 'depth')
+  
+      t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
+      t.equal(pSpanEvent.getEndelapsed(), 2, 'endElapsed')
+  
+      t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
+  
+      const pAnnotations = pSpanEvent.getAnnotationList()
+      pAnnotations.forEach(annotation => {
+        t.equal(annotation.getKey(), 12, 'annotation key')
+        const pAnnotationValue = annotation.getValue()
+        t.equal(pAnnotationValue.getStringvalue(), "redis.SET.end", 'annotation string value')
+      })
+    }
   })
 })
 
@@ -378,20 +380,22 @@ test('sendSpanChunk redis.GET.end', (t) => {
 
   t.equal(actual.getKeytime(), 1592872091543, 'keytime')
   const actualSpanEvents = actual.getSpaneventList()
-  actualSpanEvents.forEach(pSpanEvent => {
-    t.equal(pSpanEvent.getSequence(), 0, 'sequence')
-    t.equal(pSpanEvent.getDepth(), 1, 'depth')
-
-    t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
-
-    t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
-
-    const pAnnotations = pSpanEvent.getAnnotationList()
-    pAnnotations.forEach(annotation => {
-      t.equal(annotation.getKey(), 12, 'annotation key')
-      const pAnnotationValue = annotation.getValue()
-      t.equal(pAnnotationValue.getStringvalue(), "redis.GET.end", 'annotation string value')
-    })
+  actualSpanEvents.forEach((pSpanEvent, index) => {
+    if (index == 1) {      
+      t.equal(pSpanEvent.getSequence(), 0, 'sequence')
+      t.equal(pSpanEvent.getDepth(), 1, 'depth')
+  
+      t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
+  
+      t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
+  
+      const pAnnotations = pSpanEvent.getAnnotationList()
+      pAnnotations.forEach(annotation => {
+        t.equal(annotation.getKey(), 12, 'annotation key')
+        const pAnnotationValue = annotation.getValue()
+        t.equal(pAnnotationValue.getStringvalue(), "redis.GET.end", 'annotation string value')
+      })
+    }
   })
 })
 

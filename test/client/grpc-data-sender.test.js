@@ -265,7 +265,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
 
   const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
 
-  t.plan(21)
+  t.plan(22)
   t.true(actual != null, 'spanChunk send')
   t.equal(actual.getVersion(), 1, 'spanChunk version is 1')
 
@@ -289,6 +289,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
       t.equal(pSpanEvent.getSequence(), 0, 'sequence')
       t.equal(pSpanEvent.getDepth(), 1, 'depth')
       t.equal(pSpanEvent.getServicetype(), 100, 'serviceType')
+      t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
     } else if (index == 1) {
       t.equal(pSpanEvent.getSequence(), 0, 'sequence')
       t.equal(pSpanEvent.getDepth(), 1, 'depth')

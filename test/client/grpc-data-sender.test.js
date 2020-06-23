@@ -204,8 +204,6 @@ grpcDataSender.spanClient = {
 }
 
 test('sendSpanChunk redis.SET.end', function (t) {
-  t.plan(18)
-
   let expectedSpanChunk = {
     "agentId": "express-node-sample-id",
     "applicationName": "express-node-sample-name",
@@ -266,6 +264,8 @@ test('sendSpanChunk redis.SET.end', function (t) {
   grpcDataSender.sendSpanChunk(spanChunk)
 
   const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
+
+  t.plan(21)
   t.true(actual != null, 'spanChunk send')
   t.equal(actual.getVersion(), 1, 'spanChunk version is 1')
 
@@ -285,15 +285,18 @@ test('sendSpanChunk redis.SET.end', function (t) {
   t.equal(actual.getKeytime(), 1592872091543, 'keytime')
   const actualSpanEvents = actual.getSpaneventList()
   actualSpanEvents.forEach((pSpanEvent, index) => {
-    if (index == 1) {      
+    if (index == 0) {
       t.equal(pSpanEvent.getSequence(), 0, 'sequence')
       t.equal(pSpanEvent.getDepth(), 1, 'depth')
-  
+      t.equal(pSpanEvent.getServicetype(), 100, 'serviceType')
+    } else if (index == 1) {
+      t.equal(pSpanEvent.getSequence(), 0, 'sequence')
+      t.equal(pSpanEvent.getDepth(), 1, 'depth')
+
       t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
       t.equal(pSpanEvent.getEndelapsed(), 2, 'endElapsed')
-  
       t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
-  
+
       const pAnnotations = pSpanEvent.getAnnotationList()
       pAnnotations.forEach(annotation => {
         t.equal(annotation.getKey(), 12, 'annotation key')
@@ -381,14 +384,14 @@ test('sendSpanChunk redis.GET.end', (t) => {
   t.equal(actual.getKeytime(), 1592872091543, 'keytime')
   const actualSpanEvents = actual.getSpaneventList()
   actualSpanEvents.forEach((pSpanEvent, index) => {
-    if (index == 1) {      
+    if (index == 1) {
       t.equal(pSpanEvent.getSequence(), 0, 'sequence')
       t.equal(pSpanEvent.getDepth(), 1, 'depth')
-  
+
       t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
-  
+
       t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
-  
+
       const pAnnotations = pSpanEvent.getAnnotationList()
       pAnnotations.forEach(annotation => {
         t.equal(annotation.getKey(), 12, 'annotation key')

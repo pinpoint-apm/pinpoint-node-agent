@@ -283,7 +283,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
 })
 
 test('sendSpanChunk redis.GET.end', (t) => {
-  const expectedSpanChunk = {
+  let expectedSpanChunk = {
     "agentId": "express-node-sample-id",
     "applicationName": "express-node-sample-name",
     "agentStartTime": 1592572771026,
@@ -323,19 +323,59 @@ test('sendSpanChunk redis.GET.end', (t) => {
     "applicationServiceType": 1400,
     "localAsyncId": new AsyncId(8)
   }
+  expectedSpanChunk = {
+    "agentId": "express-node-sample-id",
+    "applicationName": "express-node-sample-name",
+    "agentStartTime": 1592872080170,
+    "serviceType": 1400,
+    "spanId": 7056897257955935,
+    "parentSpanId": -1,
+    "transactionId": {
+      "type": "Buffer",
+      "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 170, 166, 204, 244, 173, 46, 0]
+    },
+    "transactionIdObject": {
+      "agentId": "express-node-sample-id",
+      "agentStartTime": 1592872080170,
+      "sequence": 0
+    },
+    "spanEventList": [{
+      "spanId": 7056897257955935,
+      "sequence": 0,
+      "startTime": 1592872091543,
+      "elapsedTime": 0,
+      "startElapsed": 7,
+      "serviceType": 8200,
+      "endPoint": "localhost:6379",
+      "annotations": [new Annotation(DefaultAnnotationKey.API, "redis.GET.end")],
+      "depth": 1,
+      "nextSpanId": 6277978728741477,
+      "destinationId": "Redis",
+      "apiId": 0,
+      "exceptionInfo": null,
+      "asyncId": null,
+      "nextAsyncId": null,
+      "asyncSequence": null,
+      "dummyId": null,
+      "nextDummyId": null
+    }],
+    "endPoint": null,
+    "applicationServiceType": 1400,
+    "localAsyncId": new AsyncId(2)
+  }
 
   const spanChunk = Object.assign(new SpanChunk({
-    spanId: 2894367178713953,
+    spanId: 7056897257955935,
     parentSpanId: -1,
     transactionId: {
       "agentId": "express-node-sample-id",
-      "agentStartTime": 1592572771026,
-      "sequence": 5
+      "agentStartTime": 1592872080170,
+      "sequence": 0
     }
   }, {
     agentId: "express-node-sample-id",
     applicationName: "express-node-sample-name",
-    agentStartTime: 1592572771026
+    agentStartTime: 1592872080170
   }), expectedSpanChunk)
   grpcDataSender.sendSpanChunk(spanChunk)
   const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
@@ -345,15 +385,15 @@ test('sendSpanChunk redis.GET.end', (t) => {
 
   const actualTransactionId = actual.getTransactionid()
   t.equal(actualTransactionId.getAgentid(), 'express-node-sample-id', 'gRPC agentId')
-  t.equal(actualTransactionId.getAgentstarttime(), 1592572771026, 'agent start time')
-  t.equal(actualTransactionId.getSequence(), 5, 'sequence')
+  t.equal(actualTransactionId.getAgentstarttime(), 1592872080170, 'agent start time')
+  t.equal(actualTransactionId.getSequence(), 0, 'sequence')
 
-  t.equal(actual.getSpanid(), 2894367178713953, 'span ID')
+  t.equal(actual.getSpanid(), 7056897257955935, 'span ID')
   t.equal(actual.getEndpoint(), '', 'endpoint')
   t.equal(actual.getApplicationservicetype(), 1400, 'application service type')
 
   const actualLocalAsyncId = actual.getLocalasyncid()
-  t.equal(actualLocalAsyncId.getAsyncid(), 8, 'local async id')
+  t.equal(actualLocalAsyncId.getAsyncid(), 2, 'local async id')
   t.equal(actualLocalAsyncId.getSequence(), 0, 'local async id sequence')
 
   const actualSpanEvents = actual.getSpaneventList()
@@ -361,7 +401,7 @@ test('sendSpanChunk redis.GET.end', (t) => {
     t.equal(pSpanEvent.getSequence(), 0, 'sequence')
     t.equal(pSpanEvent.getDepth(), 1, 'depth')
 
-    t.equal(pSpanEvent.getStartelapsed(), 16, 'startElapsed')
+    t.equal(pSpanEvent.getStartelapsed(), 7, 'startElapsed')
 
     t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
 

@@ -655,7 +655,7 @@ test('sendSpan', (t) => {
   grpcDataSender.sendSpan(span)
   const actual = grpcDataSender.actualSpanChunk.getSpan()
 
-  t.plan(20)
+  t.plan(22)
   t.equal(actual.getVersion(), 1, 'version')
 
   const actualTransactionId = actual.getTransactionid()
@@ -680,7 +680,10 @@ test('sendSpan', (t) => {
   t.equal(actual.getFlag(), 0, 'flag')
   t.equal(actual.getErr(), 0, 'Error')
 
-  t.equal(actual.getApplicationservicetype(), 1400, 'application service type')
+  t.equal(actual.getExceptioninfo(), null, 'span exceptionInfo')
+
+  t.equal(actual.getApplicationservicetype(), 1400, 'applicaiton service type')
+  t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
 
   const actualSpanEvents = actual.getSpaneventList()
   actualSpanEvents.forEach((pSpanEvent, index) => {

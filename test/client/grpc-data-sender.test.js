@@ -286,46 +286,6 @@ test('sendSpanChunk redis.GET.end', (t) => {
   let expectedSpanChunk = {
     "agentId": "express-node-sample-id",
     "applicationName": "express-node-sample-name",
-    "agentStartTime": 1592572771026,
-    "serviceType": 1400,
-    "spanId": 2894367178713953,
-    "parentSpanId": -1,
-    "transactionId": {
-      "type": "Buffer",
-      "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 210, 245, 239, 229, 172, 46, 5]
-    },
-    "transactionIdObject": {
-      "agentId": "express-node-sample-id",
-      "agentStartTime": 1592572771026,
-      "sequence": 5
-    },
-    "spanEventList": [{
-      "spanId": 2894367178713953,
-      "sequence": 0,
-      "startTime": 1592574173366,
-      "elapsedTime": 0,
-      "startElapsed": 16,
-      "serviceType": 8200,
-      "endPoint": "localhost:6379",
-      "annotations": [new Annotation(DefaultAnnotationKey.API, "redis.GET.end")],
-      "depth": 1,
-      "nextSpanId": 3704047662997471,
-      "destinationId": "Redis",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": null,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }],
-    "endPoint": null,
-    "applicationServiceType": 1400,
-    "localAsyncId": new AsyncId(8)
-  }
-  expectedSpanChunk = {
-    "agentId": "express-node-sample-id",
-    "applicationName": "express-node-sample-name",
     "agentStartTime": 1592872080170,
     "serviceType": 1400,
     "spanId": 7056897257955935,

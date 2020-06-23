@@ -204,7 +204,7 @@ grpcDataSender.spanClient = {
 }
 
 test('sendSpanChunk redis.SET.end', function (t) {
-  t.plan(16)
+  t.plan(18)
 
   let expectedSpanChunk = {
     "agentId": "express-node-sample-id",
@@ -229,7 +229,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
       "spanId": 7056897257955935,
       "sequence": 0,
       "startTime": 1592872091543,
-      "elapsedTime": 0,
+      "elapsedTime": 2,
       "startElapsed": 7,
       "serviceType": 8200,
       "endPoint": "localhost:6379",
@@ -282,12 +282,14 @@ test('sendSpanChunk redis.SET.end', function (t) {
   t.equal(actualLocalAsyncId.getAsyncid(), 1, 'local async id')
   t.equal(actualLocalAsyncId.getSequence(), 0, 'local async id sequence')
 
+  t.equal(actual.getKeytime(), 1592872091543, 'keytime')
   const actualSpanEvents = actual.getSpaneventList()
   actualSpanEvents.forEach(pSpanEvent => {
     t.equal(pSpanEvent.getSequence(), 0, 'sequence')
     t.equal(pSpanEvent.getDepth(), 1, 'depth')
 
     t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
+    t.equal(pSpanEvent.getEndelapsed(), 2, 'endElapsed')
 
     t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
 
@@ -358,7 +360,7 @@ test('sendSpanChunk redis.GET.end', (t) => {
   grpcDataSender.sendSpanChunk(spanChunk)
   const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
 
-  t.plan(15)
+  t.plan(16)
   t.equal(actual.getVersion(), 1, 'version')
 
   const actualTransactionId = actual.getTransactionid()
@@ -374,6 +376,7 @@ test('sendSpanChunk redis.GET.end', (t) => {
   t.equal(actualLocalAsyncId.getAsyncid(), 2, 'local async id')
   t.equal(actualLocalAsyncId.getSequence(), 0, 'local async id sequence')
 
+  t.equal(actual.getKeytime(), 1592872091543, 'keytime')
   const actualSpanEvents = actual.getSpaneventList()
   actualSpanEvents.forEach(pSpanEvent => {
     t.equal(pSpanEvent.getSequence(), 0, 'sequence')

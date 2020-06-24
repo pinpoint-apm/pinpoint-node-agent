@@ -30,6 +30,7 @@ dataSender.basicDataSender = dataSenderMock()
 dataSender.dataSender.agentClient.close()
 dataSender.dataSender.metadataClient.close()
 dataSender.dataSender.spanClient.close()
+dataSender.dataSender.statClient.close()
 dataSender.dataSender = dataSenderMock()
 
 const Annotation = require('../../lib/context/annotation')

@@ -748,7 +748,6 @@ test('sendSpan', (t) => {
     if (index == 0) {
       t.equal(pSpanEvent.getSequence(), 0, 'sort span events')
       t.equal(pSpanEvent.getDepth(), 1, 'depth')
-
       t.equal(pSpanEvent.getStartelapsed(), 3, 'startElapsed')
     }
     if (pSpanEvent.getSequence() == 6) {

@@ -24,7 +24,7 @@ ES6
   import 'pinpoint-node-agent'  
 ```
 
-CommonJs
+CommonJS
 ```javascript
   require('pinpoint-node-agent')
 ```

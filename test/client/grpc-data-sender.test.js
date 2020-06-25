@@ -24,9 +24,6 @@ const agentInfo = AgentInfo.create(fixture.config, Date.now())
 const dataSender = dataSenderFactory.create(fixture.config, agentInfo)
 const dataSenderMock = require('../support/data-sender-mock')
 const TypedValue = require('../../lib/data/typed-value')
-dataSender.basicDataSender.closeClient()
-dataSender.basicDataSender.statUdpClient.close()
-dataSender.basicDataSender = dataSenderMock()
 dataSender.dataSender.agentClient.close()
 dataSender.dataSender.metadataClient.close()
 dataSender.dataSender.spanClient.close()
@@ -210,6 +207,24 @@ grpcDataSender.profilerCommandClient = {
         grpcDataSender.actualPCmdMessage = pmessage
       },
       end: function () {
+
+      },
+      on: function (eventName, callback) {
+
+      }
+    }
+  }
+}
+grpcDataSender.statClient = {
+  sendAgentStat: function () {
+    return {
+      write: function (pmessage) {
+        grpcDataSender.actualPStatMessage = pmessage
+      },
+      end: function () {
+
+      },
+      on: function (eventName, callback) {
 
       }
     }
@@ -794,7 +809,7 @@ test('sendHandshake', (t) => {
   })
 })
 
-test('sendStats', (t) => {
+test('sendStat', (t) => {
   let expectedStat = {
     "agentId": "express-node-sample-id",
     "agentStartTime": 1593058531421,
@@ -822,6 +837,14 @@ test('sendStats', (t) => {
       "verySlowCount": 0
     }
   }
+  grpcDataSender.sendStat(expectedStat)
+
+  const pStatMessage = grpcDataSender.actualPStatMessage
+  const pAgentStat = pStatMessage.getAgentstat()
+  t.plan(2)
+
+  t.equal(pAgentStat.getTimestamp(), 1593058537472, 'timestamp')
+  t.equal(pAgentStat.getCollectinterval(), 1000, 'collectInterval')
 })
 
 const sendSpanChunk1 = {

@@ -16,15 +16,6 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-test('Should collect and send stats one', function (t) {
-  t.plan(1)
-
-  const statsMonitor = new AgentStatsMonitor(agent.dataSender, agent.agentId, agent.agentStartTime)
-  statsMonitor.send()
-
-  t.ok(statsMonitor)
-})
-
 test(`Should send stats in every 1 sec`, function (t) {
 
   const PATH = '/active-trace'

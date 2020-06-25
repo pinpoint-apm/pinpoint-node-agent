@@ -5,9 +5,9 @@
   "application-type": 1400,
   "collector": {
     "ip": "127.0.0.1",
-    "span-port": 9996,
-    "stat-port": 9995,
-    "tcp-port": 9994
+    "span-port": 9993,
+    "stat-port": 9992,
+    "tcp-port": 9991
   },
   "sampling": {
     "enable": true,
@@ -16,17 +16,11 @@
   "http-status-code-errors": ["5xx"],
   "enabled-stats-monitor-sending": false,
   "enabled-active-thread-count": false,
-  "log-level": "WARN",
-  "express": {
-    "enable": true
-  },
-  "koa": {
-    "enable": true
-  },
-  "mongo": {
-    "enable": true
-  },
-  "redis": {
-    "enable": true
+  "log-level": "DEBUG",
+  "modules": {
+    "express": true,
+    "koa": true,
+    "mongodb": true,
+    "redis": true
   }
 }

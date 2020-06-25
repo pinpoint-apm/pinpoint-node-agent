@@ -14,9 +14,9 @@ test(`outgoing request URL escape a bug`, async (t) => {
         .then(function (response) {
             t.true(response.status == 200)
 
-            t.true(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList.length == 1, `a spanEventList`)
+            t.true(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList.length == 2, `spanEventList`)
 
-            const spanEvent = agent.pinpointClient.dataSender.mockSpanChunk.spanEventList[0]
+            const spanEvent = agent.pinpointClient.dataSender.mockSpanChunk.spanEventList[1]
             
             t.equal(spanEvent.annotations[0].value.stringValue, "GET", "URL")
             t.equal(spanEvent.annotations[1].value.stringValue, "eonet.sci.gsfc.nasa.gov/api/v2.1/categories", "URL")

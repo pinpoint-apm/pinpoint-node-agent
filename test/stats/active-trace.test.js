@@ -40,7 +40,7 @@ test(`Should record active trace in multiple call`, function (t) {
       axios.get(getServerUrl(LASTONE_PATH)),
     ]).then((result) => {
       t.equal(activeTrace.getAllTraces().length, 0)
-      t.equal(agent.mockAgentStartTime, agent.mockAgentInfo.startTimestamp, "startTimestamp equals")
+      t.equal(agent.mockAgentStartTime, agent.agentInfo.startTimestamp, "startTimestamp equals")
       server.close()
     }).catch((error) => {
       server.close()
@@ -48,5 +48,5 @@ test(`Should record active trace in multiple call`, function (t) {
   })
 
   t.equal(agent.mockAgentId, fixture.config.agentId, "Agent ID equals")
-  t.equal(agent.mockAgentInfo, agent.pinpointClient.mockAgentInfo, "AgentInfo equals")
+  t.equal(agent.agentInfo, agent.pinpointClient.agentInfo, "AgentInfo equals")
 })

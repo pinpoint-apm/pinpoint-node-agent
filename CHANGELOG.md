@@ -1,7 +1,14 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
-## [0.5.2] - 2020-6-3
+## [0.6.0] - 2020-6-26
+### Changed
+- The protocol that connects with the Collector has been changed from Thrift to gRPC.
+- The agent version refers to the value of Package.json.
+### Breaking Changes
+- Agents with versions lower than 0.6.0 have a bug in which the server list is not exposed after 30 minutes in the container environment. Servers using the container environment should be upgraded to 0.6.0 or higher.
+
+## [0.5.2] - 2020-6-03
 ### Added
 - Pinpoint ping feature implementation
 ### Fixed

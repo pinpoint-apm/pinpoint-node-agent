@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [0.6.0] - 2020-6-26
+### Changed
+- The protocol that connects with the Collector has been changed from Thrift to gRPC.
+- The agent version refers to the value of Package.json.
+
 ## [0.5.1] - 2020-5-27
 ### Fixed
 - Disable Active thread count default configuration

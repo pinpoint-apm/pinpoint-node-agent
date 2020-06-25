@@ -3271,11 +3271,6 @@ punycode@^2.1.0, punycode@^2.1.1:
   resolved "https://***REMOVED***:443/api/npm/npm-naver/punycode/-/punycode-2.1.1.tgz#b58b010ac40c22c5657616c8d2c2c02c7bf479ec"
   integrity sha1-tYsBCsQMIsVldhbI0sLALHv0eew=
 
-q@^1.5.0:
-  version "1.5.1"
-  resolved "https://***REMOVED***:443/api/npm/npm-naver/q/-/q-1.5.1.tgz#7e32f75b41381291d04611f1bf14109ac00651d7"
-  integrity sha1-fjL3W0E4EpHQRhHxvxQQmsAGUdc=
-
 qs@6.7.0:
   version "6.7.0"
   resolved "https://***REMOVED***:443/api/npm/npm-naver/qs/-/qs-6.7.0.tgz#41dc1a015e3d581f1621776be31afb2876a9b1bc"
@@ -4167,15 +4162,6 @@ text-table@~0.2.0:
   resolved "https://***REMOVED***:443/api/npm/npm-naver/text-table/-/text-table-0.2.0.tgz#7f5ee823ae805207c00af2df4a84ec3fcfa570b4"
   integrity sha1-f17oI66AUgfACvLfSoTsP8+lcLQ=
 
-thrift@^0.11.0:
-  version "0.11.0"
-  resolved "https://***REMOVED***:443/api/npm/npm-naver/thrift/-/thrift-0.11.0.tgz#256115e4ff87871e12537f4b510bd2b425e13990"
-  integrity sha1-JWEV5P+Hhx4SU39LUQvStCXhOZA=
-  dependencies:
-    node-int64 "^0.4.0"
-    q "^1.5.0"
-    ws ">= 2.2.3"
-
 through2@^2.0.0:
   version "2.0.5"
   resolved "https://***REMOVED***:443/api/npm/npm-naver/through2/-/through2-2.0.5.tgz#01c1e39eb31d07cb7d03a96a70823260b23132cd"
@@ -4395,11 +4381,6 @@ write@^0.2.1:
   integrity sha1-X8A4KOJkzqP+kUVUdvejxWbLB1c=
   dependencies:
     mkdirp "^0.5.1"
-
-"ws@>= 2.2.3":
-  version "7.3.0"
-  resolved "https://***REMOVED***:443/api/npm/npm-naver/ws/-/ws-7.3.0.tgz#4b2f7f219b3d3737bc1a2fbf145d825b94d38ffd"
-  integrity sha1-Sy9/IZs9Nze8Gi+/FF2CW5TTj/0=
 
 xtend@^4.0.0, xtend@~4.0.1:
   version "4.0.2"

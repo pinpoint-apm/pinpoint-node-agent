@@ -35,8 +35,7 @@ const Span = require('../../lib/context/span')
 const SpanEvent = require('../../lib/context/span-event')
 
 class MockgRPCDataSender extends GrpcDataSender {
-  constructor() {
-    
+  initializeClients(agentInfo, collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort) {
   }
 }
 test('Should send span ', function (t) {
@@ -91,7 +90,7 @@ test('Should send span ', function (t) {
     agentStartTime: 1592574173350
   }), expectedSpan)
 
-  const grpcDataSender = new GrpcDataSender(0, 0, 0, 0, {agentId: '', applicationName: '', agentStartTime: 0})
+  const grpcDataSender = new MockgRPCDataSender()
   grpcDataSender.spanClient = {
     sendSpan: function () {
       return {
@@ -159,7 +158,7 @@ test('Should send span ', function (t) {
   t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
 })
 
-const grpcDataSender = new GrpcDataSender(0, 0, 0, 0, {agentId: '', applicationName: '', agentStartTime: 0})
+const grpcDataSender = new MockgRPCDataSender()
 grpcDataSender.spanClient = {
   sendSpan: function () {
     return {

@@ -794,6 +794,36 @@ test('sendHandshake', (t) => {
   })
 })
 
+test('sendStats', (t) => {
+  let expectedStat = {
+    "agentId": "express-node-sample-id",
+    "agentStartTime": 1593058531421,
+    "timestamp": 1593058537472,
+    "collectInterval": 1000,
+    "memory": {
+      "heapUsed": 37042600,
+      "heapTotal": 62197760
+    },
+    "cpu": {
+      "user": 0.0003919068831319893,
+      "system": 0
+    },
+    "activeTrace": {
+      "schema": {
+        "typeCode": 2,
+        "fast": 1000,
+        "normal": 3000,
+        "slow": 5000
+      },
+      "typeCode": 2,
+      "fastCount": 0,
+      "normalCount": 0,
+      "slowCount": 0,
+      "verySlowCount": 0
+    }
+  }
+})
+
 const sendSpanChunk1 = {
   "spanchunk": {
     "version": 1,

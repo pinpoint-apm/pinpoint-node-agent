@@ -147,3 +147,13 @@ test(`default config`, (t) => {
 
     t.end()
 })
+
+test(`detect container`, (t) => {
+    config.clear()
+
+    process.env['KUBERNETES_SERVICE_HOST'] = "aaa"
+    const given = config.getConfig()
+
+    t.plan(1)
+    t.equal(given.container, true, 'container detect')
+})

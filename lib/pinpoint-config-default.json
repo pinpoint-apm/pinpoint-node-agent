@@ -2,9 +2,9 @@
   "application-type": 1400,
   "collector": {
     "ip": "localhost",
-    "span-port": 9996,
-    "stat-port": 9995,
-    "tcp-port": 9994
+    "span-port": 9993,
+    "stat-port": 9992,
+    "tcp-port": 9991
   },
   "sampling": {
     "enable": true,

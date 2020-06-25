@@ -794,86 +794,15 @@ test('sendHandshake', (t) => {
   })
 })
 
-const spanChunk1 = {
-  "agentId": "express-node-sample-id",
-  "applicationName": "express-node-sample-name",
-  "agentStartTime": 1593003997620,
-  "serviceType": 1400,
-  "spanId": 491293017330319,
-  "parentSpanId": -1,
-  "transactionId": {
-    "type": "Buffer",
-    "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 180, 243, 191, 179, 174, 46, 0]
-  },
-  "transactionIdObject": {
-    "agentId": "express-node-sample-id",
-    "agentStartTime": 1593003997620,
-    "sequence": 0
-  },
-  "spanEventList": [{
-    "spanId": 491293017330319,
-    "sequence": 0,
-    "startTime": 1593004008739,
-    "elapsedTime": 0,
-    "startElapsed": 7,
-    "serviceType": 100,
-    "endPoint": null,
-    "annotations": [],
-    "depth": 1,
-    "nextSpanId": -1,
-    "destinationId": null,
-    "apiId": 2,
-    "exceptionInfo": null,
-    "asyncId": null,
-    "nextAsyncId": null,
-    "asyncSequence": null,
-    "dummyId": null,
-    "nextDummyId": null
-  }, {
-    "spanId": 491293017330319,
-    "sequence": 1,
-    "startTime": 1593004008739,
-    "elapsedTime": 0,
-    "startElapsed": 7,
-    "serviceType": 8200,
-    "endPoint": "localhost:6379",
-    "annotations": [{
-      "key": 12,
-      "value": {
-        "stringValue": "redis.SET.end"
-      }
-    }],
-    "depth": 2,
-    "nextSpanId": 2394251428516605,
-    "destinationId": "Redis",
-    "apiId": 0,
-    "exceptionInfo": null,
-    "asyncId": null,
-    "nextAsyncId": null,
-    "asyncSequence": null,
-    "dummyId": null,
-    "nextDummyId": null
-  }],
-  "endPoint": null,
-  "applicationServiceType": 1400,
-  "localAsyncId": {
-    "asyncId": 1,
-    "sequenceGenerator": {
-      "initValue": 0,
-      "maxValue": 9007199254740991,
-      "sequence": 1
-    }
-  }
-}
-const pSpanChunk1 = {
+const sendSpanChunk1 = {
   "spanchunk": {
     "version": 1,
     "transactionid": {
       "agentid": "express-node-sample-id",
-      "agentstarttime": 1593003997620,
+      "agentstarttime": 1593053095538,
       "sequence": 0
     },
-    "spanid": 491293017330319,
+    "spanid": 8566269145474923,
     "endpoint": "",
     "spaneventList": [{
       "sequence": 0,
@@ -915,7 +844,7 @@ const pSpanChunk1 = {
       "exceptioninfo": null,
       "nextevent": {
         "messageevent": {
-          "nextspanid": 2394251428516605,
+          "nextspanid": 7005420794443373,
           "endpoint": "localhost:6379",
           "destinationid": "Redis"
         }
@@ -923,224 +852,25 @@ const pSpanChunk1 = {
       "asyncevent": 0
     }],
     "applicationservicetype": 1400,
-    "keytime": 1593004008739,
+    "keytime": 1593053554053,
     "localasyncid": {
       "asyncid": 1,
       "sequence": 0
     }
   }
 }
-const span1 = {
-  "traceId": {
-    "transactionId": {
-      "agentId": "express-node-sample-id",
-      "agentStartTime": 1593003997620,
-      "sequence": 0
-    },
-    "spanId": 491293017330319,
-    "parentSpanId": -1,
-    "flag": 0
-  },
-  "agentId": "express-node-sample-id",
-  "applicationName": "express-node-sample-name",
-  "agentStartTime": 1593003997620,
-  "serviceType": 1400,
-  "spanId": 491293017330319,
-  "parentSpanId": -1,
-  "transactionId": {
-    "type": "Buffer",
-    "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 180, 243, 191, 179, 174, 46, 0]
-  },
-  "startTime": 1593004008732,
-  "elapsedTime": 337,
-  "rpc": "/",
-  "endPoint": "localhost:3000",
-  "remoteAddr": "::1",
-  "annotations": [],
-  "flag": 0,
-  "err": null,
-  "spanEventList": [{
-    "spanId": 491293017330319,
-    "sequence": 4,
-    "startTime": 1593004008736,
-    "elapsedTime": 1,
-    "startElapsed": 4,
-    "serviceType": 6600,
-    "endPoint": "localhost:3000",
-    "annotations": [{
-      "key": 12,
-      "value": {
-        "stringValue": "express.middleware.serveStatic"
-      }
-    }],
-    "depth": 5,
-    "nextSpanId": -1,
-    "destinationId": "localhost:3000",
-    "apiId": 0,
-    "exceptionInfo": null,
-    "asyncId": null,
-    "nextAsyncId": null,
-    "asyncSequence": null,
-    "dummyId": null,
-    "nextDummyId": null
-  }, {
-    "spanId": 491293017330319,
-    "sequence": 3,
-    "startTime": 1593004008736,
-    "elapsedTime": 1,
-    "startElapsed": 4,
-    "serviceType": 6600,
-    "endPoint": "localhost:3000",
-    "annotations": [{
-      "key": 12,
-      "value": {
-        "stringValue": "express.middleware.cookieParser"
-      }
-    }],
-    "depth": 4,
-    "nextSpanId": -1,
-    "destinationId": "localhost:3000",
-    "apiId": 0,
-    "exceptionInfo": null,
-    "asyncId": null,
-    "nextAsyncId": null,
-    "asyncSequence": null,
-    "dummyId": null,
-    "nextDummyId": null
-  }, {
-    "spanId": 491293017330319,
-    "sequence": 2,
-    "startTime": 1593004008736,
-    "elapsedTime": 1,
-    "startElapsed": 4,
-    "serviceType": 6600,
-    "endPoint": "localhost:3000",
-    "annotations": [{
-      "key": 12,
-      "value": {
-        "stringValue": "express.middleware.urlencodedParser"
-      }
-    }],
-    "depth": 3,
-    "nextSpanId": -1,
-    "destinationId": "localhost:3000",
-    "apiId": 0,
-    "exceptionInfo": null,
-    "asyncId": null,
-    "nextAsyncId": null,
-    "asyncSequence": null,
-    "dummyId": null,
-    "nextDummyId": null
-  }, {
-    "spanId": 491293017330319,
-    "sequence": 1,
-    "startTime": 1593004008735,
-    "elapsedTime": 2,
-    "startElapsed": 3,
-    "serviceType": 6600,
-    "endPoint": "localhost:3000",
-    "annotations": [{
-      "key": 12,
-      "value": {
-        "stringValue": "express.middleware.jsonParser"
-      }
-    }],
-    "depth": 2,
-    "nextSpanId": -1,
-    "destinationId": "localhost:3000",
-    "apiId": 0,
-    "exceptionInfo": null,
-    "asyncId": null,
-    "nextAsyncId": null,
-    "asyncSequence": null,
-    "dummyId": null,
-    "nextDummyId": null
-  }, {
-    "spanId": 491293017330319,
-    "sequence": 0,
-    "startTime": 1593004008735,
-    "elapsedTime": 2,
-    "startElapsed": 3,
-    "serviceType": 6600,
-    "endPoint": "localhost:3000",
-    "annotations": [{
-      "key": 12,
-      "value": {
-        "stringValue": "express.middleware.logger"
-      }
-    }],
-    "depth": 1,
-    "nextSpanId": -1,
-    "destinationId": "localhost:3000",
-    "apiId": 0,
-    "exceptionInfo": null,
-    "asyncId": null,
-    "nextAsyncId": null,
-    "asyncSequence": null,
-    "dummyId": null,
-    "nextDummyId": null
-  }, {
-    "spanId": 491293017330319,
-    "sequence": 6,
-    "startTime": 1593004008738,
-    "elapsedTime": 0,
-    "startElapsed": 6,
-    "serviceType": 9057,
-    "endPoint": "localhost:6379",
-    "annotations": [{
-      "key": 12,
-      "value": {
-        "stringValue": "redis.SET.call"
-      }
-    }],
-    "depth": 2,
-    "nextSpanId": -1,
-    "destinationId": "Redis",
-    "apiId": 0,
-    "exceptionInfo": null,
-    "asyncId": null,
-    "nextAsyncId": 1,
-    "asyncSequence": null,
-    "dummyId": null,
-    "nextDummyId": null
-  }, {
-    "spanId": 491293017330319,
-    "sequence": 5,
-    "startTime": 1593004008738,
-    "elapsedTime": 1,
-    "startElapsed": 6,
-    "serviceType": 6600,
-    "endPoint": "localhost:3000",
-    "annotations": [],
-    "depth": 1,
-    "nextSpanId": -1,
-    "destinationId": "localhost:3000",
-    "apiId": 3,
-    "exceptionInfo": null,
-    "asyncId": null,
-    "nextAsyncId": null,
-    "asyncSequence": null,
-    "dummyId": null,
-    "nextDummyId": null
-  }],
-  "apiId": 1,
-  "exceptionInfo": null,
-  "applicationServiceType": 1400,
-  "loggingTransactionInfo": null,
-  "version": 1
-}
 const pSpan1 = {
   "span": {
     "version": 1,
     "transactionid": {
       "agentid": "express-node-sample-id",
-      "agentstarttime": 1593003997620,
+      "agentstarttime": 1593053095538,
       "sequence": 0
     },
-    "spanid": 491293017330319,
+    "spanid": 8566269145474923,
     "parentspanid": -1,
-    "starttime": 1593004008732,
-    "elapsed": 337,
+    "starttime": 1593053554047,
+    "elapsed": 311,
     "apiid": 1,
     "servicetype": 1400,
     "acceptevent": {
@@ -1159,7 +889,7 @@ const pSpan1 = {
     "spaneventList": [{
       "sequence": 0,
       "depth": 1,
-      "startelapsed": 3,
+      "startelapsed": 2,
       "endelapsed": 2,
       "servicetype": 6600,
       "annotationList": [{
@@ -1188,8 +918,8 @@ const pSpan1 = {
     }, {
       "sequence": 1,
       "depth": 2,
-      "startelapsed": 3,
-      "endelapsed": 2,
+      "startelapsed": 1,
+      "endelapsed": 1,
       "servicetype": 6600,
       "annotationList": [{
         "key": 12,
@@ -1217,7 +947,7 @@ const pSpan1 = {
     }, {
       "sequence": 2,
       "depth": 3,
-      "startelapsed": 4,
+      "startelapsed": 0,
       "endelapsed": 1,
       "servicetype": 6600,
       "annotationList": [{
@@ -1246,7 +976,7 @@ const pSpan1 = {
     }, {
       "sequence": 3,
       "depth": 4,
-      "startelapsed": 4,
+      "startelapsed": 0,
       "endelapsed": 1,
       "servicetype": 6600,
       "annotationList": [{
@@ -1275,7 +1005,7 @@ const pSpan1 = {
     }, {
       "sequence": 4,
       "depth": 5,
-      "startelapsed": 4,
+      "startelapsed": 0,
       "endelapsed": 1,
       "servicetype": 6600,
       "annotationList": [{
@@ -1304,8 +1034,8 @@ const pSpan1 = {
     }, {
       "sequence": 5,
       "depth": 1,
-      "startelapsed": 6,
-      "endelapsed": 1,
+      "startelapsed": 2,
+      "endelapsed": 2,
       "servicetype": 6600,
       "annotationList": [],
       "apiid": 3,
@@ -1321,7 +1051,7 @@ const pSpan1 = {
     }, {
       "sequence": 6,
       "depth": 2,
-      "startelapsed": 6,
+      "startelapsed": 0,
       "endelapsed": 0,
       "servicetype": 9057,
       "annotationList": [{

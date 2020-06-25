@@ -777,13 +777,19 @@ test('sendHandshake', (t) => {
   grpcDataSender.sendControlHandshake(expectedParams)
   const pCmdServiceHandshake = grpcDataSender.actualPCmdMessage.getHandshakemessage()
 
-  t.plan(2)
+  t.plan(4)
   t.true(pCmdServiceHandshake != null, 'pCmdServiceHandshake')
 
   const actualKeys = pCmdServiceHandshake.getSupportcommandservicekeyList()
   actualKeys.forEach((key, index) => {
     if (index == 0) {
       t.equal(key, CommandType.ECHO, 'CommandType.ECHO')
+    }
+    if (index == 1) {
+      t.equal(key, CommandType.ACTIVE_THREAD_COUNT, 'CommandType.ACTIVE_THREAD_COUNT')
+    }
+    if (index == 2) {
+      t.equal(key, CommandType.ACTIVE_THREAD_COUNT_RESPONSE, 'CommandType.ACTIVE_THREAD_COUNT_RESPONSE')
     }
   })
 })

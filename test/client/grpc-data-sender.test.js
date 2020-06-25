@@ -841,10 +841,14 @@ test('sendStat', (t) => {
 
   const pStatMessage = grpcDataSender.actualPStatMessage
   const pAgentStat = pStatMessage.getAgentstat()
-  t.plan(2)
+  t.plan(4)
 
   t.equal(pAgentStat.getTimestamp(), 1593058537472, 'timestamp')
   t.equal(pAgentStat.getCollectinterval(), 1000, 'collectInterval')
+
+  const pCpuLoad = pAgentStat.getCpuload()
+  t.equal(pCpuLoad.getJvmcpuload(), 0.0003919068831319893, 'cpu.user')
+  t.equal(pCpuLoad.getSystemcpuload(), 0, 'cpu.system')
 })
 
 const sendSpanChunk1 = {

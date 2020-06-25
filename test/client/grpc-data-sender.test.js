@@ -21,14 +21,9 @@ const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const GRPC_ENABLE = true
 fixture.config['grpcEnable'] = GRPC_ENABLE
 const agentInfo = AgentInfo.create(fixture.config, Date.now())
-const dataSender = dataSenderFactory.create(fixture.config, agentInfo)
+
 const dataSenderMock = require('../support/data-sender-mock')
 const TypedValue = require('../../lib/data/typed-value')
-dataSender.dataSender.agentClient.close()
-dataSender.dataSender.metadataClient.close()
-dataSender.dataSender.spanClient.close()
-dataSender.dataSender.statClient.close()
-dataSender.dataSender = dataSenderMock()
 
 const Annotation = require('../../lib/context/annotation')
 const {
@@ -39,34 +34,11 @@ const SpanChunk = require('../../lib/context/span-chunk')
 const Span = require('../../lib/context/span')
 const SpanEvent = require('../../lib/context/span-event')
 
-test('Should send agent info', function (t) {
-  t.plan(1)
-
-  dataSender.send(agentInfo)
-
-  t.ok(true)
-})
-
-test('Should send api meta info', function (t) {
-  t.plan(1)
-
-  const methodDescriptor = new MethodDescriptor('http', 'Server', 'request', MethodType.WEB_REQUEST, 'Node Server Process')
-  const apiMetaInfo = ApiMetaInfo.create(methodDescriptor)
-  dataSender.send(apiMetaInfo)
-
-  t.ok(true)
-})
-
-test('Should send string meta info', function (t) {
-  t.plan(1)
-
-  const stringMetaInfo = StringMetaInfo.create('1', 'test string')
-  dataSender.send(stringMetaInfo)
-
-  t.ok(true)
-})
-
-
+class MockgRPCDataSender extends GrpcDataSender {
+  constructor() {
+    
+  }
+}
 test('Should send span ', function (t) {
   const expectedSpan = {
     "traceId": {

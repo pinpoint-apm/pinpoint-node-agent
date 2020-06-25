@@ -48,5 +48,5 @@ test(`Should record active trace in multiple call`, function (t) {
   })
 
   t.equal(agent.mockAgentId, fixture.config.agentId, "Agent ID equals")
-  t.equal(agent.mockAgentInfo, agent.pinpointClient.mockAgentInfo, "AgentInfo equals")
+  t.equal(agent.gentInfo, agent.pinpointClient.agentInfo, "AgentInfo equals")
 })

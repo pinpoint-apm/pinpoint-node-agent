@@ -40,7 +40,7 @@ test(`Should record active trace in multiple call`, function (t) {
       axios.get(getServerUrl(LASTONE_PATH)),
     ]).then((result) => {
       t.equal(activeTrace.getAllTraces().length, 0)
-      t.equal(agent.mockAgentStartTime, agent.mockAgentInfo.startTimestamp, "startTimestamp equals")
+      t.equal(agent.mockAgentStartTime, agent.agentInfo.startTimestamp, "startTimestamp equals")
       server.close()
     }).catch((error) => {
       server.close()

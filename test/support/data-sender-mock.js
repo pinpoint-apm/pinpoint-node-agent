@@ -5,6 +5,7 @@ const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const Span = require('../../lib/context/span')
+const SpanChunk = require('../../lib/context/span-chunk')
 
 const dataSender = () => {
   return {
@@ -32,7 +33,12 @@ const dataSender = () => {
         this.sendStringMetaInfo(data)
       } else if (data instanceof Span) {
         this.sendSpan(data)
+      } else if (data instanceof SpanChunk) {
+        this.sendSpanChunk(data)
       }
+    },
+    sendPing: function() {
+
     }
   }
 }

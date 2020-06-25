@@ -10,14 +10,6 @@ const dataSenderMock = require('./data-sender-mock')
 const shimmer = require('shimmer')
 const httpShared = require('../../lib/instrumentation/http-shared')
 
-class MockPinpointClient {
-    constructor(config, agentInfo) {
-        this.mockConfig = config
-        this.mockAgentInfo = agentInfo
-        this.dataSender = dataSenderMock()
-    }
-}
-
 class MockAgent extends Agent {
     createAgentInfo(config, agentStartTime) {
         this.mockAgentInfo = super.createAgentInfo(config, agentStartTime)
@@ -32,10 +24,6 @@ class MockAgent extends Agent {
     initializeDataSender() {
         this.dataSender = dataSenderMock()
         this.dataSender.send(this.agentInfo)
-    }
-
-    initializePinpointClient() {
-        this.pinpointClient = new MockPinpointClient(this.config, this.mockAgentInfo)
     }
 
     bindHttp() {

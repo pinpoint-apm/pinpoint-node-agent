@@ -130,9 +130,9 @@ test('should not exist in the process.env property when you do not set an enviro
     t.equal(given.container, false, 'No set PINPOINT_CONTAINER env, should equal default config')
 
     t.equal(given.serviceType, 1400, 'No set PINPOINT_SERVICE_TYPE env, should equal default config')
-    t.equal(given.collectorTcpPort, 9994, 'No set PINPOINT_COLLECTOR_TCP_PORT env, should equal default config')
-    t.equal(given.collectorStatPort, 9995, 'No set PINPOINT_COLLECTOR_STAT_PORT env, should equal default config')
-    t.equal(given.collectorSpanPort, 9996, 'No set PINPOINT_COLLECTOR_SPAN_PORT env, should equal default config')
+    t.equal(given.collectorTcpPort, 9993, 'No set PINPOINT_COLLECTOR_TCP_PORT env, should equal default config')
+    t.equal(given.collectorStatPort, 9992, 'No set PINPOINT_COLLECTOR_STAT_PORT env, should equal default config')
+    t.equal(given.collectorSpanPort, 9991, 'No set PINPOINT_COLLECTOR_SPAN_PORT env, should equal default config')
     t.equal(given.sampleRate, 10, 'No set PINPOINT_SAMPLING_RATE env, should equal default config')
 
     config.clear()

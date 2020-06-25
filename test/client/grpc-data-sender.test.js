@@ -203,6 +203,18 @@ grpcDataSender.spanClient = {
     }
   }
 }
+grpcDataSender.profilerCommandClient = {
+  handleCommand: function () {
+    return {
+      write: function (pmessage) {
+        grpcDataSender.actualPCmdMessage = pmessage
+      },
+      end: function () {
+
+      }
+    }
+  }
+}
 
 test('sendSpanChunk redis.SET.end', function (t) {
   let expectedSpanChunk = {
@@ -757,69 +769,23 @@ test('sendSpan', (t) => {
   })
 })
 
-test.skip('outgoing request', (t) => {
-  const exprected = {
-    "agentId": "express-node-sample-id",
-    "applicationName": "express-node-sample-name",
-    "agentStartTime": 1592872080170,
-    "serviceType": 1400,
-    "spanId": 7056897257955935,
-    "parentSpanId": -1,
-    "transactionId": {
-      "type": "Buffer",
-      "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 170, 166, 204, 244, 173, 46, 0]
-    },
-    "transactionIdObject": {
-      "agentId": "express-node-sample-id",
-      "agentStartTime": 1592872080170,
-      "sequence": 0
-    },
-    "spanEventList": [{
-      "spanId": 7056897257955935,
-      "sequence": 0,
-      "startTime": 1592872091558,
-      "elapsedTime": 0,
-      "startElapsed": 22,
-      "serviceType": 9056,
-      "endPoint": "localhost:3000",
-      "annotations": [{
-        "key": 12,
-        "value": {
-          "stringValue": "GET"
-        }
-      }, {
-        "key": 40,
-        "value": {
-          "stringValue": "eonet.sci.gsfc.nasa.gov/api/v2.1/categories"
-        }
-      }, {
-        "key": 46,
-        "value": {
-          "intValue": 200
-        }
-      }],
-      "depth": 1,
-      "nextSpanId": 4845473726792547,
-      "destinationId": "eonet.sci.gsfc.nasa.gov",
-      "apiId": 0,
-      "exceptionInfo": null,
-      "asyncId": null,
-      "nextAsyncId": null,
-      "asyncSequence": null,
-      "dummyId": null,
-      "nextDummyId": null
-    }],
-    "endPoint": null,
-    "applicationServiceType": 1400,
-    "localAsyncId": {
-      "asyncId": 3,
-      "sequenceGenerator": {
-        "initValue": 0,
-        "maxValue": 9007199254740991,
-        "sequence": 0
-      }
-    }
+const CommandType = require('../../lib/constant/commaned-type')
+test('sendHandshake', (t) => {
+  let expectedParams = {
+    supportCommandList: [CommandType.ECHO, CommandType.ACTIVE_THREAD_COUNT, CommandType.ACTIVE_THREAD_COUNT_RESPONSE],
   }
+  grpcDataSender.sendControlHandshake(expectedParams)
+  const pCmdServiceHandshake = grpcDataSender.actualPCmdMessage.getHandshakemessage()
+
+  t.plan(2)
+  t.true(pCmdServiceHandshake != null, 'pCmdServiceHandshake')
+
+  const actualKeys = pCmdServiceHandshake.getSupportcommandservicekeyList()
+  actualKeys.forEach((key, index) => {
+    if (index == 0) {
+      t.equal(key, CommandType.ECHO, 'CommandType.ECHO')
+    }
+  })
 })
 
 const spanChunk1 = {

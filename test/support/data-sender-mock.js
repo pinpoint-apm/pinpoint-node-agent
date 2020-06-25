@@ -38,7 +38,6 @@ const dataSender = () => {
       }
     },
     sendPing: function() {
-
     }
   }
 }

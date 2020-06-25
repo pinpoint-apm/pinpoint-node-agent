@@ -156,4 +156,17 @@ test(`detect container`, (t) => {
 
     t.plan(1)
     t.equal(given.container, true, 'container detect')
+
+    delete process.env.KUBERNETES_SERVICE_HOST
+})
+
+test(`detect container2`, (t) => {
+    config.clear()
+
+    const given = config.getConfig()
+
+    t.plan(1)
+    t.equal(given.container, false, 'container detect')
+
+    delete process.env.KUBERNETES_SERVICE_HOST
 })

@@ -2,6 +2,8 @@
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
 ## [0.6.0] - 2020-6-26
+### Added
+- docker env auto detection
 ### Changed
 - The protocol that connects with the Collector has been changed from Thrift to gRPC.
 - The agent version refers to the value of Package.json.

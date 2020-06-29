@@ -37,6 +37,33 @@ const SpanEvent = require('../../lib/context/span-event')
 class MockgRPCDataSender extends GrpcDataSender {
   initializeClients(agentInfo, collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort) {
   }
+
+  initializeSpanStream() {
+    let self = this
+    this.spanStream = {
+      write: function (span) {
+        self.actualSpan = span
+      },
+      end: function () {
+
+      }
+    }
+  }
+
+  initializeProfilerStream() {
+    let self = this
+    this.profilerStream = {
+      write: function (pmessage) {
+        self.actualPCmdMessage = pmessage
+      },
+      end: function () {
+
+      },
+      on: function (eventName, callback) {
+
+      }
+    }
+  }
 }
 test('Should send span ', function (t) {
   const expectedSpan = {
@@ -90,19 +117,7 @@ test('Should send span ', function (t) {
     agentStartTime: 1592574173350
   }), expectedSpan)
 
-  const grpcDataSender = new MockgRPCDataSender()
-  grpcDataSender.spanClient = {
-    sendSpan: function () {
-      return {
-        write: function (span) {
-          grpcDataSender.actualSpan = span
-        },
-        end: function () {
-
-        }
-      }
-    }
-  }
+  const grpcDataSender = new MockgRPCDataSender('', 0, 0, 0, {agentId: 'agent', applicationName: 'applicationName', agentStartTime: 1234344})
   grpcDataSender.sendSpan(span)
 
   t.plan(20)
@@ -158,19 +173,7 @@ test('Should send span ', function (t) {
   t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
 })
 
-const grpcDataSender = new MockgRPCDataSender()
-grpcDataSender.spanClient = {
-  sendSpan: function () {
-    return {
-      write: function (spanChunk) {
-        grpcDataSender.actualSpanChunk = spanChunk
-      },
-      end: function () {
-
-      }
-    }
-  }
-}
+const grpcDataSender = new MockgRPCDataSender('', 0, 0, 0, {agentId: 'agent', applicationName: 'applicationName', agentStartTime: 1234344})
 grpcDataSender.profilerCommandClient = {
   handleCommand: function () {
     return {

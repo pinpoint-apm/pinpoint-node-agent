@@ -10,10 +10,8 @@ const {
 enableDataSending()
 
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
-
 const GRPC_ENABLE = true
 fixture.config['grpcEnable'] = GRPC_ENABLE
-
 const Annotation = require('../../lib/context/annotation')
 const {
   DefaultAnnotationKey

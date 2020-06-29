@@ -9,21 +9,10 @@ const {
 } = require('../test-helper')
 enableDataSending()
 
-const Trace = require('../../lib/context/trace')
-const AgentInfo = require('../../lib/data/dto/agent-info')
-const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
-const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
-const MethodDescriptor = require('../../lib/context/method-descriptor')
-const MethodType = require('../../lib/constant/method-type').MethodType
-const dataSenderFactory = require('../../lib/client/data-sender-factory')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
 const GRPC_ENABLE = true
 fixture.config['grpcEnable'] = GRPC_ENABLE
-const agentInfo = AgentInfo.create(fixture.config, Date.now())
-
-const dataSenderMock = require('../support/data-sender-mock')
-const TypedValue = require('../../lib/data/typed-value')
 
 const Annotation = require('../../lib/context/annotation')
 const {

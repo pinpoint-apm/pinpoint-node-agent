@@ -64,6 +64,21 @@ class MockgRPCDataSender extends GrpcDataSender {
       }
     }
   }
+
+  initializeStatStream() {
+    let self = this
+    this.statStream = {
+      write: function (pmessage) {
+        self.actualPStatMessage = pmessage
+      },
+      end: function () {
+
+      },
+      on: function (eventName, callback) {
+
+      }
+    }
+  }
 }
 test('Should send span ', function (t) {
   const expectedSpan = {
@@ -174,36 +189,6 @@ test('Should send span ', function (t) {
 })
 
 const grpcDataSender = new MockgRPCDataSender('', 0, 0, 0, {agentId: 'agent', applicationName: 'applicationName', agentStartTime: 1234344})
-grpcDataSender.profilerCommandClient = {
-  handleCommand: function () {
-    return {
-      write: function (pmessage) {
-        grpcDataSender.actualPCmdMessage = pmessage
-      },
-      end: function () {
-
-      },
-      on: function (eventName, callback) {
-
-      }
-    }
-  }
-}
-grpcDataSender.statClient = {
-  sendAgentStat: function () {
-    return {
-      write: function (pmessage) {
-        grpcDataSender.actualPStatMessage = pmessage
-      },
-      end: function () {
-
-      },
-      on: function (eventName, callback) {
-
-      }
-    }
-  }
-}
 
 test('sendSpanChunk redis.SET.end', function (t) {
   let expectedSpanChunk = {
@@ -289,7 +274,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
 
   grpcDataSender.sendSpanChunk(spanChunk)
 
-  const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
+  const actual = grpcDataSender.actualSpan.getSpanchunk()
 
   t.plan(22)
   t.true(actual != null, 'spanChunk send')
@@ -414,7 +399,7 @@ test('sendSpanChunk redis.GET.end', (t) => {
     agentStartTime: 1592872080170
   }), expectedSpanChunk)
   grpcDataSender.sendSpanChunk(spanChunk)
-  const actual = grpcDataSender.actualSpanChunk.getSpanchunk()
+  const actual = grpcDataSender.actualSpan.getSpanchunk()
 
   t.plan(16)
   t.equal(actual.getVersion(), 1, 'version')
@@ -713,7 +698,7 @@ test('sendSpan', (t) => {
     agentStartTime: 1592872080170
   }), expectedSpanChunk)
   grpcDataSender.sendSpan(span)
-  const actual = grpcDataSender.actualSpanChunk.getSpan()
+  const actual = grpcDataSender.actualSpan.getSpan()
 
   t.plan(22)
   t.equal(actual.getVersion(), 1, 'version')

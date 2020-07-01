@@ -12,29 +12,51 @@ test(`mongodb`, async (t) => {
     agent.bindHttp()
 
     const trace = agent.createTraceObject()
-    const mongoose = require('mongoose');
-    mongoose.connect(`mongodb://${container.getContainerIpAddress()}:${container.getMappedPort(27017)}/test`, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true
-    });
+    const Server = require('mongodb-core').Server
+    var server = new Server({
+        host: container.getContainerIpAddress(),
+        port: container.getMappedPort(27017),
+        reconnect: true,
+        reconnectInterval: 50
+    })
 
-    const Cat = mongoose.model('Cat', {
-        name: String
-    });
+    t.plan(2)
+    // Add event listeners
+    server.on('connect', async function (_server) {
+        console.log('connected')
 
-    const kitty = new Cat({
-        name: 'Zildjian'
-    });
+        // Execute the ismaster command
+        _server.command('system.$cmd', {
+            ismaster: true
+        }, function (err, result) {
 
-    t.plan(1)
-    kitty.save().then(async () => {
-        agent.completeTraceObject(trace)
-
-        
-        t.true(true)
-
-        await mongoose.disconnect()
+            // Perform a document insert
+            _server.insert('myproject.inserts1', [{
+                a: 1
+            }, {
+                a: 2
+            }], {
+                writeConcern: {
+                    w: 1
+                },
+                ordered: true
+            }, function (err, results) {
+                t.equal(null, err);
+                t.equal(2, results.result.n);
+            });
+        });
         await container.stop()
     });
+
+    server.on('close', function () {
+        console.log('closed');
+    });
+
+    server.on('reconnect', function () {
+        console.log('reconnect');
+    });
+
+    // Start connection
+    server.connect();
 
 })

@@ -25,11 +25,12 @@ test(`mongodb`, async (t) => {
     const kitty = new Cat({
         name: 'Zildjian'
     });
+
+    t.plan(1)
     kitty.save().then(async () => {
-        console.log('meow')
         agent.completeTraceObject(trace)
 
-        t.plan(1)
+        
         t.true(true)
 
         await mongoose.disconnect()

@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [0.6.1] - 2020-7-02
+### Fixed
+- Fix TypeError: c.toArray is not a function error in mongodb-core hook module
+
 ## [0.6.0] - 2020-6-26
 ### Added
 - docker env auto detection

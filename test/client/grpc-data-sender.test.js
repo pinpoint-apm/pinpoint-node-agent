@@ -7,11 +7,7 @@ const {
   util,
   enableDataSending
 } = require('../test-helper')
-enableDataSending()
 
-const GrpcDataSender = require('../../lib/client/grpc-data-sender')
-const GRPC_ENABLE = true
-fixture.config['grpcEnable'] = GRPC_ENABLE
 const Annotation = require('../../lib/context/annotation')
 const {
   DefaultAnnotationKey
@@ -20,57 +16,8 @@ const AsyncId = require('../../lib/context/async-id')
 const SpanChunk = require('../../lib/context/span-chunk')
 const Span = require('../../lib/context/span')
 const SpanEvent = require('../../lib/context/span-event')
+const MockgRPCDataSender = require('./mock-grpc-data-sender')
 
-class MockgRPCDataSender extends GrpcDataSender {
-  initializeClients(agentInfo, collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort) {
-  }
-
-  initializeSpanStream() {
-    let self = this
-    this.spanStream = {
-      write: function (span) {
-        self.actualSpan = span
-      },
-      end: function () {
-
-      }
-    }
-  }
-
-  initializeProfilerStream() {
-    let self = this
-    this.profilerStream = {
-      write: function (pmessage) {
-        self.actualPCmdMessage = pmessage
-      },
-      end: function () {
-
-      },
-      on: function (eventName, callback) {
-
-      }
-    }
-  }
-
-  initializeStatStream() {
-    let self = this
-    this.statStream = {
-      write: function (pmessage) {
-        self.actualPStatMessage = pmessage
-      },
-      end: function () {
-
-      },
-      on: function (eventName, callback) {
-
-      }
-    }
-  }
-
-  initializePingStream() {
-
-  }
-}
 test('Should send span ', function (t) {
   const expectedSpan = {
     "traceId": {

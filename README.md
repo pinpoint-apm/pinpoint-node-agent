@@ -38,7 +38,6 @@ CommonJS
 * Elasticsearch Node client
 
 ## Environment variables
-
 name | default | description
 -----|---------|------------
 `PINPOINT_AGENT_ID` |  | The maximum length is 24. a required variable.

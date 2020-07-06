@@ -31,9 +31,9 @@ CommonJS
 
 ## Supported Modules
 * Express 4
-* Koa
+* Koa(koa-router >=5.2.0 <8)
 * HTTP, HTTPS
-* Redis, ioredis(>=2.0.0, <5.0.0)
+* Redis, ioredis(>=2.0.0 <5.0.0)
 * mongodb-core(>=1.0.0)
 * Elasticsearch Node client
 

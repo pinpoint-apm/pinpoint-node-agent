@@ -29,6 +29,14 @@ CommonJS
   require('pinpoint-node-agent')
 ```
 
+## Supported Modules
+* Express 4
+* Koa
+* HTTP, HTTPS
+* Redis, ioredis(>=2.0.0, <5.0.0)
+* mongodb-core(>=1.0.0)
+* Elasticsearch Node client
+
 ## Environment variables
 
 name | default | description

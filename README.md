@@ -44,7 +44,10 @@ name | default | description
 `PINPOINT_AGENT_ID` |  | The maximum length is 24. a required variable.
 `PINPOINT_APPLICATION_NAME` | | The maximum length is 24. a required variable.
 `PINPOINT_COLLECTOR_IP` | localhost | The address that the Pinpoint collector. ex) 192.168.0.1
-`PINPOINT_SAMPLING_RATE` | 10 | 
+`PINPOINT_SAMPLING_RATE` | 10 | Sample rate of incoming HTTP or HTTPS request
+`PINPOINT_LOG_LEVEL` | WARN | Log level
+`PINPOINT_ENABLE` | true | If you set it to false, the agent will not work.
+`PINPOINT_CONTAINER` | false | Whether to use docker or kubernetes. 
 
 ## Contributing
 

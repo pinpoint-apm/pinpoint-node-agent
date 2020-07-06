@@ -47,7 +47,7 @@ name | default | description
 `PINPOINT_SAMPLING_RATE` | 10 | Sample rate of incoming HTTP or HTTPS request
 `PINPOINT_LOG_LEVEL` | WARN | Log level
 `PINPOINT_ENABLE` | true | If you set it to false, the agent will not work.
-`PINPOINT_CONTAINER` | false | Whether to use docker or kubernetes. 
+`PINPOINT_CONTAINER` | false | Whether to use docker or kubernetes. If the PINPOINT_CONTAINER environment variable is not set, the agent analyzes the'/.dockerenv' and'/proc/self/cgroup' files to determine whether to use the Docker container. If the KUBERNETES_SERVICE_HOST environment variable exists, it is determined that it is the kubernetes environment and changes it to the true value.
 
 ## Contributing
 

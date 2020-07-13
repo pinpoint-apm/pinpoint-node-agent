@@ -29,3 +29,5 @@ yarn-error.log*
 
 # npmrc
 packages/**/.npmrc
+
+.vscode

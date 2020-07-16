@@ -1,0 +1,4 @@
+.npmrc
+mongodb
+mongoconfig
+mongo-entrypoint

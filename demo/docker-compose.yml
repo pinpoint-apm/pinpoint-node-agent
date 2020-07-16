@@ -1,20 +1,6 @@
 version: '3.4'
 
 services:
-  demo:
-    image: demo
-    build: .
-    environment:
-      - NODE_ENV=production
-      - PINPOINT_COLLECTOR_IP=dev.collector.pinpoint.navercorp.com
-      - PINPOINT_CONTAINER=true
-      - PINPOINT_APPLICATION_NAME=0.6.2.rc.1-test
-      - PINPOINT_AGENT_ID=pinpoint-node-agent-docker
-    depends_on:
-      - "redis"
-    ports:
-      - 3000:3000
-
   redis:
     image: redis
     restart: always

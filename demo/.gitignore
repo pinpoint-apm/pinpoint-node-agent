@@ -3,3 +3,4 @@ mongodb
 mongoconfig
 mongo-entrypoint
 .vscode
+.node-version

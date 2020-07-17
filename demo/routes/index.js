@@ -3,7 +3,7 @@ var router = express.Router();
 const axios = require('axios');
 
 const IORedis = require('ioredis');
-const ioRedis = new IORedis(6379, "redis");
+const ioRedis = new IORedis(6379);
 
 let callcount = 0
 /* GET home page. */

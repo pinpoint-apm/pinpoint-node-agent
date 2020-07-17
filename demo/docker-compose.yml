@@ -1,17 +1,6 @@
 version: '3.4'
 
 services:
-  demo:
-    image: demo
-    build: .
-    environment:
-      NODE_ENV: production
-    depends_on:
-      - "redis"
-      - "my-mongodb"
-    ports:
-      - 3000:3000
-
   redis:
     image: redis
     restart: always

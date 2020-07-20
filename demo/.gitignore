@@ -2,3 +2,6 @@
 mongodb
 mongoconfig
 mongo-entrypoint
+.vscode
+.node-version
+package-lock.json

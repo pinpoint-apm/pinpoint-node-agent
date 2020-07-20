@@ -1,9 +1,10 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
-## [0.6.2] - 2020-7-02
+## [0.6.2] - 2020-7-20
 ### Fixed
 - Fix Ping stream close a bug
+- Fix that the Inspector shutdown server status icon was exposed.
 
 ## [0.6.1] - 2020-7-02
 ### Fixed

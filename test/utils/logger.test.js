@@ -10,3 +10,10 @@ test('isDebug', (t) => {
     log.init("DEBUG")
     t.equal(log.isDebug(), true, 'debug')
 })
+
+test('isInfo', (t) => {
+    log.logger = null
+
+    t.plan(1)
+    t.equal(log.isInfo(), false, 'info null')
+})

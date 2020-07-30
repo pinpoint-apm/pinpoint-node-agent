@@ -38,6 +38,8 @@ CommonJS
 * Elasticsearch Node client
 
 ## Environment variables
+Based on the [pinpoint-config-default.json](/blob/master/lib/pinpoint-config-default.json) file, only necessary parts are set as environment variables.
+
 name | default | description
 -----|---------|------------
 PINPOINT_AGENT_ID |  | The maximum length is 24. a required variable.
@@ -49,7 +51,7 @@ PINPOINT_ENABLE | true | If you set it to false, the agent will not work.
 PINPOINT_CONTAINER | false | Whether to use docker or kubernetes. If the PINPOINT_CONTAINER environment variable is not set, the agent analyzes the'/.dockerenv' and'/proc/self/cgroup' files to determine whether to use the Docker container. If the KUBERNETES_SERVICE_HOST environment variable exists, it is determined that it is the kubernetes environment and changes it to the true value.
 
 ## Agent ID
-Based on the [pinpoint-config-default.json](/blob/master/lib/pinpoint-config-default.json) file, only necessary parts are set as environment variables.
+
 
 ## Contributing
 

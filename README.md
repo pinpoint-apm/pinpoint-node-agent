@@ -38,15 +38,23 @@ CommonJS
 * Elasticsearch Node client
 
 ## Environment variables
+Based on the [pinpoint-config-default.json](/blob/master/lib/pinpoint-config-default.json) file, only necessary parts are set as environment variables.
+
 name | default | description
 -----|---------|------------
 PINPOINT_AGENT_ID |  | The maximum length is 24. a required variable.
-PINPOINT_APPLICATION_NAME | | The maximum length is 24. a required variable.
+PINPOINT_APPLICATION_NAME | | meaningful name of the app. an application name can have multiple PINPOINT_AGENT_ID. The maximum length is 24. a required variable. 
 PINPOINT_COLLECTOR_IP | localhost | The address that the Pinpoint collector. ex) 192.168.0.1
 PINPOINT_SAMPLING_RATE | 10 | Sample rate of incoming HTTP or HTTPS request. The value is calculated as 1/value.
 PINPOINT_LOG_LEVEL | WARN | Log level
 PINPOINT_ENABLE | true | If you set it to false, the agent will not work.
 PINPOINT_CONTAINER | false | Whether to use docker or kubernetes. If the PINPOINT_CONTAINER environment variable is not set, the agent analyzes the'/.dockerenv' and'/proc/self/cgroup' files to determine whether to use the Docker container. If the KUBERNETES_SERVICE_HOST environment variable exists, it is determined that it is the kubernetes environment and changes it to the true value.
+
+## Agent ID
+The agent ID is used as the identifier per the server or node. You need to set the hostname or node identifier(The maximum length is 24) on the server.
+```
+PINPOINT_AGENT_ID=${HOSTNAME} pm2 start ~/service/bin/pm2_start.json​
+```
 
 ## Contributing
 

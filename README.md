@@ -43,7 +43,7 @@ Based on the [pinpoint-config-default.json](/blob/master/lib/pinpoint-config-def
 name | default | description
 -----|---------|------------
 PINPOINT_AGENT_ID |  | The maximum length is 24. a required variable.
-PINPOINT_APPLICATION_NAME | | The maximum length is 24. a required variable.
+PINPOINT_APPLICATION_NAME | | meaningful name of the app. an application name can have multiple PINPOINT_AGENT_ID. The maximum length is 24. a required variable. 
 PINPOINT_COLLECTOR_IP | localhost | The address that the Pinpoint collector. ex) 192.168.0.1
 PINPOINT_SAMPLING_RATE | 10 | Sample rate of incoming HTTP or HTTPS request. The value is calculated as 1/value.
 PINPOINT_LOG_LEVEL | WARN | Log level

@@ -38,7 +38,7 @@ CommonJS
 * Elasticsearch Node client
 
 ## Environment variables
-Based on the [pinpoint-config-default.json](/blob/master/lib/pinpoint-config-default.json) file, only necessary parts are set as environment variables.
+Based on the [pinpoint-config-default.json](/lib/pinpoint-config-default.json) file, only necessary parts are set as environment variables.
 
 name | default | description
 -----|---------|------------

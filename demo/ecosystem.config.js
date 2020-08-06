@@ -11,7 +11,7 @@ module.exports = {
     env: {
       NODE_ENV: 'development',
       "PINPOINT_CONTAINER": "false",
-      "PINPOINT_AGENT_ID": "express-node-js-id",
+      // "PINPOINT_AGENT_ID": "express-node-js-id",
       "PINPOINT_APPLICATION_NAME": "express.node.js",
       "PINPOINT_COLLECTOR_IP": "localhost",
       "PINPOINT_LOG_LEVEL": "DEBUG",

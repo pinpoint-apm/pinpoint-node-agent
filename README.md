@@ -37,6 +37,9 @@ CommonJS
 * mongodb-core(>=1.0.0)
 * Elasticsearch Node client
 
+## Compatibility for Pinpoint Collector
+The Pinpoint Node agent use the gRPC library. The agent must be used with Pinpoint v2.0 or higher.
+
 ## Environment variables
 Based on the [pinpoint-config-default.json](/lib/pinpoint-config-default.json) file, only necessary parts are set as environment variables.
 

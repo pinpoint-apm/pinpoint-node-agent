@@ -38,9 +38,9 @@ CommonJS
 * Elasticsearch Node client
 
 ## Agent - Collector compatibility table
-Agent Version | Collector 1.5.x | Collector 1.6.x | Collector 1.7.x | Collector 1.8.x | Collector 2.0.x
-------------- | --------------- | --------------- | --------------- | --------------- | ---------------
-0.6.x | no        | no | no | no | yes
+Agent Version | Collector 1.x | Collector 2.0.x
+------------- | --------------- | ---------------
+0.6.x | no      | yes
 
 ## Environment variables
 Based on the [pinpoint-config-default.json](/lib/pinpoint-config-default.json) file, only necessary parts are set as environment variables.

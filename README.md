@@ -61,6 +61,11 @@ The agent ID is used as the identifier per the server or node. You need to set t
 PINPOINT_AGENT_ID=${HOSTNAME} pm2 start ~/service/bin/pm2_start.json​
 ```
 
+## No support the JVM agent features
+The Pinpoint Node agent does not support the following the JVM agent features. We plan to provide more detailed app information like the JVM agent.
+* Active Request
+* Some inspector information(Transactions Per Second, Active Request ...)
+
 ## Contributing
 
 We are looking forward to your contributions via pull requests.

@@ -1,3 +1,9 @@
+/**
+ * Pinpoint Node.js Agent
+ * Copyright 2020-present NAVER Corp.
+ * Apache License v2.0
+ */
+
 const fixture = require('./fixture')
 const util = require('./util')
 

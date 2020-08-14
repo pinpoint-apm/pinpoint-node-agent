@@ -72,3 +72,10 @@ test('Should complete trace ', async function (t) {
   traceContext.completeTraceObject(trace)
   t.ok(trace.spanRecorder.span.elapsedTime > 500)
 })
+
+test('No sample pinpoint sampled 0', (t) => {
+  t.plan(1)
+
+  const dut = TraceContext.init(fixture.getAgentInfo(), dataSenderMock())
+  t.true( dut != null, 'dut is not null')
+})

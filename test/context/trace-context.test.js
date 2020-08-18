@@ -74,8 +74,10 @@ test('Should complete trace ', async function (t) {
 })
 
 test('No sample pinpoint sampled 0', (t) => {
-  t.plan(1)
+  t.plan(2)
 
-  const dut = TraceContext.init(fixture.getAgentInfo(), dataSenderMock())
-  t.true( dut != null, 'dut is not null')
+  const dut = TraceContext.init(fixture.getAgentInfo(), dataSenderMock(), fixture.config)
+  t.true( dut.isSampling != null, 'dut is not null')
+
+  t.true(dut.makeTrace() != null, 'trace is not null')
 })

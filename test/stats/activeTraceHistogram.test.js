@@ -18,7 +18,7 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
   
-test(`Should get histogram`, function (t) {
+test.skip(`Should get histogram`, function (t) {
     t.plan(1)
   
     const PATH = '/active-trace'

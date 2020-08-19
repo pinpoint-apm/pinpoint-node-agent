@@ -94,3 +94,22 @@ test('new Trace', (t) => {
   t.equal(trace.traceId.parentSpanId, -1, 'trace is not null')
   t.true(trace.traceId.spanId > 0, 'trace id')
 })
+
+test('continue trace', (t) => {
+  t.plan(1)
+
+  const dut = TraceContext.init(fixture.getAgentInfo(), dataSenderMock(), fixture.config)
+  const req = {
+    url: "http://test.com",
+    headers: {
+      "pinpoint-traceid": "node.test.app^1597822882452^2",
+      "pinpoint-spanid": 8694404353014521
+    },
+    connection: {}
+  }
+  const requestData = RequestHeaderUtils.read(req)
+  const trace = dut.makeTrace(requestData)
+
+  t.equal(trace.traceId.transactionId.toString(), "node.test.app^1597822882452^2", "transactionId")
+  // t.equal(trace.traceId.spanId, 8694404353014521, "spanId")
+})

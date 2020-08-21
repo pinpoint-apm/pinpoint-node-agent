@@ -96,14 +96,15 @@ test('new Trace', (t) => {
 })
 
 test('continue trace', (t) => {
-  t.plan(2)
+  t.plan(3)
 
   const dut = TraceContext.init(fixture.getAgentInfo(), dataSenderMock(), fixture.config)
   const req = {
     url: "http://test.com",
     headers: {
       "pinpoint-traceid": "node.test.app^1597822882452^2",
-      "pinpoint-spanid": '1844674407370955161'
+      "pinpoint-spanid": '1844674407370955161',
+      "pinpoint-pspanid": '-1844674407370955141'
     },
     connection: {}
   }
@@ -112,4 +113,5 @@ test('continue trace', (t) => {
 
   t.equal(trace.traceId.transactionId.toString(), "node.test.app^1597822882452^2", "transactionId")
   t.equal(trace.traceId.spanId.toString(), '1844674407370955161', "spanId")
+  t.equal(trace.traceId.parentSpanId.toString(), '-1844674407370955141', "parentSpanId")
 })

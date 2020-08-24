@@ -6,6 +6,7 @@
 
 const test = require('tape')
 const axios = require('axios')
+const express = require('express')
 
 const agent = require('../support/agent-singleton-mock')
 
@@ -20,6 +21,16 @@ test('continue trace', (t) => {
 
     t.plan(1)
     const PATH = '/outgoingrequest'
+    const app = new express()
 
-    t.true(true)
+    app.get(PATH, async (req, res) => {
+      res.send('ok get')
+    })
+
+    const server = app.listen(TEST_ENV.port, async () => {
+      const result1 = await axios.get(getServerUrl(PATH))
+      t.ok(result1.status, 200)
+
+      server.close()
+    })
 })

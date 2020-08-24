@@ -24,16 +24,26 @@ test('continue trace', (t) => {
   const app = new express()
 
   app.get(PATH, async (req, res) => {
-    const instance = axios.create({
-      baseURL: 'https://naver.com/',
-      timeout: 1000,
-    })
-    instance.interceptors.response.use(res => {
-      console.log(res.request._header)
-      return res;
-    }, error => Promise.reject(error))
+    const https = require('https')
+    const options = {
+      hostname: 'naver.com',
+      port: 443,
+      path: '/',
+      method: 'GET'
+    }
 
-    const result = await instance.get('/')
+    const request = https.request(options, res => {
+      
+
+      res.on('data', d => {
+        process.stdout.write(d)
+      })
+    })
+    request.on('error', error => {
+      console.error(error)
+    })
+    request.end()
+
     res.send('ok get')
   })
 

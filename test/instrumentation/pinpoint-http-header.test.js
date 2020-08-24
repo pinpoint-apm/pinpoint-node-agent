@@ -16,10 +16,10 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-test('continue trace', (t) => {
+test('outgoing request', (t) => {
   agent.bindHttp()
 
-  t.plan(1)
+  t.plan(3)
   const PATH = '/outgoingrequest'
   const app = new express()
 
@@ -32,9 +32,11 @@ test('continue trace', (t) => {
       method: 'GET'
     }
 
+    const trace = agent.currentTraceObject()
     const request = https.request(options, res => {
-      
-
+      const headers = res.req._headers
+      t.equal(trace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
+      t.equal(trace.traceId.spanId, headers['pinpoint-pspanid'])
       res.on('data', d => {
         process.stdout.write(d)
       })

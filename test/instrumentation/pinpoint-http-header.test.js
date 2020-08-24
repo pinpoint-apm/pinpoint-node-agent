@@ -11,26 +11,36 @@ const express = require('express')
 const agent = require('../support/agent-singleton-mock')
 
 const TEST_ENV = {
-    host: 'localhost',
-    port: 5006,
-  }
+  host: 'localhost',
+  port: 5006,
+}
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 test('continue trace', (t) => {
-    agent.bindHttp()
+  agent.bindHttp()
 
-    t.plan(1)
-    const PATH = '/outgoingrequest'
-    const app = new express()
+  t.plan(1)
+  const PATH = '/outgoingrequest'
+  const app = new express()
 
-    app.get(PATH, async (req, res) => {
-      res.send('ok get')
+  app.get(PATH, async (req, res) => {
+    const instance = axios.create({
+      baseURL: 'https://naver.com/',
+      timeout: 1000,
     })
+    instance.interceptors.response.use(res => {
+      console.log(res.request._header)
+      return res;
+    }, error => Promise.reject(error))
 
-    const server = app.listen(TEST_ENV.port, async () => {
-      const result1 = await axios.get(getServerUrl(PATH))
-      t.ok(result1.status, 200)
+    const result = await instance.get('/')
+    res.send('ok get')
+  })
 
-      server.close()
-    })
+  const server = app.listen(TEST_ENV.port, async () => {
+    const result1 = await axios.get(getServerUrl(PATH))
+    t.ok(result1.status, 200)
+
+    server.close()
+  })
 })

@@ -19,7 +19,7 @@ const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 test('outgoing request', (t) => {
   agent.bindHttp()
 
-  t.plan(3)
+  t.plan(7)
   const PATH = '/outgoingrequest'
   const app = new express()
 
@@ -37,6 +37,10 @@ test('outgoing request', (t) => {
       const headers = res.req._headers
       t.equal(trace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
       t.equal(trace.traceId.spanId, headers['pinpoint-pspanid'])
+      t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
+      t.equal(agent.config.serviceType, headers['pinpoint-papptype'])
+      t.equal(trace.traceId.flag, headers["pinpoint-flags"])
+      t.equal(trace.canSampled(), headers["pinpoint-sampled"])
       res.on('data', d => {
         process.stdout.write(d)
       })

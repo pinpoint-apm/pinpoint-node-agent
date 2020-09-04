@@ -60,3 +60,43 @@ test('outgoing request', (t) => {
     server.close()
   })
 })
+
+test('incomming request', (t) => {
+  agent.bindHttp()
+
+  t.plan(1)
+  const PATH = '/incommingrequest'
+  const app = new express()
+
+  app.get(PATH, async (req, res) => {
+    const https = require('https')
+    const options = {
+      hostname: 'naver.com',
+      port: 443,
+      path: '/',
+      method: 'GET'
+    }
+
+    const trace = agent.currentTraceObject()
+    const request = https.request(options, res => {
+      const headers = res.req._headers
+
+      res.on('data', d => {
+        process.stdout.write(d)
+      })
+    })
+    request.on('error', error => {
+      console.error(error)
+    })
+    request.end()
+
+    res.send('ok get')
+  })
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    const result1 = await axios.get(getServerUrl(PATH))
+    t.ok(result1.status, 200)
+
+    server.close()
+  })
+})

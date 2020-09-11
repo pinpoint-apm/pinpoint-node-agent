@@ -112,7 +112,7 @@ test('incomming request', (t) => {
       },
     }
 
-    const result1 = await axios.get(getServerUrl(PATH))
+    const result1 = await axios.get(getServerUrl(PATH), config)
     t.ok(result1.status, 200)
 
     server.close()

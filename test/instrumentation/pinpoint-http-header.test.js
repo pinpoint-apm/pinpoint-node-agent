@@ -64,7 +64,7 @@ test.skip('outgoing request', (t) => {
 test('incomming request', (t) => {
   agent.bindHttp()
 
-  t.plan(2)
+  t.plan(4)
   const PATH = '/incommingrequest'
   const app = new express()
 
@@ -91,7 +91,8 @@ test('incomming request', (t) => {
     const headers = config.headers
 
     t.equal(trace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
-
+    t.equal(trace.traceId.spanId.toString(), headers['pinpoint-spanid'])
+    t.equal(trace.traceId.parentSpanId.toString(), headers['pinpoint-pspanid'])
     res.send('ok get')
   })
 

@@ -15,6 +15,7 @@ const Agent = require('../../lib/agent')
 const dataSenderMock = require('./data-sender-mock')
 const shimmer = require('shimmer')
 const httpShared = require('../../lib/instrumentation/http-shared')
+const traceContext = require('../../lib/context/trace-context')
 
 class MockAgent extends Agent {
     startSchedule(agentId, agentStartTime) {
@@ -53,6 +54,7 @@ class MockAgent extends Agent {
             this.traceContext.completeTraceObject(trace)
         })
 
+        this.traceContext = traceContext.init(this.agentInfo, this.dataSender, this.config)
     }
 
     cleanup() {

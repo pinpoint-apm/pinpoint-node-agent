@@ -8,6 +8,7 @@ const test = require('tape')
 const axios = require('axios')
 const express = require('express')
 
+const { fixture } = require('../test-helper')
 const agent = require('../support/agent-singleton-mock')
 
 const TEST_ENV = {
@@ -61,8 +62,12 @@ test.skip('outgoing request', (t) => {
   })
 })
 
+test('incomming request agent sampled true', (t) => {
+  incomingRequest(t)
+})
+
 //https://github.com/naver/pinpoint/blob/ab07664e2ed944e90aa9c44f7e39597f39264c2b/bootstrap-core/src/main/java/com/navercorp/pinpoint/bootstrap/plugin/request/DefaultTraceHeaderReader.java#L78
-test('incomming request', (t) => {
+function incomingRequest(t, sampled) {
   agent.bindHttp()
 
   t.plan(5)
@@ -83,8 +88,7 @@ test('incomming request', (t) => {
       "pinpoint-papptype": "1210",
       "pinpoint-host": "localhost:3000"
     },
-    params: {
-    },
+    params: {},
   }
 
   app.get(PATH, async (req, res) => {
@@ -94,7 +98,11 @@ test('incomming request', (t) => {
     t.equal(trace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
     t.equal(trace.traceId.spanId.toString(), headers['pinpoint-spanid'])
     t.equal(trace.traceId.parentSpanId.toString(), headers['pinpoint-pspanid'])
-    t.equal(trace.sampling, true)
+    if (sampled == undefined) {
+      t.equal(trace.sampling, true)
+    } else {
+      t.equal(trace.sampling, sampled)
+    }
     res.send('ok get')
   })
 
@@ -104,4 +112,9 @@ test('incomming request', (t) => {
 
     server.close()
   })
+}
+
+test('incomming request agent sampled false', (t) => {
+  fixture.config.sampling = false
+  incomingRequest(t, false)
 })

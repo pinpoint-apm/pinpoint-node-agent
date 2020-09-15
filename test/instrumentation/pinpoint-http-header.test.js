@@ -117,4 +117,5 @@ function incomingRequest(t, sampled) {
 test('incomming request agent sampled false', (t) => {
   fixture.config.sampling = false
   incomingRequest(t, false)
+  fixture.config.sampling = true
 })

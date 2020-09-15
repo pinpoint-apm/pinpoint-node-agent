@@ -61,10 +61,11 @@ test.skip('outgoing request', (t) => {
   })
 })
 
+//https://github.com/naver/pinpoint/blob/ab07664e2ed944e90aa9c44f7e39597f39264c2b/bootstrap-core/src/main/java/com/navercorp/pinpoint/bootstrap/plugin/request/DefaultTraceHeaderReader.java#L78
 test('incomming request', (t) => {
   agent.bindHttp()
 
-  t.plan(4)
+  t.plan(5)
   const PATH = '/incommingrequest'
   const app = new express()
 
@@ -93,6 +94,7 @@ test('incomming request', (t) => {
     t.equal(trace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
     t.equal(trace.traceId.spanId.toString(), headers['pinpoint-spanid'])
     t.equal(trace.traceId.parentSpanId.toString(), headers['pinpoint-pspanid'])
+    t.equal(trace.sampling, true)
     res.send('ok get')
   })
 

@@ -13,8 +13,7 @@ public class HelloController {
 
 	@RequestMapping("/")
 	public String index() throws IOException {
-        String result = this.run("http://localhost:3000");
-		return "result";
+		return this.run("http://localhost:3000/api");
     }
     
     OkHttpClient client = new OkHttpClient();

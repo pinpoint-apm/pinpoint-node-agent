@@ -17,7 +17,7 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-test.skip('outgoing request', (t) => {
+test('outgoing request', (t) => {
   agent.bindHttp()
 
   t.plan(7)

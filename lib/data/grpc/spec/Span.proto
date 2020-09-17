@@ -17,11 +17,11 @@ message PSpan {
 
     PTransactionId transactionId = 2;
 
-    sfixed64 spanId = 3;
-    sfixed64 parentSpanId = 4;
+    sfixed64 spanId = 3 [jstype = JS_STRING];
+    sfixed64 parentSpanId = 4 [jstype = JS_STRING];
 
     // span event's startTimestamp
-    int64 startTime = 5;
+    int64 startTime = 5; 
     int32 elapsed = 6;
     int32 apiId = 7;
 
@@ -45,8 +45,8 @@ message PSpan {
 message PTransactionId {
     // identical to agentId if null
     string agentId = 1; //nullable
-    int64 agentStartTime = 2;
-    int64 sequence = 3;
+    int64 agentStartTime = 2 [jstype = JS_STRING];
+    int64 sequence = 3 [jstype = JS_STRING];
 }
 
 message PAcceptEvent {

@@ -96,8 +96,8 @@ function incomingRequest(t, sampled) {
     const headers = config.headers
 
     t.equal(trace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
-    t.equal(trace.traceId.spanId.toString(), headers['pinpoint-spanid'])
-    t.equal(trace.traceId.parentSpanId.toString(), headers['pinpoint-pspanid'])
+    t.equal(trace.traceId.spanId, headers['pinpoint-spanid'])
+    t.equal(trace.traceId.parentSpanId, headers['pinpoint-pspanid'])
     if (sampled == undefined) {
       t.equal(trace.sampling, true)
     } else {

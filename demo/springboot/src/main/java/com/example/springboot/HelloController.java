@@ -16,11 +16,14 @@ public class HelloController {
 		return this.run("http://localhost:3000/api");
     }
     
-    OkHttpClient client = new OkHttpClient();
+    OkHttpClient client = new OkHttpClient.Builder()
+                            .retryOnConnectionFailure(false)
+                            .build();
 
     String run(String url) throws IOException {
         Request request = new Request.Builder()
             .url(url)
+            .header("Accept-Encoding", "identity")
             .build();
 
         try (Response response = client.newCall(request).execute()) {

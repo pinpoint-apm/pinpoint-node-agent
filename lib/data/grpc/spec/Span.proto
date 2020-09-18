@@ -103,7 +103,7 @@ message PSpanChunk {
 
     PTransactionId transactionId = 2;
 
-    sfixed64 spanId = 3;
+    sfixed64 spanId = 3 [jstype = JS_STRING];
 
     string endPoint = 4;
 

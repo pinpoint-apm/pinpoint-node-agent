@@ -22,6 +22,7 @@ public class HelloController {
 
     String run(String url) throws IOException {
         Request request = new Request.Builder()
+            .header("Connection", "close")
             .url(url)
             .header("Accept-Encoding", "identity")
             .build();

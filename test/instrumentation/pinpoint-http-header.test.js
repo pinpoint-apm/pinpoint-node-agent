@@ -137,6 +137,7 @@ function incomingRequest(t, sampled) {
       t.equal(actualHeaders['pinpoint-host'], headers['pinpoint-host'])
       t.equal(actualHeaders['pinpoint-sampled'], headers['pinpoint-sampled'])
     } else {
+      // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
       t.equal('s0', headers['pinpoint-sampled'])
     }
     res.send('ok get')

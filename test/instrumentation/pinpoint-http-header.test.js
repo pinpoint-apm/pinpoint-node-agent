@@ -116,6 +116,7 @@ function incomingRequest(t, sampled) {
 
   const OUTGOING_PATH = '/outgoingrequest'
   app.get(OUTGOING_PATH, async (req, res) => {
+    const headers = req.headers
     res.send('ok get')
   })
 

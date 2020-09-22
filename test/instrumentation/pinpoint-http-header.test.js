@@ -22,7 +22,7 @@ const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 test('outgoing request', (t) => {
   agent.bindHttp()
 
-  t.plan(7)
+  t.plan(6)
   const PATH = '/outgoingrequest'
   const app = new express()
 
@@ -43,7 +43,6 @@ test('outgoing request', (t) => {
       t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
       t.equal(agent.config.serviceType, headers['pinpoint-papptype'])
       t.equal(trace.traceId.flag, headers["pinpoint-flags"])
-      t.equal(trace.canSampled(), headers["pinpoint-sampled"])
       res.on('data', d => {
         process.stdout.write(d)
       })
@@ -127,7 +126,6 @@ function incomingRequest(t, sampled) {
       "pinpoint-papptype": "1400",
       "pinpoint-flags": "0",
       "pinpoint-host": "localhost:5006",
-      "pinpoint-sampled": "true",
       "connection": "close"
     }
     const headers = req.headers
@@ -137,6 +135,7 @@ function incomingRequest(t, sampled) {
       t.equal(actualHeaders['pinpoint-pappname'], headers['pinpoint-pappname'])
       t.equal(actualHeaders['pinpoint-papptype'], headers['pinpoint-papptype'])
       t.equal(actualHeaders['pinpoint-host'], headers['pinpoint-host'])
+      t.equal(actualHeaders['pinpoint-sampled'], headers['pinpoint-sampled'])
     }
     res.send('ok get')
   })

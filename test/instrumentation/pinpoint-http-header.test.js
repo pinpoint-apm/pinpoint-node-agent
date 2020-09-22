@@ -70,12 +70,6 @@ test('incomming request agent sampled true', (t) => {
 function incomingRequest(t, sampled) {
   agent.bindHttp()
 
-  if (sampled) {
-    t.plan(5)
-  } else {
-    t.plan(5)
-  }
-  
   const app = new express()
 
   let config = {
@@ -113,8 +107,8 @@ function incomingRequest(t, sampled) {
       t.equal(trace.sampling, sampled)
     }
 
-    // const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
-    // t.equal(result1.data, 'ok get', 'result equals')
+    const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
+    t.equal(result1.data, 'ok get', 'result equals')
     res.send('ok get')
   })
 
@@ -131,6 +125,7 @@ function incomingRequest(t, sampled) {
   const server = app.listen(TEST_ENV.port, async () => {
     const result1 = await axios.get(getServerUrl(PATH), config)
     t.ok(result1.status, 200)
+    t.end()
     server.close()
   })
 }

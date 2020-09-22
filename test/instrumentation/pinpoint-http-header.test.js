@@ -136,6 +136,8 @@ function incomingRequest(t, sampled) {
       t.equal(actualHeaders['pinpoint-papptype'], headers['pinpoint-papptype'])
       t.equal(actualHeaders['pinpoint-host'], headers['pinpoint-host'])
       t.equal(actualHeaders['pinpoint-sampled'], headers['pinpoint-sampled'])
+    } else {
+      t.equal('s0', headers['pinpoint-sampled'])
     }
     res.send('ok get')
   })

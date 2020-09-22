@@ -70,8 +70,12 @@ test('incomming request agent sampled true', (t) => {
 function incomingRequest(t, sampled) {
   agent.bindHttp()
 
-  t.plan(5)
-  const PATH = '/incommingrequest'
+  if (sampled) {
+    t.plan(5)
+  } else {
+    t.plan(5)
+  }
+  
   const app = new express()
 
   let config = {
@@ -91,6 +95,7 @@ function incomingRequest(t, sampled) {
     params: {},
   }
 
+  const PATH = '/incommingrequest'
   app.get(PATH, async (req, res) => {
     const trace = agent.currentTraceObject()
     const headers = config.headers
@@ -103,6 +108,13 @@ function incomingRequest(t, sampled) {
     } else {
       t.equal(trace.sampling, sampled)
     }
+
+    const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
+    res.send('ok get')
+  })
+
+  const OUTGOING_PATH = '/outgoingrequest'
+  app.get(OUTGOING_PATH, async (req, res) => {
     res.send('ok get')
   })
 

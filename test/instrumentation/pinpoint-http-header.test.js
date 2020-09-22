@@ -63,7 +63,7 @@ test('outgoing request', (t) => {
 })
 
 test('incomming request agent sampled true', (t) => {
-  incomingRequest(t)
+  incomingRequest(t, true)
 })
 
 //https://github.com/naver/pinpoint/blob/ab07664e2ed944e90aa9c44f7e39597f39264c2b/bootstrap-core/src/main/java/com/navercorp/pinpoint/bootstrap/plugin/request/DefaultTraceHeaderReader.java#L78
@@ -71,9 +71,9 @@ function incomingRequest(t, sampled) {
   agent.bindHttp()
 
   if (sampled) {
-    t.plan(6)
+    t.plan(5)
   } else {
-    t.plan(6)
+    t.plan(5)
   }
   
   const app = new express()
@@ -96,12 +96,16 @@ function incomingRequest(t, sampled) {
   }
 
   const PATH = '/incommingrequest'
+  let expectedTransactionId
+  let expectedSpanId
   app.get(PATH, async (req, res) => {
     const trace = agent.currentTraceObject()
     const headers = config.headers
 
-    t.equal(trace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
-    t.equal(trace.traceId.spanId, headers['pinpoint-spanid'])
+    expectedTransactionId = trace.traceId.transactionId.toString()
+    expectedSpanId = trace.traceId.spanId 
+    t.equal(expectedTransactionId, headers['pinpoint-traceid'])
+    t.equal(expectedSpanId, headers['pinpoint-spanid'])
     t.equal(trace.traceId.parentSpanId, headers['pinpoint-pspanid'])
     if (sampled == undefined) {
       t.equal(trace.sampling, true)
@@ -109,21 +113,24 @@ function incomingRequest(t, sampled) {
       t.equal(trace.sampling, sampled)
     }
 
-    const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
-    t.equal(result1.data, 'ok get', 'result equals')
+    // const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
+    // t.equal(result1.data, 'ok get', 'result equals')
     res.send('ok get')
   })
 
   const OUTGOING_PATH = '/outgoingrequest'
   app.get(OUTGOING_PATH, async (req, res) => {
     const headers = req.headers
+    if (sampled) {
+      t.equal(expectedTransactionId, headers['pinpoint-traceid'])
+      t.equal(expectedSpanId, headers['pinpoint-pspanid'])
+    }
     res.send('ok get')
   })
 
   const server = app.listen(TEST_ENV.port, async () => {
     const result1 = await axios.get(getServerUrl(PATH), config)
     t.ok(result1.status, 200)
-
     server.close()
   })
 }

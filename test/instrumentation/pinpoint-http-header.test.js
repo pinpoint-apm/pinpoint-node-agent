@@ -8,7 +8,9 @@ const test = require('tape')
 const axios = require('axios')
 const express = require('express')
 
-const { fixture } = require('../test-helper')
+const {
+  fixture
+} = require('../test-helper')
 const agent = require('../support/agent-singleton-mock')
 
 const TEST_ENV = {
@@ -97,7 +99,7 @@ function incomingRequest(t, sampled) {
     const headers = config.headers
 
     expectedTransactionId = trace.traceId.transactionId.toString()
-    expectedSpanId = trace.traceId.spanId 
+    expectedSpanId = trace.traceId.spanId
     t.equal(expectedTransactionId, headers['pinpoint-traceid'])
     t.equal(expectedSpanId, headers['pinpoint-spanid'])
     t.equal(trace.traceId.parentSpanId, headers['pinpoint-pspanid'])
@@ -114,10 +116,27 @@ function incomingRequest(t, sampled) {
 
   const OUTGOING_PATH = '/outgoingrequest'
   app.get(OUTGOING_PATH, async (req, res) => {
+    const actualHeaders = {
+      "accept": "application/json, text/plain, */*",
+      "user-agent": "axios/0.18.1",
+      "host": "localhost:5006",
+      "pinpoint-traceid": "express-spring-sampleid^1599831487121^4",
+      "pinpoint-spanid": "8478505740685359",
+      "pinpoint-pspanid": "-387300102333636357",
+      "pinpoint-pappname": "node.test.app",
+      "pinpoint-papptype": "1400",
+      "pinpoint-flags": "0",
+      "pinpoint-host": "localhost:5006",
+      "pinpoint-sampled": "true",
+      "connection": "close"
+    }
     const headers = req.headers
     if (sampled) {
       t.equal(expectedTransactionId, headers['pinpoint-traceid'])
       t.equal(expectedSpanId, headers['pinpoint-pspanid'])
+      t.equal(actualHeaders['pinpoint-pappname'], headers['pinpoint-pappname'])
+      t.equal(actualHeaders['pinpoint-papptype'], headers['pinpoint-papptype'])
+      t.equal(actualHeaders['pinpoint-host'], headers['pinpoint-host'])
     }
     res.send('ok get')
   })

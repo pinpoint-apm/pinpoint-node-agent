@@ -71,9 +71,9 @@ function incomingRequest(t, sampled) {
   agent.bindHttp()
 
   if (sampled) {
-    t.plan(5)
+    t.plan(6)
   } else {
-    t.plan(5)
+    t.plan(6)
   }
   
   const app = new express()
@@ -110,6 +110,7 @@ function incomingRequest(t, sampled) {
     }
 
     const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
+    t.equal(result1.data, 'ok get', 'result equals')
     res.send('ok get')
   })
 

@@ -20,6 +20,10 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 test('outgoing request', (t) => {
+  outgoingRequest(t)
+})
+
+function outgoingRequest(t) {
   agent.bindHttp()
 
   t.plan(6)
@@ -61,7 +65,7 @@ test('outgoing request', (t) => {
 
     server.close()
   })
-})
+}
 
 test('incomming request agent sampled true', (t) => {
   incomingRequest(t, true)

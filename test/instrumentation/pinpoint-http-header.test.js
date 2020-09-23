@@ -54,6 +54,8 @@ function outgoingRequest(t, sampling) {
         t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
         t.equal(agent.config.serviceType, headers['pinpoint-papptype'])
         t.equal(trace.traceId.flag, headers["pinpoint-flags"])
+      } else {
+        t.equal('s0', headers['pinpoint-sampled'], 'if canSample is false, outgoing request has only one pinpoint headers')
       }
       res.on('data', d => {
         process.stdout.write(d)

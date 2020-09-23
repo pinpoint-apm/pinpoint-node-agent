@@ -16,9 +16,9 @@ test('Should create', function (t) {
 
   const agentId = 'agent-for-dev'
   const agentStartTime = Date.now()
-  const transactionId = new TransactionId(agentId, agentStartTime)
+  const transactionId = new TransactionId(agentId, agentStartTime.toString())
   const spanId = IdGenerator.next
-  const traceId = new TraceId(transactionId, spanId)
+  const traceId = new TraceId(transactionId, spanId.toString())
 
   t.ok(traceId)
   t.equal(traceId.parentSpanId, -1)

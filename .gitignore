@@ -35,3 +35,5 @@ packages/**/.npmrc
 package-lock.json
 
 yarn.lock
+
+.node-version

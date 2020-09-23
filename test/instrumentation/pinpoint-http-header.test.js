@@ -29,9 +29,10 @@ function outgoingRequest(t, sampling) {
   const isSamplingFunction = agent.traceContext.isSampling
   if (sampling) {
     agent.traceContext.isSampling = () => { return true }
+  } else {
+    agent.traceContext.isSampling = () => { return false }
   }
 
-  t.plan(6)
   const PATH = '/outgoingrequest'
   const app = new express()
 
@@ -47,11 +48,13 @@ function outgoingRequest(t, sampling) {
     const trace = agent.currentTraceObject()
     const request = https.request(options, res => {
       const headers = res.req._headers
-      t.equal(trace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
-      t.equal(trace.traceId.spanId, headers['pinpoint-pspanid'])
-      t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
-      t.equal(agent.config.serviceType, headers['pinpoint-papptype'])
-      t.equal(trace.traceId.flag, headers["pinpoint-flags"])
+      if (sampling) {        
+        t.equal(trace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
+        t.equal(trace.traceId.spanId, headers['pinpoint-pspanid'])
+        t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
+        t.equal(agent.config.serviceType, headers['pinpoint-papptype'])
+        t.equal(trace.traceId.flag, headers["pinpoint-flags"])
+      }
       res.on('data', d => {
         process.stdout.write(d)
       })
@@ -70,11 +73,14 @@ function outgoingRequest(t, sampling) {
 
     server.close()
 
-    if (sampling) {
-      agent.traceContext.isSampling = isSamplingFunction
-    }
+    agent.traceContext.isSampling = isSamplingFunction
+    t.end()
   })
 }
+
+test('outgoing request when canSample false', (t) => {
+  outgoingRequest(t, false)
+})
 
 test('incomming request agent sampled true', (t) => {
   incomingRequest(t, true)

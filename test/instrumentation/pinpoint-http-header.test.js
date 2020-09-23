@@ -19,15 +19,17 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-test('outgoing request', (t) => {
-  const origin = agent.traceContext.isSampling
-  agent.traceContext.isSampling = () => { return true }
-  outgoingRequest(t)
-  agent.traceContext.isSampling = origin
+test('outgoing request when canSample true', (t) => {
+  outgoingRequest(t, true)
 })
 
-function outgoingRequest(t) {
+function outgoingRequest(t, sampling) {
   agent.bindHttp()
+
+  const isSamplingFunction = agent.traceContext.isSampling
+  if (sampling) {
+    agent.traceContext.isSampling = () => { return true }
+  }
 
   t.plan(6)
   const PATH = '/outgoingrequest'
@@ -67,6 +69,10 @@ function outgoingRequest(t) {
     t.ok(result1.status, 200)
 
     server.close()
+
+    if (sampling) {
+      agent.traceContext.isSampling = isSamplingFunction
+    }
   })
 }
 

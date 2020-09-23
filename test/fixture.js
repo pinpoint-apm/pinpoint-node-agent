@@ -14,12 +14,12 @@ const config = require('../lib/config').getConfig(testConfig)
 const getTransactionId = () => {
   const agentId = config.agentId
   const agentStartTime = Date.now()
-  return new TransactionId(agentId, agentStartTime, 99)
+  return new TransactionId(agentId, agentStartTime.toString(), "99")
 }
 
 const getTraceId = (transactionId) => {
   const spanId = IdGenerator.next
-  return new TraceId(transactionId || getTransactionId(), spanId)
+  return new TraceId(transactionId || getTransactionId(), spanId.toString())
 }
 
 const getAgentInfo = () => ({

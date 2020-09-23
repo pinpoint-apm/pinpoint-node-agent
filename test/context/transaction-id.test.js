@@ -17,10 +17,10 @@ test('Should create with sequence number', function (t) {
 
   const agentId = 'agent-for-dev'
   const agentStartTime = Date.now()
-  const transactionId = new TransactionId(agentId, agentStartTime)
-  const transactionId2 = new TransactionId(agentId, agentStartTime)
+  const transactionId = new TransactionId(agentId, agentStartTime.toString())
+  const transactionId2 = new TransactionId(agentId, agentStartTime.toString())
 
   t.ok(transactionId)
-  t.equal(transactionId.sequence, 0)
-  t.equal(transactionId2.sequence, 1)
+  t.equal(transactionId.sequence, "0")
+  t.equal(transactionId2.sequence, "1")
 })

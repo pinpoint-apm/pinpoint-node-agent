@@ -20,7 +20,10 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 test('outgoing request', (t) => {
+  const origin = agent.traceContext.isSampling
+  agent.traceContext.isSampling = () => { return true }
   outgoingRequest(t)
+  agent.traceContext.isSampling = origin
 })
 
 function outgoingRequest(t) {

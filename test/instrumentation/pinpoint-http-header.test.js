@@ -33,9 +33,10 @@ function outgoingRequest(t, sampling) {
     agent.traceContext.isSampling = () => { return false }
   }
 
-  const PATH = '/outgoingrequest'
+  const PATH = '/request'
   const app = new express()
 
+  let actualTrace
   app.get(PATH, async (req, res) => {
     const https = require('https')
     const options = {
@@ -45,27 +46,26 @@ function outgoingRequest(t, sampling) {
       method: 'GET'
     }
 
-    const trace = agent.currentTraceObject()
-    const request = https.request(options, res => {
-      const headers = res.req._headers
-      if (sampling) {        
-        t.equal(trace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
-        t.equal(trace.traceId.spanId, headers['pinpoint-pspanid'])
-        t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
-        t.equal(agent.config.serviceType, headers['pinpoint-papptype'])
-        t.equal(trace.traceId.flag, headers["pinpoint-flags"])
-      } else {
-        t.equal('s0', headers['pinpoint-sampled'], 'if canSample is false, outgoing request has only one pinpoint headers')
-      }
-      res.on('data', d => {
-        process.stdout.write(d)
-      })
-    })
-    request.on('error', error => {
-      console.error(error)
-    })
-    request.end()
+    actualTrace = agent.currentTraceObject()
 
+    const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
+    t.equal(result1.data, 'ok get', 'result equals')
+    res.send('ok get')
+  })
+
+  const OUTGOING_PATH = '/outgoingrequest'
+  app.get(OUTGOING_PATH, async (req, res) => {
+    const headers = req.headers
+    if (sampling) {
+      t.equal(actualTrace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
+      t.equal(actualTrace.traceId.spanId, headers['pinpoint-pspanid'])
+      t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
+      t.equal(agent.config.serviceType, Number(headers['pinpoint-papptype']))
+      t.equal(actualTrace.traceId.flag.toString(), headers['pinpoint-flags'])
+    } else {
+      // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
+      t.equal('s0', headers['pinpoint-sampled'])
+    }
     res.send('ok get')
   })
 

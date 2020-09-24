@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [0.6.3] - 2020-9-24
+### Added
+- Implementation Outgoing request header 'pinpoint-sampled' "s0"
+- Support Pinpoint-SpanID, Pinpoint-pSpanID gRPC long type
+
+### Fixed
+- Could not be traced when requesting outgoing request from JVM server to Node server
+
 ## [0.6.2] - 2020-7-20
 ### Fixed
 - Fix Ping stream close a bug

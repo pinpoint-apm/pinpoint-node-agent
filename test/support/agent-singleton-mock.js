@@ -46,6 +46,8 @@ class MockAgent extends Agent {
 
         const traceObjectMap = contextManager.getAllObject()
         traceObjectMap.clear()
+
+        this.dataSender = dataSenderMock()
         this.traceContext = traceContext.init(this.agentInfo, this.dataSender, this.config)
     }
 
@@ -53,14 +55,6 @@ class MockAgent extends Agent {
         const http = require('http')
         shimmer.unwrap(http && http.Server && http.Server.prototype, 'emit')
         shimmer.unwrap(http, 'request')
-
-        const traces = this.traceContext.getAllTraceObject()
-        traces.forEach((trace) => {
-            this.traceContext.completeTraceObject(trace)
-        })
-    }
-
-    cleanup() {
     }
 
     resetAgent(callback) {

@@ -167,6 +167,10 @@ function incomingRequest(t, sampled) {
   const server = app.listen(TEST_ENV.port, async () => {
     const result1 = await axios.get(getServerUrl(PATH), config)
     t.ok(result1.status, 200)
+    if (sampled) {
+      t.equal(typeof agent.dataSender.mockSpan.spanId, "string")  
+      t.equal(typeof agent.dataSender.mockSpan.parentSpanId, "string")
+    }
     t.end()
     server.close()
   })

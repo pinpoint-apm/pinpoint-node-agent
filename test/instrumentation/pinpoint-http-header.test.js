@@ -170,6 +170,8 @@ function incomingRequest(t, sampled) {
     if (sampled) {
       t.equal(typeof agent.dataSender.mockSpan.spanId, "string")  
       t.equal(typeof agent.dataSender.mockSpan.parentSpanId, "string")
+      t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.agentStartTime, "string")
+      t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.sequence, "string")
     }
     t.end()
     server.close()

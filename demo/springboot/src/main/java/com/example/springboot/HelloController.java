@@ -31,4 +31,9 @@ public class HelloController {
         return response.body().string();
         }
     }
+
+    @RequestMapping("/api")
+    public String api() throws IOException {
+		return "Node server connection";
+    }
 }

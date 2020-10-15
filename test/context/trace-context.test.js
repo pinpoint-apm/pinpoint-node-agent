@@ -91,7 +91,7 @@ test('new Trace', (t) => {
   t.equal(requestData.isRoot, true, 'root request')
 
   const trace = dut.makeTrace(requestData)
-  t.equal(trace.traceId.parentSpanId, -1, 'trace is not null')
+  t.equal(trace.traceId.parentSpanId, '-1', 'trace is not null')
   t.true(trace.traceId.spanId > 0, 'trace id')
 })
 

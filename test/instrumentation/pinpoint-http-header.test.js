@@ -167,6 +167,12 @@ function incomingRequest(t, sampled) {
   const server = app.listen(TEST_ENV.port, async () => {
     const result1 = await axios.get(getServerUrl(PATH), config)
     t.ok(result1.status, 200)
+    if (sampled) {
+      t.equal(typeof agent.dataSender.mockSpan.spanId, "string")  
+      t.equal(typeof agent.dataSender.mockSpan.parentSpanId, "string")
+      t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.agentStartTime, "string")
+      t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.sequence, "string")
+    }
     t.end()
     server.close()
   })
@@ -176,4 +182,65 @@ test('incomming request agent sampled false', (t) => {
   fixture.config.sampling = false
   incomingRequest(t, false)
   fixture.config.sampling = true
+})
+
+test('incomming request by User', (t) => {
+  agent.bindHttp()
+
+  const app = new express()
+  const PATH = '/incommingrequest'
+  let expectedTransactionId
+  let expectedSpanId
+  app.get(PATH, async (req, res) => {
+    const trace = agent.currentTraceObject()
+
+    expectedTransactionId = trace.traceId.transactionId.toString()
+    expectedSpanId = trace.traceId.spanId
+    t.equal(typeof expectedTransactionId, "string")
+    t.equal(typeof expectedSpanId, "string")
+    t.equal(trace.traceId.parentSpanId, "-1")
+    t.equal(trace.sampling, true)
+    t.equal(typeof trace.traceId.transactionId.agentStartTime, "string")
+    t.equal(typeof trace.traceId.transactionId.sequence, "string")
+    
+    const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
+    t.equal(result1.data, 'ok get', 'result equals')
+    res.send('ok get')
+  })
+
+  const OUTGOING_PATH = '/outgoingrequest'
+  app.get(OUTGOING_PATH, async (req, res) => {
+    const actualHeaders = {
+      "accept": "application/json, text/plain, */*",
+      "user-agent": "axios/0.18.1",
+      "host": "localhost:5006",
+      "pinpoint-traceid": "express-spring-sampleid^1599831487121^4",
+      "pinpoint-spanid": "8478505740685359",
+      "pinpoint-pspanid": "-387300102333636357",
+      "pinpoint-pappname": "node.test.app",
+      "pinpoint-papptype": "1400",
+      "pinpoint-flags": "0",
+      "pinpoint-host": "localhost:5006",
+      "connection": "close"
+    }
+    const headers = req.headers
+    t.equal(expectedTransactionId, headers['pinpoint-traceid'])
+    t.equal(expectedSpanId, headers['pinpoint-pspanid'])
+    t.equal(actualHeaders['pinpoint-pappname'], headers['pinpoint-pappname'])
+    t.equal(actualHeaders['pinpoint-papptype'], headers['pinpoint-papptype'])
+    t.equal(actualHeaders['pinpoint-host'], headers['pinpoint-host'])
+    t.equal(actualHeaders['pinpoint-sampled'], headers['pinpoint-sampled'])
+    res.send('ok get')
+  })
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    const result1 = await axios.get(getServerUrl(PATH))
+    t.ok(result1.status, 200)
+    t.equal(typeof agent.dataSender.mockSpan.spanId, "string")  
+    t.equal(typeof agent.dataSender.mockSpan.parentSpanId, "string")
+    t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.agentStartTime, "string")
+    t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.sequence, "string")
+    t.end()
+    server.close()
+  })
 })

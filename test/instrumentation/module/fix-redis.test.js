@@ -77,9 +77,9 @@ test("ioredis destination id", async function (t) {
     redis.get("key", async function (error, data) {
         t.equal(data, "value", "redis value validation")
 
-        t.true(agent.pinpointClient.dataSender.mockSpanChunk.spanEventList.length > 0, "a spanEventList should has one chunk")
+        t.true(agent.dataSender.mockSpanChunk.spanEventList.length > 0, "a spanEventList should has one chunk")
 
-        const spanevent = agent.pinpointClient.dataSender.mockSpanChunk.spanEventList[1]
+        const spanevent = agent.dataSender.mockSpanChunk.spanEventList[1]
         t.equal(spanevent.destinationId, "Redis", "Redis destionation ID check")
         t.equal(spanevent.endPoint, `localhost:${port}`)
 

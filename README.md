@@ -62,7 +62,7 @@ PINPOINT_AGENT_ID=${HOSTNAME} pm2 start ~/service/bin/pm2_start.json​
 ```
 
 ## Sampling rate
-The list below is the result of executing the Pinpoint Node agent debug level as warn. You can test your application overhead with Pinpoint Node agent. [Performance Tester](/demo/performance-tester)
+You can test your application overhead with Pinpoint Node agent. [Performance Tester](/demo/performance-tester)
 
 ## No support the JVM agent features
 The Pinpoint Node agent does not support the following the JVM agent features. We plan to provide more detailed app information like the JVM agent.

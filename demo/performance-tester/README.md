@@ -1,4 +1,4 @@
-# pinpoint-node-agent-tester
+# Performance test
 
 You can test the difference in performance according to the pinpoint sampling value. You must install [Swift tools](https://swift.org/getting-started/#package-manager) in your test environment.
 

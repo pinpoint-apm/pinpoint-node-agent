@@ -3,8 +3,6 @@ import Combine
 
 @available(OSX 10.15, *)
 struct PinpointNodeAgentTester {
-    var text = "Hello, World!"
-    
     public enum Error: LocalizedError {
         case addressUnreachable(URL)
         case invalidRespose

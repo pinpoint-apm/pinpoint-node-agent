@@ -8,7 +8,7 @@
   "description": "Pinpoint node agent provided by NAVER",
   "repository": {
     "type": "git",
-    "url": "https://github.com/naver/pinpoint-node-agent"
+    "url": "https://github.com/pinpoint-apm/pinpoint-node-agent"
   },
   "contributors": [
     "Lee Jun Hee <jundol.lee@navercorp.com> (https://github.com/intojun)",
@@ -23,9 +23,9 @@
     }
   ],
   "bugs": {
-    "url": "https://github.com/naver/pinpoint-node-agent/issues"
+    "url": "https://github.com/pinpoint-apm/pinpoint-node-agent/issues"
   },
-  "homepage": "https://github.com/naver/pinpoint-node-agent",
+  "homepage": "https://github.com/pinpoint-apm/pinpoint-node-agent",
   "engines": {
     "node": ">=8.2.0"
   },

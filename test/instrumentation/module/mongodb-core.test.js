@@ -26,7 +26,6 @@ test(`mongodb`, async (t) => {
         reconnectInterval: 50
     })
 
-    t.plan(2)
     // Add event listeners
     server.on('connect', async function (_server) {
         console.log('connected')
@@ -34,8 +33,7 @@ test(`mongodb`, async (t) => {
         // Execute the ismaster command
         _server.command('system.$cmd', {
             ismaster: true
-        }, function (err, result) {
-
+        }, async function (err, result) {
             // Perform a document insert
             _server.insert('myproject.inserts1', [{
                 a: 1
@@ -46,16 +44,20 @@ test(`mongodb`, async (t) => {
                     w: 1
                 },
                 ordered: true
-            }, function (err, results) {
+            }, async function (err, results) {
                 t.equal(null, err);
                 t.equal(2, results.result.n);
+
+                server.destroy()
+                await container.stop()
+                t.end()
             });
         });
-        await container.stop()
     });
 
     server.on('close', function () {
-        console.log('closed');
+        console.log('closed')
+        t.end()
     });
 
     server.on('reconnect', function () {

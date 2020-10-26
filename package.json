@@ -55,7 +55,6 @@
     "distributed-tracing"
   ],
   "dependencies": {
-    "bufferutil": "^4.0.1",
     "end-of-stream": "^1.4.1",
     "find-node-modules": "^1.0.4",
     "google-protobuf": "^3.13.0",

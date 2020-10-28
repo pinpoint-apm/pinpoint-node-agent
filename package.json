@@ -1,6 +1,6 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "0.7.1",
+  "version": "0.8.0-ver.yowu",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/.bin/tape ./test/**/*.test.js"
@@ -13,7 +13,8 @@
   "contributors": [
     "Lee Jun Hee <jundol.lee@navercorp.com> (https://github.com/intojun)",
     "Bae Keun Bae <with.earth.u@gmail.com> (https://github.com/withearth)",
-    "Yongseok Kang <feelform@gmail.com> (https://github.com/feelform)"
+    "Yongseok Kang <feelform@gmail.com> (https://github.com/feelform)",
+    "Yongwoo Yu <me@yowu.dev> (https://yowu.dev)"
   ],
   "license": "Apache-2.0",
   "licenses": [

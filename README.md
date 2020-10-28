@@ -1,4 +1,34 @@
-# Pinpoint Node.js Agent
+# Pinpoint Node.js Agent ver.Yowu
+
+- upstream package is [pinpoint-node-agent](https://www.npmjs.com/package/pinpoint-node-agent)
+
+## Diffrence by original Pinpoint Node.js Agent
+
+- Include simple `*.d.ts` file. (for TypeScript)
+- supported read `./pinpoint-config.js` [#9](https://github.com/pinpoint-apm/pinpoint-node-agent/pull/9)
+- Change Agent init Method
+  ```ts
+  // original
+  import 'pinpoint-node-agent`
+  ```
+  ```ts
+  // ver.yowu
+  import pinpointNodeAgent, { ConfigOption } from 'pinpoint-node-agent';
+
+  pinpointNodeAgent({
+    applicationName: 'somehing-name',
+    agentId: 'something-id',
+    collectorIp: 'somthing-ip',
+  } as ConfigOption)
+  ```
+- some bug fix
+  - [fixed Config init processing bug #10](https://github.com/pinpoint-apm/pinpoint-node-agent/pull/10)
+
+<br/>
+<hr/>
+<br/>
+
+# (Origin README) Pinpoint Node.js Agent
 This is the official Node.js agent for [Pinpoint](https://github.com/naver/pinpoint).
 
 If you have any feedback or questions,

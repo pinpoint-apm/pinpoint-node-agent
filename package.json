@@ -1,6 +1,6 @@
 {
   "name": "@uyu423/pinpoint-node-agent",
-  "version": "0.8.1-ver.yowu",
+  "version": "0.8.2-ver.yowu",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/.bin/tape ./test/**/*.test.js"

@@ -1,4 +1,4 @@
-declare module 'pinpoint-node-agent' {
+declare module '@uyu423/pinpoint-node-agent' {
   function PinpointNodeAgent(options?: ConfigOption): Agent
 
   interface ConfigOption {

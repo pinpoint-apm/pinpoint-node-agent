@@ -13,8 +13,9 @@
   ```
   ```ts
   // ver.yowu
-  import pinpointNodeAgent, { ConfigOption } from 'pinpoint-node-agent';
+  import pinpointNodeAgent, { ConfigOption } from '@uyu423/pinpoint-node-agent';
 
+  // bootstarp agent on your application level
   pinpointNodeAgent({
     applicationName: 'somehing-name',
     agentId: 'something-id',

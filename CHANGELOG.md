@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [0.7.0] - 2020-11-13
+### Fixed
+- Fix app crash without callback function in redis instrumentation module(by @wormslab) #12
+
 ## [0.7.0-rc.0] - 2020-10-16
 ### Added
 - Implementation Outgoing request header 'pinpoint-sampled' "s0"

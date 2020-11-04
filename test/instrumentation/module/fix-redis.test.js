@@ -105,6 +105,7 @@ test(`addressStringOf`, (t) => {
     t.equal(value, "127.0.0.1:8000")
 })
 
+// https://github.com/NodeRedis/node-redis#rediscreateclient
 test(`Fix app crash without callback function https://github.com/pinpoint-apm/pinpoint-node-agent/pull/12`, async (t) => {
     const container = await new GenericContainer("redis")
         .withExposedPorts(6379)

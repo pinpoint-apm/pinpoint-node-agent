@@ -118,10 +118,13 @@ test(`Fix app crash without callback function https://github.com/pinpoint-apm/pi
     const trace = agent.createTraceObject()
     const redis = require('redis')
 
-    const client = redis.createClient(
-        container.getMappedPort(6379),
-        container.getContainerIpAddress(),
-    )
+    const client = redis.createClient({
+        host: container.getContainerIpAddress(), 
+        port: container.getMappedPort(6379),
+        db: 3,
+    })
+
+    client.select(2)
 
     client.on("error", function (error) {
         console.error(error);

@@ -16,7 +16,6 @@ test(`mongodb`, async (t) => {
         .start()
 
     agent.bindHttp()
-
     const trace = agent.createTraceObject()
     const Server = require('mongodb-core').Server
     var server = new Server({
@@ -28,7 +27,7 @@ test(`mongodb`, async (t) => {
 
     // Add event listeners
     server.on('connect', async function (_server) {
-        console.log('connected')
+        console.log('mongodb-core.test.js connected')
 
         // Execute the ismaster command
         _server.command('system.$cmd', {
@@ -50,18 +49,19 @@ test(`mongodb`, async (t) => {
 
                 server.destroy()
                 await container.stop()
+                agent.completeTraceObject(trace)
                 t.end()
             });
         });
     });
 
     server.on('close', function () {
-        console.log('closed')
+        console.log('mongodb-core.test.js closed')
         t.end()
     });
 
     server.on('reconnect', function () {
-        console.log('reconnect');
+        console.log('mongodb-core.test.js reconnect');
     });
 
     // Start connection

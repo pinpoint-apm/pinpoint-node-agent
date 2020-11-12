@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [0.7.0] - 2020-11-20
+### Fixed
+- If it detects that the app is using core-js v2.4 or lower, disable the function using the v8 module. #14
+
 ## [0.7.0-rc.0] - 2020-10-16
 ### Added
 - Implementation Outgoing request header 'pinpoint-sampled' "s0"

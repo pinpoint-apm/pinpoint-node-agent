@@ -15,10 +15,11 @@ test(`detect Node 8, core-js, version`, (t) => {
         return '8.9.3'
     }
     v8Compatibility.initialize()
-    t.equal(v8Compatibility.version, '8.9.3', "current node version")
-    v8Compatibility.getNodeVersion = origin
+    t.true(v8Compatibility.disabled, '8.9.3', "8.9.3 disable version")
 
+
+    v8Compatibility.getNodeVersion = origin
     v8Compatibility.initialize()
-    t.notEqual(v8Compatibility.version, '8.9.3')
+    t.equal(v8Compatibility.getNodeVersion(), process.versions.node)
     t.end()
 })

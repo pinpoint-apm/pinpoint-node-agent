@@ -6,3 +6,6 @@
 
 const test = require('tape')
 
+test(`detect Node 8, core-js, version`, (t) => {
+    t.end()
+})

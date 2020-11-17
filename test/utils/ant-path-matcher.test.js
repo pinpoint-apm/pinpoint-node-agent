@@ -9,8 +9,8 @@ const AntPathMatcher = require('../../lib/utils/ant-path-matcher')
 
 // https://github.com/spring-projects/spring-framework/blob/master/spring-core/src/test/java/org/springframework/util/AntPathMatcherTests.java
 test('Unit test for AntPathMatcher', (t) => {
-    const antPathMatcher = new AntPathMatcher()
-    t.ok(antPathMatcher, 'Ant Path matcher initialization')
-
+    const pathMatcher = new AntPathMatcher()
+    t.ok(pathMatcher, 'Ant Path matcher initialization')
+    t.true(pathMatcher.match("test", "test"))
     t.end()
 })

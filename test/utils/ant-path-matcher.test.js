@@ -47,6 +47,7 @@ test('Unit test for AntPathMatcher', (t) => {
     t.true(pathMatcher.match("test*aaa", "testblaaaa"), 'pathMatcher.match("test*aaa", "testblaaaa")')
     t.false(pathMatcher.match("test*", "tst"), 'pathMatcher.match("test*", "tst")')
     t.false(pathMatcher.match("test*", "tsttest"), 'pathMatcher.match("test*", "tsttest")')
+    t.false(pathMatcher.match("test*", "test/"), 'pathMatcher.match("test*", "test/")')
 
     t.end()
 })
@@ -71,7 +72,7 @@ test('new', (t) => {
     // t.true(pathMatcher.match("test*aaa", "testblaaaa"), 'pathMatcher.match("test*aaa", "testblaaaa")')
     // t.false(pathMatcher.match("test*", "tst"), 'pathMatcher.match("test*", "tst")')
     // t.false(pathMatcher.match("test*", "tsttest"), 'pathMatcher.match("test*", "tsttest")')
-    // t.false(pathMatcher.match("test*", "test/"), 'pathMatcher.match("test*", "test/")')
+    t.false(pathMatcher.match("test*", "test/"), 'pathMatcher.match("test*", "test/")')
     // t.false(pathMatcher.match("test*", "test/t"), 'pathMatcher.match("test*", "test/t")')
 	// t.false(pathMatcher.match("test/*", "test"), 'pathMatcher.match("test/*", "test")')
 	// t.false(pathMatcher.match("*test*", "tsttst"), 'pathMatcher.match("*test*", "tsttst")')

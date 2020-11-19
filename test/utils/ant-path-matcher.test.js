@@ -32,5 +32,29 @@ test('Unit test for AntPathMatcher', (t) => {
     t.false(pathMatcher.match("tes?", "testt"), 'match("tes?", "testt")')
     t.false(pathMatcher.match("tes?", "tsst"), 'match("tes?", "tsst")')
 
+    // test matching with *'s
+    t.true(pathMatcher.match("*", "test"), 'pathMatcher.match("*", "test")')
+    t.true(pathMatcher.match("test*", "test"), 'pathMatcher.match("test*", "test")')
+    // t.true(pathMatcher.match("test*", "testTest"), 'pathMatcher.match("test*", "testTest")')
+		// assertThat(pathMatcher.match("test/*", "test/Test")).isTrue();
+		// assertThat(pathMatcher.match("test/*", "test/t")).isTrue();
+		// assertThat(pathMatcher.match("test/*", "test/")).isTrue();
+		// assertThat(pathMatcher.match("*test*", "AnothertestTest")).isTrue();
+		// assertThat(pathMatcher.match("*test", "Anothertest")).isTrue();
+		// assertThat(pathMatcher.match("*.*", "test.")).isTrue();
+		// assertThat(pathMatcher.match("*.*", "test.test")).isTrue();
+		// assertThat(pathMatcher.match("*.*", "test.test.test")).isTrue();
+		// assertThat(pathMatcher.match("test*aaa", "testblaaaa")).isTrue();
+		// assertThat(pathMatcher.match("test*", "tst")).isFalse();
+		// assertThat(pathMatcher.match("test*", "tsttest")).isFalse();
+		// assertThat(pathMatcher.match("test*", "test/")).isFalse();
+		// assertThat(pathMatcher.match("test*", "test/t")).isFalse();
+		// assertThat(pathMatcher.match("test/*", "test")).isFalse();
+		// assertThat(pathMatcher.match("*test*", "tsttst")).isFalse();
+		// assertThat(pathMatcher.match("*test", "tsttst")).isFalse();
+		// assertThat(pathMatcher.match("*.*", "tsttst")).isFalse();
+		// assertThat(pathMatcher.match("test*aaa", "test")).isFalse();
+		// assertThat(pathMatcher.match("test*aaa", "testblaaab")).isFalse();
+
     t.end()
 })

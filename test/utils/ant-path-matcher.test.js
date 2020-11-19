@@ -9,7 +9,7 @@ const AntPathMatcher = require('../../lib/utils/ant-path-matcher')
 const { log, fixture, util } = require('../test-helper')
 
 // https://github.com/spring-projects/spring-framework/blob/master/spring-core/src/test/java/org/springframework/util/AntPathMatcherTests.java
-test.skip('match', (t) => {
+test('match', (t) => {
     const pathMatcher = new AntPathMatcher()
 
     // test exact matching

@@ -83,6 +83,23 @@ test('match', (t) => {
     t.false(pathMatcher.match("/????", "/bala/bla"), 'pathMatcher.match("/????", "/bala/bla")')
     t.false(pathMatcher.match("/**/*bla", "/bla/bla/bla/bbb"), 'pathMatcher.match("/**/*bla", "/bla/bla/bla/bbb")')
 
+    t.true(pathMatcher.match("/*bla*/**/bla/**", "/XXXblaXXXX/testing/testing/bla/testing/testing/"), 'pathMatcher.match("/*bla*/**/bla/**", "/XXXblaXXXX/testing/testing/bla/testing/testing/")')
+    t.true(pathMatcher.match("/*bla*/**/bla/*", "/XXXblaXXXX/testing/testing/bla/testing"), 'pathMatcher.match("/*bla*/**/bla/*", "/XXXblaXXXX/testing/testing/bla/testing")')
+    t.true(pathMatcher.match("/*bla*/**/bla/**", "/XXXblaXXXX/testing/testing/bla/testing/testing"), 'pathMatcher.match("/*bla*/**/bla/**", "/XXXblaXXXX/testing/testing/bla/testing/testing")')
+    t.true(pathMatcher.match("/*bla*/**/bla/**", "/XXXblaXXXX/testing/testing/bla/testing/testing.jpg"), 'pathMatcher.match("/*bla*/**/bla/**", "/XXXblaXXXX/testing/testing/bla/testing/testing.jpg")')
+    
+    t.true(pathMatcher.match("*bla*/**/bla/**", "XXXblaXXXX/testing/testing/bla/testing/testing/"), 'pathMatcher.match("*bla*/**/bla/**", "XXXblaXXXX/testing/testing/bla/testing/testing/")')
+    t.true(pathMatcher.match("*bla*/**/bla/*", "XXXblaXXXX/testing/testing/bla/testing"), 'pathMatcher.match("*bla*/**/bla/*", "XXXblaXXXX/testing/testing/bla/testing")')
+    t.true(pathMatcher.match("*bla*/**/bla/**", "XXXblaXXXX/testing/testing/bla/testing/testing"), 'pathMatcher.match("*bla*/**/bla/**", "XXXblaXXXX/testing/testing/bla/testing/testing")')
+    t.false(pathMatcher.match("*bla*/**/bla/*", "XXXblaXXXX/testing/testing/bla/testing/testing"), 'pathMatcher.match("*bla*/**/bla/*", "XXXblaXXXX/testing/testing/bla/testing/testing")')
+
+    t.false(pathMatcher.match("/x/x/**/bla", "/x/x/x/"), 'pathMatcher.match("/x/x/**/bla", "/x/x/x/")')
+
+    t.true(pathMatcher.match("/foo/bar/**", "/foo/bar"), 'pathMatcher.match("/foo/bar/**", "/foo/bar")')
+
+    t.true(pathMatcher.match("", ""), 'pathMatcher.match("", "")')
+
+
     t.end()
 })
 
@@ -90,23 +107,12 @@ test('match', (t) => {
 test('new', (t) => {
     const pathMatcher = new AntPathMatcher()
 
-
-    // t.true(pathMatcher.match("/*bla*/**/bla/**", "/XXXblaXXXX/testing/testing/bla/testing/testing/"), 'pathMatcher.match("/*bla*/**/bla/**", "/XXXblaXXXX/testing/testing/bla/testing/testing/")')
+    //
+    //		assertThat().isFalse();
+    //
     //		assertThat().isTrue();
-    //		assertThat(pathMatcher.match("/*bla*/**/bla/*", "/XXXblaXXXX/testing/testing/bla/testing")).isTrue();
-    //		assertThat(pathMatcher.match("/*bla*/**/bla/**", "/XXXblaXXXX/testing/testing/bla/testing/testing")).isTrue();
-    //		assertThat(pathMatcher.match("/*bla*/**/bla/**", "/XXXblaXXXX/testing/testing/bla/testing/testing.jpg")).isTrue();
     //
-    //		assertThat(pathMatcher.match("*bla*/**/bla/**", "XXXblaXXXX/testing/testing/bla/testing/testing/")).isTrue();
-    //		assertThat(pathMatcher.match("*bla*/**/bla/*", "XXXblaXXXX/testing/testing/bla/testing")).isTrue();
-    //		assertThat(pathMatcher.match("*bla*/**/bla/**", "XXXblaXXXX/testing/testing/bla/testing/testing")).isTrue();
-    //		assertThat(pathMatcher.match("*bla*/**/bla/*", "XXXblaXXXX/testing/testing/bla/testing/testing")).isFalse();
-    //
-    //		assertThat(pathMatcher.match("/x/x/**/bla", "/x/x/x/")).isFalse();
-    //
-    //		assertThat(pathMatcher.match("/foo/bar/**", "/foo/bar")).isTrue();
-    //
-    //		assertThat(pathMatcher.match("", "")).isTrue();
+    //		assertThat().isTrue();
     //
     //		assertThat(pathMatcher.match("/{bla}.*", "/testing.html")).isTrue();
     //		assertThat(pathMatcher.match("/{bla}", "//x\ny")).isTrue();

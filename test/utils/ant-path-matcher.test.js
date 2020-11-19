@@ -22,5 +22,15 @@ test('Unit test for AntPathMatcher', (t) => {
     t.false(pathMatcher.match("test", "/test"))
     t.false(pathMatcher.match("/test", "test"))
 
+    // test matching with ?'s
+    t.true(pathMatcher.match("t?st", "test"), "match('t?st', 'test')")
+    t.true(pathMatcher.match("??st", "test"), 'match("??st", "test")')
+    t.true(pathMatcher.match("tes?", "test"), 'match("tes?", "test")')
+    t.true(pathMatcher.match("te??", "test"), 'match("te??", "test")')
+    t.true(pathMatcher.match("?es?", "test"), 'match("?es?", "test")')
+    t.false(pathMatcher.match("tes?", "tes"), 'match("tes?", "tes")')
+    // t.false(pathMatcher.match("tes?", "testt"), 'match("tes?", "testt")')
+    // t.false(pathMatcher.match("tes?", "tsst"), 'match("tes?", "tsst")')
+
     t.end()
 })

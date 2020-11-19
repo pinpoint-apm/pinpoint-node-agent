@@ -50,11 +50,22 @@ test('match', (t) => {
     t.false(pathMatcher.match("test*", "test/"), 'pathMatcher.match("test*", "test/")')
     t.false(pathMatcher.match("test*", "test/t"), 'pathMatcher.match("test*", "test/t")')
     t.false(pathMatcher.match("test/*", "test"), 'pathMatcher.match("test/*", "test")')
-	t.false(pathMatcher.match("*test*", "tsttst"), 'pathMatcher.match("*test*", "tsttst")')
-	t.false(pathMatcher.match("*test", "tsttst"), 'pathMatcher.match("*test", "tsttst")')
-	t.false(pathMatcher.match("*.*", "tsttst"), 'pathMatcher.match("*.*", "tsttst")')
+    t.false(pathMatcher.match("*test*", "tsttst"), 'pathMatcher.match("*test*", "tsttst")')
+    t.false(pathMatcher.match("*test", "tsttst"), 'pathMatcher.match("*test", "tsttst")')
+    t.false(pathMatcher.match("*.*", "tsttst"), 'pathMatcher.match("*.*", "tsttst")')
     t.false(pathMatcher.match("test*aaa", "test"), 'pathMatcher.match("test*aaa", "test")')
     t.false(pathMatcher.match("test*aaa", "testblaaab"), 'pathMatcher.match("test*aaa", "testblaaab")')
+
+    // test matching with ?'s and /'s
+    t.true(pathMatcher.match("/?", "/a"), 'pathMatcher.match("/?", "/a")')
+    t.true(pathMatcher.match("/?/a", "/a/a"), 'pathMatcher.match("/?/a", "/a/a")')
+    t.true(pathMatcher.match("/a/?", "/a/b"), 'pathMatcher.match("/a/?", "/a/b")')
+    t.true(pathMatcher.match("/?/a", "/a/a"), 'pathMatcher.match("/?/a", "/a/a")')
+    t.true(pathMatcher.match("/a/?", "/a/b"), 'pathMatcher.match("/a/?", "/a/b")')
+    t.true(pathMatcher.match("/??/a", "/aa/a"), 'pathMatcher.match("/??/a", "/aa/a")')
+    t.true(pathMatcher.match("/a/??", "/a/bb"), 'pathMatcher.match("/a/??", "/a/bb")')
+    t.true(pathMatcher.match("/?", "/a"), 'pathMatcher.match("/?", "/a")')
+
 
     t.end()
 })
@@ -64,6 +75,5 @@ test('new', (t) => {
     const pathMatcher = new AntPathMatcher()
 
 
-    // // test matching with *'s
     t.end()
 })

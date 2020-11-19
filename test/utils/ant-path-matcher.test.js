@@ -17,7 +17,10 @@ test('Unit test for AntPathMatcher', (t) => {
     t.true(pathMatcher.match("/test", "/test"))
 
     // SPR-14141
-    
+    t.true(pathMatcher.match("https://example.org", "https://example.org"))
+    t.false(pathMatcher.match("/test.jpg", "test.jpg"))
+    t.false(pathMatcher.match("test", "/test"))
+    t.false(pathMatcher.match("/test", "test"))
 
     t.end()
 })

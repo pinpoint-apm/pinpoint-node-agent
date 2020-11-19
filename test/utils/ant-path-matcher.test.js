@@ -100,6 +100,7 @@ test.skip('match', (t) => {
 
     t.true(pathMatcher.match("", ""), 'pathMatcher.match("", "")')
 
+    t.true(pathMatcher.match("/{bla}.*", "/testing.html"), 'pathMatcher.match("/{bla}.*", "/testing.html")')
 
     t.end()
 })
@@ -107,19 +108,8 @@ test.skip('match', (t) => {
 
 test('new', (t) => {
     const pathMatcher = new AntPathMatcher()
-
-
-    // Uncaught SyntaxError: Invalid regular expression: /^((?s).*)\..*$/: Invalid group
-    // t.true(pathMatcher.match("/{bla}.*", "/testing.html"), 'pathMatcher.match("/{bla}.*", "/testing.html")')
-    //
-    //		assertThat().isFalse();
-    //
-    //		assertThat().isTrue();
-    //
-    //		assertThat().isTrue();
-    //
-    //		assertThat().isTrue();
-    //		assertThat(pathMatcher.match("/{bla}", "//x\ny")).isTrue();
+    
+    // t.true(pathMatcher.match("/{bla}", "//x\ny"), 'pathMatcher.match("/{bla}", "//x\ny")')
 
     t.end()
 })

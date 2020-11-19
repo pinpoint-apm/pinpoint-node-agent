@@ -8,7 +8,7 @@ const test = require('tape')
 const AntPathMatcher = require('../../lib/utils/ant-path-matcher')
 
 // https://github.com/spring-projects/spring-framework/blob/master/spring-core/src/test/java/org/springframework/util/AntPathMatcherTests.java
-test('Unit test for AntPathMatcher', (t) => {
+test('match', (t) => {
     const pathMatcher = new AntPathMatcher()
 
     // test exact matching

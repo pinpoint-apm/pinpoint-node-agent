@@ -77,17 +77,24 @@ test('new', (t) => {
     // test matching with **'s
     t.true(pathMatcher.match("/**", "/testing/testing"), 'pathMatcher.match("/**", "/testing/testing")')
     t.true(pathMatcher.match("/*/**", "/testing/testing"), 'pathMatcher.match("/*/**", "/testing/testing")')
-    // t.true(pathMatcher.match("/**/*", "/testing/testing"), 'pathMatcher.match("/**/*", "/testing/testing")')
+    t.true(pathMatcher.match("/**/*", "/testing/testing"), 'pathMatcher.match("/**/*", "/testing/testing")')
+    t.true(pathMatcher.match("/bla/**/bla", "/bla/testing/testing/bla"), 'pathMatcher.match("/bla/**/bla", "/bla/testing/testing/bla")')
+    t.true(pathMatcher.match("/bla/**/bla", "/bla/testing/testing/bla/bla"), 'pathMatcher.match("/bla/**/bla", "/bla/testing/testing/bla/bla")')
+    t.true(pathMatcher.match("/**/test", "/bla/bla/test"), 'pathMatcher.match("/**/test", "/bla/bla/test")')
+    t.true(pathMatcher.match("/bla/**/**/bla", "/bla/bla/bla/bla/bla/bla"), 'pathMatcher.match("/bla/**/**/bla", "/bla/bla/bla/bla/bla/bla")')
+    t.true(pathMatcher.match("/bla*bla/test", "/blaXXXbla/test"), 'pathMatcher.match("/bla*bla/test", "/blaXXXbla/test")')
+    t.true(pathMatcher.match("/*bla/test", "/XXXbla/test"), 'pathMatcher.match("/*bla/test", "/XXXbla/test")')
+    t.false(pathMatcher.match("/bla*bla/test", "/blaXXXbl/test"), 'pathMatcher.match("/bla*bla/test", "/blaXXXbl/test")')
     //		assertThat().isTrue();
     //		assertThat().isTrue();
     //		assertThat().isTrue();
-    //		assertThat(pathMatcher.match("/bla/**/bla", "/bla/testing/testing/bla")).isTrue();
-    //		assertThat(pathMatcher.match("/bla/**/bla", "/bla/testing/testing/bla/bla")).isTrue();
-    //		assertThat(pathMatcher.match("/**/test", "/bla/bla/test")).isTrue();
-    //		assertThat(pathMatcher.match("/bla/**/**/bla", "/bla/bla/bla/bla/bla/bla")).isTrue();
-    //		assertThat(pathMatcher.match("/bla*bla/test", "/blaXXXbla/test")).isTrue();
-    //		assertThat(pathMatcher.match("/*bla/test", "/XXXbla/test")).isTrue();
-    //		assertThat(pathMatcher.match("/bla*bla/test", "/blaXXXbl/test")).isFalse();
+    //		assertThat().isTrue();
+    //		assertThat().isTrue();
+    //		assertThat().isTrue();
+    //		assertThat().isTrue();
+    //		assertThat().isTrue();
+    //		assertThat().isTrue();
+    //		assertThat().isFalse();
     //		assertThat(pathMatcher.match("/*bla/test", "XXXblab/test")).isFalse();
     //		assertThat(pathMatcher.match("/*bla/test", "XXXbl/test")).isFalse();
     //

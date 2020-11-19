@@ -35,26 +35,50 @@ test('Unit test for AntPathMatcher', (t) => {
     // test matching with *'s
     t.true(pathMatcher.match("*", "test"), 'pathMatcher.match("*", "test")')
     t.true(pathMatcher.match("test*", "test"), 'pathMatcher.match("test*", "test")')
+    t.true(pathMatcher.match("test*", "testTest"), 'pathMatcher.match("test*", "testTest")')
+    t.true(pathMatcher.match("test/*", "test/Test"), 'pathMatcher.match("test/*", "test/Test")')
+    t.true(pathMatcher.match("test/*", "test/t"), 'pathMatcher.match("test/*", "test/t")')
+    t.true(pathMatcher.match("test/*", "test/"), 'pathMatcher.match("test/*", "test/")')
+    t.true(pathMatcher.match("*test*", "AnothertestTest"), 'pathMatcher.match("*test*", "AnothertestTest")')
+    t.true(pathMatcher.match("*test", "Anothertest"), 'pathMatcher.match("*test", "Anothertest")')
+    t.true(pathMatcher.match("*.*", "test."), 'pathMatcher.match("*.*", "test.")')
+    t.true(pathMatcher.match("*.*", "test.test"), 'pathMatcher.match("*.*", "test.test")')
+    t.true(pathMatcher.match("*.*", "test.test.test"), 'pathMatcher.match("*.*", "test.test.test")')
+    t.true(pathMatcher.match("test*aaa", "testblaaaa"), 'pathMatcher.match("test*aaa", "testblaaaa")')
+    t.false(pathMatcher.match("test*", "tst"), 'pathMatcher.match("test*", "tst")')
+    t.false(pathMatcher.match("test*", "tsttest"), 'pathMatcher.match("test*", "tsttest")')
+
+    t.end()
+})
+
+
+test('new', (t) => {
+    const pathMatcher = new AntPathMatcher()
+
+
+    // // test matching with *'s
+    // t.true(pathMatcher.match("*", "test"), 'pathMatcher.match("*", "test")')
+    // t.true(pathMatcher.match("test*", "test"), 'pathMatcher.match("test*", "test")')
     // t.true(pathMatcher.match("test*", "testTest"), 'pathMatcher.match("test*", "testTest")')
-		// assertThat(pathMatcher.match("test/*", "test/Test")).isTrue();
-		// assertThat(pathMatcher.match("test/*", "test/t")).isTrue();
-		// assertThat(pathMatcher.match("test/*", "test/")).isTrue();
-		// assertThat(pathMatcher.match("*test*", "AnothertestTest")).isTrue();
-		// assertThat(pathMatcher.match("*test", "Anothertest")).isTrue();
-		// assertThat(pathMatcher.match("*.*", "test.")).isTrue();
-		// assertThat(pathMatcher.match("*.*", "test.test")).isTrue();
-		// assertThat(pathMatcher.match("*.*", "test.test.test")).isTrue();
-		// assertThat(pathMatcher.match("test*aaa", "testblaaaa")).isTrue();
-		// assertThat(pathMatcher.match("test*", "tst")).isFalse();
-		// assertThat(pathMatcher.match("test*", "tsttest")).isFalse();
-		// assertThat(pathMatcher.match("test*", "test/")).isFalse();
-		// assertThat(pathMatcher.match("test*", "test/t")).isFalse();
-		// assertThat(pathMatcher.match("test/*", "test")).isFalse();
-		// assertThat(pathMatcher.match("*test*", "tsttst")).isFalse();
-		// assertThat(pathMatcher.match("*test", "tsttst")).isFalse();
-		// assertThat(pathMatcher.match("*.*", "tsttst")).isFalse();
-		// assertThat(pathMatcher.match("test*aaa", "test")).isFalse();
-		// assertThat(pathMatcher.match("test*aaa", "testblaaab")).isFalse();
+    // t.true(pathMatcher.match("test/*", "test/Test"), 'pathMatcher.match("test/*", "test/Test")')
+    // t.true(pathMatcher.match("test/*", "test/t"), 'pathMatcher.match("test/*", "test/t")')
+    // t.true(pathMatcher.match("test/*", "test/"), 'pathMatcher.match("test/*", "test/")')
+    // t.true(pathMatcher.match("*test*", "AnothertestTest"), 'pathMatcher.match("*test*", "AnothertestTest")')
+    // t.true(pathMatcher.match("*test", "Anothertest"), 'pathMatcher.match("*test", "Anothertest")')
+    // t.true(pathMatcher.match("*.*", "test."), 'pathMatcher.match("*.*", "test.")')
+    // t.true(pathMatcher.match("*.*", "test.test"), 'pathMatcher.match("*.*", "test.test")')
+    // t.true(pathMatcher.match("*.*", "test.test.test"), 'pathMatcher.match("*.*", "test.test.test")')
+    // t.true(pathMatcher.match("test*aaa", "testblaaaa"), 'pathMatcher.match("test*aaa", "testblaaaa")')
+    // t.false(pathMatcher.match("test*", "tst"), 'pathMatcher.match("test*", "tst")')
+    // t.false(pathMatcher.match("test*", "tsttest"), 'pathMatcher.match("test*", "tsttest")')
+    // t.false(pathMatcher.match("test*", "test/"), 'pathMatcher.match("test*", "test/")')
+    // t.false(pathMatcher.match("test*", "test/t"), 'pathMatcher.match("test*", "test/t")')
+	// t.false(pathMatcher.match("test/*", "test"), 'pathMatcher.match("test/*", "test")')
+	// t.false(pathMatcher.match("*test*", "tsttst"), 'pathMatcher.match("*test*", "tsttst")')
+	// t.false(pathMatcher.match("*test", "tsttst"), 'pathMatcher.match("*test", "tsttst")')
+	// t.false(pathMatcher.match("*.*", "tsttst"), 'pathMatcher.match("*.*", "tsttst")')
+    // t.false(pathMatcher.match("test*aaa", "test"), 'pathMatcher.match("test*aaa", "test")')
+    // t.false(pathMatcher.match("test*aaa", "testblaaab"), 'pathMatcher.match("test*aaa", "testblaaab")')
 
     t.end()
 })

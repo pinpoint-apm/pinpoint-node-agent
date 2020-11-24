@@ -6,7 +6,20 @@
 
 const test = require('tape')
 const AntPathMatcher = require('../../lib/utils/ant-path-matcher')
-const { log, fixture, util } = require('../test-helper')
+const axios = require('axios')
+const express = require('express')
+
+const agent = require('../support/agent-singleton-mock')
+const TEST_ENV = {
+    host: 'localhost',
+    port: 5006,
+  }
+const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
+test('filter excludeURLs', (t) => {
+    agent.bindHttp()
+    t.end()
+})
+
 
 // https://github.com/spring-projects/spring-framework/blob/master/spring-core/src/test/java/org/springframework/util/AntPathMatcherTests.java
 test.skip('match', (t) => {

@@ -29,13 +29,15 @@ class MockAgent extends Agent {
         this.dataSender.send(this.agentInfo)
     }
 
-    bindHttp() {
+    bindHttp(json) {
         this.cleanHttp()
 
-        // const testConfig= require('../pinpoint-config-test')
-        // require('../../lib/config').clear()
-        // const config = require('../../lib/config').getConfig(testConfig)
-        // this.config = config
+        if (!json) {
+            json = require('../pinpoint-config-test')
+        }
+        require('../../lib/config').clear()
+        const config = require('../../lib/config').getConfig(json)
+        this.config = config
 
         const http = require('http')
         log.debug('shimming http.Server.prototype.emit function')

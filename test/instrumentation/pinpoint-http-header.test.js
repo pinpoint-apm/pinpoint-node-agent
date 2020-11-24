@@ -85,13 +85,12 @@ test('outgoing request when canSample false', (t) => {
 })
 
 test('incomming request agent sampled true', (t) => {
+  agent.bindHttp()
   incomingRequest(t, true)
 })
 
 //https://github.com/naver/pinpoint/blob/ab07664e2ed944e90aa9c44f7e39597f39264c2b/bootstrap-core/src/main/java/com/navercorp/pinpoint/bootstrap/plugin/request/DefaultTraceHeaderReader.java#L78
 function incomingRequest(t, sampled) {
-  agent.bindHttp()
-
   const app = new express()
 
   let config = {
@@ -179,9 +178,11 @@ function incomingRequest(t, sampled) {
 }
 
 test('incomming request agent sampled false', (t) => {
-  fixture.config.sampling = false
+  const config = require('../pinpoint-config-test')
+  config.sampling.enable = false
+  agent.bindHttp(config)
   incomingRequest(t, false)
-  fixture.config.sampling = true
+  config.sampling.enable = true
 })
 
 test('incomming request by User', (t) => {

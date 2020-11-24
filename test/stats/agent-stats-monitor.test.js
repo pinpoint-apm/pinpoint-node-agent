@@ -23,7 +23,6 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 test(`Should send stats in every 1 sec`, function (t) {
-  agent.bindHttp()
   const PATH = '/active-trace'
   const app = new express()
 

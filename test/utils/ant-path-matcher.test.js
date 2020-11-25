@@ -163,7 +163,9 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 test('outgoing request when canSample true', (t) => {
+    process.env['PINPOINT_EXCLUDE_URLS'] = "/heath_check"
     outgoingRequest(t, true)
+    delete process.env.PINPOINT_EXCLUDE_URLS
 })
 
 function outgoingRequest(t, sampling) {

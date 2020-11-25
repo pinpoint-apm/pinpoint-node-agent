@@ -11,7 +11,7 @@ const express = require('express')
 
 const agent = require('../support/agent-singleton-mock')
 // https://github.com/spring-projects/spring-framework/blob/master/spring-core/src/test/java/org/springframework/util/AntPathMatcherTests.java
-test.skip('match', (t) => {
+test('match', (t) => {
     const pathMatcher = new AntPathMatcher()
 
     // test exact matching
@@ -108,7 +108,7 @@ test.skip('match', (t) => {
 })
 
 
-test.skip('matchWithNullPath', (t) => {
+test('matchWithNullPath', (t) => {
     const pathMatcher = new AntPathMatcher()
 
     t.false(pathMatcher.match("/test", null), 'pathMatcher.match("/test", null)')
@@ -120,13 +120,14 @@ test.skip('matchWithNullPath', (t) => {
     t.end()
 })
 
-test('filter excludeURLs', (t) => {
+test('config object excludeURLs', (t) => {
     let config = require('../pinpoint-config-test')
     Object.assign(config, {
         'exclude-urls': ["/test.jpg"]
     })
     agent.bindHttp(config)
     t.deepEqual(agent.config.excludeURLs, ["/test.jpg"])
+    delete config['exclude-urls']
 
     config = require('../pinpoint-config-test')
     Object.assign(config, {
@@ -134,9 +135,9 @@ test('filter excludeURLs', (t) => {
     })
     agent.bindHttp(config)
     t.deepEqual(agent.config.excludeURLs, ["/??/a", "/*bla/test"])
+    delete config['exclude-urls']
 
     t.end()
-    delete process.env.PINPOINT_EXCLUDE_URLS
 })
 
 const TEST_ENV = {

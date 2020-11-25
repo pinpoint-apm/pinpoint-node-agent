@@ -202,7 +202,8 @@ function outgoingRequest(t, sampling) {
             t.equal(actualTrace.traceId.flag.toString(), headers['pinpoint-flags'])
         } else {
             // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
-            t.equal('s0', headers['pinpoint-sampled'])
+            // TODO: Think about for outgoing request pinpoint-sampled
+            t.equal(undefined, headers['pinpoint-sampled'])
         }
         res.send('ok get')
     })

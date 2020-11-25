@@ -162,3 +162,54 @@ const TEST_ENV = {
     port: 5006,
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
+test('outgoing request when canSample true', (t) => {
+    outgoingRequest(t, true)
+})
+
+function outgoingRequest(t, sampling) {
+    agent.bindHttp()
+
+    const PATH = '/heath_check'
+    const app = new express()
+
+    let actualTrace
+    app.get(PATH, async (req, res) => {
+        const https = require('https')
+        const options = {
+            hostname: 'naver.com',
+            port: 443,
+            path: '/',
+            method: 'GET'
+        }
+
+        actualTrace = agent.currentTraceObject()
+
+        const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
+        t.equal(result1.data, 'ok get', 'result equals')
+        res.send('ok get')
+    })
+
+    const OUTGOING_PATH = '/outgoingrequest'
+    app.get(OUTGOING_PATH, async (req, res) => {
+        const headers = req.headers
+        if (sampling) {
+            t.equal(actualTrace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
+            t.equal(actualTrace.traceId.spanId, headers['pinpoint-pspanid'])
+            t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
+            t.equal(agent.config.serviceType, Number(headers['pinpoint-papptype']))
+            t.equal(actualTrace.traceId.flag.toString(), headers['pinpoint-flags'])
+        } else {
+            // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
+            t.equal('s0', headers['pinpoint-sampled'])
+        }
+        res.send('ok get')
+    })
+
+    const server = app.listen(TEST_ENV.port, async () => {
+        const result1 = await axios.get(getServerUrl(PATH))
+        t.ok(result1.status, 200)
+
+        server.close()
+        t.end()
+    })
+}

@@ -121,17 +121,19 @@ test.skip('matchWithNullPath', (t) => {
 })
 
 test('filter excludeURLs', (t) => {
-    process.env['PINPOINT_EXCLUDE_URLS'] = "/test"
-    agent.bindHttp()
-    t.deepEqual(agent.config.excludeURLs, ["/test"])
+    let config = require('../pinpoint-config-test')
+    Object.assign(config, {
+        'exclude-urls': ["/test.jpg"]
+    })
+    agent.bindHttp(config)
+    t.deepEqual(agent.config.excludeURLs, ["/test.jpg"])
 
-    process.env['PINPOINT_EXCLUDE_URLS'] = "/test, test"
-    agent.bindHttp()
-    t.deepEqual(agent.config.excludeURLs, ["/test", "test"])
-
-    process.env['PINPOINT_EXCLUDE_URLS'] = "/test, test,tes?"
-    agent.bindHttp()
-    t.deepEqual(agent.config.excludeURLs, ["/test", "test", "tes?"])
+    config = require('../pinpoint-config-test')
+    Object.assign(config, {
+        'exclude-urls': ["/??/a", "/*bla/test"]
+    })
+    agent.bindHttp(config)
+    t.deepEqual(agent.config.excludeURLs, ["/??/a", "/*bla/test"])
 
     t.end()
     delete process.env.PINPOINT_EXCLUDE_URLS

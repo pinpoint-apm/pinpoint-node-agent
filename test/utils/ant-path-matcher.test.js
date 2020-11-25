@@ -82,7 +82,7 @@ test.skip('match', (t) => {
     t.false(pathMatcher.match("/bla*bla/test", "/blaXXXbl/test"), 'pathMatcher.match("/bla*bla/test", "/blaXXXbl/test")')
     t.false(pathMatcher.match("/*bla/test", "XXXblab/test"), 'pathMatcher.match("/*bla/test", "XXXblab/test")')
     t.false(pathMatcher.match("/*bla/test", "XXXbl/test"), 'pathMatcher.match("/*bla/test", "XXXbl/test")')
-    
+
     t.false(pathMatcher.match("/????", "/bala/bla"), 'pathMatcher.match("/????", "/bala/bla")')
     t.false(pathMatcher.match("/**/*bla", "/bla/bla/bla/bbb"), 'pathMatcher.match("/**/*bla", "/bla/bla/bla/bbb")')
 
@@ -90,7 +90,7 @@ test.skip('match', (t) => {
     t.true(pathMatcher.match("/*bla*/**/bla/*", "/XXXblaXXXX/testing/testing/bla/testing"), 'pathMatcher.match("/*bla*/**/bla/*", "/XXXblaXXXX/testing/testing/bla/testing")')
     t.true(pathMatcher.match("/*bla*/**/bla/**", "/XXXblaXXXX/testing/testing/bla/testing/testing"), 'pathMatcher.match("/*bla*/**/bla/**", "/XXXblaXXXX/testing/testing/bla/testing/testing")')
     t.true(pathMatcher.match("/*bla*/**/bla/**", "/XXXblaXXXX/testing/testing/bla/testing/testing.jpg"), 'pathMatcher.match("/*bla*/**/bla/**", "/XXXblaXXXX/testing/testing/bla/testing/testing.jpg")')
-    
+
     t.true(pathMatcher.match("*bla*/**/bla/**", "XXXblaXXXX/testing/testing/bla/testing/testing/"), 'pathMatcher.match("*bla*/**/bla/**", "XXXblaXXXX/testing/testing/bla/testing/testing/")')
     t.true(pathMatcher.match("*bla*/**/bla/*", "XXXblaXXXX/testing/testing/bla/testing"), 'pathMatcher.match("*bla*/**/bla/*", "XXXblaXXXX/testing/testing/bla/testing")')
     t.true(pathMatcher.match("*bla*/**/bla/**", "XXXblaXXXX/testing/testing/bla/testing/testing"), 'pathMatcher.match("*bla*/**/bla/**", "XXXblaXXXX/testing/testing/bla/testing/testing")')
@@ -110,7 +110,7 @@ test.skip('match', (t) => {
 
 test.skip('matchWithNullPath', (t) => {
     const pathMatcher = new AntPathMatcher()
-    
+
     t.false(pathMatcher.match("/test", null), 'pathMatcher.match("/test", null)')
     t.false(pathMatcher.match("/test"), 'pathMatcher.match("/test")')
     t.false(pathMatcher.match("/", null), 'pathMatcher.match("/", null)')
@@ -136,5 +136,5 @@ test('filter excludeURLs', (t) => {
 const TEST_ENV = {
     host: 'localhost',
     port: 5006,
-  }
+}
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`

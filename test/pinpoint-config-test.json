@@ -29,5 +29,6 @@
   },
   "redis": {
     "enable": true
-  }
+  },
+  "exclude-urls": []
 }

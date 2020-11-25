@@ -140,6 +140,23 @@ test('config object excludeURLs', (t) => {
     t.end()
 })
 
+test('config env excludeURLs', (t) => {
+    process.env['PINPOINT_EXCLUDE_URLS'] = "/test"
+    agent.bindHttp()
+    t.deepEqual(agent.config.excludeURLs, ["/test"])
+
+    process.env['PINPOINT_EXCLUDE_URLS'] = "/test, test"
+    agent.bindHttp()
+    t.deepEqual(agent.config.excludeURLs, ["/test", "test"])
+
+    process.env['PINPOINT_EXCLUDE_URLS'] = "/test, test,tes?"
+    agent.bindHttp()
+    t.deepEqual(agent.config.excludeURLs, ["/test", "test", "tes?"])
+
+    t.end()
+    delete process.env.PINPOINT_EXCLUDE_URLS
+})
+
 const TEST_ENV = {
     host: 'localhost',
     port: 5006,

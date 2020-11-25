@@ -9,9 +9,9 @@ const AntPathMatcher = require('../../lib/utils/ant-path-matcher')
 const axios = require('axios')
 const express = require('express')
 
-
+const agent = require('../support/agent-singleton-mock')
 // https://github.com/spring-projects/spring-framework/blob/master/spring-core/src/test/java/org/springframework/util/AntPathMatcherTests.java
-test('match', (t) => {
+test.skip('match', (t) => {
     const pathMatcher = new AntPathMatcher()
 
     // test exact matching
@@ -108,7 +108,7 @@ test('match', (t) => {
 })
 
 
-test('matchWithNullPath', (t) => {
+test.skip('matchWithNullPath', (t) => {
     const pathMatcher = new AntPathMatcher()
     
     t.false(pathMatcher.match("/test", null), 'pathMatcher.match("/test", null)')
@@ -120,19 +120,21 @@ test('matchWithNullPath', (t) => {
     t.end()
 })
 
-const agent = require('../support/agent-singleton-mock')
+test('filter excludeURLs', (t) => {
+    process.env['PINPOINT_EXCLUDE_URLS'] = "/test"
+    agent.bindHttp()
+    t.deepEqual(agent.config.excludeURLs, ["/test"])
+
+    process.env['PINPOINT_EXCLUDE_URLS'] = "/test, test"
+    agent.bindHttp()
+    t.deepEqual(agent.config.excludeURLs, ["/test", "test"])
+
+    t.end()
+    delete process.env.PINPOINT_EXCLUDE_URLS
+})
+
 const TEST_ENV = {
     host: 'localhost',
     port: 5006,
   }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
-test('filter excludeURLs', (t) => {
-    process.env['PINPOINT_EXCLUDE_URLS'] = "/test"
-    agent.bindHttp()
-
-    const excludeURLs = agent.config.excludeURLs
-    t.equal(excludeURLs, "/test")
-
-    t.end()
-    delete process.env.PINPOINT_LOG_LEVEL
-})

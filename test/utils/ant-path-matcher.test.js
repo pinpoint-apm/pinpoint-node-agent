@@ -155,17 +155,17 @@ test('config env excludeURLs', (t) => {
     delete process.env.PINPOINT_EXCLUDE_URLS
 })
 
-const TEST_ENV = {
-    host: 'localhost',
-    port: 5006,
-}
-const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 test('outgoing request when canSample true', (t) => {
     process.env['PINPOINT_EXCLUDE_URLS'] = "/heath_check"
     outgoingRequest(t, process.env['PINPOINT_EXCLUDE_URLS'])
     delete process.env.PINPOINT_EXCLUDE_URLS
 })
 
+const TEST_ENV = {
+    host: 'localhost',
+    port: 5006,
+}
+const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 function outgoingRequest(t, patterns) {
     agent.bindHttp()
 
@@ -217,3 +217,9 @@ function outgoingRequest(t, patterns) {
         t.end()
     })
 }
+
+test('outgoing request when canSample true', (t) => {
+    process.env['PINPOINT_EXCLUDE_URLS'] = "/heath_check/**"
+    outgoingRequest(t, process.env['PINPOINT_EXCLUDE_URLS'])
+    delete process.env.PINPOINT_EXCLUDE_URLS
+})

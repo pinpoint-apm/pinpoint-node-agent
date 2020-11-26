@@ -10,7 +10,7 @@ const axios = require('axios')
 const express = require('express')
 
 const agent = require('../support/agent-singleton-mock')
-const pathMatcher = new AntPathMatcher()
+let pathMatcher = new AntPathMatcher()
 
 // https://github.com/spring-projects/spring-framework/blob/master/spring-core/src/test/java/org/springframework/util/AntPathMatcherTests.java
 test('match', (t) => {
@@ -174,7 +174,7 @@ function outgoingRequest(t, patterns) {
     const PATH = '/heath_check'
     const app = new express()
 
-    pathMatcher.compilePatterns(agent.config.excludeURLs)
+    pathMatcher = new AntPathMatcher(agent.config)
     const sampling = !pathMatcher.matchPath(PATH)
 
     let actualTrace

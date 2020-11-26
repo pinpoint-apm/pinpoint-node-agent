@@ -263,5 +263,25 @@ test('map insertion order learning test', (t) => {
         }
         index++
     }
+
+    // get order
+    const cache = Array.from(map1)
+    t.deepEqual(cache[0], [1, 'bar'], 'key match')
+    t.deepEqual(cache[1], ['0', 'foo2'], 'key match')
+
+    // remove low hit count
+    map1.delete(1)
+    t.equal(map1.size, 1)
+
+    iterator1 = map1[Symbol.iterator]();
+    index = 0
+    for (const item of iterator1) {
+        if (index == 0) {
+            t.equal(item[0], '0', 'key match')
+            t.equal(item[1], 'foo2', 'value match')
+        }
+        index++
+    }
+
     t.end()
 })

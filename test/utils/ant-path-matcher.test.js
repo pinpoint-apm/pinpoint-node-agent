@@ -10,10 +10,10 @@ const axios = require('axios')
 const express = require('express')
 
 const agent = require('../support/agent-singleton-mock')
+const pathMatcher = new AntPathMatcher()
+
 // https://github.com/spring-projects/spring-framework/blob/master/spring-core/src/test/java/org/springframework/util/AntPathMatcherTests.java
 test('match', (t) => {
-    const pathMatcher = new AntPathMatcher()
-
     // test exact matching
     t.ok(pathMatcher, 'Ant Path matcher initialization')
     t.true(pathMatcher.match("test", "test"))
@@ -109,8 +109,6 @@ test('match', (t) => {
 
 
 test('matchWithNullPath', (t) => {
-    const pathMatcher = new AntPathMatcher()
-
     t.false(pathMatcher.match("/test", null), 'pathMatcher.match("/test", null)')
     t.false(pathMatcher.match("/test"), 'pathMatcher.match("/test")')
     t.false(pathMatcher.match("/", null), 'pathMatcher.match("/", null)')
@@ -164,15 +162,18 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 test('outgoing request when canSample true', (t) => {
     process.env['PINPOINT_EXCLUDE_URLS'] = "/heath_check"
-    outgoingRequest(t, false)
+    outgoingRequest(t, process.env['PINPOINT_EXCLUDE_URLS'])
     delete process.env.PINPOINT_EXCLUDE_URLS
 })
 
-function outgoingRequest(t, sampling) {
+function outgoingRequest(t, patterns) {
     agent.bindHttp()
 
     const PATH = '/heath_check'
     const app = new express()
+
+    pathMatcher.compilePatterns(patterns)
+    const sampling = pathMatcher.matchPath(PATH)
 
     let actualTrace
     app.get(PATH, async (req, res) => {

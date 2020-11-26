@@ -166,6 +166,7 @@ const TEST_ENV = {
     port: 5006,
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
+
 function outgoingRequest(t, patterns) {
     agent.bindHttp()
 
@@ -222,4 +223,45 @@ test('outgoing request when canSample false', (t) => {
     process.env['PINPOINT_EXCLUDE_URLS'] = "/heath_check/**"
     outgoingRequest(t, process.env['PINPOINT_EXCLUDE_URLS'])
     delete process.env.PINPOINT_EXCLUDE_URLS
+})
+
+test('map insertion order learning test', (t) => {
+    const map1 = new Map();
+
+    map1.set('0', 'foo');
+    map1.set(1, 'bar');
+
+    let iterator1 = map1[Symbol.iterator]();
+
+    let index = 0
+    for (const item of iterator1) {
+        if (index == 0) {
+            t.equal(item[0], '0', 'key match')
+            t.equal(item[1], 'foo', 'value match')
+        }
+        if (index == 1) {
+            t.equal(item[0], 1, 'key match')
+            t.equal(item[1], 'bar', 'value match')
+        }
+        index++
+    }
+
+    map1.set('0', 'foo');
+    map1.set(1, 'bar');
+    map1.delete('0')
+    map1.set('0', 'foo2');
+    iterator1 = map1[Symbol.iterator]();
+    index = 0
+    for (const item of iterator1) {
+        if (index == 0) {
+            t.equal(item[0], 1, 'key match')
+            t.equal(item[1], 'bar', 'value match')
+        }
+        if (index == 1) {
+            t.equal(item[0], '0', 'key match')
+            t.equal(item[1], 'foo2', 'value match')
+        }
+        index++
+    }
+    t.end()
 })

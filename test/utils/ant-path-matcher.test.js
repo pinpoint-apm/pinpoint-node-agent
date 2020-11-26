@@ -158,7 +158,7 @@ test('config env excludeURLs', (t) => {
 
 test('outgoing request when canSample true', (t) => {
     process.env['PINPOINT_EXCLUDE_URLS'] = "/heath_check"
-    outgoingRequest(t, process.env['PINPOINT_EXCLUDE_URLS'])
+    outgoingRequest(t, "/heath_check")
     delete process.env.PINPOINT_EXCLUDE_URLS
 })
 
@@ -168,14 +168,18 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-function outgoingRequest(t, patterns) {
+function outgoingRequest(t, path, expectedSampling) {
     agent.bindHttp()
 
-    const PATH = '/heath_check'
+    const PATH = path
     const app = new express()
 
     pathMatcher = new AntPathMatcher(agent.config)
     const sampling = !pathMatcher.matchPath(PATH)
+
+    if (expectedSampling) {
+        t.equal(sampling, expectedSampling, `expectedMatch ${expectedSampling}`)
+    }
 
     let actualTrace
     app.get(PATH, async (req, res) => {
@@ -220,9 +224,15 @@ function outgoingRequest(t, patterns) {
     })
 }
 
-test('outgoing request when canSample false', (t) => {
+test('request when canSample false', (t) => {
     process.env['PINPOINT_EXCLUDE_URLS'] = "/heath_check?/**"
-    outgoingRequest(t, process.env['PINPOINT_EXCLUDE_URLS'])
+    outgoingRequest(t, "/heath_check")
+    delete process.env.PINPOINT_EXCLUDE_URLS
+})
+
+test('request when multi patterns true', (t) => {
+    process.env['PINPOINT_EXCLUDE_URLS'] = "/heath_check?/**,/tes?"
+    outgoingRequest(t, "/test", false)
     delete process.env.PINPOINT_EXCLUDE_URLS
 })
 

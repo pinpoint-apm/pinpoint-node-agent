@@ -188,7 +188,7 @@ function outgoingRequest(t, patterns) {
         actualTrace = agent.currentTraceObject()
 
         const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
-        t.equal(result1.data, 'ok get', 'result equals')
+        t.equal(result1.data, 'ok get', `sampling is ${sampling}, outgoing req ok`)
         res.send('ok get')
     })
 
@@ -204,21 +204,21 @@ function outgoingRequest(t, patterns) {
         } else {
             // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
             // TODO: Think about for outgoing request pinpoint-sampled
-            t.equal(undefined, headers['pinpoint-sampled'])
+            t.equal(undefined, headers['pinpoint-sampled'], 'When no sampling, pinpoint-sampled is s0')
         }
         res.send('ok get')
     })
 
     const server = app.listen(TEST_ENV.port, async () => {
         const result1 = await axios.get(getServerUrl(PATH))
-        t.ok(result1.status, 200)
+        t.equal(result1.status, 200, `sampling is ${sampling}, response status 200 ok`)
 
         server.close()
         t.end()
     })
 }
 
-test('outgoing request when canSample true', (t) => {
+test('outgoing request when canSample false', (t) => {
     process.env['PINPOINT_EXCLUDE_URLS'] = "/heath_check/**"
     outgoingRequest(t, process.env['PINPOINT_EXCLUDE_URLS'])
     delete process.env.PINPOINT_EXCLUDE_URLS

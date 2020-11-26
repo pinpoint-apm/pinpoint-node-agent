@@ -39,6 +39,7 @@ class MockAgent extends Agent {
         const config = require('../../lib/config').getConfig(json)
         this.config = config
 
+        httpShared.clearPathMatcher()
         const http = require('http')
         log.debug('shimming http.Server.prototype.emit function')
         shimmer.wrap(http && http.Server && http.Server.prototype, 'emit', httpShared.instrumentRequest(agent, 'http'))

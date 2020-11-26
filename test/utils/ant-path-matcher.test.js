@@ -71,6 +71,7 @@ test('match', (t) => {
 
     // test matching with **'s
     t.true(pathMatcher.match("/**", "/testing/testing"), 'pathMatcher.match("/**", "/testing/testing")')
+    t.true(pathMatcher.match("/test/**", "/test/"), 'pathMatcher.match("/test/**", "/test/")')
     t.true(pathMatcher.match("/*/**", "/testing/testing"), 'pathMatcher.match("/*/**", "/testing/testing")')
     t.true(pathMatcher.match("/**/*", "/testing/testing"), 'pathMatcher.match("/**/*", "/testing/testing")')
     t.true(pathMatcher.match("/bla/**/bla", "/bla/testing/testing/bla"), 'pathMatcher.match("/bla/**/bla", "/bla/testing/testing/bla")')
@@ -173,8 +174,8 @@ function outgoingRequest(t, patterns) {
     const PATH = '/heath_check'
     const app = new express()
 
-    pathMatcher.compilePatterns(patterns)
-    const sampling = pathMatcher.matchPath(PATH)
+    pathMatcher.compilePatterns(agent.config.excludeURLs)
+    const sampling = !pathMatcher.matchPath(PATH)
 
     let actualTrace
     app.get(PATH, async (req, res) => {
@@ -220,18 +221,18 @@ function outgoingRequest(t, patterns) {
 }
 
 test('outgoing request when canSample false', (t) => {
-    process.env['PINPOINT_EXCLUDE_URLS'] = "/heath_check/**"
+    process.env['PINPOINT_EXCLUDE_URLS'] = "/heath_check?/**"
     outgoingRequest(t, process.env['PINPOINT_EXCLUDE_URLS'])
     delete process.env.PINPOINT_EXCLUDE_URLS
 })
 
 test('map insertion order learning test', (t) => {
-    const map1 = new Map();
+    const map1 = new Map()
 
-    map1.set('0', 'foo');
-    map1.set(1, 'bar');
+    map1.set('0', 'foo')
+    map1.set(1, 'bar')
 
-    let iterator1 = map1[Symbol.iterator]();
+    let iterator1 = map1[Symbol.iterator]()
 
     let index = 0
     for (const item of iterator1) {
@@ -246,11 +247,11 @@ test('map insertion order learning test', (t) => {
         index++
     }
 
-    map1.set('0', 'foo');
-    map1.set(1, 'bar');
+    map1.set('0', 'foo')
+    map1.set(1, 'bar')
     map1.delete('0')
-    map1.set('0', 'foo2');
-    iterator1 = map1[Symbol.iterator]();
+    map1.set('0', 'foo2')
+    iterator1 = map1[Symbol.iterator]()
     index = 0
     for (const item of iterator1) {
         if (index == 0) {

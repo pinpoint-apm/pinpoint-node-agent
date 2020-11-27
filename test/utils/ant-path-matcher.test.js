@@ -175,10 +175,12 @@ test('config env exclusion URL', (t) => {
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 })
 
-test('outgoing request when canSample true', (t) => {
+test('outgoing request when canSample true', async (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check"
-    outgoingRequest(t, "/heath_check", true)
+    await outgoingRequest(t, "/heath_check", false)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+
+    t.end()
 })
 
 const TEST_ENV = {
@@ -187,84 +189,100 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-function outgoingRequest(t, path, expectedSampling, expectUnits) {
-    agent.bindHttp()
-
-    const PATH = path
-    const app = new express()
-
-    pathMatcher = new AntPathMatcher(agent.config)
-    const sampling = !pathMatcher.matchPath(PATH)
-
-    if (typeof expectedSampling === 'undefined') {
-        t.equal(sampling, expectedSampling, `expectedMatch ${expectedSampling}`)
-    }
-
-    let actualTrace
-    app.get(PATH, async (req, res) => {
-        const https = require('https')
-        const options = {
-            hostname: 'naver.com',
-            port: 443,
-            path: '/',
-            method: 'GET'
+async function outgoingRequest(t, path, expectedSampling, expectUnits) {
+    return new Promise((resolve, reject) => {
+        agent.bindHttp()
+    
+        const PATH = path
+        const app = new express()
+    
+        pathMatcher = new AntPathMatcher(agent.config)
+        const sampling = !pathMatcher.matchPath(PATH)
+    
+        if (typeof expectedSampling !== 'undefined') {
+            t.equal(sampling, expectedSampling, `expectedMatch ${expectedSampling}`)
         }
-
-        actualTrace = agent.currentTraceObject()
-
-        const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
-        t.equal(result1.data, 'ok get', `sampling is ${sampling}, outgoing req ok`)
-        res.send('ok get')
-    })
-
-    const OUTGOING_PATH = '/outgoingrequest'
-    app.get(OUTGOING_PATH, async (req, res) => {
-        const headers = req.headers
-        if (sampling) {
-            t.equal(actualTrace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
-            t.equal(actualTrace.traceId.spanId, headers['pinpoint-pspanid'])
-            t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
-            t.equal(agent.config.serviceType, Number(headers['pinpoint-papptype']))
-            t.equal(actualTrace.traceId.flag.toString(), headers['pinpoint-flags'])
-        } else {
-            // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
-            // TODO: Think about for outgoing request pinpoint-sampled
-            t.equal(undefined, headers['pinpoint-sampled'], 'When no sampling, pinpoint-sampled is s0')
-        }
-        res.send('ok get')
-    })
-
-    const server = app.listen(TEST_ENV.port, async () => {
-        const result1 = await axios.get(getServerUrl(PATH))
-        t.equal(result1.status, 200, `sampling is ${sampling}, response status 200 ok`)
-
-        if (expectUnits) {
-            expectUnits(t)
-        }
-
-        server.close()
-        t.end()
+    
+        let actualTrace
+        app.get(PATH, async (req, res) => {
+            const https = require('https')
+            const options = {
+                hostname: 'naver.com',
+                port: 443,
+                path: '/',
+                method: 'GET'
+            }
+    
+            actualTrace = agent.currentTraceObject()
+    
+            const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
+            t.equal(result1.data, 'ok get', `sampling is ${sampling}, outgoing req ok`)
+            res.send('ok get')
+        })
+    
+        const OUTGOING_PATH = '/outgoingrequest'
+        app.get(OUTGOING_PATH, async (req, res) => {
+            const headers = req.headers
+            if (sampling) {
+                t.equal(actualTrace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
+                t.equal(actualTrace.traceId.spanId, headers['pinpoint-pspanid'])
+                t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
+                t.equal(agent.config.serviceType, Number(headers['pinpoint-papptype']))
+                t.equal(actualTrace.traceId.flag.toString(), headers['pinpoint-flags'])
+            } else {
+                // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
+                // TODO: Think about for outgoing request pinpoint-sampled
+                t.equal(undefined, headers['pinpoint-sampled'], 'When no sampling, pinpoint-sampled is s0')
+            }
+            res.send('ok get')
+        })
+    
+        const server = app.listen(TEST_ENV.port, async () => {
+            const result1 = await axios.get(getServerUrl(PATH))
+            t.equal(result1.status, 200, `sampling is ${sampling}, response status 200 ok`)
+    
+            if (expectUnits) {
+                expectUnits(t)
+            }
+    
+            server.close()
+            resolve(t)
+        })
     })
 }
 
-test('when pattern match is false, sampling is false', (t) => {
+test('when pattern match is false, sampling is false', async (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**"
-    outgoingRequest(t, "/heath_check", true)
+    await outgoingRequest(t, "/heath_check", true)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+
+    t.end()
 })
 
-test('request when multi patterns true', (t) => {
+test('request when multi patterns true', async (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
-    outgoingRequest(t, "/test", false)
+    await outgoingRequest(t, "/test", false)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+
+    t.end()
 })
 
-test('when pattern match with cache size, sampling test with cache hit', (t) => {
+test('when pattern match with cache size, sampling test with cache hit', async (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
-    outgoingRequest(t, "/test", false, (t) => {
+    await outgoingRequest(t, "/test", false, (t) => {
         t.true(typeof agent.config.traceExclusionUrlCacheSize === 'undefined', 'traceExclusionUrlCacheSize ENV undefined case')
     })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+
+    process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
+    process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
+    await outgoingRequest(t, "/test", false, (t) => {
+        t.true(typeof agent.config.traceExclusionUrlCacheSize !== 'undefined', 'traceExclusionUrlCacheSize ENV undefined case')
+    })
+    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
+
+    t.end()
 })
 
 test('map insertion order learning test', (t) => {

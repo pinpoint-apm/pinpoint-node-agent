@@ -267,24 +267,6 @@ test('request when multi patterns true', async (t) => {
     t.end()
 })
 
-test('when pattern match with cache size, sampling test with cache hit', async (t) => {
-    process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
-    await outgoingRequest(t, "/test", false, (t) => {
-        t.true(typeof agent.config.traceExclusionUrlCacheSize === 'undefined', 'traceExclusionUrlCacheSize ENV undefined case')
-    })
-    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
-
-    process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
-    process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
-    await outgoingRequest(t, "/test", false, (t) => {
-        t.true(typeof agent.config.traceExclusionUrlCacheSize !== 'undefined', 'traceExclusionUrlCacheSize ENV undefined case')
-    })
-    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
-    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
-
-    t.end()
-})
-
 test('map insertion order learning test', (t) => {
     const map1 = new Map()
 
@@ -342,6 +324,25 @@ test('map insertion order learning test', (t) => {
         }
         index++
     }
+
+    t.end()
+})
+
+test('when pattern match with cache size, sampling test with cache hit', async (t) => {
+    process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
+    await outgoingRequest(t, "/test", false, (t) => {
+        t.true(typeof agent.config.traceExclusionUrlCacheSize === 'undefined', 'traceExclusionUrlCacheSize ENV undefined case')
+    })
+    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+
+    process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
+    process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
+    await outgoingRequest(t, "/test", false, (t) => {
+        t.true(typeof agent.config.traceExclusionUrlCacheSize !== 'undefined', 'traceExclusionUrlCacheSize ENV undefined case')
+        t.equal(agent.config.traceExclusionUrlCacheSize, 100, 'traceExclusionUrlCacheSize default 100')
+    })
+    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
 
     t.end()
 })

@@ -338,10 +338,17 @@ test('when pattern match with cache size, sampling test with cache hit', async (
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
     await outgoingRequest(t, "/test", false, (t) => {
-        t.true(typeof agent.config.traceExclusionUrlCacheSize !== 'undefined', 'traceExclusionUrlCacheSize ENV undefined case')
+        t.true(typeof agent.config.traceExclusionUrlCacheSize !== 'undefined', 'traceExclusionUrlCacheSize ENV case')
         t.equal(agent.config.traceExclusionUrlCacheSize, 100, 'traceExclusionUrlCacheSize default 100')
     })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
+
+    process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
+    await outgoingRequest(t, "/test", true, (t) => {
+        t.true(typeof agent.config.traceExclusionUrlPatterns === 'undefined', 'when only set traceExclusionUrlCacheSize ENV, agent.config.traceExclusionUrlPatterns undefined case')
+        t.true(typeof agent.config.traceExclusionUrlCacheSize === 'undefined', 'when only set traceExclusionUrlCacheSize ENV, agent.config.traceExclusionUrlCacheSize undefined case')
+    })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
 
     t.end()

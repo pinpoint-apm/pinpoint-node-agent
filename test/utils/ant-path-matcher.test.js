@@ -125,7 +125,7 @@ test('config object exclusion URL', (t) => {
         'trace-exclusion-url': ["/test.jpg"]
     })
     agent.bindHttp(config)
-    t.deepEqual(agent.config.excludeURLs, ["/test.jpg"])
+    t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test.jpg"])
     delete config['trace-exclusion-url']
 
     config = require('../pinpoint-config-test')
@@ -133,7 +133,7 @@ test('config object exclusion URL', (t) => {
         'trace-exclusion-url': ["/??/a", "/*bla/test"]
     })
     agent.bindHttp(config)
-    t.deepEqual(agent.config.excludeURLs, ["/??/a", "/*bla/test"])
+    t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/??/a", "/*bla/test"])
     delete config['trace-exclusion-url']
 
     t.end()
@@ -146,7 +146,7 @@ test('config object exclusion URL with cache size', (t) => {
         'trace-exclusion-url': ["/test.jpg"]
     })
     agent.bindHttp(config)
-    t.deepEqual(agent.config.excludeURLs, ["/test.jpg"])
+    t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test.jpg"])
     delete config['trace-exclusion-url']
 
     t.end()
@@ -155,15 +155,15 @@ test('config object exclusion URL with cache size', (t) => {
 test('config env exclusion URL', (t) => {
     process.env['PINPOINT_EXCLUDE_URLS'] = "/test"
     agent.bindHttp()
-    t.deepEqual(agent.config.excludeURLs, ["/test"])
+    t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test"])
 
     process.env['PINPOINT_EXCLUDE_URLS'] = "/test, test"
     agent.bindHttp()
-    t.deepEqual(agent.config.excludeURLs, ["/test", "test"])
+    t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test", "test"])
 
     process.env['PINPOINT_EXCLUDE_URLS'] = "/test, test,tes?"
     agent.bindHttp()
-    t.deepEqual(agent.config.excludeURLs, ["/test", "test", "tes?"])
+    t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test", "test", "tes?"])
 
     t.end()
     delete process.env.PINPOINT_EXCLUDE_URLS

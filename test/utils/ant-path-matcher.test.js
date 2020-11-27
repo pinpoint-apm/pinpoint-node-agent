@@ -140,7 +140,7 @@ test('config object exclusion URL', (t) => {
 })
 
 // for acronyms camel case:  https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-1.1/141e06ef(v=vs.71)?redirectedfrom=MSDN
-test('config object exclusion URL with ', (t) => {
+test('config object exclusion URL with cache size', (t) => {
     let config = require('../pinpoint-config-test')
     Object.assign(config, {
         'trace-exclusion-url': ["/test.jpg"]

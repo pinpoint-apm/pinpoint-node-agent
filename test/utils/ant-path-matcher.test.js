@@ -159,26 +159,26 @@ test('config object exclusion URL with cache size', (t) => {
 })
 
 test('config env exclusion URL', (t) => {
-    process.env['PINPOINT_EXCLUDE_URLS'] = "/test"
+    process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/test"
     agent.bindHttp()
     t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test"])
 
-    process.env['PINPOINT_EXCLUDE_URLS'] = "/test, test"
+    process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/test, test"
     agent.bindHttp()
     t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test", "test"])
 
-    process.env['PINPOINT_EXCLUDE_URLS'] = "/test, test,tes?"
+    process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/test, test,tes?"
     agent.bindHttp()
     t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test", "test", "tes?"])
 
     t.end()
-    delete process.env.PINPOINT_EXCLUDE_URLS
+    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 })
 
 test('outgoing request when canSample true', (t) => {
-    process.env['PINPOINT_EXCLUDE_URLS'] = "/heath_check"
+    process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check"
     outgoingRequest(t, "/heath_check")
-    delete process.env.PINPOINT_EXCLUDE_URLS
+    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 })
 
 const TEST_ENV = {
@@ -244,15 +244,15 @@ function outgoingRequest(t, path, expectedSampling) {
 }
 
 test('request when canSample false', (t) => {
-    process.env['PINPOINT_EXCLUDE_URLS'] = "/heath_check?/**"
+    process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**"
     outgoingRequest(t, "/heath_check")
-    delete process.env.PINPOINT_EXCLUDE_URLS
+    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 })
 
 test('request when multi patterns true', (t) => {
-    process.env['PINPOINT_EXCLUDE_URLS'] = "/heath_check?/**,/tes?"
+    process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
     outgoingRequest(t, "/test", false)
-    delete process.env.PINPOINT_EXCLUDE_URLS
+    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 })
 
 test('map insertion order learning test', (t) => {

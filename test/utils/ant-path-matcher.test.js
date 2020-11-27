@@ -187,7 +187,7 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-function outgoingRequest(t, path, expectedSampling) {
+function outgoingRequest(t, path, expectedSampling, expectUnits) {
     agent.bindHttp()
 
     const PATH = path
@@ -238,6 +238,10 @@ function outgoingRequest(t, path, expectedSampling) {
         const result1 = await axios.get(getServerUrl(PATH))
         t.equal(result1.status, 200, `sampling is ${sampling}, response status 200 ok`)
 
+        if (expectUnits) {
+            expectUnits(t)
+        }
+
         server.close()
         t.end()
     })
@@ -252,6 +256,14 @@ test('when pattern match is false, sampling is false', (t) => {
 test('request when multi patterns true', (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
     outgoingRequest(t, "/test", false)
+    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+})
+
+test('when pattern match with cache size, sampling test with cache hit', (t) => {
+    process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
+    outgoingRequest(t, "/test", false, (t) => {
+        t.true(typeof agent.config.traceExclusionUrlCacheSize === 'undefined', 'traceExclusionUrlCacheSize ENV undefined case')
+    })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 })
 

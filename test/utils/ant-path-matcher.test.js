@@ -177,7 +177,7 @@ test('config env exclusion URL', (t) => {
 
 test('outgoing request when canSample true', (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check"
-    outgoingRequest(t, "/heath_check")
+    outgoingRequest(t, "/heath_check", true)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 })
 
@@ -196,7 +196,7 @@ function outgoingRequest(t, path, expectedSampling) {
     pathMatcher = new AntPathMatcher(agent.config)
     const sampling = !pathMatcher.matchPath(PATH)
 
-    if (expectedSampling) {
+    if (typeof expectedSampling === 'undefined') {
         t.equal(sampling, expectedSampling, `expectedMatch ${expectedSampling}`)
     }
 
@@ -243,9 +243,9 @@ function outgoingRequest(t, path, expectedSampling) {
     })
 }
 
-test('request when canSample false', (t) => {
+test('when pattern match is false, sampling is false', (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**"
-    outgoingRequest(t, "/heath_check")
+    outgoingRequest(t, "/heath_check", true)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 })
 

@@ -122,19 +122,32 @@ test('matchWithNullPath', (t) => {
 test('config object excludeURLs', (t) => {
     let config = require('../pinpoint-config-test')
     Object.assign(config, {
-        'exclude-urls': ["/test.jpg"]
+        'trace-exclusion-url': ["/test.jpg"]
     })
     agent.bindHttp(config)
     t.deepEqual(agent.config.excludeURLs, ["/test.jpg"])
-    delete config['exclude-urls']
+    delete config['trace-exclusion-url']
 
     config = require('../pinpoint-config-test')
     Object.assign(config, {
-        'exclude-urls': ["/??/a", "/*bla/test"]
+        'trace-exclusion-url': ["/??/a", "/*bla/test"]
     })
     agent.bindHttp(config)
     t.deepEqual(agent.config.excludeURLs, ["/??/a", "/*bla/test"])
-    delete config['exclude-urls']
+    delete config['trace-exclusion-url']
+
+    t.end()
+})
+
+// for acronyms camel case:  https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-1.1/141e06ef(v=vs.71)?redirectedfrom=MSDN
+test('config object exclusion URL with ', (t) => {
+    let config = require('../pinpoint-config-test')
+    Object.assign(config, {
+        'trace-exclusion-url': ["/test.jpg"]
+    })
+    agent.bindHttp(config)
+    t.deepEqual(agent.config.excludeURLs, ["/test.jpg"])
+    delete config['trace-exclusion-url']
 
     t.end()
 })

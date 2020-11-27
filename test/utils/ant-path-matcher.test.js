@@ -119,7 +119,7 @@ test('matchWithNullPath', (t) => {
     t.end()
 })
 
-test('config object excludeURLs', (t) => {
+test('config object exclusion URL', (t) => {
     let config = require('../pinpoint-config-test')
     Object.assign(config, {
         'trace-exclusion-url': ["/test.jpg"]
@@ -152,7 +152,7 @@ test('config object exclusion URL with ', (t) => {
     t.end()
 })
 
-test('config env excludeURLs', (t) => {
+test('config env exclusion URL', (t) => {
     process.env['PINPOINT_EXCLUDE_URLS'] = "/test"
     agent.bindHttp()
     t.deepEqual(agent.config.excludeURLs, ["/test"])

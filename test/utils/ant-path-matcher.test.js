@@ -122,7 +122,9 @@ test('matchWithNullPath', (t) => {
 test('config object exclusion URL', (t) => {
     let config = require('../pinpoint-config-test')
     Object.assign(config, {
-        'trace-exclusion-url': ["/test.jpg"]
+        'trace-exclusion-url': {
+            pattern: ["/test.jpg"]
+        }
     })
     agent.bindHttp(config)
     t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test.jpg"])
@@ -130,7 +132,9 @@ test('config object exclusion URL', (t) => {
 
     config = require('../pinpoint-config-test')
     Object.assign(config, {
-        'trace-exclusion-url': ["/??/a", "/*bla/test"]
+        'trace-exclusion-url': {
+            pattern: ["/??/a", "/*bla/test"]
+        }
     })
     agent.bindHttp(config)
     t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/??/a", "/*bla/test"])
@@ -143,7 +147,9 @@ test('config object exclusion URL', (t) => {
 test('config object exclusion URL with cache size', (t) => {
     let config = require('../pinpoint-config-test')
     Object.assign(config, {
-        'trace-exclusion-url': ["/test.jpg"]
+        'trace-exclusion-url': {
+            pattern: ["/test.jpg"]
+        }
     })
     agent.bindHttp(config)
     t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test.jpg"])

@@ -544,6 +544,36 @@ test('path matcher cache', (t) => {
         index++
     }
     t.equal(cachedPathMatcher.pathMatchedCache.size, 3, `cache size: ${cachedPathMatcher.pathMatchedCache.size}`)
-    
+
+    cachedPathMatcher = new AntPathMatcher({
+        traceExclusionUrlPatterns: ["/test", "/test/**"],
+        traceExclusionUrlCacheSize: 3
+    })
+    cachedPathMatcher.matchPath("/teste/")
+    cachedPathMatcher.matchPath("/test/1")
+    cachedPathMatcher.matchPath("/test/12")
+    cachedPathMatcher.matchPath("/teste/")
+    cachedPathMatcher.matchPath("/testa/")
+    cachedPathMatcher.matchPath("/test/12")
+
+    iterator = cachedPathMatcher.pathMatchedCache[Symbol.iterator]()
+    index = 0
+    for (const item of iterator) {
+        if (index == 0) {
+            t.equal(item[0], '/teste/', `${item[0]} path key matcher`)
+            t.equal(item[1], false, `${item[1]} path value matcher`)
+        }
+        if (index == 1) {
+            t.equal(item[0], '/testa/', `${item[0]} path key matcher`)
+            t.equal(item[1], false, `${item[1]} path value matcher`)
+        }
+        if (index == 2) {
+            t.equal(item[0], '/test/12', `${item[0]} path key matcher`)
+            t.equal(item[1], true, `${item[1]} path value matcher`)
+        }
+        index++
+    }
+    t.equal(cachedPathMatcher.pathMatchedCache.size, 3, `cache size: ${cachedPathMatcher.pathMatchedCache.size}`)
+
     t.end()
 })

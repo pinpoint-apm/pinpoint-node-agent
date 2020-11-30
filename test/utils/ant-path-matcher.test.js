@@ -194,14 +194,14 @@ async function outgoingRequest(t, path, expectedSampling, expectUnits) {
     return new Promise((resolve, reject) => {
         const PATH = path
         const app = new express()
-    
+
         pathMatcher = new AntPathMatcher(agent.config)
         const sampling = !pathMatcher.matchPath(PATH)
-    
+
         if (typeof expectedSampling !== 'undefined') {
             t.equal(sampling, expectedSampling, `expectedMatch ${expectedSampling}`)
         }
-    
+
         let actualTrace
         app.get(PATH, async (req, res) => {
             const https = require('https')
@@ -211,14 +211,14 @@ async function outgoingRequest(t, path, expectedSampling, expectUnits) {
                 path: '/',
                 method: 'GET'
             }
-    
+
             actualTrace = agent.currentTraceObject()
-    
+
             const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
             t.equal(result1.data, 'ok get', `sampling is ${sampling}, outgoing req ok`)
             res.send('ok get')
         })
-    
+
         const OUTGOING_PATH = '/outgoingrequest'
         app.get(OUTGOING_PATH, async (req, res) => {
             const headers = req.headers
@@ -235,15 +235,15 @@ async function outgoingRequest(t, path, expectedSampling, expectUnits) {
             }
             res.send('ok get')
         })
-    
+
         const server = app.listen(TEST_ENV.port, async () => {
             const result1 = await axios.get(getServerUrl(PATH))
             t.equal(result1.status, 200, `sampling is ${sampling}, response status 200 ok`)
-    
+
             if (expectUnits) {
                 expectUnits(t)
             }
-    
+
             server.close()
             resolve(t)
         })
@@ -445,7 +445,7 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
 })
 
 test('path matcher cache', (t) => {
-    const cachedPathMatcher = new AntPathMatcher({
+    let cachedPathMatcher = new AntPathMatcher({
         traceExclusionUrlPatterns: ["/test", "/test/**"],
         traceExclusionUrlCacheSize: 3
     })
@@ -459,6 +459,59 @@ test('path matcher cache', (t) => {
         if (index == 0) {
             t.equal(item[0], '/test', 'path key matcher')
             t.equal(item[1], true, 'path value matcher')
+        }
+        index++
+    }
+
+    cachedPathMatcher = new AntPathMatcher({
+        traceExclusionUrlPatterns: ["/test", "/test/**"],
+        traceExclusionUrlCacheSize: 3
+    })
+    cachedPathMatcher.matchPath("/teste/")
+    cachedPathMatcher.matchPath("/test/1")
+    cachedPathMatcher.matchPath("/test/12")
+
+    iterator = cachedPathMatcher.pathMatchedCache[Symbol.iterator]()
+    index = 0
+    for (const item of iterator) {
+        if (index == 0) {
+            t.equal(item[0], '/teste/', `${item[0]} path key matcher`)
+            t.equal(item[1], false, `${item[1]} path value matcher`)
+        }
+        if (index == 1) {
+            t.equal(item[0], '/test/1', `${item[0]} path key matcher`)
+            t.equal(item[1], true, `${item[1]} path value matcher`)
+        }
+        if (index == 2) {
+            t.equal(item[0], '/test/12', `${item[0]} path key matcher`)
+            t.equal(item[1], true, `${item[1]} path value matcher`)
+        }
+        index++
+    }
+
+    cachedPathMatcher = new AntPathMatcher({
+        traceExclusionUrlPatterns: ["/test", "/test/**"],
+        traceExclusionUrlCacheSize: 3
+    })
+    cachedPathMatcher.matchPath("/teste/")
+    cachedPathMatcher.matchPath("/test/1")
+    cachedPathMatcher.matchPath("/test/12")
+    cachedPathMatcher.matchPath("/teste/")
+
+    iterator = cachedPathMatcher.pathMatchedCache[Symbol.iterator]()
+    index = 0
+    for (const item of iterator) {
+        if (index == 0) {
+            t.equal(item[0], '/test/1', `${item[0]} path key matcher`)
+            t.equal(item[1], true, `${item[1]} path value matcher`)
+        }
+        if (index == 1) {
+            t.equal(item[0], '/test/12', `${item[0]} path key matcher`)
+            t.equal(item[1], true, `${item[1]} path value matcher`)
+        }
+        if (index == 2) {
+            t.equal(item[0], '/teste/', `${item[0]} path key matcher`)
+            t.equal(item[1], false, `${item[1]} path value matcher`)
         }
         index++
     }

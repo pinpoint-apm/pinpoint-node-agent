@@ -119,15 +119,6 @@ test('matchWithNullPath', (t) => {
     t.end()
 })
 
-test('path matcher cache', (t) => {
-    const cachedPathMatcher = new AntPathMatcher({
-        traceExclusionUrlPatterns: ["/test"],
-        traceExclusionUrlCacheSize: 3
-    })
-
-    t.end()
-})
-
 test('config object exclusion URL', (t) => {
     let config = require('../pinpoint-config-test')
     Object.assign(config, {
@@ -449,6 +440,28 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
         t.equal(agent.config.traceExclusionUrlCacheSize, 100, 'when sampling is true, traceExclusionUrlCacheSize default 100')
     })
     delete config['trace-exclusion-url']
+
+    t.end()
+})
+
+test('path matcher cache', (t) => {
+    const cachedPathMatcher = new AntPathMatcher({
+        traceExclusionUrlPatterns: ["/test", "/test/**"],
+        traceExclusionUrlCacheSize: 3
+    })
+    cachedPathMatcher.matchPath("/test")
+    cachedPathMatcher.matchPath()
+    cachedPathMatcher.matchPath(null)
+
+    let iterator = cachedPathMatcher.pathMatchedCache[Symbol.iterator]()
+    let index = 0
+    for (const item of iterator) {
+        if (index == 0) {
+            t.equal(item[0], '/test', 'path key matcher')
+            t.equal(item[1], true, 'path value matcher')
+        }
+        index++
+    }
 
     t.end()
 })

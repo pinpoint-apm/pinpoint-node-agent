@@ -119,6 +119,15 @@ test('matchWithNullPath', (t) => {
     t.end()
 })
 
+test('path matcher cache', (t) => {
+    const cachedPathMatcher = new AntPathMatcher({
+        traceExclusionUrlPatterns: ["/test"],
+        traceExclusionUrlCacheSize: 3
+    })
+
+    t.end()
+})
+
 test('config object exclusion URL', (t) => {
     let config = require('../pinpoint-config-test')
     Object.assign(config, {

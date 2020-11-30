@@ -2,9 +2,11 @@
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
 ## [0.7.0] - 2020-11-13
+### Added
+- #17 Support Ant style excludeurl
 ### Fixed
-- Fix app crash without callback function in redis instrumentation module(by @wormslab) #12
-- If it detects that the app is using core-js v2.4 or lower, disable the function using the v8 module. #14
+- #12 Fix app crash without callback function in redis instrumentation module(by @wormslab)
+- #14 If it detects that the app is using core-js v2.4 or lower, disable the function using the v8 module. 
 
 ## [0.7.0-rc.0] - 2020-10-16
 ### Added

@@ -29,9 +29,17 @@ class MockAgent extends Agent {
         this.dataSender.send(this.agentInfo)
     }
 
-    bindHttp() {
+    bindHttp(json) {
         this.cleanHttp()
 
+        if (!json) {
+            json = require('../pinpoint-config-test')
+        }
+        require('../../lib/config').clear()
+        const config = require('../../lib/config').getConfig(json)
+        this.config = config
+
+        httpShared.clearPathMatcher()
         const http = require('http')
         log.debug('shimming http.Server.prototype.emit function')
         shimmer.wrap(http && http.Server && http.Server.prototype, 'emit', httpShared.instrumentRequest(agent, 'http'))

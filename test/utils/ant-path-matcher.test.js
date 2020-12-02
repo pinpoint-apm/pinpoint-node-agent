@@ -122,23 +122,23 @@ test('matchWithNullPath', (t) => {
 test('config object exclusion URL', (t) => {
     let config = require('../pinpoint-config-test')
     Object.assign(config, {
-        'trace-exclusion-url': {
-            pattern: ["/test.jpg"]
+        "trace-exclusion-url": {
+            "pattern": ["/test.jpg"]
         }
     })
     agent.bindHttp(config)
     t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test.jpg"])
-    delete config['trace-exclusion-url']
+    delete config["trace-exclusion-url"]
 
     config = require('../pinpoint-config-test')
     Object.assign(config, {
-        'trace-exclusion-url': {
-            pattern: ["/??/a", "/*bla/test"]
+        "trace-exclusion-url": {
+            "pattern": ["/??/a", "/*bla/test"]
         }
     })
     agent.bindHttp(config)
     t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/??/a", "/*bla/test"])
-    delete config['trace-exclusion-url']
+    delete config["trace-exclusion-url"]
 
     t.end()
 })
@@ -147,13 +147,13 @@ test('config object exclusion URL', (t) => {
 test('config object exclusion URL with cache size', (t) => {
     let config = require('../pinpoint-config-test')
     Object.assign(config, {
-        'trace-exclusion-url': {
-            pattern: ["/test.jpg"]
+        "trace-exclusion-url": {
+            "pattern": ["/test.jpg"]
         }
     })
     agent.bindHttp(config)
     t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test.jpg"])
-    delete config['trace-exclusion-url']
+    delete config["trace-exclusion-url"]
 
     t.end()
 })
@@ -378,21 +378,21 @@ test('when pattern match with cache size on ENV environment, sampling test with 
 test('when pattern match with cache size form JSON, sampling test with cache hit', async (t) => {
     let config = require('../pinpoint-config-test')
     Object.assign(config, {
-        'trace-exclusion-url': {
-            pattern: ["/heath_check?/**", "/tes?"]
+        "trace-exclusion-url": {
+            "pattern": ["/heath_check?/**", "/tes?"]
         }
     })
     agent.bindHttp(config)
     await outgoingRequest(t, "/test", false, (t) => {
         t.true(typeof agent.config.traceExclusionUrlCacheSize === 'undefined', 'traceExclusionUrlCacheSize ENV undefined case')
     })
-    delete config['trace-exclusion-url']
+    delete config["trace-exclusion-url"]
 
     config = require('../pinpoint-config-test')
     Object.assign(config, {
-        'trace-exclusion-url': {
-            pattern: ["/heath_check?/**", "/tes?"],
-            'cache-size': 0
+        "trace-exclusion-url": {
+            "pattern": ["/heath_check?/**", "/tes?"],
+            "cache-size": 0
         }
     })
     agent.bindHttp(config)
@@ -400,12 +400,12 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
         t.true(typeof agent.config.traceExclusionUrlCacheSize !== 'undefined', 'traceExclusionUrlCacheSize ENV case')
         t.equal(agent.config.traceExclusionUrlCacheSize, 100, 'traceExclusionUrlCacheSize default 100')
     })
-    delete config['trace-exclusion-url']
+    delete config["trace-exclusion-url"]
 
     config = require('../pinpoint-config-test')
     Object.assign(config, {
-        'trace-exclusion-url': {
-            'cache-size': 0
+        "trace-exclusion-url": {
+            "cache-size": 0
         }
     })
     agent.bindHttp(config)
@@ -413,25 +413,25 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
         t.true(typeof agent.config.traceExclusionUrlPatterns === 'undefined', 'when only set traceExclusionUrlCacheSize ENV, agent.config.traceExclusionUrlPatterns undefined case')
         t.true(typeof agent.config.traceExclusionUrlCacheSize === 'undefined', 'when only set traceExclusionUrlCacheSize ENV, agent.config.traceExclusionUrlCacheSize undefined case')
     })
-    delete config['trace-exclusion-url']
+    delete config["trace-exclusion-url"]
 
     config = require('../pinpoint-config-test')
     Object.assign(config, {
-        'trace-exclusion-url': {
-            pattern: ["/heath_check?/**", "/test?"],
+        "trace-exclusion-url": {
+            "pattern": ["/heath_check?/**", "/test?"],
         }
     })
     agent.bindHttp(config)
     await outgoingRequest(t, "/test", true, (t) => {
         t.true(typeof agent.config.traceExclusionUrlCacheSize === 'undefined', 'when sampling is true, traceExclusionUrlCacheSize ENV undefined case')
     })
-    delete config['trace-exclusion-url']
+    delete config["trace-exclusion-url"]
 
     config = require('../pinpoint-config-test')
     Object.assign(config, {
-        'trace-exclusion-url': {
-            pattern: ["/heath_check?/**", "/test?"],
-            'cache-size': 0
+        "trace-exclusion-url": {
+            "pattern": ["/heath_check?/**", "/test?"],
+            "cache-size": 0
         }
     })
     agent.bindHttp(config)
@@ -439,7 +439,7 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
         t.true(typeof agent.config.traceExclusionUrlCacheSize !== 'undefined', 'when sampling is true, traceExclusionUrlCacheSize ENV case')
         t.equal(agent.config.traceExclusionUrlCacheSize, 100, 'when sampling is true, traceExclusionUrlCacheSize default 100')
     })
-    delete config['trace-exclusion-url']
+    delete config["trace-exclusion-url"]
 
     t.end()
 })

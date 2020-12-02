@@ -575,5 +575,16 @@ test('path matcher cache', (t) => {
     }
     t.equal(cachedPathMatcher.pathMatchedCache.size, 3, `cache size: ${cachedPathMatcher.pathMatchedCache.size}`)
 
+    cachedPathMatcher = new AntPathMatcher({
+        traceExclusionUrlPatterns: ["/test", "/test/**"],
+    })
+    cachedPathMatcher.matchPath("/teste/")
+    cachedPathMatcher.matchPath("/test/1")
+    cachedPathMatcher.matchPath("/test/12")
+    cachedPathMatcher.matchPath("/teste/")
+    cachedPathMatcher.matchPath("/testa/")
+    cachedPathMatcher.matchPath("/test/12")
+
+    t.true(typeof cachedPathMatcher.pathMatchedCache === 'undefined', 'cache is diabled')
     t.end()
 })

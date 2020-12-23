@@ -47,6 +47,19 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
                 }
             })
             .store(in: &subscriptions)
+        
+        source.receive(on: DispatchQueue.global())
+            .sink(receiveCompletion: { result in
+                print("receiveCompletion: \(result)")
+            }, receiveValue: { data in
+                let thread = Thread.current.number
+                print("receiveValue thread number: \(thread) data: \(data)")
+                
+                if data > 10 {
+                    exp.fulfill()
+                }
+            })
+            .store(in: &subscriptions)
             
         waitForExpectations(timeout: 2 * 24 * 60 * 60)
     }

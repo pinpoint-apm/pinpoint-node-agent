@@ -54,6 +54,10 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
         
         var downloadsDirectory = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
         downloadsDirectory.appendPathComponent("channels")
+        if FileManager.default.fileExists(atPath: downloadsDirectory.absoluteString) {
+            try! FileManager.default.removeItem(at: downloadsDirectory)
+        }
+        try! FileManager.default.createDirectory(at: downloadsDirectory, withIntermediateDirectories: true, attributes: nil)
         
         source.receive(on: DispatchQueue.global())
             .flatMap({ index -> AnyPublisher<(index: Int, htmlString: String), PinpointNodeAgentTester.Error> in
@@ -64,11 +68,10 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
                     return html
                 }
                 let channelCount = NSString(string: html.htmlString).substring(with: channelCountMatches.range(at: 1))
-                print("channel count: \(channelCount)")
+                let channelDirectory = downloadsDirectory.appendingPathComponent(String(channelCount))
                 
-                let htmlPath = downloadsDirectory.appendingPathComponent(channelCount)
+                let htmlPath = channelDirectory.appendingPathComponent("\(html.index).html")
                 print("htmlPath: \(htmlPath)")
-                try! FileManager.default.createDirectory(at: htmlPath, withIntermediateDirectories: true, attributes: nil)
                 return html
             })
             .sink(receiveCompletion: { result in

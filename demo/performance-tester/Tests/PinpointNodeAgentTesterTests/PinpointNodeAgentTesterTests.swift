@@ -46,15 +46,23 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
         
         let startTime = DispatchTime.now()
         
-        requestNodeServer(source, tester)
-        requestNodeServer(source, tester)
-        requestNodeServer(source, tester)
-        requestNodeServer(source, tester)
-        requestNodeServer(source, tester)
+//        requestNodeServer(source, tester)
+//        requestNodeServer(source, tester)
+//        requestNodeServer(source, tester)
+//        requestNodeServer(source, tester)
+//        requestNodeServer(source, tester)
         
         source.receive(on: DispatchQueue.global())
             .flatMap({ index -> AnyPublisher<String, PinpointNodeAgentTester.Error> in
                 return tester.channels()
+            })
+            .map({ htmlString -> String in
+                guard let channelCountMatches = Regexes.streamStarted.firstMatch(in: htmlString, range: NSMakeRange(0, htmlString.count)) else {
+                    return htmlString
+                }
+                let channelCount = NSString(string: htmlString).substring(with: channelCountMatches.range(at: 1))
+                print("channel count: \(channelCount)")
+                return htmlString
             })
             .sink(receiveCompletion: { result in
                 print("moniterning Subscriber Completion: \(result)")
@@ -81,7 +89,9 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
 }
 
 fileprivate enum Regexes {
-  static let threadNumber = try! NSRegularExpression(pattern: "number = (\\d+)", options: .caseInsensitive)
+    static let threadNumber = try! NSRegularExpression(pattern: "number = (\\d+)", options: .caseInsensitive)
+    
+    static let streamStarted = try! NSRegularExpression(pattern: "<tbody><tr><td>streamsStarted</td><td>(\\d+)</td></tr>", options: .caseInsensitive)
 }
 
 extension Thread {

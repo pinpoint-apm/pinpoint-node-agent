@@ -20,16 +20,7 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
         waitForExpectations(timeout: 30)
     }
     
-    func testGrpcChannel() {
-        let exp = expectation(description: "grpc channel test")
-        
-        let tester = PinpointNodeAgentTester()
-        
-        let source = Timer
-                .publish(every: 1.0, on: .main, in: .common)
-                .autoconnect()
-                .scan(0) { index, _ in index + 1 }
-        
+    fileprivate func requestNodeServer(_ source: Publishers.Scan<Publishers.Autoconnect<Timer.TimerPublisher>, Int>, _ tester: PinpointNodeAgentTester) {
         source.receive(on: DispatchQueue.global())
             .flatMap({ index -> AnyPublisher<String, PinpointNodeAgentTester.Error> in
                 return tester.request()
@@ -41,6 +32,23 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
                 print("receiveValue thread number: \(thread) data: \(data)")
             })
             .store(in: &subscriptions)
+    }
+    
+    func testGrpcChannel() {
+        let exp = expectation(description: "grpc channel test")
+        
+        let tester = PinpointNodeAgentTester()
+        
+        let source = Timer
+                .publish(every: 1.0, on: .main, in: .common)
+                .autoconnect()
+                .scan(0) { index, _ in index + 1 }
+        
+        requestNodeServer(source, tester)
+        requestNodeServer(source, tester)
+        requestNodeServer(source, tester)
+        requestNodeServer(source, tester)
+        requestNodeServer(source, tester)
         
         source.receive(on: DispatchQueue.global())
             .sink(receiveCompletion: { result in

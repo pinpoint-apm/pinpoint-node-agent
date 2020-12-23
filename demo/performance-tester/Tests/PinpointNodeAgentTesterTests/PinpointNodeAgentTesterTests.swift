@@ -82,7 +82,7 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
                 let nanoTime = end.uptimeNanoseconds - startTime.uptimeNanoseconds
                 let elapsedSeconds = Double(nanoTime) / 1_000_000_000
                 
-                if elapsedSeconds > 10 {
+                if elapsedSeconds > 2 * 60 * 60 {
                     exp.fulfill()
                 }
             })

@@ -44,6 +44,8 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
                 .autoconnect()
                 .scan(0) { index, _ in index + 1 }
         
+        let startTime = DispatchTime.now()
+        
         requestNodeServer(source, tester)
         requestNodeServer(source, tester)
         requestNodeServer(source, tester)
@@ -57,7 +59,11 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
                 let thread = Thread.current.number
                 print("moniterning Subscriber thread number: \(thread) data: \(data)")
                 
-                if data > 10 {
+                let end = DispatchTime.now()
+                let nanoTime = end.uptimeNanoseconds - startTime.uptimeNanoseconds
+                let elapsedSeconds = Double(nanoTime) / 1_000_000_000
+                
+                if elapsedSeconds > 10 {
                     exp.fulfill()
                 }
             })

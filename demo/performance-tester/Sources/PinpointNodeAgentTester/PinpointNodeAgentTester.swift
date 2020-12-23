@@ -35,12 +35,12 @@ struct PinpointNodeAgentTester {
             .eraseToAnyPublisher()
     }
     
-    func channels() -> AnyPublisher<String, Error> {
+    func channels(_ index: Int) -> AnyPublisher<(index: Int, htmlString: String), Error> {
         let url = URL(string: "http://localhost:8090/channelz/html/findSocket?remoteAddress=0:0:0:0:0:0:0:1&localPort=9993")!
         return URLSession.shared
             .dataTaskPublisher(for: url)
             .map { response in
-                return String(data: response.data, encoding: .utf8)!
+                return (index: index, htmlString: String(data: response.data, encoding: .utf8)!)
             }
             .mapError { error -> PinpointNodeAgentTester.Error in
                 switch error {

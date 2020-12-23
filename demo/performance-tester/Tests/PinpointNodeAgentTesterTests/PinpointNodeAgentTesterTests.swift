@@ -52,24 +52,28 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
 //        requestNodeServer(source, tester)
 //        requestNodeServer(source, tester)
         
+        var downloadsDirectory = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
+        downloadsDirectory.appendPathComponent("channels")
+        
         source.receive(on: DispatchQueue.global())
-            .flatMap({ index -> AnyPublisher<String, PinpointNodeAgentTester.Error> in
-                return tester.channels()
+            .flatMap({ index -> AnyPublisher<(index: Int, htmlString: String), PinpointNodeAgentTester.Error> in
+                return tester.channels(index)
             })
-            .map({ htmlString -> String in
-                guard let channelCountMatches = Regexes.streamStarted.firstMatch(in: htmlString, range: NSMakeRange(0, htmlString.count)) else {
-                    return htmlString
+            .map({ html -> (index: Int, htmlString: String) in
+                guard let channelCountMatches = Regexes.streamStarted.firstMatch(in: html.htmlString, range: NSMakeRange(0, html.htmlString.count)) else {
+                    return html
                 }
-                let channelCount = NSString(string: htmlString).substring(with: channelCountMatches.range(at: 1))
+                let channelCount = NSString(string: html.htmlString).substring(with: channelCountMatches.range(at: 1))
                 print("channel count: \(channelCount)")
-                return htmlString
+                
+                let htmlPath = downloadsDirectory.appendingPathComponent(channelCount)
+                print("htmlPath: \(htmlPath)")
+                try! FileManager.default.createDirectory(at: htmlPath, withIntermediateDirectories: true, attributes: nil)
+                return html
             })
             .sink(receiveCompletion: { result in
                 print("moniterning Subscriber Completion: \(result)")
             }, receiveValue: { data in
-                let thread = Thread.current.number
-                print("moniterning Subscriber thread number: \(thread) data: \(data)")
-                
                 let end = DispatchTime.now()
                 let nanoTime = end.uptimeNanoseconds - startTime.uptimeNanoseconds
                 let elapsedSeconds = Double(nanoTime) / 1_000_000_000

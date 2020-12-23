@@ -54,7 +54,7 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
         
         var downloadsDirectory = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
         downloadsDirectory.appendPathComponent("channels")
-        if FileManager.default.fileExists(atPath: downloadsDirectory.absoluteString) {
+        if FileManager.default.fileExists(atPath: downloadsDirectory.path) {
             try! FileManager.default.removeItem(at: downloadsDirectory)
         }
         try! FileManager.default.createDirectory(at: downloadsDirectory, withIntermediateDirectories: true, attributes: nil)
@@ -72,6 +72,7 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
                 
                 let htmlPath = channelDirectory.appendingPathComponent("\(html.index).html")
                 print("htmlPath: \(htmlPath)")
+//                try! html.htmlString.write(to: htmlPath, atomically: false, encoding: .utf8)
                 return html
             })
             .sink(receiveCompletion: { result in

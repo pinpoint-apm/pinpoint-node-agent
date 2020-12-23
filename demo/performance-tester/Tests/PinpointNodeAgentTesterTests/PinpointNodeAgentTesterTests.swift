@@ -27,6 +27,7 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
         let timer = Timer
                 .publish(every: 1.0, on: .main, in: .common)
                 .autoconnect()
+        
         let subscription = timer
             .flatMap({ index -> AnyPublisher<String, PinpointNodeAgentTester.Error> in
                 return tester.request()

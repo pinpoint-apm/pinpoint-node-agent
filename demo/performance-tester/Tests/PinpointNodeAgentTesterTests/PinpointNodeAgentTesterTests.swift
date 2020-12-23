@@ -32,7 +32,6 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
         
         source.receive(on: DispatchQueue.global())
             .flatMap({ index -> AnyPublisher<String, PinpointNodeAgentTester.Error> in
-                timerCount = index
                 return tester.request()
             })
             .sink(receiveCompletion: { result in

@@ -25,7 +25,6 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
         
         let tester = PinpointNodeAgentTester()
         
-        var timerCount = 0
         let source = Timer
                 .publish(every: 1.0, on: .main, in: .common)
                 .autoconnect()
@@ -41,19 +40,15 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
             }, receiveValue: { data in
                 let thread = Thread.current.number
                 print("receiveValue thread number: \(thread) data: \(data)")
-                
-                if timerCount > 10 {
-                    exp.fulfill()
-                }
             })
             .store(in: &subscriptions)
         
         source.receive(on: DispatchQueue.global())
             .sink(receiveCompletion: { result in
-                print("receiveCompletion: \(result)")
+                print("moniterning Subscriber Completion: \(result)")
             }, receiveValue: { data in
                 let thread = Thread.current.number
-                print("receiveValue thread number: \(thread) data: \(data)")
+                print("moniterning Subscriber thread number: \(thread) data: \(data)")
                 
                 if data > 10 {
                     exp.fulfill()

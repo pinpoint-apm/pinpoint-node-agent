@@ -24,12 +24,13 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
         let exp = expectation(description: "grpc channel test")
         
         let tester = PinpointNodeAgentTester()
+        
+        var timerCount = 0
         let source = Timer
                 .publish(every: 1.0, on: .main, in: .common)
                 .autoconnect()
                 .scan(0) { index, _ in index + 1 }
         
-        var timerCount = 0
         source.receive(on: DispatchQueue.global())
             .flatMap({ index -> AnyPublisher<String, PinpointNodeAgentTester.Error> in
                 timerCount = index

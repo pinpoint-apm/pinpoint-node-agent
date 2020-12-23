@@ -30,7 +30,7 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
                 .scan(0) { index, _ in index + 1 }
         
         var timerCount = 0
-        let subscription = source
+        source.receive(on: DispatchQueue.global())
             .flatMap({ index -> AnyPublisher<String, PinpointNodeAgentTester.Error> in
                 timerCount = index
                 return tester.request()
@@ -38,13 +38,14 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
             .sink(receiveCompletion: { result in
                 print("receiveCompletion: \(result)")
             }, receiveValue: { data in
-                print("receiveValue: \(data)")
+                let thread = Thread.current.number
+                print("receiveValue thread number: \(thread) data: \(data)")
                 
                 if timerCount > 10 {
                     exp.fulfill()
                 }
             })
-        subscription.store(in: &subscriptions)
+            .store(in: &subscriptions)
             
         waitForExpectations(timeout: 2 * 24 * 60 * 60)
     }
@@ -52,4 +53,19 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
     static var allTests = [
         ("testExample", testPerformanceTest),
     ]
+}
+
+fileprivate enum Regexes {
+  static let threadNumber = try! NSRegularExpression(pattern: "number = (\\d+)", options: .caseInsensitive)
+}
+
+extension Thread {
+  public var number: Int {
+    let desc = self.description
+    if let numberMatches = Regexes.threadNumber.firstMatch(in: desc, range: NSMakeRange(0, desc.count)) {
+      let s = NSString(string: desc).substring(with: numberMatches.range(at: 1))
+      return Int(s) ?? 0
+    }
+    return 0
+  }
 }

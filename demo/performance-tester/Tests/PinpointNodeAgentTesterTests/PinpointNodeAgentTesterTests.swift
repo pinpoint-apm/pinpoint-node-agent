@@ -46,11 +46,11 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
         
         let startTime = DispatchTime.now()
         
-//        requestNodeServer(source, tester)
-//        requestNodeServer(source, tester)
-//        requestNodeServer(source, tester)
-//        requestNodeServer(source, tester)
-//        requestNodeServer(source, tester)
+        requestNodeServer(source, tester)
+        requestNodeServer(source, tester)
+        requestNodeServer(source, tester)
+        requestNodeServer(source, tester)
+        requestNodeServer(source, tester)
         
         var downloadsDirectory = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
         downloadsDirectory.appendPathComponent("channels")

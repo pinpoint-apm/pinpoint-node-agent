@@ -35,6 +35,24 @@ struct PinpointNodeAgentTester {
             .eraseToAnyPublisher()
     }
     
+    func channels(_ index: Int) -> AnyPublisher<(index: Int, htmlString: String), Error> {
+        let url = URL(string: "http://localhost:8090/channelz/html/findSocket?remoteAddress=0:0:0:0:0:0:0:1&localPort=9993")!
+        return URLSession.shared
+            .dataTaskPublisher(for: url)
+            .map { response in
+                return (index: index, htmlString: String(data: response.data, encoding: .utf8)!)
+            }
+            .mapError { error -> PinpointNodeAgentTester.Error in
+                switch error {
+                case is URLError:
+                    return Error.addressUnreachable(url)
+                default:
+                    return Error.invalidRespose
+                }
+            }
+            .eraseToAnyPublisher()
+    }
+    
     func test() -> AnyPublisher<String, Error> {
         return (1...1000).publisher
             .mapError { error -> PinpointNodeAgentTester.Error in

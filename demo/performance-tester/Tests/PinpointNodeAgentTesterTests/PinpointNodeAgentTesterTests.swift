@@ -53,6 +53,9 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
         requestNodeServer(source, tester)
         
         source.receive(on: DispatchQueue.global())
+            .flatMap({ index -> AnyPublisher<String, PinpointNodeAgentTester.Error> in
+                return tester.channels()
+            })
             .sink(receiveCompletion: { result in
                 print("moniterning Subscriber Completion: \(result)")
             }, receiveValue: { data in

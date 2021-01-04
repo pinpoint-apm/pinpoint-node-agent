@@ -28,12 +28,19 @@ class MockgRPCDataSender extends GrpcDataSender {
 
   initializeSpanStream() {
     let self = this
-    this.spanStream = {
-      write: function (span) {
-        self.actualSpan = span
-      },
-      end: function () {
+    this.spanClient = {
+      sendSpan: function (span) {
+        return {
+          write: function (span) {
+            self.actualSpan = span
+          },
+          end: function () {
+    
+          },
+          on: function (eventName, callback) {
 
+          }
+        }
       }
     }
   }
@@ -55,15 +62,19 @@ class MockgRPCDataSender extends GrpcDataSender {
 
   initializeStatStream() {
     let self = this
-    this.statStream = {
-      write: function (pmessage) {
-        self.actualPStatMessage = pmessage
-      },
-      end: function () {
-
-      },
-      on: function (eventName, callback) {
-
+    this.statClient = {
+      sendAgentStat: function() {
+        return {
+          write: function (pmessage) {
+            self.actualPStatMessage = pmessage
+          },
+          end: function () {
+    
+          },
+          on: function (eventName, callback) {
+    
+          }
+        }
       }
     }
   }

@@ -6,6 +6,20 @@
 
 'use strict'
 
-const Agent = require('./lib/agent')
-const agent = new Agent()
-module.exports = agent
+let agent;
+
+module.exports = (options) => {
+  /**
+   * Modified to receive option at Application Level
+   * 
+   * @version 0.8.0-ver.yowu
+   */ 
+  if (agent !== undefined) {
+    return agent;
+  }
+
+  const Agent = require('./lib/agent')
+  agent = new Agent(options);
+
+  return agent;
+}

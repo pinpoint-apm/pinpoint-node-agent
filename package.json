@@ -1,19 +1,20 @@
 {
-  "name": "pinpoint-node-agent",
-  "version": "0.7.1",
+  "name": "@uyu423/pinpoint-node-agent",
+  "version": "0.8.3-ver.yowu",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/.bin/tape ./test/**/*.test.js"
   },
-  "description": "Pinpoint node agent provided by NAVER",
+  "description": "Pinpoint node agent provided by NAVER (Personalized version)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pinpoint-apm/pinpoint-node-agent"
+    "url": "https://github.com/uyu423/pinpoint-node-agent"
   },
   "contributors": [
     "Lee Jun Hee <jundol.lee@navercorp.com> (https://github.com/intojun)",
     "Bae Keun Bae <with.earth.u@gmail.com> (https://github.com/withearth)",
-    "Yongseok Kang <feelform@gmail.com> (https://github.com/feelform)"
+    "Yongseok Kang <feelform@gmail.com> (https://github.com/feelform)",
+    "Yongwoo Yu <me@yowu.dev> (https://yowu.dev)"
   ],
   "license": "Apache-2.0",
   "licenses": [
@@ -22,10 +23,6 @@
       "url": "http://www.apache.org/licenses/LICENSE-2.0"
     }
   ],
-  "bugs": {
-    "url": "https://github.com/pinpoint-apm/pinpoint-node-agent/issues"
-  },
-  "homepage": "https://github.com/pinpoint-apm/pinpoint-node-agent",
   "engines": {
     "node": ">=8.2.0"
   },

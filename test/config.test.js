@@ -42,11 +42,20 @@ test('Should be configured with argument', function (t) {
   t.equal(agentId, conf.agentId)
 })
 
-test('Should be read from config file', function (t) {
+test('Should be read from config *.json file', function (t) {
   t.plan(1)
 
-  const testConfig = require('./pinpoint-config-test')
+  const testConfig = require('./pinpoint-config-test.json')
   const result = config.readConfigJson(testConfig)
   log.debug(result)
   t.ok(result)
 })
+
+test('Should be read from config *.js file', function (t) {
+  t.plan(1)
+
+  const testConfig = require('./pinpoint-config-test.js')
+  const result = config.readConfigJson(testConfig)
+  log.debug(result)
+  t.ok(result)
+});

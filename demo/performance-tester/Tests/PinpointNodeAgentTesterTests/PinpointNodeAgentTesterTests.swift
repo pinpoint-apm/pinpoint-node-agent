@@ -90,6 +90,25 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
             
         waitForExpectations(timeout: 2 * 24 * 60 * 60)
     }
+    
+    func testGrpcMemoryLeak() {
+        let exp = expectation(description: "grpc memory leak test")
+        
+        let tester = PinpointNodeAgentTester()
+        
+        let source = Timer
+                .publish(every: 1.0, on: .main, in: .common)
+                .autoconnect()
+                .scan(0) { index, _ in index + 1 }
+        
+        requestNodeServer(source, tester)
+        requestNodeServer(source, tester)
+        requestNodeServer(source, tester)
+        requestNodeServer(source, tester)
+        requestNodeServer(source, tester)
+        
+        waitForExpectations(timeout: 2 * 24 * 60 * 60)
+    }
 
     static var allTests = [
         ("testExample", testPerformanceTest),

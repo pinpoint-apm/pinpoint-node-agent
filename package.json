@@ -1,6 +1,6 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "0.7.2",
+  "version": "0.7.2-next.0",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/.bin/tape ./test/**/*.test.js"
@@ -69,7 +69,7 @@
     "utf-8-validate": "^5.0.2"
   },
   "devDependencies": {
-    "axios": "^0.18.0",
+    "axios": ">=0.21.1",
     "elasticsearch": "^15.4.1",
     "eslint-config-airbnb": "^17.1.0",
     "eslint-config-prettier": "^3.1.0",

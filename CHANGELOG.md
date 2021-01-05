@@ -1,7 +1,13 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
-## [0.7.0] - 2020-11-13
+## [0.7.2] - 2021-01-05
+### Fixed
+- #27 Fix gRPC client side streaming memory leak
+- #28 Fix security alert CVE-2020-28168
+- #21 Fix a npm audit security report
+
+## [0.7.1] - 2020-11-13
 ### Added
 - #17 Support Ant style excludeurl
 ### Fixed

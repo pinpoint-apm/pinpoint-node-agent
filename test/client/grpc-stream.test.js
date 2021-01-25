@@ -27,14 +27,8 @@ const headerInterceptor = function (options, nextCall) {
     })
 }
 
+let statClient
 function callStat() {
-    const statClient = new services.StatClient(
-        'localhost' + ":" + 50051,
-        grpc.credentials.createInsecure(), {
-            interceptors: [headerInterceptor]
-        }
-    )
-
     const call = statClient.sendAgentStat((err, response) => {
         if (err) {
             console.log(`statStream callback err: ${err}`)
@@ -60,14 +54,19 @@ test('client side streaming', function (t) {
     server.addService(services.StatService, {
         SendAgentStat: sendAgentStat
     })
-    server.bindAsync('0.0.0.0:50051', grpc.ServerCredentials.createInsecure(), () => {
+    server.bindAsync('localhost:50051', grpc.ServerCredentials.createInsecure(), (err, port) => {
+        statClient = new services.StatClient(
+            'localhost' + ":" + port,
+            grpc.credentials.createInsecure(), {
+                interceptors: [headerInterceptor]
+            }
+        )
         server.start()
-
+    
         callStat()
 
         server.tryShutdown((error) => {
-
+            t.end()
         })
-        t.end()
     })
 })

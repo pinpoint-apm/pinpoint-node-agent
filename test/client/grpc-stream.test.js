@@ -18,8 +18,11 @@ test('client side streaming', function (t) {
     const server = new grpc.Server()
     server.addService(services.SpanService, {sendSpan: sendSpan})
     server.bindAsync('0.0.0.0:50051', grpc.ServerCredentials.createInsecure(), () => {
-        server.start();
+        server.start()
 
-        
-    });
+        server.tryShutdown((error) => {
+            
+        })
+        t.end()
+    })
 })

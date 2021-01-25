@@ -10,7 +10,6 @@ const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/grpc/Service_grpc_pb')
 const messages = require('../../lib/data/grpc/Service_pb')
 const dataConvertor = require('../../lib/data/grpc-data-convertor')
-<<<<<<< HEAD
 const {
     Empty
 } = require('google-protobuf/google/protobuf/empty_pb')
@@ -20,8 +19,6 @@ var _ = require('lodash')
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/7caf9fb3a650fe7cf7a04c0c65201997874a5f38/examples/src/grpcjs/server.ts#L53
 const messageCount = 11
 let callDataEventCount = 0
-=======
->>>>>>> call stat test code #33
 
 function sendAgentStat(call, callback) {
     call.on('data', function (stat) {

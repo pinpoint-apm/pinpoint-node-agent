@@ -13,6 +13,12 @@ const dataConvertor = require('../../lib/data/grpc-data-convertor')
 
 function sendAgentStat(call, callback) {
     console.log('call request: ' + call.request)
+    call.on('data', function(stat) {
+
+    })
+    call.on('end', function() {
+        callback(null, null)
+    })
 }
 
 const agentStartTime = Date.now()
@@ -47,26 +53,30 @@ function callStat() {
         }
     })
     call.write(pStatMessage)
+    call.end()
 }
 
 test('client side streaming', function (t) {
     const server = new grpc.Server()
     server.addService(services.StatService, {
-        SendAgentStat: sendAgentStat
+        sendAgentStat: sendAgentStat
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+        server.start()
+
         statClient = new services.StatClient(
             'localhost' + ":" + port,
             grpc.credentials.createInsecure(), {
                 interceptors: [headerInterceptor]
             }
         )
-        server.start()
     
         callStat()
 
-        server.tryShutdown((error) => {
-            t.end()
-        })
+        setTimeout(function() {
+            server.tryShutdown((error) => {
+                t.end()
+            })    
+        }, 1000)
     })
 })

@@ -54,7 +54,7 @@ test('client side streaming', function (t) {
     server.addService(services.StatService, {
         SendAgentStat: sendAgentStat
     })
-    server.bindAsync('localhost:50051', grpc.ServerCredentials.createInsecure(), (err, port) => {
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         statClient = new services.StatClient(
             'localhost' + ":" + port,
             grpc.credentials.createInsecure(), {

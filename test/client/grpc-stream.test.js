@@ -10,14 +10,16 @@ const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/grpc/Service_grpc_pb')
 const messages = require('../../lib/data/grpc/Service_pb')
 const dataConvertor = require('../../lib/data/grpc-data-convertor')
+const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 
+// https://github.com/grpc/grpc/issues/6557#issuecomment-282153379
 function sendAgentStat(call, callback) {
     console.log('call request: ' + call.request)
     call.on('data', function(stat) {
 
     })
     call.on('end', function() {
-        callback(null, null)
+        callback(null, new Empty())
     })
 }
 

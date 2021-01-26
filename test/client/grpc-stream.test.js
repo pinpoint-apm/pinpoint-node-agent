@@ -13,9 +13,11 @@ const dataConvertor = require('../../lib/data/grpc-data-convertor')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/7caf9fb3a650fe7cf7a04c0c65201997874a5f38/examples/src/grpcjs/server.ts#L53
+const messageCount = 100
+let callDataEventCount = 0
 function sendAgentStat(call, callback) {
     call.on('data', function(stat) {
-        console.log('call request stat: ' + stat)
+        callDataEventCount++
     })
     call.on('end', function() {
         callback(null, new Empty())
@@ -44,19 +46,21 @@ function callStat() {
             console.log(`statStream callback err: ${err}`)
         }
     })
-    // agent-stats-monitor.js
-    const pStatMessage = dataConvertor.convertStat({
-        agentId: '1212121212',
-        agentStartTime: agentStartTime,
-        timestamp: Date.now(),
-        collectInterval: 1000,
-        memory: 0,
-        cpu: {
-            user: 0,
-            system: 0
-        }
-    })
-    call.write(pStatMessage)
+    for (let index = 0; index < messageCount; index++) {
+        // agent-stats-monitor.js
+        const pStatMessage = dataConvertor.convertStat({
+            agentId: '1212121212',
+            agentStartTime: agentStartTime,
+            timestamp: Date.now(),
+            collectInterval: 1000,
+            memory: 0,
+            cpu: {
+                user: 0,
+                system: 0
+            }
+        })
+        call.write(pStatMessage)
+    }
     call.end()
 }
 
@@ -79,6 +83,7 @@ test('client side streaming', function (t) {
         callStat()
 
         endAction = () => {
+            t.equal(callDataEventCount, messageCount, `Message count is ${messageCount}`)
             server.tryShutdown((error) => {
                 t.end()
             })    

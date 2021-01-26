@@ -80,6 +80,7 @@
     "koa": "^2.6.1",
     "koa-bodyparser": "^4.2.1",
     "koa-router": "^7.4.0",
+    "lodash": "^4.17.20",
     "mock-mongoose": "^8.0.0",
     "mongodb-core": "3.1.7",
     "mongoose": "^5.4.3",

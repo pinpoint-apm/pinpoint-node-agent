@@ -10,16 +10,25 @@ const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/grpc/Service_grpc_pb')
 const messages = require('../../lib/data/grpc/Service_pb')
 const dataConvertor = require('../../lib/data/grpc-data-convertor')
-const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
+const {
+    Empty
+} = require('google-protobuf/google/protobuf/empty_pb')
+
+var _ = require('lodash')
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/7caf9fb3a650fe7cf7a04c0c65201997874a5f38/examples/src/grpcjs/server.ts#L53
 const messageCount = 100
 let callDataEventCount = 0
+
 function sendAgentStat(call, callback) {
-    call.on('data', function(stat) {
+    call.on('data', function (stat) {
         callDataEventCount++
+
+        _.delay(function () {
+            console.log('dealy')
+        }, _.random(5000, 15000))
     })
-    call.on('end', function() {
+    call.on('end', function () {
         callback(null, new Empty())
         setTimeout(() => {
             endAction()
@@ -40,6 +49,7 @@ const headerInterceptor = function (options, nextCall) {
 }
 
 let statClient
+
 function callStat() {
     const call = statClient.sendAgentStat((err, response) => {
         if (err) {
@@ -79,14 +89,14 @@ test('client side streaming', function (t) {
                 interceptors: [headerInterceptor]
             }
         )
-    
+
         callStat()
 
         endAction = () => {
             t.equal(callDataEventCount, messageCount, `Message count is ${messageCount}`)
             server.tryShutdown((error) => {
                 t.end()
-            })    
+            })
         }
     })
 })

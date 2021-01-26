@@ -12,14 +12,17 @@ const messages = require('../../lib/data/grpc/Service_pb')
 const dataConvertor = require('../../lib/data/grpc-data-convertor')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 
-// https://github.com/grpc/grpc/issues/6557#issuecomment-282153379
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/7caf9fb3a650fe7cf7a04c0c65201997874a5f38/examples/src/grpcjs/server.ts#L53
 function sendAgentStat(call, callback) {
     console.log('call request: ' + call.request)
     call.on('data', function(stat) {
-
+        console.log('call request stat: ' + stat)
     })
     call.on('end', function() {
         callback(null, new Empty())
+        setTimeout(() => {
+            endAction()
+        }, 0)
     })
 }
 
@@ -58,6 +61,7 @@ function callStat() {
     call.end()
 }
 
+let endAction
 test('client side streaming', function (t) {
     const server = new grpc.Server()
     server.addService(services.StatService, {
@@ -75,10 +79,10 @@ test('client side streaming', function (t) {
     
         callStat()
 
-        setTimeout(function() {
+        endAction = () => {
             server.tryShutdown((error) => {
                 t.end()
             })    
-        }, 1000)
+        }
     })
 })

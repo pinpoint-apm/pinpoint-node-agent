@@ -23,10 +23,6 @@ let callDataEventCount = 0
 function sendAgentStat(call, callback) {
     call.on('data', function (stat) {
         callDataEventCount++
-
-        _.delay(function () {
-            console.log('dealy')
-        }, _.random(5000, 15000))
     })
     call.on('end', function () {
         callback(null, new Empty())

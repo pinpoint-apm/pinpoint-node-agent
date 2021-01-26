@@ -17,16 +17,12 @@ const {
 var _ = require('lodash')
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/7caf9fb3a650fe7cf7a04c0c65201997874a5f38/examples/src/grpcjs/server.ts#L53
-const messageCount = 1000000
+const messageCount = 100
 let callDataEventCount = 0
 
 function sendAgentStat(call, callback) {
     call.on('data', function (stat) {
         callDataEventCount++
-
-        _.delay(function () {
-            console.log('dealy')
-        }, _.random(5000, 15000))
     })
     call.on('end', function () {
         callback(null, new Empty())

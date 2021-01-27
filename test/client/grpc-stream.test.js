@@ -17,7 +17,7 @@ const {
 var _ = require('lodash')
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/7caf9fb3a650fe7cf7a04c0c65201997874a5f38/examples/src/grpcjs/server.ts#L53
-const messageCount = 100
+const messageCount = 1
 let callDataEventCount = 0
 
 function sendAgentStat(call, callback) {
@@ -46,12 +46,15 @@ const headerInterceptor = function (options, nextCall) {
 
 let statClient
 
-function callStat() {
+function callStat(t) {
     const call = statClient.sendAgentStat((err, response) => {
         if (err) {
             console.log(`statStream callback err: ${err}`)
         }
     })
+    t.equal(call.call.nextCall.call.callNumber, 0, `call number is ${call.call.nextCall.call.callNumber}`)
+    t.equal(call.call.nextCall.call.filterStack.filters.length, 4, `Filter is (4) [CallCredentialsFilter, DeadlineFilter, MaxMessageSizeFilter, CompressionFilter]`)
+    
     for (let index = 0; index < messageCount; index++) {
         // agent-stats-monitor.js
         const pStatMessage = dataConvertor.convertStat({
@@ -86,7 +89,7 @@ test('client side streaming', function (t) {
             }
         )
 
-        callStat()
+        callStat(t)
 
         endAction = () => {
             t.equal(callDataEventCount, messageCount, `Message count is ${messageCount}`)

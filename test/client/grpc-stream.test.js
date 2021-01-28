@@ -55,7 +55,7 @@ function callStat(t) {
     t.equal(call.call.nextCall.call.callNumber, 0, `call number is ${call.call.nextCall.call.callNumber}`)
     t.equal(call.call.nextCall.call.filterStack.filters.length, 4, `Filter is (4) [CallCredentialsFilter, DeadlineFilter, MaxMessageSizeFilter, CompressionFilter]`)
     t.equal(call.call.nextCall.call.options.deadline, Infinity, 'deadline default is Infinity')
-    
+
     for (let index = 0; index < messageCount; index++) {
         // agent-stats-monitor.js
         const pStatMessage = dataConvertor.convertStat({
@@ -69,7 +69,11 @@ function callStat(t) {
                 system: 0
             }
         })
-        call.write(pStatMessage)
+        call.write(pStatMessage, () => {
+            if (index == 0) {
+                t.true(call.call.nextCall.call.pendingWrite, "1st message is pendingWrite")
+            }
+        })
     }
     call.end()
 }

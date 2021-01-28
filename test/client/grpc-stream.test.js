@@ -55,6 +55,7 @@ function callStat(t) {
     t.equal(call.call.nextCall.call.callNumber, 0, `call number is ${call.call.nextCall.call.callNumber}`)
     t.equal(call.call.nextCall.call.filterStack.filters.length, 4, `Filter is (4) [CallCredentialsFilter, DeadlineFilter, MaxMessageSizeFilter, CompressionFilter]`)
     t.equal(call.call.nextCall.call.options.deadline, Infinity, 'deadline default is Infinity')
+    t.equal(call.call.nextCall.call.channel.pickQueue.length, 1, 'start call stream 1st queue')
 
     for (let index = 0; index < messageCount; index++) {
         // agent-stats-monitor.js

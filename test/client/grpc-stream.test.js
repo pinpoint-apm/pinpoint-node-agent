@@ -17,7 +17,7 @@ const {
 var _ = require('lodash')
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/7caf9fb3a650fe7cf7a04c0c65201997874a5f38/examples/src/grpcjs/server.ts#L53
-const messageCount = 1
+const messageCount = 2
 let callDataEventCount = 0
 
 function sendAgentStat(call, callback) {
@@ -73,6 +73,8 @@ function callStat(t) {
         call.write(pStatMessage, () => {
             if (index == 0) {
                 t.true(call.call.nextCall.call.pendingWrite, "1st message is pendingWrite")
+            } else if (index == 1) {
+                t.equal(call.call.nextCall.call.channel.subchannelPool.pool[`dns:localhost:${actualPort}`].length, 2, `subchannel count`)
             }
         })
     }
@@ -80,14 +82,16 @@ function callStat(t) {
 }
 
 let endAction
+let actualPort
 test('client side streaming', function (t) {
     const server = new grpc.Server()
     server.addService(services.StatService, {
         sendAgentStat: sendAgentStat
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        server.start()
+        actualPort = port
 
+        server.start()
         statClient = new services.StatClient(
             'localhost' + ":" + port,
             grpc.credentials.createInsecure(), {

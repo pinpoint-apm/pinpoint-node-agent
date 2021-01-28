@@ -17,7 +17,7 @@ const {
 var _ = require('lodash')
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/7caf9fb3a650fe7cf7a04c0c65201997874a5f38/examples/src/grpcjs/server.ts#L53
-const messageCount = 2
+const messageCount = 11
 let callDataEventCount = 0
 
 function sendAgentStat(call, callback) {
@@ -73,8 +73,11 @@ function callStat(t) {
         call.write(pStatMessage, () => {
             if (index == 0) {
                 t.true(call.call.nextCall.call.pendingWrite, "1st message is pendingWrite")
+                t.equal(call.call.nextCall.call.channel.subchannelPool.pool[`dns:localhost:${actualPort}`].length, 2, 'subchannel pool no related to call.write')
             } else if (index == 1) {
                 t.equal(call.call.nextCall.call.channel.subchannelPool.pool[`dns:localhost:${actualPort}`].length, 2, `subchannel count`)
+            } else if (index == 10) {
+                t.equal(call.call.nextCall.call.channel.subchannelPool.pool[`dns:localhost:${actualPort}`].length, 2, 'subchannel pool no related to call.write')
             }
         })
     }

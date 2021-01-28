@@ -56,6 +56,7 @@ function callStat(t) {
     t.equal(call.call.nextCall.call.filterStack.filters.length, 4, `Filter is (4) [CallCredentialsFilter, DeadlineFilter, MaxMessageSizeFilter, CompressionFilter]`)
     t.equal(call.call.nextCall.call.options.deadline, Infinity, 'deadline default is Infinity')
     t.equal(call.call.nextCall.call.channel.pickQueue.length, 1, 'start call stream 1st queue')
+    t.true(typeof call.call.nextCall.call.channel.subchannelPool.pool[`dns:localhost:${actualPort}`] === 'undefined', 'subchannel pool no related to call.write')
 
     for (let index = 0; index < messageCount; index++) {
         // agent-stats-monitor.js

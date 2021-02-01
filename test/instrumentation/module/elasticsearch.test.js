@@ -9,7 +9,7 @@ const axios = require('axios')
 
 const { log, fixture, util, enableDataSending } = require('../../test-helper')
 
-const agent = require('../../stats/agent-mock')()
+const agent = require('../../support/agent-singleton-mock')
 
 const elasticsearch = require('elasticsearch')
 

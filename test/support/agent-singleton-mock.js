@@ -47,10 +47,15 @@ class MockAgent extends Agent {
         log.debug('shimming http.request function')
         shimmer.wrap(http, 'request', httpShared.traceOutgoingRequest(agent, 'http'))
 
+        // on node v10.15.0 init call before destory
         const traces = this.traceContext.getAllTraceObject()
-        traces.forEach((trace) => {
+        let traceSet = new Set()
+        for (const [key, trace] of traces) {
+            traceSet.add(trace)
+        }
+        for (const trace of traceSet) {
             this.traceContext.completeTraceObject(trace)
-        })
+        }
 
         const traceObjectMap = contextManager.getAllObject()
         traceObjectMap.clear()

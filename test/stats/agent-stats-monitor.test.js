@@ -11,7 +11,7 @@ const { log, fixture, util, enableDataSending, enableStatsMonitorSending } = req
 enableDataSending()
 enableStatsMonitorSending()
 
-const agent = require('./agent-mock')()
+const agent = require('../support/agent-singleton-mock')
 const AgentStatsMonitor = require('../../lib/metric/agent-stats-monitor')
 
 const express = require('express')

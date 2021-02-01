@@ -11,7 +11,7 @@ const http = require('http')
 const { log, fixture, util } = require('../test-helper')
 
 const RequestHeaderUtils = require('../../lib/instrumentation/request-header-utils')
-const agent = require('../stats/agent-mock')()
+const agent = require('../support/agent-singleton-mock')
 const PinpointHeader = require('../../lib/constant/http-header').PinpointHeader
 
 const headers = {

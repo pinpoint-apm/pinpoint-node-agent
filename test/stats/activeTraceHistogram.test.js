@@ -9,7 +9,7 @@ const axios = require('axios')
 const { util, log } = require('../test-helper')
 const activeTrace = require('../../lib/metric/active-trace')
 const AgentStatsMonitor = require('../../lib/metric/agent-stats-monitor')
-const agent = require('./agent-mock')()
+const agent = require('../support/agent-singleton-mock')
 const express = require('express')
 
 const TEST_ENV = {

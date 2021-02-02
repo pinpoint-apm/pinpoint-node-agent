@@ -11,7 +11,7 @@ const http = require('http')
 const { log, fixture, util } = require('../test-helper')
 
 const RequestHeaderUtils = require('../../lib/instrumentation/request-header-utils')
-const agent = require('../stats/agent-mock')()
+const agent = require('../support/agent-singleton-mock')
 const PinpointHeader = require('../../lib/constant/http-header').PinpointHeader
 
 const headers = {
@@ -42,7 +42,7 @@ test('Should read pinpoint header', async function (t) {
 })
 
 test('Should write pinpoint header', async function (t) {
-  t.plan(3)
+  t.plan(1)
 
   const server = http.createServer((req, res) => {
     res.writeHead(200, {'Content-Type': 'text/plain'})
@@ -54,8 +54,6 @@ test('Should write pinpoint header', async function (t) {
     const writtenReq = RequestHeaderUtils.write(req, agent)
 
     t.equal(writtenReq.headers[PinpointHeader.HTTP_TRACE_ID], trace.traceId.transactionId.toString(), "trace ID new ID was added in Header")
-    t.deepEqual(agent.loadedModule, [], "agent loadModule should clean up")
-    t.equal(agent.loadedModule.length, 0, "when server is shutdown, loadModule length is zero")
   })
   .listen(5005, async function() {
     await axios.get(`http://${endPoint}${rpcName}?q=1`)

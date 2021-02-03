@@ -21,8 +21,6 @@ const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 test(`Should record active trace in multiple call`, function (t) {
   agent.bindHttp()
 
-  t.plan(5)
-
   const PATH = '/active-trace'
   const LASTONE_PATH = '/active-trace/lastone'
   const SHUTDOWN = '/shutdown'
@@ -46,8 +44,10 @@ test(`Should record active trace in multiple call`, function (t) {
     ]).then((result) => {
       t.equal(activeTrace.getAllTraces().length, 0)
       t.equal(agent.mockAgentStartTime, agent.agentInfo.startTimestamp, "startTimestamp equals")
+      t.end()
       server.close()
     }).catch((error) => {
+      t.end()
       server.close()
     })
   })

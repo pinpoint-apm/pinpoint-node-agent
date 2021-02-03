@@ -17,11 +17,11 @@ module.exports = {
             'unix'
         ],
         'quotes': [
-            'error',
+            'off',
             'single'
         ],
         'semi': [
-            'error',
+            'off',
             'never'
         ]
     }

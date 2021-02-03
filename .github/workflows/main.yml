@@ -24,9 +24,11 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - name: setup node environment
+        uses: actions/setup-node@v2
         with:
           node-version: '12'
       - run: npm install
       - run: npm test
-      - run: npm run lint
+      - name: setup node environment
+        run: npm run lint

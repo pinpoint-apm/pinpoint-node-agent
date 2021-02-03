@@ -13,7 +13,7 @@
     "rate": 1
   },
   "http-status-code-errors": ["5xx"],
-  "log-level": "DEBUG",
+  "log-level": "WARN",
   "enable": true,
   "enabled-data-sending": true,
   "enabled-stats-monitor-sending": false,

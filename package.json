@@ -3,7 +3,8 @@
   "version": "0.7.2",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/tape ./test/**/*.test.js"
+    "test": "./node_modules/.bin/tape ./test/**/*.test.js",
+    "lint": "./node_modules/.bin/eslint -f checkstyle ./lib > checkstyle-results.xml;exit 0" 
   },
   "description": "Pinpoint node agent provided by NAVER",
   "repository": {
@@ -71,8 +72,9 @@
   "devDependencies": {
     "axios": "^0.21.1",
     "elasticsearch": "^15.4.1",
-    "eslint-config-airbnb": "^17.1.0",
+    "eslint": "^7.19.0",
     "eslint-config-prettier": "^3.1.0",
+    "eslint-plugin-import": "^2.22.1",
     "express": "^4.16.4",
     "install": "^0.13.0",
     "ioredis": "^4.3.0",

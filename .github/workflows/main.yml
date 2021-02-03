@@ -34,4 +34,4 @@ jobs:
         run: npm run lint
       - uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
-          path: './checkstyle-result.xml'
+          path: '**/checkstyle-result.xml'

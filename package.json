@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/.bin/tape ./test/**/*.test.js",
-    "lint": "./node_modules/.bin/eslint -f checkstyle ./lib > checkstyle-results.xml;exit 0" 
+    "lint": "./node_modules/.bin/eslint -f checkstyle ./lib > checkstyle-result.xml;exit 0" 
   },
   "description": "Pinpoint node agent provided by NAVER",
   "repository": {

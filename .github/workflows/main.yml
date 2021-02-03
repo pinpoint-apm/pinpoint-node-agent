@@ -38,7 +38,7 @@ jobs:
       - name: Coverage
         run: npm run coverage
       - name: Report coverage
-        uses: mszlgr/lcov-reporter-action@v0.2.23
+        uses: romeovs/lcov-reporter-action@v0.2.19
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           lcov-file: ./coverage/lcov.info

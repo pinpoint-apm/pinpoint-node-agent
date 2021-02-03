@@ -3,7 +3,9 @@
   "version": "0.7.2",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/tape ./test/**/*.test.js"
+    "test": "./node_modules/.bin/tape ./test/**/*.test.js",
+    "lint": "./node_modules/.bin/eslint -f checkstyle ./lib > checkstyle-result.xml;exit 0",
+    "coverage": "./node_modules/.bin/istanbul cover node_modules/.bin/tape ./test/**/*.test.js"
   },
   "description": "Pinpoint node agent provided by NAVER",
   "repository": {
@@ -71,16 +73,17 @@
   "devDependencies": {
     "axios": "^0.21.1",
     "elasticsearch": "^15.4.1",
-    "eslint-config-airbnb": "^17.1.0",
+    "eslint": "^7.19.0",
     "eslint-config-prettier": "^3.1.0",
+    "eslint-plugin-import": "^2.22.1",
     "express": "^4.16.4",
     "install": "^0.13.0",
     "ioredis": "^4.3.0",
     "ioredis-mock": "^4.19.0",
+    "istanbul": "^0.4.5",
     "koa": "^2.6.1",
     "koa-bodyparser": "^4.2.1",
     "koa-router": "^7.4.0",
-    "mock-mongoose": "^8.0.0",
     "mongodb-core": "3.1.7",
     "mongoose": "^5.4.3",
     "npm-run-all": "^4.1.5",

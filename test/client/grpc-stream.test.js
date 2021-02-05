@@ -47,6 +47,11 @@ function callStat(t) {
     const call = statClient.sendAgentStat((err, response) => {
         if (err) {
             console.log(`statStream callback err: ${err}`)
+            return
+        }
+
+        if (response) {
+            t.true(response, 'response is true')
         }
     })
     t.equal(call.call.nextCall.call.callNumber, 0, `call number is ${call.call.nextCall.call.callNumber}`)

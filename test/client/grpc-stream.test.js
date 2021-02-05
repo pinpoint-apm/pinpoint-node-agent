@@ -10,8 +10,7 @@ const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/grpc/Service_grpc_pb')
 const dataConvertor = require('../../lib/data/grpc-data-convertor')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
-
-var _ = require('lodash')
+const { log} = require('../test-helper')
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/7caf9fb3a650fe7cf7a04c0c65201997874a5f38/examples/src/grpcjs/server.ts#L53
 const messageCount = 11
@@ -19,7 +18,9 @@ let callDataEventCount = 0
 
 function sendAgentStat(call, callback) {
     call.on('data', function (stat) {
-        callDataEventCount++
+        if (stat) {
+            callDataEventCount++
+        }
     })
     call.on('end', function () {
         callback(null, new Empty())
@@ -46,7 +47,7 @@ let statClient
 function callStat(t) {
     const call = statClient.sendAgentStat((err, response) => {
         if (err) {
-            console.log(`statStream callback err: ${err}`)
+            log.error(`statStream callback err: ${err}`)
             return
         }
 
@@ -105,6 +106,7 @@ test('client side streaming', function (t) {
         endAction = () => {
             t.equal(callDataEventCount, messageCount, `Message count is ${messageCount}`)
             server.tryShutdown((error) => {
+                t.false(error, 'error is null')
                 t.end()
             })
         }

@@ -6,7 +6,7 @@
 
 const test = require('tape')
 
-const { log, fixture, util, enableDataSending } = require('./test-helper')
+const { enableDataSending } = require('./test-helper')
 enableDataSending()
 
 test('Should initialize agent', function (t) {

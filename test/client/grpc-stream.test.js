@@ -10,9 +10,7 @@ const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/grpc/Service_grpc_pb')
 const messages = require('../../lib/data/grpc/Service_pb')
 const dataConvertor = require('../../lib/data/grpc-data-convertor')
-const {
-    Empty
-} = require('google-protobuf/google/protobuf/empty_pb')
+const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 
 var _ = require('lodash')
 
@@ -96,12 +94,7 @@ test('client side streaming', function (t) {
         actualPort = port
 
         server.start()
-        statClient = new services.StatClient(
-            'localhost' + ":" + port,
-            grpc.credentials.createInsecure(), {
-                interceptors: [headerInterceptor]
-            }
-        )
+        statClient = new services.StatClient('localhost' + ":" + port, grpc.credentials.createInsecure(), { interceptors: [headerInterceptor] })
 
         callStat(t)
 

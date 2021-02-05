@@ -38,7 +38,7 @@ CommonJS
 * Elasticsearch Node client
 
 ## Agent - Collector compatibility table
-Agent Version | Collector 1.x | Collector 2.0.x
+Agent Version | Collector 1.x | Collector 2.x
 ------------- | --------------- | ---------------
 0.6.x | no      | yes
 

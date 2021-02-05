@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/pinpoint-apm/pinpoint-node-agent",
   "engines": {
-    "node": ">=8.2.0"
+    "node": "^8.13.0 || >=10.10.0"
   },
   "keywords": [
     "pinpoint",

@@ -32,8 +32,11 @@ function sendAgentStat(call, callback) {
     })
 }
 
+let callStatOrder = 1
 function callStat(t) {
     const call = statClient.sendAgentStat((err, response) => {
+        t.equal(callStatOrder, 2)
+
         if (err) {
             log.error(`statStream callback err: ${err}`)
             return
@@ -56,6 +59,8 @@ function callStat(t) {
         }
     })
     call.write(pStatMessage, () => {
+        t.equal(callStatOrder, 1)
+        callStatOrder++
     })
 
     call.end()

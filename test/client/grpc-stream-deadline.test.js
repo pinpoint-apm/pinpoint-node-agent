@@ -14,7 +14,7 @@ const { log } = require('../test-helper')
 
 let statClient
 let endAction
-let globalT
+let serverT
 const agentStartTime = Date.now()
 let callStatOrder = 1
 let call
@@ -27,7 +27,7 @@ function sendAgentStat(call, callback) {
 
         if (stat) {
             const agentStat = stat.getAgentstat()
-            globalT.equal(agentStat.getCollectinterval(), 1000, 'agentStat.getCollectinterval(), 1000')
+            serverT.equal(agentStat.getCollectinterval(), 1000, 'agentStat.getCollectinterval(), 1000')
 
             if (dataCount == callCount) {
                 setTimeout(() => {
@@ -92,7 +92,7 @@ test('client side streaming with deadline', function (t) {
         }
         statClient = new services.StatClient('localhost' + ":" + port, grpc.credentials.createInsecure(), { interceptors: [headerInterceptor] })
 
-        globalT = t
+        serverT = t
         callStat(t)
 
         endAction = () => {

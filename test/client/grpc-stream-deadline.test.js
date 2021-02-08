@@ -42,7 +42,7 @@ function sendAgentStat(call, callback) {
 }
 
 function callStat(t) {
-    call = statClient.sendAgentStat((err, response) => {
+    call = statClient.sendAgentStat({deadline: Date.now() + 1000}, (err, response) => {
         t.equal(callStatOrder, 2)
 
         if (err) {

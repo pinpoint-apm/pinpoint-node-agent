@@ -10,31 +10,39 @@ const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/grpc/Service_grpc_pb')
 const dataConvertor = require('../../lib/data/grpc-data-convertor')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
-const { log} = require('../test-helper')
+const { log } = require('../test-helper')
 
 let statClient
 let endAction
 let globalT
 const agentStartTime = Date.now()
+let callStatOrder = 1
+let call
+let callCount = 1
+let dataCount = 0
 
 function sendAgentStat(call, callback) {
     call.on('data', function (stat) {
+        dataCount++
+
         if (stat) {
             const agentStat = stat.getAgentstat()
             globalT.equal(agentStat.getCollectinterval(), 1000, 'agentStat.getCollectinterval(), 1000')
+
+            if (dataCount == callCount) {
+                setTimeout(() => {
+                    endAction()
+                }, 0)
+            }
         }
     })
     call.on('end', function () {
         callback(null, new Empty())
-        setTimeout(() => {
-            endAction()
-        }, 0)
     })
 }
 
-let callStatOrder = 1
 function callStat(t) {
-    const call = statClient.sendAgentStat((err, response) => {
+    call = statClient.sendAgentStat((err, response) => {
         t.equal(callStatOrder, 2)
 
         if (err) {
@@ -62,8 +70,6 @@ function callStat(t) {
         t.equal(callStatOrder, 1)
         callStatOrder++
     })
-
-    call.end()
 }
 
 test('client side streaming with deadline', function (t) {
@@ -90,6 +96,7 @@ test('client side streaming with deadline', function (t) {
         callStat(t)
 
         endAction = () => {
+            call.end()
             server.tryShutdown((error) => {
                 t.false(error, 'error is null')
                 t.end()

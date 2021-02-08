@@ -8,15 +8,20 @@ const test = require('tape')
 const grpc = require('@grpc/grpc-js')
 
 const services = require('../../lib/data/grpc/Service_grpc_pb')
+const dataConvertor = require('../../lib/data/grpc-data-convertor')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const { log} = require('../test-helper')
 
 let statClient
 let endAction
+let globalT
+const agentStartTime = Date.now()
 
 function sendAgentStat(call, callback) {
     call.on('data', function (stat) {
         if (stat) {
+            const agentStat = stat.getAgentstat()
+            globalT.equal(agentStat.getCollectinterval(), 1000, 'agentStat.getCollectinterval(), 1000')
         }
     })
     call.on('end', function () {
@@ -38,6 +43,21 @@ function callStat(t) {
             t.true(response, 'response is true')
         }
     })
+
+    const pStatMessage = dataConvertor.convertStat({
+        agentId: '1212121212',
+        agentStartTime: agentStartTime,
+        timestamp: Date.now(),
+        collectInterval: 1000,
+        memory: 0,
+        cpu: {
+            user: 0,
+            system: 0
+        }
+    })
+    call.write(pStatMessage, () => {
+    })
+
     call.end()
 }
 
@@ -49,7 +69,6 @@ test('client side streaming with deadline', function (t) {
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         server.start()
 
-        const agentStartTime = Date.now()
         const headerInterceptor = function (options, nextCall) {
             return new grpc.InterceptingCall(nextCall(options), {
                 start: function (metadata, listener, next) {
@@ -62,6 +81,7 @@ test('client side streaming with deadline', function (t) {
         }
         statClient = new services.StatClient('localhost' + ":" + port, grpc.credentials.createInsecure(), { interceptors: [headerInterceptor] })
 
+        globalT = t
         callStat(t)
 
         endAction = () => {

@@ -22,7 +22,7 @@ module.exports = {
             'single'
         ],
         'semi': [
-            'off',
+            'error',
             'never'
         ]
     }

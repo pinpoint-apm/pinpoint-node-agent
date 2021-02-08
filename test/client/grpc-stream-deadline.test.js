@@ -9,8 +9,8 @@ const grpc = require('@grpc/grpc-js')
 
 const services = require('../../lib/data/grpc/Service_grpc_pb')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
+const { log} = require('../test-helper')
 
-let actualPort
 let statClient
 let endAction
 
@@ -47,8 +47,6 @@ test('client side streaming with deadline', function (t) {
         sendAgentStat: sendAgentStat
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        actualPort = port
-
         server.start()
 
         const agentStartTime = Date.now()

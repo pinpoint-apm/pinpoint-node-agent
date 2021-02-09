@@ -55,21 +55,23 @@ function callStat(t) {
         }
     })
 
-    const pStatMessage = dataConvertor.convertStat({
-        agentId: '1212121212',
-        agentStartTime: agentStartTime,
-        timestamp: Date.now(),
-        collectInterval: 1000,
-        memory: 0,
-        cpu: {
-            user: 0,
-            system: 0
-        }
-    })
-    call.write(pStatMessage, () => {
-        t.equal(callStatOrder, 1)
-        callStatOrder++
-    })
+    for (let index = 0; index < callCount; index++) {
+        const pStatMessage = dataConvertor.convertStat({
+            agentId: '1212121212',
+            agentStartTime: agentStartTime,
+            timestamp: Date.now(),
+            collectInterval: 1000,
+            memory: 0,
+            cpu: {
+                user: 0,
+                system: 0
+            }
+        })
+        call.write(pStatMessage, () => {
+            t.equal(callStatOrder, 1)
+            callStatOrder++
+        })
+    }
 }
 
 test('client side streaming with deadline', function (t) {

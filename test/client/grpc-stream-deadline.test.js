@@ -28,10 +28,10 @@ function sendAgentStat(call, callback) {
 
         if (statMessage) {
             const agentStat = statMessage.getAgentstat()
-            serverT.equal(agentStat.getCollectinterval(), 1000, 'agentStat.getCollectinterval(), 1000')
+            serverT.equal(agentStat.getCollectinterval(), 1000, 'agentStat.getCollectinterval(), 1000 in server call.on("data")')
 
             const memory = agentStat.getGc()
-            serverT.equal(memory.getJvmmemoryheapused(), dataCount - 1, 'equlity jvm memory heap used')
+            serverT.equal(memory.getJvmmemoryheapused(), dataCount - 1, 'equlity jvm memory heap used in server call.on("data")')
             if (dataCount == callCount) {
                 setTimeout(() => {
                     endAction()
@@ -40,11 +40,11 @@ function sendAgentStat(call, callback) {
         }
     })
     call.on('error', function(error) {
-        serverT.true(false, 'when dealine, gRPC should never error')
+        serverT.true(false, 'when dealine, gRPC should never error in server call.on("error")')
         log.debug(`error: ${error}`)
     })
     call.on('end', function () {
-        serverT.equal(dataCount, callWriteOrder, `all gRPC call completed`)
+        serverT.equal(dataCount, callWriteOrder, `matches datacount and callWirteOrder in server call.on('end')`)
         callback(null, new Empty())
     })
 }
@@ -54,14 +54,13 @@ function createStatCall(t) {
     deadline.setMilliseconds(deadline.getMilliseconds() + 100)
     return statClient.sendAgentStat({deadline: deadline}, (err, response) => {
         if (err) {
-            log.error(`statStream callback err: ${err}`)
+            log.error(`statStream callback err: ${err} in statClient.sendAgentStat callback`)
             return
         }
         
         if (response) {
             t.equal(callWriteOrder, callCount, 'call count compare in statClient.sendAgentStat callback')
-            t.true(response, 'response is true')
-            t.true(response, 'stat call response completed')
+            t.true(response, 'response is true in statClient.sendAgentStat callback')
         }
     })
 }
@@ -84,7 +83,7 @@ function callStat(t) {
             }
         })
         call.write(pStatMessage, () => {
-            t.equal(callWriteOrder, index, 'equal call.write count')
+            t.equal(callWriteOrder, index, 'equal call.write count in client call.write()')
             callWriteOrder++
         })
     }
@@ -116,8 +115,8 @@ test('client side streaming with deadline', function (t) {
         endAction = () => {
             call.end()
             server.tryShutdown((error) => {
-                t.false(error, 'error is null')
-                t.equal()
+                t.false(error, 'error is null in server.tryShutdown')
+                t.equal(dataCount, callCount, 'call count matches in server.tryShutdown')
                 t.end()
             })
         }

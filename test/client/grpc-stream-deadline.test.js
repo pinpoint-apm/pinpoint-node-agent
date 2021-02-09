@@ -43,7 +43,7 @@ function sendAgentStat(call, callback) {
 
 function callStat(t) {
     call = statClient.sendAgentStat({deadline: Date.now() + 1000}, (err, response) => {
-        t.equal(callWriteOrder, callCount)
+        t.equal(callWriteOrder, callCount, 'call count compare in statClient.sendAgentStat callback')
 
         if (err) {
             log.error(`statStream callback err: ${err}`)

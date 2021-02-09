@@ -20,6 +20,7 @@ let callWriteOrder = 0
 let call
 let callCount = 10
 let dataCount = 0
+let responsed = false
 
 function sendAgentStat(call, callback) {
     call.on('data', function (statMessage) {
@@ -43,7 +44,7 @@ function sendAgentStat(call, callback) {
         log.debug(`error: ${error}`)
     })
     call.on('end', function () {
-        serverT.equal(dataCount, callCount, `all gRPC call completed`)
+        serverT.equal(dataCount, callWriteOrder, `all gRPC call completed`)
         callback(null, new Empty())
     })
 }
@@ -60,6 +61,7 @@ function createStatCall(t) {
         if (response) {
             t.equal(callWriteOrder, callCount, 'call count compare in statClient.sendAgentStat callback')
             t.true(response, 'response is true')
+            t.true(response, 'stat call response completed')
         }
     })
 }
@@ -115,6 +117,7 @@ test('client side streaming with deadline', function (t) {
             call.end()
             server.tryShutdown((error) => {
                 t.false(error, 'error is null')
+                t.equal()
                 t.end()
             })
         }

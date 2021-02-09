@@ -39,6 +39,7 @@ function sendAgentStat(call, callback) {
         }
     })
     call.on('error', function(error) {
+        serverT.true(false, 'when dealine, gRPC should never error')
         log.debug(`error: ${error}`)
     })
     call.on('end', function () {

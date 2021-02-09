@@ -16,9 +16,9 @@ let statClient
 let endAction
 let serverT
 const agentStartTime = Date.now()
-let callStatOrder = 1
+let callWriteOrder = 0
 let call
-let callCount = 1
+let callCount = 2
 let dataCount = 0
 
 function sendAgentStat(call, callback) {
@@ -43,7 +43,7 @@ function sendAgentStat(call, callback) {
 
 function callStat(t) {
     call = statClient.sendAgentStat({deadline: Date.now() + 1000}, (err, response) => {
-        t.equal(callStatOrder, 2)
+        t.equal(callWriteOrder, callCount)
 
         if (err) {
             log.error(`statStream callback err: ${err}`)
@@ -68,8 +68,8 @@ function callStat(t) {
             }
         })
         call.write(pStatMessage, () => {
-            t.equal(callStatOrder, 1)
-            callStatOrder++
+            t.equal(callWriteOrder, index, 'equal call.write count')
+            callWriteOrder++
         })
     }
 }

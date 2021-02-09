@@ -22,13 +22,15 @@ let callCount = 2
 let dataCount = 0
 
 function sendAgentStat(call, callback) {
-    call.on('data', function (stat) {
+    call.on('data', function (statMessage) {
         dataCount++
 
-        if (stat) {
-            const agentStat = stat.getAgentstat()
+        if (statMessage) {
+            const agentStat = statMessage.getAgentstat()
             serverT.equal(agentStat.getCollectinterval(), 1000, 'agentStat.getCollectinterval(), 1000')
 
+            const memory = agentStat.getGc()
+            serverT.equal(memory.getJvmmemoryheapused(), dataCount - 1, 'equlity jvm memory heap used')
             if (dataCount == callCount) {
                 setTimeout(() => {
                     endAction()
@@ -61,7 +63,9 @@ function callStat(t) {
             agentStartTime: agentStartTime,
             timestamp: Date.now(),
             collectInterval: 1000,
-            memory: 0,
+            memory: {
+                heapUsed: index
+            },
             cpu: {
                 user: 0,
                 system: 0

@@ -18,7 +18,7 @@ let serverT
 const agentStartTime = Date.now()
 let callWriteOrder = 0
 let call
-let callCount = 2
+let callCount = 10
 let dataCount = 0
 
 function sendAgentStat(call, callback) {
@@ -38,25 +38,34 @@ function sendAgentStat(call, callback) {
             }
         }
     })
+    call.on('error', function(error) {
+        log.debug(`error: ${error}`)
+    })
     call.on('end', function () {
+        serverT.equal(dataCount, callCount, `all gRPC call completed`)
         callback(null, new Empty())
     })
 }
 
-function callStat(t) {
-    call = statClient.sendAgentStat({deadline: Date.now() + 1000}, (err, response) => {
-        t.equal(callWriteOrder, callCount, 'call count compare in statClient.sendAgentStat callback')
-
+function createStatCall(t) {
+    const deadline = new Date()
+    deadline.setMilliseconds(deadline.getMilliseconds() + 100)
+    return statClient.sendAgentStat({deadline: deadline}, (err, response) => {
         if (err) {
             log.error(`statStream callback err: ${err}`)
             return
         }
-
+        
         if (response) {
+            t.equal(callWriteOrder, callCount, 'call count compare in statClient.sendAgentStat callback')
             t.true(response, 'response is true')
         }
     })
+}
 
+function callStat(t) {
+    call = createStatCall(t)
+    
     for (let index = 0; index < callCount; index++) {
         const pStatMessage = dataConvertor.convertStat({
             agentId: '1212121212',

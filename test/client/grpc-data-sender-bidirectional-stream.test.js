@@ -1,3 +1,10 @@
+/**
+ * Pinpoint Node.js Agent
+ * Copyright 2021-present NAVER Corp.
+ * Apache License v2.0
+ */
+
+
 const test = require('tape')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/grpc/Service_grpc_pb')
@@ -5,22 +12,18 @@ const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
-function sendAgentStat(call, callback) {
-    call.on('data', function (statMessage) {
-    })
-    call.on('error', function(error) {
-        log.debug(`error: ${error}`)
-    })
-    call.on('end', function () {
-        callback(null, new Empty())
+function pingSession(call) {
+    call.on('data', (ping) => {
+        log.debug(`[pingSession] Write: ${JSON.stringify(ping.toObject())}`)
+        call.write(ping)
     })
 }
 
 let grpcDataSender
-test('client side streaming with deadline', function (t) {
+test('gRPC bidirectional stream Ping', function (t) {
     const server = new grpc.Server()
-    server.addService(services.StatService, {
-        sendAgentStat: sendAgentStat
+    server.addService(services.AgentService, {
+        pingSession: pingSession
     })
 
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {

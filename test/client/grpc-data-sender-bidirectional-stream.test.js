@@ -21,6 +21,9 @@ function pingSession(call) {
 test('gRPC bidirectional stream Ping', function (t) {
     const server = new GrpcServer()
 
+    server.addService(services.AgentService, {
+        pingSession: pingSession
+    })
     server.startup((port) => {
         this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',
@@ -41,11 +44,11 @@ class GrpcServer {
         this.server = new grpc.Server()
     }
 
-    startup(callback) {
-        this.server.addService(services.AgentService, {
-            pingSession: pingSession
-        })
-    
+    addService(service, implementation) {
+        this.server.addService(service, implementation)
+    }
+
+    startup(callback) {    
         this.server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
             this.server.start()
 

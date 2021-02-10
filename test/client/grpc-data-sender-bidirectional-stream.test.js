@@ -30,13 +30,14 @@ test('gRPC bidirectional stream Ping', function (t) {
             'applicationname': 'applicationName',
             'starttime': Date.now()
         })
+        
+        setTimeout((error) => {
+            t.false(error, 'server graceful shutdown')
+            t.end()
+            server.shutdown()
+        }, 0)
     })
     
-    setTimeout((error) => {
-        t.false(error, 'server graceful shutdown')
-        t.end()
-        server.shutdown()
-    }, 0)
 })
 
 class GrpcServer {

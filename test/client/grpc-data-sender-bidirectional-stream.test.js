@@ -8,7 +8,6 @@
 const test = require('tape')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/grpc/Service_grpc_pb')
-const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 

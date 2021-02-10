@@ -49,8 +49,12 @@ class GrpcServer {
     
         this.server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
             this.server.start()
+
+            if (err) {
+                throw new Error('this.server.bindAsync error')
+            }
         
-            if (callback && !err) {
+            if (callback) {
                 callback(port)
             }
         })

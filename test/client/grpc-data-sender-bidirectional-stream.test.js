@@ -11,6 +11,8 @@ const services = require('../../lib/data/grpc/Service_grpc_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
+let pingActuals = {}
+
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function pingSession(call) {
     call.on('data', (ping) => {
@@ -39,7 +41,7 @@ test('gRPC bidirectional stream Ping write ', function (t) {
         t.equal(this.grpcDataSender.pingStream.constructor.name, 'GrpcBidirectionalStream', `pingStream is the GrpcBidirectionalStream`)
 
         this.grpcDataSender.pingStream.stream.write = (data) => {
-
+            pingActuals.actualsData = data
         }
 
         this.grpcDataSender.sendPing()

@@ -13,8 +13,12 @@ const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
 function pingSession(call) {
     call.on('data', (ping) => {
-        log.debug(`[pingSession] Write: ${JSON.stringify(ping.toObject())}`)
+        log.debug(`pingSession in data: ${JSON.stringify(ping.toObject())}`)
         call.write(ping)
+    })
+    call.on('end', (arg1) => {
+        log.debug(`pingSession in end: ${JSON.stringify(arg1)}`)
+        call.end()
     })
 }
 
@@ -31,10 +35,13 @@ test('gRPC bidirectional stream Ping', function (t) {
             'starttime': Date.now()
         })
         
+        this.grpcDataSender.sendPing()
+
         setTimeout((error) => {
             t.false(error, 'server graceful shutdown')
-            t.end()
-            server.shutdown()
+            server.shutdown(() => {
+                t.end()
+            })
         }, 0)
     })
     

@@ -11,7 +11,7 @@ const services = require('../../lib/data/grpc/Service_grpc_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
-let pingActuals
+let actuals
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function pingSession(call) {
@@ -26,7 +26,7 @@ function pingSession(call) {
 }
 
 test('when ping stream write throw a error, gRPC bidirectional stream Ping end ', function (t) {
-    pingActuals = {}
+    actuals = {}
     const server = new GrpcServer()
 
     server.addService(services.AgentService, {
@@ -41,9 +41,11 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end '
       
         t.equal(this.grpcDataSender.pingStream.constructor.name, 'GrpcBidirectionalStream', `pingStream is the GrpcBidirectionalStream`)
 
+        this.grpcDataSender.sendPing()
+
         this.grpcDataSender.pingStream.stream.write = (data) => {
-            pingActuals.actualsData = data
-            t.equal(pingActuals.actualsData.constructor.name, '', 'ping data equality')
+            actuals.actualsData = data
+            t.equal(actuals.actualsData.constructor.name, '', 'ping data equality')
             throw new Error('Deadline exceeded')
         }
 

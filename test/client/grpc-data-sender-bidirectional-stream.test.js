@@ -11,6 +11,7 @@ const services = require('../../lib/data/grpc/Service_grpc_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function pingSession(call) {
     call.on('data', (ping) => {
         log.debug(`pingSession in data: ${JSON.stringify(ping.toObject())}`)

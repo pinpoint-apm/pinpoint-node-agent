@@ -35,7 +35,8 @@ test('gRPC bidirectional stream Ping', function (t) {
             'applicationname': 'applicationName',
             'starttime': Date.now()
         })
-        
+      
+        t.equal(this.grpcDataSender.pingStream.constructor.name, 'GrpcBidirectionalStream', `pingStream is the GrpcBidirectionalStream`)
         this.grpcDataSender.sendPing()
 
         setTimeout((error) => {
@@ -45,7 +46,6 @@ test('gRPC bidirectional stream Ping', function (t) {
             })
         }, 0)
     })
-    
 })
 
 class GrpcServer {

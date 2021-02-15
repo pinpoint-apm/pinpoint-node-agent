@@ -23,7 +23,7 @@ function pingSession(call) {
     })
 }
 
-test('gRPC bidirectional stream Ping', function (t) {
+test('gRPC bidirectional stream Ping write ', function (t) {
     const server = new GrpcServer()
 
     server.addService(services.AgentService, {
@@ -37,6 +37,11 @@ test('gRPC bidirectional stream Ping', function (t) {
         })
       
         t.equal(this.grpcDataSender.pingStream.constructor.name, 'GrpcBidirectionalStream', `pingStream is the GrpcBidirectionalStream`)
+
+        this.grpcDataSender.pingStream.stream.write = (data) => {
+
+        }
+
         this.grpcDataSender.sendPing()
 
         setTimeout((error) => {

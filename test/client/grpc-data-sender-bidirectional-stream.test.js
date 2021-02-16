@@ -95,6 +95,47 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
     })
 })
 
+function pingSessionServer(call) {
+    call.on('data', (ping) => {
+    })
+    actualsPingSession.serverEndCount = 0
+    call.on('end', (arg1) => {
+        endAction()
+    })
+}
+
+let actualsPingSessionServer
+test('Server end(), error, data Test', function (t) {
+    actualsPingSessionServer = {}
+    const server = new GrpcServer()
+
+    server.addService(services.AgentService, {
+        pingSession: pingSessionServer
+    })
+    server.startup((port) => {
+        actualsPingSessionServer.endCount = 2
+        actualsPingSessionServer.dataCount = 2
+        actualsPingSessionServer.t = t
+
+        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
+            'agentid': '12121212',
+            'applicationname': 'applicationName',
+            'starttime': Date.now()
+        })
+
+        this.grpcDataSender.sendPing()
+        
+        this.grpcDataSender.pingStream.end()
+        
+        endAction = () => {
+            setTimeout(() => {
+                t.end()
+                server.shutdown()
+            }, 0)
+        }
+    })
+})
+
 class GrpcServer {
     constructor() {
         this.server = new grpc.Server()

@@ -28,7 +28,6 @@ function pingSession(call) {
     actualsPingSession.serverEndCount = 0
     call.on('end', () => {
         actualsPingSession.serverEndCount++
-        log.debug(`pingSession in end: ${JSON.stringify(arg1)}`)
         call.end()
         if (actualsPingSession.serverEndCount == 2) {
             actualsPingSession.t.equal(actualsPingSession.serverEndCount, actualsPingSession.endCount, 'bidirectional stream end count match')
@@ -134,7 +133,7 @@ test('Server end(), error, data Test', function (t) {
         this.grpcDataSender.pingStream.stream.on('data', (data) => {
             clientReceiveDataCount++
             t.true(clientReceiveDataCount <= actualsPingSessionServer.sendPingCount, 'client receive data count')
-            originData(this.grpcDataSender.pingStream.stream, data)
+            originData(data)
         })
 
         actualsPingSessionServer.sendPingCount++

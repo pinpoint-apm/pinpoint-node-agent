@@ -99,9 +99,7 @@ function pingSessionServer(call) {
     actualsPingSessionServer.serverDataCount = 0
     call.on('data', (ping) => {
         actualsPingSessionServer.serverDataCount++
-        if (actualsPingSessionServer.serverDataCount == actualsPingSessionServer.dataCount) {
-            actualsPingSessionServer.t.equal(actualsPingSessionServer.serverDataCount, actualsPingSessionServer.dataCount, 'server data count matches')
-        }
+        actualsPingSessionServer.t.true(actualsPingSessionServer.serverDataCount <= actualsPingSessionServer.sendPingCount, 'server data count matches')
         call.write(ping)
     })
     actualsPingSession.serverEndCount = 0
@@ -113,7 +111,7 @@ function pingSessionServer(call) {
 
 let actualsPingSessionServer
 test('Server end(), error, data Test', function (t) {
-    t.plan(1)
+    t.plan(2)
     actualsPingSessionServer = {}
     const server = new GrpcServer()
 
@@ -122,8 +120,8 @@ test('Server end(), error, data Test', function (t) {
     })
     server.startup((port) => {
         actualsPingSessionServer.endCount = 2
-        actualsPingSessionServer.dataCount = 1
         actualsPingSessionServer.t = t
+        actualsPingSessionServer.sendPingCount = 0
 
         this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',
@@ -131,7 +129,17 @@ test('Server end(), error, data Test', function (t) {
             'starttime': Date.now()
         })
 
+        let clientReceiveDataCount = 0
+        const originData = this.grpcDataSender.pingStream.stream.listeners('data')[0]
+        this.grpcDataSender.pingStream.stream.on('data', (data) => {
+            clientReceiveDataCount++
+            t.true(clientReceiveDataCount <= actualsPingSessionServer.sendPingCount, 'client receive data count')
+            originData(this.grpcDataSender.pingStream.stream, data)
+        })
+
+        actualsPingSessionServer.sendPingCount++
         this.grpcDataSender.sendPing()
+
         this.grpcDataSender.pingStream.end()
 
         endAction = () => {

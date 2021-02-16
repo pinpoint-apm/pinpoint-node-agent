@@ -60,6 +60,10 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
         t.false(this.grpcDataSender.pingStream.stream, 'after throw Deadline exceeded, ')
         t.true(this.grpcDataSender.pingStream.actualEnded, 'when throw Deadline exceeded, ended')
 
+        t.true(this.grpcDataSender.pingStream.stream === null, 'stream is null')
+        this.grpcDataSender.sendPing()
+        t.true(this.grpcDataSender.pingStream.stream, 'after sendPing, stream is an instance')
+
         setTimeout((error) => {
             t.false(error, 'server graceful shutdown')
             server.shutdown(() => {

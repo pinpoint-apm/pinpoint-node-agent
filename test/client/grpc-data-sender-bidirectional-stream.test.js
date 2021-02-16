@@ -14,6 +14,7 @@ const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 let actuals
 let endCount = 0
 let dataCount = 0
+let endAction
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function pingSession(call) {
     call.on('data', (ping) => {
@@ -21,12 +22,15 @@ function pingSession(call) {
         log.debug(`pingSession in data: ${JSON.stringify(ping.toObject())}`)
         call.write(ping)
         actuals.t.true(dataCount <= actuals.dataCount, 'dataCount is not matching')
+        if (dataCount == actuals.dataCount) {
+            endAction()
+        }
     })
     call.on('end', (arg1) => {
         endCount++
         log.debug(`pingSession in end: ${JSON.stringify(arg1)}`)
-        call.end()
-        actuals.t.equal(actuals.endCount, endCount, 'bidirectional stream end count match')
+        // call.end()
+        // actuals.t.equal(actuals.endCount, endCount, 'bidirectional stream end count match')
     })
 }
 
@@ -78,14 +82,14 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
         t.false(this.grpcDataSender.pingStream.actualConnectedStream, 'stream not reconnected stream')
         this.grpcDataSender.sendPing()
         t.true(this.grpcDataSender.pingStream.stream, 'after sendPing, stream is an instance')
-        this.grpcDataSender.pingStream.end()
-
-        setTimeout(() => {
-            server.shutdown((error) => {
-                t.false(error, 'server graceful shutdown')
+        
+        endAction = () => {
+            this.grpcDataSender.pingStream.end()
+            setTimeout(() => {
                 t.end()
-            })
-        }, 0)
+                server.shutdown()
+            }, 0)
+        }
     })
 })
 
@@ -113,10 +117,6 @@ class GrpcServer {
     }
     
     shutdown(callback) {
-        this.server.tryShutdown((error) => {
-            if (callback) {
-                callback(error)
-            }
-        })
+        this.server.forceShutdown()
     }
 }

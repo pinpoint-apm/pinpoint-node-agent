@@ -102,10 +102,12 @@ function pingSessionServer(call) {
         if (actualsPingSessionServer.serverDataCount == actualsPingSessionServer.dataCount) {
             actualsPingSessionServer.t.equal(actualsPingSessionServer.serverDataCount, actualsPingSessionServer.dataCount, 'server data count matches')
         }
+        call.write(ping)
     })
     actualsPingSession.serverEndCount = 0
     call.on('end', (arg1) => {
         endAction()
+        call.end()
     })
 }
 

@@ -118,7 +118,7 @@ class GrpcServer {
         })
     }
     
-    shutdown(callback) {
+    shutdown() {
         this.server.forceShutdown()
     }
 }

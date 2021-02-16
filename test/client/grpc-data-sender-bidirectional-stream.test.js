@@ -12,7 +12,6 @@ const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
 let actuals
-let serverEndCount = 0
 let serverDataCount = 0
 let endAction
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
@@ -26,12 +25,13 @@ function pingSession(call) {
             endAction()
         }
     })
+    actuals.serverEndCount = 0
     call.on('end', (arg1) => {
-        serverEndCount++
+        actuals.serverEndCount++
         log.debug(`pingSession in end: ${JSON.stringify(arg1)}`)
         call.end()
-        if (serverEndCount == 2) {
-            actuals.t.equal(serverEndCount, actuals.endCount, 'bidirectional stream end count match')
+        if (actuals.serverEndCount == 2) {
+            actuals.t.equal(actuals.serverEndCount, actuals.endCount, 'bidirectional stream end count match')
         }
     })
 }

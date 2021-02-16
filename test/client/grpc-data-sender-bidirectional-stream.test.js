@@ -26,7 +26,7 @@ function pingSession(call) {
         }
     })
     actualsPingSession.serverEndCount = 0
-    call.on('end', (arg1) => {
+    call.on('end', () => {
         actualsPingSession.serverEndCount++
         log.debug(`pingSession in end: ${JSON.stringify(arg1)}`)
         call.end()
@@ -103,7 +103,7 @@ function pingSessionServer(call) {
         call.write(ping)
     })
     actualsPingSession.serverEndCount = 0
-    call.on('end', (arg1) => {
+    call.on('end', () => {
         endAction()
         call.end()
     })

@@ -25,7 +25,7 @@ function pingSession(call) {
     })
 }
 
-test('when ping stream write throw a error, gRPC bidirectional stream Ping end ', function (t) {
+test('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
     actuals = {}
     const server = new GrpcServer()
 

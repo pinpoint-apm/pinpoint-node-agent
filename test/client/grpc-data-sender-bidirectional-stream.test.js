@@ -137,10 +137,6 @@ test('Server end(), error, data Test', function (t) {
             clientReceiveDataCount++
             t.true(clientReceiveDataCount <= actualsPingSessionServer.sendPingCount, 'client receive data count')
             originData(data)
-
-            if (clientReceiveDataCount == actualsPingSessionServer.dataCount) {
-                endAction()
-            }
         })
 
         actualsPingSessionServer.sendPingCount++
@@ -149,10 +145,15 @@ test('Server end(), error, data Test', function (t) {
         // when server send stream end event
         let clientReceiveEndCount = 0
         const originEnd = this.grpcDataSender.pingStream.stream.listeners('end')[0]
+        this.grpcDataSender.pingStream.stream.removeListener('end', originEnd)
         this.grpcDataSender.pingStream.stream.on('end', () => {
             clientReceiveEndCount++
             t.true(clientReceiveEndCount <= 2, 'client receive data count')
             originEnd()
+
+            if (clientReceiveDataCount == actualsPingSessionServer.dataCount) {
+                endAction()
+            }
         })
         actualsPingSessionServer.sendPingCount++
         this.grpcDataSender.sendPing()

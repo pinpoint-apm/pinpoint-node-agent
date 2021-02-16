@@ -12,26 +12,26 @@ const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
 let actuals
-let endCount = 0
-let dataCount = 0
+let serverEndCount = 0
+let serverDataCount = 0
 let endAction
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function pingSession(call) {
     call.on('data', (ping) => {
-        dataCount++
+        serverDataCount++
         log.debug(`pingSession in data: ${JSON.stringify(ping.toObject())}`)
         call.write(ping)
-        actuals.t.true(dataCount <= actuals.dataCount, 'dataCount is not matching')
-        if (dataCount == actuals.dataCount) {
+        actuals.t.true(serverDataCount <= actuals.dataCount, 'dataCount is not matching')
+        if (serverDataCount == actuals.dataCount) {
             endAction()
         }
     })
     call.on('end', (arg1) => {
-        endCount++
+        serverEndCount++
         log.debug(`pingSession in end: ${JSON.stringify(arg1)}`)
         call.end()
-        if (endCount == 2) {
-            actuals.t.equal(endCount, actuals.endCount, 'bidirectional stream end count match')
+        if (serverEndCount == 2) {
+            actuals.t.equal(serverEndCount, actuals.endCount, 'bidirectional stream end count match')
         }
     })
 }

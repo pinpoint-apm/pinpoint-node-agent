@@ -29,8 +29,10 @@ function pingSession(call) {
     call.on('end', (arg1) => {
         endCount++
         log.debug(`pingSession in end: ${JSON.stringify(arg1)}`)
-        // call.end()
-        // actuals.t.equal(actuals.endCount, endCount, 'bidirectional stream end count match')
+        call.end()
+        if (endCount == 2) {
+            actuals.t.equal(endCount, actuals.endCount, 'bidirectional stream end count match')
+        }
     })
 }
 
@@ -42,7 +44,7 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
         pingSession: pingSession
     })
     server.startup((port) => {
-        actuals.endCount = 1
+        actuals.endCount = 2
         actuals.dataCount = 2
         actuals.t = t
 

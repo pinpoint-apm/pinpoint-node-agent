@@ -60,7 +60,13 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
         t.false(this.grpcDataSender.pingStream.stream, 'after throw Deadline exceeded, ')
         t.true(this.grpcDataSender.pingStream.actualEnded, 'when throw Deadline exceeded, ended')
 
+        const originConnectStream = this.grpcDataSender.pingStream.connectStream
+        this.grpcDataSender.pingStream.connectStream = () => {
+            this.grpcDataSender.pingStream.actualConnectedStream = true
+            originConnectStream.call(this.grpcDataSender.pingStream)
+        }
         t.true(this.grpcDataSender.pingStream.stream === null, 'stream is null')
+        t.false(this.grpcDataSender.pingStream.actualConnectedStream, 'stream not reconnected stream')
         this.grpcDataSender.sendPing()
         t.true(this.grpcDataSender.pingStream.stream, 'after sendPing, stream is an instance')
 

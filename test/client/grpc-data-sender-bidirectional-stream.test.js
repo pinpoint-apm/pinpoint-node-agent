@@ -100,17 +100,20 @@ function pingSessionServer(call) {
         actualsPingSessionServer.serverDataCount++
         actualsPingSessionServer.t.true(actualsPingSessionServer.serverDataCount <= actualsPingSessionServer.sendPingCount, 'server data count matches')
         call.write(ping)
+
+        if (actualsPingSessionServer.serverDataCount == 2) {
+            call.end()
+        }
     })
     actualsPingSession.serverEndCount = 0
     call.on('end', () => {
-        endAction()
-        call.end()
+        actualsPingSession.serverEndCount++
     })
 }
 
 let actualsPingSessionServer
 test('Server end(), error, data Test', function (t) {
-    t.plan(2)
+    t.plan(5)
     actualsPingSessionServer = {}
     const server = new GrpcServer()
 
@@ -118,7 +121,7 @@ test('Server end(), error, data Test', function (t) {
         pingSession: pingSessionServer
     })
     server.startup((port) => {
-        actualsPingSessionServer.endCount = 2
+        actualsPingSessionServer.dataCount = 2
         actualsPingSessionServer.t = t
         actualsPingSessionServer.sendPingCount = 0
 
@@ -134,14 +137,29 @@ test('Server end(), error, data Test', function (t) {
             clientReceiveDataCount++
             t.true(clientReceiveDataCount <= actualsPingSessionServer.sendPingCount, 'client receive data count')
             originData(data)
+
+            if (clientReceiveDataCount == actualsPingSessionServer.dataCount) {
+                endAction()
+            }
         })
 
         actualsPingSessionServer.sendPingCount++
         this.grpcDataSender.sendPing()
 
-        this.grpcDataSender.pingStream.end()
+        // when server send stream end event
+        let clientReceiveEndCount = 0
+        const originEnd = this.grpcDataSender.pingStream.stream.listeners('end')[0]
+        this.grpcDataSender.pingStream.stream.on('end', () => {
+            clientReceiveEndCount++
+            t.true(clientReceiveEndCount <= 2, 'client receive data count')
+            originEnd()
+        })
+        actualsPingSessionServer.sendPingCount++
+        this.grpcDataSender.sendPing()
 
+        
         endAction = () => {
+            this.grpcDataSender.pingStream.end()
             setTimeout(() => {
                 t.end()
                 server.shutdown()

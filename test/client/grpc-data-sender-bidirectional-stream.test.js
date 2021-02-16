@@ -12,16 +12,16 @@ const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
 let actuals
-let serverDataCount = 0
 let endAction
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function pingSession(call) {
+    actuals.serverDataCount = 0
     call.on('data', (ping) => {
-        serverDataCount++
+        actuals.serverDataCount++
         log.debug(`pingSession in data: ${JSON.stringify(ping.toObject())}`)
         call.write(ping)
-        actuals.t.true(serverDataCount <= actuals.dataCount, 'dataCount is not matching')
-        if (serverDataCount == actuals.dataCount) {
+        actuals.t.true(actuals.serverDataCount <= actuals.dataCount, 'dataCount is not matching')
+        if (actuals.serverDataCount == actuals.dataCount) {
             endAction()
         }
     })

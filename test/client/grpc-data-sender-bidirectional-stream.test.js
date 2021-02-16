@@ -11,42 +11,42 @@ const services = require('../../lib/data/grpc/Service_grpc_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
-let actuals
+let actualsPingSession
 let endAction
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function pingSession(call) {
-    actuals.serverDataCount = 0
+    actualsPingSession.serverDataCount = 0
     call.on('data', (ping) => {
-        actuals.serverDataCount++
+        actualsPingSession.serverDataCount++
         log.debug(`pingSession in data: ${JSON.stringify(ping.toObject())}`)
         call.write(ping)
-        actuals.t.true(actuals.serverDataCount <= actuals.dataCount, 'dataCount is not matching')
-        if (actuals.serverDataCount == actuals.dataCount) {
+        actualsPingSession.t.true(actualsPingSession.serverDataCount <= actualsPingSession.dataCount, 'dataCount is not matching')
+        if (actualsPingSession.serverDataCount == actualsPingSession.dataCount) {
             endAction()
         }
     })
-    actuals.serverEndCount = 0
+    actualsPingSession.serverEndCount = 0
     call.on('end', (arg1) => {
-        actuals.serverEndCount++
+        actualsPingSession.serverEndCount++
         log.debug(`pingSession in end: ${JSON.stringify(arg1)}`)
         call.end()
-        if (actuals.serverEndCount == 2) {
-            actuals.t.equal(actuals.serverEndCount, actuals.endCount, 'bidirectional stream end count match')
+        if (actualsPingSession.serverEndCount == 2) {
+            actualsPingSession.t.equal(actualsPingSession.serverEndCount, actualsPingSession.endCount, 'bidirectional stream end count match')
         }
     })
 }
 
 test('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
-    actuals = {}
+    actualsPingSession = {}
     const server = new GrpcServer()
 
     server.addService(services.AgentService, {
         pingSession: pingSession
     })
     server.startup((port) => {
-        actuals.endCount = 2
-        actuals.dataCount = 2
-        actuals.t = t
+        actualsPingSession.endCount = 2
+        actualsPingSession.dataCount = 2
+        actualsPingSession.t = t
 
         this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',
@@ -59,8 +59,8 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
         this.grpcDataSender.sendPing()
 
         this.grpcDataSender.pingStream.stream.write = (data) => {
-            actuals.actualsData = data
-            t.equal(actuals.actualsData.constructor.name, '', 'ping data equality')
+            actualsPingSession.actualsData = data
+            t.equal(actualsPingSession.actualsData.constructor.name, '', 'ping data equality')
             throw new Error('Deadline exceeded')
         }
 

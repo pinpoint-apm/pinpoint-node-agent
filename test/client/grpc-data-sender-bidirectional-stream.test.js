@@ -6,10 +6,10 @@
 
 
 const test = require('tape')
-const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/grpc/Service_grpc_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
+const GrpcServer = require('./grpc-server')
 
 let actualsPingSession
 let endAction
@@ -172,31 +172,3 @@ test('Server end(), error, data Test', function (t) {
         }
     })
 })
-
-class GrpcServer {
-    constructor() {
-        this.server = new grpc.Server()
-    }
-
-    addService(service, implementation) {
-        this.server.addService(service, implementation)
-    }
-
-    startup(callback) {    
-        this.server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-            this.server.start()
-
-            if (err) {
-                throw new Error('this.server.bindAsync error')
-            }
-        
-            if (callback) {
-                callback(port)
-            }
-        })
-    }
-    
-    shutdown() {
-        this.server.forceShutdown()
-    }
-}

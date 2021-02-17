@@ -103,6 +103,8 @@ function pingSessionServer(call) {
 
         if (actualsPingSessionServer.serverDataCount == 2) {
             call.end()
+        } else if (actualsPingSessionServer.serverDataCount == 3) {
+            throw new Error("Server Error")
         }
     })
     actualsPingSession.serverEndCount = 0
@@ -113,7 +115,7 @@ function pingSessionServer(call) {
 
 let actualsPingSessionServer
 test('Server end(), error, data Test', function (t) {
-    t.plan(5)
+    t.plan(6)
     actualsPingSessionServer = {}
     const server = new GrpcServer()
 
@@ -158,6 +160,8 @@ test('Server end(), error, data Test', function (t) {
         actualsPingSessionServer.sendPingCount++
         this.grpcDataSender.sendPing()
 
+        actualsPingSessionServer.sendPingCount++
+        this.grpcDataSender.sendPing()
         
         endAction = () => {
             this.grpcDataSender.pingStream.end()

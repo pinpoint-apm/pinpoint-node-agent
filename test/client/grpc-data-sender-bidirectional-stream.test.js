@@ -99,12 +99,17 @@ function pingSessionServer(call) {
     call.on('data', (ping) => {
         actualsPingSessionServer.serverDataCount++
         actualsPingSessionServer.t.true(actualsPingSessionServer.serverDataCount <= actualsPingSessionServer.sendPingCount, 'server data count matches')
-        call.write(ping)
+
+        if (actualsPingSessionServer.serverDataCount != 4) {
+            call.write(ping)
+        }
 
         if (actualsPingSessionServer.serverDataCount == 2) {
             call.end()
         } else if (actualsPingSessionServer.serverDataCount == 3) {
             throw new Error("Server Error")
+        } else if (actualsPingSessionServer.serverDataCount == 4) {
+            call.cancel()
         }
     })
     actualsPingSession.serverEndCount = 0
@@ -115,7 +120,7 @@ function pingSessionServer(call) {
 
 let actualsPingSessionServer
 test('Server end(), error, data Test', function (t) {
-    t.plan(6)
+    t.plan(7)
     actualsPingSessionServer = {}
     const server = new GrpcServer()
 
@@ -157,6 +162,9 @@ test('Server end(), error, data Test', function (t) {
                 endAction()
             }
         })
+        actualsPingSessionServer.sendPingCount++
+        this.grpcDataSender.sendPing()
+
         actualsPingSessionServer.sendPingCount++
         this.grpcDataSender.sendPing()
 

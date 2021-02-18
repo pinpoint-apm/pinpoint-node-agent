@@ -42,6 +42,12 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
     server.addService(services.AgentService, {
         pingSession: pingSession
     })
+    server.addService(services.StatService, {
+        sendAgentStat: pingSessionServer
+    })
+    server.addService(services.SpanService, {
+        sendSpan: pingSessionServer
+    })
     server.startup((port) => {
         actualsPingSession.endCount = 2
         actualsPingSession.dataCount = 2

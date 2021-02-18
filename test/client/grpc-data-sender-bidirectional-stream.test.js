@@ -127,6 +127,12 @@ test('Server end(), error, data Test', function (t) {
     server.addService(services.AgentService, {
         pingSession: pingSessionServer
     })
+    server.addService(services.StatService, {
+        sendAgentStat: pingSessionServer
+    })
+    server.addService(services.SpanService, {
+        sendSpan: pingSessionServer
+    })
     server.startup((port) => {
         actualsPingSessionServer.dataCount = 2
         actualsPingSessionServer.t = t

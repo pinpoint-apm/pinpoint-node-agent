@@ -36,10 +36,14 @@ function sendSpan(call, callback) {
     })
 }
 
+let actualsCancellation
 // https://github.com/grpc/grpc-node/issues/1542
 // https://github.com/grpc/grpc-node/pull/1616/files
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 test('client side streaming with deadline and cancellation', function (t) {
+    t.plan(0)
+    actualsCancellation = {}
+
     const server = new GrpcServer()
     server.addService(services.StatService, {
         sendAgentStat: sendAgentStat
@@ -49,10 +53,20 @@ test('client side streaming with deadline and cancellation', function (t) {
     })
 
     server.startup((port) => {
+        actualsCancellation.t = t
+
         this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',
             'applicationname': 'applicationName',
             'starttime': Date.now()
+        })
+
+        let clientReceiveDataCount = 0
+        const originData = this.grpcDataSender.pingStream.stream.listeners('data')[0]
+        this.grpcDataSender.pingStream.stream.on('data', (data) => {
+            clientReceiveDataCount++
+            t.true(clientReceiveDataCount <= actualsCancellation.sendPingCount, 'client receive data count')
+            originData(data)
         })
 
         endAction = () => {
@@ -61,7 +75,6 @@ test('client side streaming with deadline and cancellation', function (t) {
                 server.shutdown()
             }, 0)
         }
-
         endAction()
     })
 })

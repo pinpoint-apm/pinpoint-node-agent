@@ -35,7 +35,9 @@ function sendSpan(call, callback) {
     })
 }
 
-test('client side streaming with deadline', function (t) {
+// https://github.com/grpc/grpc-node/issues/1542
+// https://github.com/grpc/grpc-node/pull/1616/files
+test('client side streaming with deadline and cancellation', function (t) {
     const server = new GrpcServer()
     server.addService(services.StatService, {
         sendAgentStat: sendAgentStat

@@ -54,6 +54,8 @@ test('client side streaming with deadline and cancellation', function (t) {
 
     server.startup((port) => {
         actualsCancellation.t = t
+        actualsCancellation.sendSpanCount = 0
+        actualsCancellation.sendStatCount = 0
 
         this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',
@@ -65,7 +67,7 @@ test('client side streaming with deadline and cancellation', function (t) {
         const originData = this.grpcDataSender.pingStream.stream.listeners('data')[0]
         this.grpcDataSender.pingStream.stream.on('data', (data) => {
             clientReceiveDataCount++
-            t.true(clientReceiveDataCount <= actualsCancellation.sendPingCount, 'client receive data count')
+            t.true(clientReceiveDataCount <= actualsCancellation.sendSpanCount, 'client receive data count')
             originData(data)
         })
 

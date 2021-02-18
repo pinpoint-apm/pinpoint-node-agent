@@ -26,7 +26,7 @@ function sendAgentStat(call, callback) {
 }
 
 function sendSpan(call, callback) {
-    call.on('data', function (statMessage) {
+    call.on('data', function (spanMessage) {
     })
     call.on('error', function(error) {
         log.debug(`error: ${error}`)

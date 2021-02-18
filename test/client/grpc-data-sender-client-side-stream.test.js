@@ -24,10 +24,24 @@ function sendAgentStat(call, callback) {
     })
 }
 
+function sendSpan(call, callback) {
+    call.on('data', function (statMessage) {
+    })
+    call.on('error', function(error) {
+        log.debug(`error: ${error}`)
+    })
+    call.on('end', function () {
+        callback(null, new Empty())
+    })
+}
+
 test('client side streaming with deadline', function (t) {
     const server = new GrpcServer()
     server.addService(services.StatService, {
         sendAgentStat: sendAgentStat
+    })
+    server.addService(services.SpanService, {
+        sendSpan: sendSpan
     })
 
     server.startup((port) => {

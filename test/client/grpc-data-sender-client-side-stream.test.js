@@ -13,6 +13,7 @@ const GrpcServer = require('./grpc-server')
 
 let endAction
 
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function sendAgentStat(call, callback) {
     call.on('data', function (statMessage) {
     })
@@ -37,6 +38,7 @@ function sendSpan(call, callback) {
 
 // https://github.com/grpc/grpc-node/issues/1542
 // https://github.com/grpc/grpc-node/pull/1616/files
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 test('client side streaming with deadline and cancellation', function (t) {
     const server = new GrpcServer()
     server.addService(services.StatService, {

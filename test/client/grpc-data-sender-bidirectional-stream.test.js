@@ -45,7 +45,7 @@ function pingSession(call) {
 }
 
 test('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
-    t.plan(26)
+    t.plan(30)
     actualsPingSession = {}
     const server = new GrpcServer()
 
@@ -86,10 +86,9 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                     originEnd()
                     t.true(this.grpcDataSender.pingStream.stream === null, 'when server throw error, end stream and null assign')
                     nextSendPingTest()
-                } else if (callOrder == 8/* 5st PingStream is ended before gRPC server shutdown */) {
-                    t.equal(callOrder, 8, '5st PingStream is ended before gRPC server shutdown')
+                } else if (callOrder == 8/* 4st Cancelled on client */) {
+                    t.equal(callOrder, 8, '4st Cancelled on client')
                     originEnd()
-                    endAction()
                 } else {
                     originEnd()
                     endAction()
@@ -107,10 +106,11 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                     t.equal(callOrder, 5, '3st Ping is data and call order is 5 ')
 
                     setTimeout(() => {
-                        // when PingStream client stream cancel
+                        // 4st when PingStream client stream cancel
                         this.grpcDataSender.pingStream.stream.cancel()
-    
-                        this.grpcDataSender.pingStream.end()
+                        // 5st when sendPing on client canceled
+                        this.grpcDataSender.sendPing()
+                        // this.grpcDataSender.pingStream.end()
                     })
                 }
                 originData(data)
@@ -130,6 +130,19 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                     t.equal(error.code, 1, '"Cancelled on client" error code is 1 in 4st Cancelled on client')
                     t.equal(error.message, '1 CANCELLED: Cancelled on client', '1 CANCELLED: Cancelled on client in 4st Cancelled on client')
                 }
+                if (callOrder == 9/* 5st when sendPing on client canceled */) {
+                    t.equal(callOrder, 9, '5st when sendPing on client canceled')
+                    t.equal(error.code, 'ERR_STREAM_WRITE_AFTER_END', ' in 5st when sendPing on client canceled')
+                    t.equal(error.message, 'write after end', 'in 5st when sendPing on client canceled')
+                    setTimeout(() => {
+                        // 6st sendPing
+                        this.grpcDataSender.sendPing()
+                        registeEventListeners()
+
+                        // 7st end
+                        this.grpcDataSender.pingStream.end()
+                    })
+                }
                 originError(error)
             })
 
@@ -147,10 +160,10 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                     t.equal(status.code, 1, 'Cancelled on client status code is 0 in 4st Cancelled on client')
                     t.equal(status.details, 'Cancelled on client', 'Cancelled on client status message is OK in 4st Cancelled on client')
                 }
-                // if (callOrder == 6/* 5st PingStream is ended before gRPC server shutdown */) {
-                //     t.equal(callOrder, 6, '5st PingStream is ended before gRPC server shutdown')
-                //     t.equal(status.code, 0, '"status is OK, code is 0 in 5st PingStream is ended before gRPC server shutdown')
-                //     t.equal(status.details, 'OK', 'status is OK in 5st PingStream is ended before gRPC server shutdown')
+                // if (callOrder == 6/* 6st PingStream is ended before gRPC server shutdown */) {
+                //     t.equal(callOrder, 6, '6st PingStream is ended before gRPC server shutdown')
+                //     t.equal(status.code, 0, '"status is OK, code is 0 in 6st PingStream is ended before gRPC server shutdown')
+                //     t.equal(status.details, 'OK', 'status is OK in 6st PingStream is ended before gRPC server shutdown')
                 // }
                 originStatus(status)
             })

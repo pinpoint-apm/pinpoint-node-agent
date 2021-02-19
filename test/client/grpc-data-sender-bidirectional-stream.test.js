@@ -105,6 +105,12 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                 }
                 if (callOrder == 5/* 3st Ping, Data */) {
                     t.equal(callOrder, 5, '3st Ping is data and call order is 5 ')
+
+                    setTimeout(() => {
+                        // this.grpcDataSender.pingStream.stream.cancel()
+    
+                        this.grpcDataSender.pingStream.end()
+                    })
                 }
                 originData(data)
             })
@@ -153,10 +159,6 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
             this.grpcDataSender.sendPing()
             registeEventListeners()
             t.true(this.grpcDataSender.pingStream.stream, 'when reconnect to gRPC server, after call.cancel not found error')
-
-            // this.grpcDataSender.pingStream.stream.cancel()
-
-            this.grpcDataSender.pingStream.end()
         }
 
         endAction = () => {

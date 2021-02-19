@@ -71,8 +71,6 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
         t.equal(this.grpcDataSender.pingStream.constructor.name, 'GrpcBidirectionalStream', `pingStream is the GrpcBidirectionalStream`)
         t.equal(this.grpcDataSender.pingStream.stream.constructor.name, 'ClientDuplexStreamImpl', 'when previous throw Deadline exceeded')
 
-        this.grpcDataSender.sendPing()
-
         // when server send stream end event
         let clientReceiveEndCount = 0
         const originEnd = this.grpcDataSender.pingStream.stream.listeners('end')[0]
@@ -86,6 +84,10 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
             }
             endAction()
         })
+
+        t.true(this.grpcDataSender.pingStream.stream, 'Ping stream is Good')
+        this.grpcDataSender.sendPing()
+
         t.true(this.grpcDataSender.pingStream.stream, 'Ping stream is Good')
         this.grpcDataSender.sendPing()
 
@@ -93,6 +95,8 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
         const nextSendPingTest = () => {
             t.true(this.grpcDataSender.pingStream.stream === null, 'stream is null after call.cancel not found error')
             this.grpcDataSender.sendPing()
+
+            this.grpcDataSender.pingStream.end()
         }
         // t.false(this.grpcDataSender.pingStream.stream, 'after throw Deadline exceeded, ')
         // t.true(this.grpcDataSender.pingStream.actualEnded, 'when throw Deadline exceeded, ended')

@@ -32,6 +32,14 @@ class GrpcServer {
     shutdown() {
         this.server.forceShutdown()
     }
+
+    tryShutdown(callback) {
+        this.server.tryShutdown((error) => {
+            if (callback) {
+                callback(error)
+            }
+        })
+    }
 }
 
 module.exports = GrpcServer

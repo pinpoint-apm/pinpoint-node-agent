@@ -146,6 +146,8 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
             t.true(this.grpcDataSender.pingStream.stream, 'when reconnect to gRPC server, after call.cancel not found error')
 
             this.grpcDataSender.pingStream.end()
+            this.grpcDataSender.spanStream.end()
+            this.grpcDataSender.statStream.end()
         }
 
         endAction = () => {

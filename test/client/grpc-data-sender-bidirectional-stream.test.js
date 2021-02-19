@@ -45,7 +45,7 @@ function pingSession(call) {
 }
 
 test('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
-    t.plan(23)
+    t.plan(26)
     actualsPingSession = {}
     const server = new GrpcServer()
 
@@ -86,8 +86,8 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                     originEnd()
                     t.true(this.grpcDataSender.pingStream.stream === null, 'when server throw error, end stream and null assign')
                     nextSendPingTest()
-                } else if (callOrder == 7/* 4st PingStream is ended before gRPC server shutdown */) {
-                    t.equal(callOrder, 7, '4st PingStream is ended before gRPC server shutdown')
+                } else if (callOrder == 8/* 5st PingStream is ended before gRPC server shutdown */) {
+                    t.equal(callOrder, 8, '5st PingStream is ended before gRPC server shutdown')
                     originEnd()
                     endAction()
                 } else {
@@ -107,7 +107,8 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                     t.equal(callOrder, 5, '3st Ping is data and call order is 5 ')
 
                     setTimeout(() => {
-                        // this.grpcDataSender.pingStream.stream.cancel()
+                        // when PingStream client stream cancel
+                        this.grpcDataSender.pingStream.stream.cancel()
     
                         this.grpcDataSender.pingStream.end()
                     })
@@ -124,6 +125,11 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                     t.equal(error.code, 13, '"call.cancel is not a function" error code is 13')
                     t.equal(error.message, '13 INTERNAL: call.cancel is not a function', '13 INTERNAL: call.cancel is not a function')
                 }
+                if (callOrder == 6/* 4st Cancelled on client */) {
+                    t.equal(callOrder, 6, '4st Cancelled on client')
+                    t.equal(error.code, 1, '"Cancelled on client" error code is 1 in 4st Cancelled on client')
+                    t.equal(error.message, '1 CANCELLED: Cancelled on client', '1 CANCELLED: Cancelled on client in 4st Cancelled on client')
+                }
                 originError(error)
             })
 
@@ -136,11 +142,16 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                     t.equal(status.code, 13, '"call.cancel is not a function" error code is 13 in 2st ping is status')
                     t.equal(status.details, 'call.cancel is not a function', 'call.cancel is not a function in 2st ping is status')
                 }
-                if (callOrder == 6/* 4st PingStream is ended before gRPC server shutdown */) {
-                    t.equal(callOrder, 6, '4st PingStream is ended before gRPC server shutdown')
-                    t.equal(status.code, 0, '"status is OK, code is 0 in 4st PingStream is ended before gRPC server shutdown')
-                    t.equal(status.details, 'OK', 'status is OK in 4st PingStream is ended before gRPC server shutdown')
+                if (callOrder == 7/* 4st Cancelled on client */) {
+                    t.equal(callOrder, 7, '4st Cancelled on client')
+                    t.equal(status.code, 1, 'Cancelled on client status code is 0 in 4st Cancelled on client')
+                    t.equal(status.details, 'Cancelled on client', 'Cancelled on client status message is OK in 4st Cancelled on client')
                 }
+                // if (callOrder == 6/* 5st PingStream is ended before gRPC server shutdown */) {
+                //     t.equal(callOrder, 6, '5st PingStream is ended before gRPC server shutdown')
+                //     t.equal(status.code, 0, '"status is OK, code is 0 in 5st PingStream is ended before gRPC server shutdown')
+                //     t.equal(status.details, 'OK', 'status is OK in 5st PingStream is ended before gRPC server shutdown')
+                // }
                 originStatus(status)
             })
         }

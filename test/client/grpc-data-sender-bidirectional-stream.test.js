@@ -22,8 +22,10 @@ function pingSession(call) {
         log.debug(`pingSession in data: ${JSON.stringify(ping.toObject())}`)
         if (actualsPingSession.serverDataCount == 1) {
             call.write(ping)
-        } else {
+        } else if (actualsPingSession.serverDataCount == 2) {
             call.cancel()
+        } else if (actualsPingSession.serverDataCount == 3) {
+            call.write(ping)
         }
 
         actualsPingSession.t.true(actualsPingSession.serverDataCount <= actualsPingSession.dataCount, 'dataCount is matching')
@@ -78,13 +80,20 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
         this.grpcDataSender.pingStream.stream.on('end', () => {
             clientReceiveEndCount++
             originEnd()
-            if (clientReceiveEndCount) {
+            if (clientReceiveEndCount == 1) {
                 t.true(this.grpcDataSender.pingStream.stream === null, 'stream is null')
+                nextSendPingTest()
             }
             endAction()
         })
         t.true(this.grpcDataSender.pingStream.stream, 'Ping stream is Good')
         this.grpcDataSender.sendPing()
+
+        
+        const nextSendPingTest = () => {
+            t.true(this.grpcDataSender.pingStream.stream === null, 'stream is null after call.cancel not found error')
+            this.grpcDataSender.sendPing()
+        }
         // t.false(this.grpcDataSender.pingStream.stream, 'after throw Deadline exceeded, ')
         // t.true(this.grpcDataSender.pingStream.actualEnded, 'when throw Deadline exceeded, ended')
 

@@ -158,93 +158,12 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
 
 function pingSessionServer(call) {
     actualsPingSessionServer.serverDataCount = 0
-    call.on('data', (ping) => {
-        actualsPingSessionServer.serverDataCount++
-        actualsPingSessionServer.t.true(actualsPingSessionServer.serverDataCount <= actualsPingSessionServer.sendPingCount, 'server data count matches')
+    call.on('data', () => {
 
-        if (actualsPingSessionServer.serverDataCount != 4) {
-            call.write(ping)
-        }
-
-        if (actualsPingSessionServer.serverDataCount == 2) {
-            call.end()
-        } else if (actualsPingSessionServer.serverDataCount == 3) {
-            throw new Error("Server Error")
-        } else if (actualsPingSessionServer.serverDataCount == 4) {
-            call.cancel()
-        }
     })
-    actualsPingSession.serverEndCount = 0
+
     call.on('end', () => {
-        actualsPingSession.serverEndCount++
     })
 }
 
 let actualsPingSessionServer
-test.skip('Server end(), error, data Test', function (t) {
-    t.plan(7)
-    actualsPingSessionServer = {}
-    const server = new GrpcServer()
-
-    server.addService(services.AgentService, {
-        pingSession: pingSessionServer
-    })
-    server.addService(services.StatService, {
-        sendAgentStat: pingSessionServer
-    })
-    server.addService(services.SpanService, {
-        sendSpan: pingSessionServer
-    })
-    server.startup((port) => {
-        actualsPingSessionServer.dataCount = 2
-        actualsPingSessionServer.t = t
-        actualsPingSessionServer.sendPingCount = 0
-
-        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
-            'agentid': '12121212',
-            'applicationname': 'applicationName',
-            'starttime': Date.now()
-        })
-
-        let clientReceiveDataCount = 0
-        const originData = this.grpcDataSender.pingStream.stream.listeners('data')[0]
-        this.grpcDataSender.pingStream.stream.on('data', (data) => {
-            clientReceiveDataCount++
-            t.true(clientReceiveDataCount <= actualsPingSessionServer.sendPingCount, 'client receive data count')
-            originData(data)
-        })
-
-        actualsPingSessionServer.sendPingCount++
-        this.grpcDataSender.sendPing()
-
-        // when server send stream end event
-        let clientReceiveEndCount = 0
-        const originEnd = this.grpcDataSender.pingStream.stream.listeners('end')[0]
-        this.grpcDataSender.pingStream.stream.removeListener('end', originEnd)
-        this.grpcDataSender.pingStream.stream.on('end', () => {
-            clientReceiveEndCount++
-            t.true(clientReceiveEndCount <= 2, 'client receive data count')
-            originEnd()
-
-            if (clientReceiveDataCount == actualsPingSessionServer.dataCount) {
-                endAction()
-            }
-        })
-        actualsPingSessionServer.sendPingCount++
-        this.grpcDataSender.sendPing()
-
-        actualsPingSessionServer.sendPingCount++
-        this.grpcDataSender.sendPing()
-
-        actualsPingSessionServer.sendPingCount++
-        this.grpcDataSender.sendPing()
-
-        endAction = () => {
-            this.grpcDataSender.pingStream.end()
-            setTimeout(() => {
-                t.end()
-                server.shutdown()
-            }, 0)
-        }
-    })
-})

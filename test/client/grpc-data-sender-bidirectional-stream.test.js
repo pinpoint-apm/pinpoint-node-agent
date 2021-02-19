@@ -45,7 +45,7 @@ function pingSession(call) {
 }
 
 test('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
-    t.plan(10)
+    t.plan(12)
     actualsPingSession = {}
     const server = new GrpcServer()
 
@@ -102,7 +102,7 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
             this.grpcDataSender.pingStream.stream.removeListener('error', originData)
             this.grpcDataSender.pingStream.stream.on('error', (error) => {
                 callOrder++
-                if (callOrder == 2) {
+                if (callOrder == 2/* 2st Ping, Server Error case */) {
                     t.true(callOrder == 2, '2st event is error')
                     t.equal(error.code, 13, '"call.cancel is not a function" error code is 13')
                     t.equal(error.message, '13 INTERNAL: call.cancel is not a function', '13 INTERNAL: call.cancel is not a function')
@@ -114,10 +114,10 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
             this.grpcDataSender.pingStream.stream.removeListener('status', originStatus)
             this.grpcDataSender.pingStream.stream.on('status', (status) => {
                 callOrder++
-                if (callOrder == 3) {
+                if (callOrder == 3/* 2st Ping, Server Error case */) {
                     t.true(callOrder == 3, '3st is status')
-                    // t.equal(error.code, 13, '"call.cancel is not a function" error code is 13')
-                    // t.equal(error.message, '13 INTERNAL: call.cancel is not a function', '13 INTERNAL: call.cancel is not a function')
+                    t.equal(status.code, 13, '"call.cancel is not a function" error code is 13 in 2st ping is status')
+                    t.equal(status.details, 'call.cancel is not a function', 'call.cancel is not a function in 2st ping is status')
                 }
                 originStatus(status)
             })
@@ -127,13 +127,16 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
         t.true(this.grpcDataSender.pingStream.stream, 'Ping stream is Good')
         this.grpcDataSender.sendPing()
 
-        t.true(this.grpcDataSender.pingStream.stream, 'Ping stream is Good')
+        // Server Error case
+        t.true(this.grpcDataSender.pingStream.stream, 'Ping stream is Good in server error')
         this.grpcDataSender.sendPing()
 
 
         const nextSendPingTest = () => {
+            // after Server Error case, reconnect case
             t.true(this.grpcDataSender.pingStream.stream === null, 'stream is null after call.cancel not found error')
             this.grpcDataSender.sendPing()
+            t.true(this.grpcDataSender.pingStream.stream === null, 'when reconnect to gRPC server, after call.cancel not found error')
 
             this.grpcDataSender.pingStream.end()
         }

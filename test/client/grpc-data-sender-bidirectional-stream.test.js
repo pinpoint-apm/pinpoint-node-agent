@@ -130,10 +130,10 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                     t.equal(status.code, 13, '"call.cancel is not a function" error code is 13 in 2st ping is status')
                     t.equal(status.details, 'call.cancel is not a function', 'call.cancel is not a function in 2st ping is status')
                 }
-                if (callOrder == 6/* 3st Ping, Data */) {
-                    t.equal(callOrder, 6, '3st Ping, when Error was fixed, next ping emit "data" and then "status" is ok')
-                    t.equal(status.code, 0, '"status is OK, code is 0 in 3st ping in status')
-                    t.equal(status.details, 'OK', 'status is OK in 3st ping in status')
+                if (callOrder == 6/* 4st PingStream is ended before gRPC server shutdown */) {
+                    t.equal(callOrder, 6, '4st PingStream is ended before gRPC server shutdown')
+                    t.equal(status.code, 0, '"status is OK, code is 0 in 4st PingStream is ended before gRPC server shutdown')
+                    t.equal(status.details, 'OK', 'status is OK in 4st PingStream is ended before gRPC server shutdown')
                 }
                 originStatus(status)
             })
@@ -153,6 +153,8 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
             this.grpcDataSender.sendPing()
             registeEventListeners()
             t.true(this.grpcDataSender.pingStream.stream, 'when reconnect to gRPC server, after call.cancel not found error')
+
+            // this.grpcDataSender.pingStream.stream.cancel()
 
             this.grpcDataSender.pingStream.end()
         }

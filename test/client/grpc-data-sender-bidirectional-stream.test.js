@@ -14,13 +14,20 @@ const GrpcServer = require('./grpc-server')
 let actualsPingSession
 let endAction
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
+// https://github.com/grpc/grpc-node/pull/1616/files
 function pingSession(call) {
     actualsPingSession.serverDataCount = 0
     call.on('data', (ping) => {
         actualsPingSession.serverDataCount++
         log.debug(`pingSession in data: ${JSON.stringify(ping.toObject())}`)
-        call.write(ping)
-        actualsPingSession.t.true(actualsPingSession.serverDataCount <= actualsPingSession.dataCount, 'dataCount is not matching')
+        if (actualsPingSession.serverDataCount == 1) {
+            call.write(ping)
+        } else {
+            call.cancel()
+        }
+
+        actualsPingSession.t.true(actualsPingSession.serverDataCount <= actualsPingSession.dataCount, 'dataCount is matching')
+
         if (actualsPingSession.serverDataCount == actualsPingSession.dataCount) {
             endAction()
         }
@@ -63,6 +70,20 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
         t.equal(this.grpcDataSender.pingStream.stream.constructor.name, 'ClientDuplexStreamImpl', 'when previous throw Deadline exceeded')
 
         this.grpcDataSender.sendPing()
+
+        // when server send stream end event
+        let clientReceiveEndCount = 0
+        const originEnd = this.grpcDataSender.pingStream.stream.listeners('end')[0]
+        this.grpcDataSender.pingStream.stream.removeListener('end', originEnd)
+        this.grpcDataSender.pingStream.stream.on('end', () => {
+            clientReceiveEndCount++
+            originEnd()
+            if (clientReceiveEndCount) {
+                t.true(this.grpcDataSender.pingStream.stream === null, 'stream is null')
+            }
+            endAction()
+        })
+        t.true(this.grpcDataSender.pingStream.stream, 'Ping stream is Good')
         this.grpcDataSender.sendPing()
         // t.false(this.grpcDataSender.pingStream.stream, 'after throw Deadline exceeded, ')
         // t.true(this.grpcDataSender.pingStream.actualEnded, 'when throw Deadline exceeded, ended')
@@ -78,7 +99,6 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
         // t.true(this.grpcDataSender.pingStream.stream, 'after sendPing, stream is an instance')
         
         endAction = () => {
-            this.grpcDataSender.pingStream.end()
             server.tryShutdown(() => {
                 t.end()
             })

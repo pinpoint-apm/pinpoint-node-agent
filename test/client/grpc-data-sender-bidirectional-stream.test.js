@@ -45,7 +45,7 @@ function pingSession(call) {
 }
 
 test('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
-    t.plan(22)
+    t.plan(23)
     actualsPingSession = {}
     const server = new GrpcServer()
 
@@ -86,6 +86,10 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                     originEnd()
                     t.true(this.grpcDataSender.pingStream.stream === null, 'when server throw error, end stream and null assign')
                     nextSendPingTest()
+                } else if (callOrder == 7/* 4st PingStream is ended before gRPC server shutdown */) {
+                    t.equal(callOrder, 7, '4st PingStream is ended before gRPC server shutdown')
+                    originEnd()
+                    endAction()
                 } else {
                     originEnd()
                     endAction()

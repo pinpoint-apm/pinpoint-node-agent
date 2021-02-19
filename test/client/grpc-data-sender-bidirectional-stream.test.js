@@ -45,7 +45,7 @@ function pingSession(call) {
 }
 
 test('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
-    t.plan(9)
+    t.plan(10)
     actualsPingSession = {}
     const server = new GrpcServer()
 
@@ -108,6 +108,18 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                     t.equal(error.message, '13 INTERNAL: call.cancel is not a function', '13 INTERNAL: call.cancel is not a function')
                 }
                 originError(error)
+            })
+
+            const originStatus = this.grpcDataSender.pingStream.stream.listeners('status')[0]
+            this.grpcDataSender.pingStream.stream.removeListener('status', originStatus)
+            this.grpcDataSender.pingStream.stream.on('status', (status) => {
+                callOrder++
+                if (callOrder == 3) {
+                    t.true(callOrder == 3, '3st is status')
+                    // t.equal(error.code, 13, '"call.cancel is not a function" error code is 13')
+                    // t.equal(error.message, '13 INTERNAL: call.cancel is not a function', '13 INTERNAL: call.cancel is not a function')
+                }
+                originStatus(status)
             })
         }
 

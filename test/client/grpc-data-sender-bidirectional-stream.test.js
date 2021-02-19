@@ -45,6 +45,7 @@ function pingSession(call) {
 }
 
 test('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
+    t.plan(7)
     actualsPingSession = {}
     const server = new GrpcServer()
 
@@ -67,31 +68,55 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
             'applicationname': 'applicationName',
             'starttime': Date.now()
         })
-      
+
         t.equal(this.grpcDataSender.pingStream.constructor.name, 'GrpcBidirectionalStream', `pingStream is the GrpcBidirectionalStream`)
         t.equal(this.grpcDataSender.pingStream.stream.constructor.name, 'ClientDuplexStreamImpl', 'when previous throw Deadline exceeded')
 
         // when server send stream end event
-        let clientReceiveEndCount = 0
-        const originEnd = this.grpcDataSender.pingStream.stream.listeners('end')[0]
-        this.grpcDataSender.pingStream.stream.removeListener('end', originEnd)
-        this.grpcDataSender.pingStream.stream.on('end', () => {
-            clientReceiveEndCount++
-            originEnd()
-            if (clientReceiveEndCount == 1) {
-                t.true(this.grpcDataSender.pingStream.stream === null, 'stream is null')
-                nextSendPingTest()
-            }
-            endAction()
-        })
+        let callOrder = 0
 
+        const registeEventListeners = () => {
+            const originEnd = this.grpcDataSender.pingStream.stream.listeners('end')[0]
+            this.grpcDataSender.pingStream.stream.removeListener('end', originEnd)
+            this.grpcDataSender.pingStream.stream.on('end', () => {
+                callOrder++
+                originEnd()
+                if (callOrder == 1) {
+                    t.true(this.grpcDataSender.pingStream.stream === null, 'stream is null')
+                    nextSendPingTest()
+                }
+                endAction()
+            })
+
+            const originData = this.grpcDataSender.pingStream.stream.listeners('data')[0]
+            this.grpcDataSender.pingStream.stream.removeListener('data', originData)
+            this.grpcDataSender.pingStream.stream.on('data', (data) => {
+                callOrder++
+                if (callOrder == 1) {
+                    t.true(callOrder == 1, '1st event is data')
+                }
+                originData(data)
+            })
+
+            const originError = this.grpcDataSender.pingStream.stream.listeners('error')[0]
+            this.grpcDataSender.pingStream.stream.removeListener('error', originData)
+            this.grpcDataSender.pingStream.stream.on('error', (data) => {
+                callOrder++
+                if (callOrder == 2) {
+                    t.true(callOrder == 2, '2st event is error')
+                }
+                originError(data)
+            })
+        }
+
+        registeEventListeners()
         t.true(this.grpcDataSender.pingStream.stream, 'Ping stream is Good')
         this.grpcDataSender.sendPing()
 
         t.true(this.grpcDataSender.pingStream.stream, 'Ping stream is Good')
         this.grpcDataSender.sendPing()
 
-        
+
         const nextSendPingTest = () => {
             t.true(this.grpcDataSender.pingStream.stream === null, 'stream is null after call.cancel not found error')
             this.grpcDataSender.sendPing()
@@ -110,7 +135,7 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
         // t.false(this.grpcDataSender.pingStream.actualConnectedStream, 'stream not reconnected stream')
         // this.grpcDataSender.sendPing()
         // t.true(this.grpcDataSender.pingStream.stream, 'after sendPing, stream is an instance')
-        
+
         endAction = () => {
             server.tryShutdown(() => {
                 t.end()
@@ -201,7 +226,7 @@ test.skip('Server end(), error, data Test', function (t) {
 
         actualsPingSessionServer.sendPingCount++
         this.grpcDataSender.sendPing()
-        
+
         endAction = () => {
             this.grpcDataSender.pingStream.end()
             setTimeout(() => {

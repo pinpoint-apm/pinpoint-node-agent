@@ -114,9 +114,9 @@ test('client side streaming with deadline and cancellation', function (t) {
     server.addService(services.AgentService, {
         pingSession: pingSession
     })
-    // server.addService(services.StatService, {
-    //     sendAgentStat: sendAgentStat
-    // })
+    server.addService(services.StatService, {
+        sendAgentStat: sendAgentStat
+    })
     server.addService(services.SpanService, {
         sendSpan: sendSpan
     })
@@ -153,7 +153,9 @@ test('client side streaming with deadline and cancellation', function (t) {
         }
 
         this.grpcDataSender.sendSpan(span)
+        this.grpcDataSender.sendSpan(span)
         this.grpcDataSender.spanStream.end()
         this.grpcDataSender.pingStream.end()
+        this.grpcDataSender.statStream.end()
     })
 })

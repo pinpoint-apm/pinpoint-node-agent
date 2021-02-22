@@ -85,6 +85,9 @@ function sendSpan(call, callback) {
 
         if (actuals.serverSpanDataCount == 1) {
             actuals.t.equal(actuals.serverSpanDataCount, 1, '1st sendSpan serverSpanDataCount is 1')
+
+            const span = spanMessage.getSpan()
+            actuals.t.equal(span.getSpanid(), '2894367178713953', 'span ID match in 1st sendSpan')
         }
     })
     call.on('error', function (error) {
@@ -109,7 +112,7 @@ function pingSession(call) {
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 // stream.isReady() newRunnable(DefaultStreamTask.java)
 test('client side streaming with deadline and cancellation', function (t) {
-    t.plan(11)
+    t.plan(12)
     actuals = {}
 
     const server = new GrpcServer()

@@ -118,7 +118,7 @@ function pingSession(call) {
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 // stream.isReady() newRunnable(DefaultStreamTask.java)
 test('client side streaming with deadline and cancellation', function (t) {
-    t.plan(21)
+    t.plan(26)
     actuals = {}
 
     const server = new GrpcServer()
@@ -162,6 +162,9 @@ test('client side streaming with deadline and cancellation', function (t) {
                 t.equal(callOrder, 5, '6st spanStream end in callback')
                 t.equal(err.code, 13, 'code is 13 in 6st spanStream callback')
                 t.equal(err.details, '6st sendSpan serverSpanDataCount is 4', 'details in 6st spanStream callback')
+            } else if (callOrder == 7/* 8st when spanStream end, recovery spanstream */) {
+                t.equal(callOrder, 7, '8st when spanStream end, recovery spanstream in callback')
+                t.false(err, 'OK in 8st recovery spanstream callback')
             }
             originCallback.call(this.grpcDataSender.spanStream, err, response)
         }
@@ -190,12 +193,18 @@ test('client side streaming with deadline and cancellation', function (t) {
                     t.equal(status.code, 13, 'code is 13 in 6st spanStream callback')
                     t.equal(status.details, '6st sendSpan serverSpanDataCount is 4', 'details on stream status event')
                     setTimeout(() => {
-                        // 8st spanStream cancel
+                        // 8st when spanStream end, recovery spanstream
                         actuals.sendSpanCount++
                         this.grpcDataSender.spanStream.stream.end()
                         this.grpcDataSender.sendSpan(span)
-                        endAction()
+                        registeEventListeners()
+                        this.grpcDataSender.spanStream.end()
                     })
+                } else if (callOrder == 8/* 8st when spanStream end, recovery spanstream */) {
+                    t.equal(callOrder, 8, '8st when spanStream end, recovery on stream status event')
+                    t.equal(status.code, 0, 'OK on 8st stream status event')
+                    t.equal(status.details, 'OK', 'OK on 8st stream status event')
+                    endAction()
                 }
                 originStatus.call(this.grpcDataSender.spanStream, status)
             })

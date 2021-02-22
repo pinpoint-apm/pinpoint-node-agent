@@ -164,6 +164,7 @@ test('client side streaming with deadline and cancellation', function (t) {
         // 2st sendSpan
         actuals.sendSpanCount++
         this.grpcDataSender.sendSpan(span)
+        
         this.grpcDataSender.spanStream.end()
         this.grpcDataSender.pingStream.end()
         this.grpcDataSender.statStream.end()

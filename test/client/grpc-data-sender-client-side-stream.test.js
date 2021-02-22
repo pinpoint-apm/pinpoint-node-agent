@@ -90,6 +90,8 @@ function sendSpan(call, callback) {
         } else if (actuals.serverSpanDataCount == 2) {
             actuals.t.equal(actuals.serverSpanDataCount, 2, '2st sendSpan serverSpanDataCount is 2')
             actuals.t.equal(span.getServicetype(), 1400, 'service type match in 2st sendSpan')
+        } else if (actuals.serverSpanDataCount == 4) {
+            actuals.t.equal(actuals.serverSpanDataCount, 4, '6st sendSpan serverSpanDataCount is 4')
         }
     })
     call.on('error', function (error) {
@@ -154,7 +156,6 @@ test('client side streaming with deadline and cancellation', function (t) {
                 t.equal(actuals.sendSpanCount, actuals.serverSpanDataCount, `span data count on server ${actuals.sendSpanCount}`)
             } else if (callOrder == 3/* 5st spanStream end in callback */) {
                 t.equal(callOrder, 3, '5st spanStream end in callback')
-                t.equal(actuals.serverSpanDataCount, 3, `span data count on server ${actuals.sendSpanCount} on 5st spanStream end in callback`)
             }
             originCallback.call(this.grpcDataSender.spanStream, err, response)
         }
@@ -202,6 +203,13 @@ test('client side streaming with deadline and cancellation', function (t) {
         this.grpcDataSender.sendSpan(span)
         registeEventListeners()
         // 5st spanStream end
+        this.grpcDataSender.spanStream.end()
+
+        // 6st sendSpan
+        actuals.sendSpanCount++
+        this.grpcDataSender.sendSpan(span)
+        registeEventListeners()
+        // 7st spanStream end
         this.grpcDataSender.spanStream.end()
 
         this.grpcDataSender.pingStream.end()

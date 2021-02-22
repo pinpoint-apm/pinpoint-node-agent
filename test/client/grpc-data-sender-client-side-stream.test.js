@@ -92,6 +92,9 @@ function sendSpan(call, callback) {
 }
 function pingSession(call) {
     actualsCancellation.pingCount = 0
+    call.on('data', function () {
+        actualsCancellation.serverDataCount++
+    })
     call.on('end', () => {
         call.end()
     })
@@ -108,9 +111,9 @@ test('client side streaming with deadline and cancellation', function (t) {
     actualsCancellation = {}
 
     const server = new GrpcServer()
-    // server.addService(services.AgentService, {
-    //     pingSession: pingSession
-    // })
+    server.addService(services.AgentService, {
+        pingSession: pingSession
+    })
     // server.addService(services.StatService, {
     //     sendAgentStat: sendAgentStat
     // })
@@ -151,5 +154,6 @@ test('client side streaming with deadline and cancellation', function (t) {
 
         this.grpcDataSender.sendSpan(span)
         this.grpcDataSender.spanStream.end()
+        this.grpcDataSender.pingStream.end()
     })
 })

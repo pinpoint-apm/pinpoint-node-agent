@@ -143,10 +143,10 @@ test('client side streaming with deadline and cancellation', function (t) {
             if (callOrder == 1/* 1st and 2st sendSpans */) {
                 t.equal(callOrder, 1, '1st and 2st sendSpans')
                 t.equal(actuals.sendSpanCount, actuals.serverSpanDataCount, `span data count on server ${actuals.sendSpanCount}`)
+            } else {
+                endAction()
             }
-
-            originCallback(err, response)
-            endAction()
+            originCallback.call(this.grpcDataSender.spanStream, err, response)
         }
 
         
@@ -164,8 +164,13 @@ test('client side streaming with deadline and cancellation', function (t) {
         // 2st sendSpan
         actuals.sendSpanCount++
         this.grpcDataSender.sendSpan(span)
-        
         this.grpcDataSender.spanStream.end()
+
+        // 3st sendSpan
+        actuals.sendSpanCount++
+        this.grpcDataSender.sendSpan(span)
+        this.grpcDataSender.spanStream.end()
+
         this.grpcDataSender.pingStream.end()
         this.grpcDataSender.statStream.end()
     })

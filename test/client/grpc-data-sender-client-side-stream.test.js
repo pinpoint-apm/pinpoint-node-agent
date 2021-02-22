@@ -29,7 +29,7 @@ const expectedSpan = {
     "applicationName": "express-node-sample-name",
     "agentStartTime": 1592572771026,
     "serviceType": 1400,
-    "spanId": 2894367178713953,
+    "spanId": '2894367178713953',
     "parentSpanId": -1,
     "transactionId": {
         "type": "Buffer",
@@ -82,7 +82,6 @@ function sendSpan(call, callback) {
     actualsCancellation.serverDataCount = 0
     call.on('data', function (spanMessage) {
         actualsCancellation.serverDataCount++
-        endAction()
     })
     call.on('error', function (error) {
         log.debug(`error: ${error}`)
@@ -93,6 +92,9 @@ function sendSpan(call, callback) {
 }
 function pingSession(call) {
     actualsCancellation.pingCount = 0
+    call.on('end', () => {
+        call.end()
+    })
 }
 
 
@@ -106,12 +108,12 @@ test('client side streaming with deadline and cancellation', function (t) {
     actualsCancellation = {}
 
     const server = new GrpcServer()
-    server.addService(services.AgentService, {
-        pingSession: pingSession
-    })
-    server.addService(services.StatService, {
-        sendAgentStat: sendAgentStat
-    })
+    // server.addService(services.AgentService, {
+    //     pingSession: pingSession
+    // })
+    // server.addService(services.StatService, {
+    //     sendAgentStat: sendAgentStat
+    // })
     server.addService(services.SpanService, {
         sendSpan: sendSpan
     })
@@ -131,15 +133,23 @@ test('client side streaming with deadline and cancellation', function (t) {
         // when server send stream
         let callOrder = 0
 
-        this.grpcDataSender.sendSpan(span)
-        this.grpcDataSender.spanStream.end()
+        const originCallback = this.grpcDataSender.spanStream.callback
+        this.grpcDataSender.spanStream.callback = (err, response) => {
+            callOrder++
+            originCallback(err, response)
+            endAction()
+        }
 
+        
         endAction = () => {
             setTimeout(() => {
-                server.shutdown(() => {
+                server.tryShutdown(() => {
+                    t.end()
                 })
-                t.end()
             }, 0)
         }
+
+        this.grpcDataSender.sendSpan(span)
+        this.grpcDataSender.spanStream.end()
     })
 })

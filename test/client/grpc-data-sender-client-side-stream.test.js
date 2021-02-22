@@ -193,7 +193,7 @@ test('client side streaming with deadline and cancellation', function (t) {
                         // 8st spanStream cancel
                         actuals.sendSpanCount++
                         this.grpcDataSender.spanStream.stream.end()
-
+                        this.grpcDataSender.sendSpan(span)
                         endAction()
                     })
                 }

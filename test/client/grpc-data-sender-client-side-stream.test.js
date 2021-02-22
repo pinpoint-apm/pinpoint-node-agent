@@ -13,7 +13,7 @@ const GrpcServer = require('./grpc-server')
 const Span = require('../../lib/context/span')
 
 let endAction
-let actuals = {}
+let actuals
 
 const expectedSpan = {
     "traceId": {
@@ -79,7 +79,6 @@ function sendAgentStat(call, callback) {
     })
 }
 
-actuals.serverSpanDataCount = 0
 function sendSpan(call, callback) {
     call.on('data', function (spanMessage) {
         actuals.serverSpanDataCount++
@@ -91,7 +90,7 @@ function sendSpan(call, callback) {
         callback(null, new Empty())
     })
 }
-actuals.serverPingCount = 0
+
 function pingSession(call) {
     call.on('data', function () {
         actuals.serverPingCount++
@@ -106,7 +105,8 @@ function pingSession(call) {
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 // stream.isReady() newRunnable(DefaultStreamTask.java)
 test('client side streaming with deadline and cancellation', function (t) {
-    t.plan(0)
+    t.plan(2)
+    actuals = {}
 
     const server = new GrpcServer()
     server.addService(services.AgentService, {
@@ -124,6 +124,8 @@ test('client side streaming with deadline and cancellation', function (t) {
         actuals.t = t
         actuals.sendSpanCount = 0
         actuals.sendStatCount = 0
+        actuals.serverSpanDataCount = 0
+        actuals.serverPingCount = 0
 
         this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',
@@ -137,6 +139,12 @@ test('client side streaming with deadline and cancellation', function (t) {
         const originCallback = this.grpcDataSender.spanStream.callback
         this.grpcDataSender.spanStream.callback = (err, response) => {
             callOrder++
+
+            if (callOrder == 1/* 1st and 2st sendSpans */) {
+                t.equal(callOrder, 1, '1st and 2st sendSpans')
+                t.equal(actuals.sendSpanCount, actuals.serverSpanDataCount, `span data count on server ${actuals.sendSpanCount}`)
+            }
+
             originCallback(err, response)
             endAction()
         }
@@ -150,7 +158,11 @@ test('client side streaming with deadline and cancellation', function (t) {
             }, 0)
         }
 
+        // 1st sendSpan
+        actuals.sendSpanCount++
         this.grpcDataSender.sendSpan(span)
+        // 2st sendSpan
+        actuals.sendSpanCount++
         this.grpcDataSender.sendSpan(span)
         this.grpcDataSender.spanStream.end()
         this.grpcDataSender.pingStream.end()

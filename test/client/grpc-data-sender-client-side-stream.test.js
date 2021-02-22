@@ -69,7 +69,7 @@ const span = Object.assign(new Span({
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function sendAgentStat(call, callback) {
     call.on('data', function (statMessage) {
-        
+
     })
     call.on('error', function (error) {
         log.debug(`error: ${error}`)
@@ -105,7 +105,7 @@ function pingSession(call) {
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 // stream.isReady() newRunnable(DefaultStreamTask.java)
 test('client side streaming with deadline and cancellation', function (t) {
-    t.plan(4)
+    t.plan(10)
     actuals = {}
 
     const server = new GrpcServer()
@@ -143,15 +143,34 @@ test('client side streaming with deadline and cancellation', function (t) {
             if (callOrder == 1/* 1st and 2st sendSpans */) {
                 t.equal(callOrder, 1, '1st and 2st sendSpans')
                 t.equal(actuals.sendSpanCount, actuals.serverSpanDataCount, `span data count on server ${actuals.sendSpanCount}`)
-            } else if (callOrder == 2/* 3st sendSpan */) {
-                t.equal(callOrder, 2, '3st sendSpans')
-                t.equal(actuals.serverSpanDataCount, 3, `span data count on server ${actuals.sendSpanCount}`)
-                endAction()
+            } else if (callOrder == 3/* 4st sendSpan */) {
+                t.equal(callOrder, 3, '4st sendSpans')
+                t.equal(actuals.serverSpanDataCount, 3, `span data count on server ${actuals.sendSpanCount} on 4st sendSpans`)
             }
             originCallback.call(this.grpcDataSender.spanStream, err, response)
         }
 
-        
+        const registeEventListeners = () => {
+            const originStatus = this.grpcDataSender.spanStream.stream.listeners('status')[0]
+            this.grpcDataSender.spanStream.stream.removeListener('status', originStatus)
+            this.grpcDataSender.spanStream.stream.on('status', (status) => {
+                callOrder++
+                if (callOrder == 2/* 3st spanStream end */) {
+                    t.true(callOrder == 2, '3st spanStream end')
+                    t.equal(status.code, 0, 'OK in 3st spanStream end')
+                    t.equal(status.details, 'OK', 'OK in 3st spanStream end')
+                } else if (callOrder == 4/* 5st spanStream end */) {
+                    t.true(callOrder == 4, '5st spanStream end')
+                    t.equal(status.code, 0, 'OK in 5st spanStream end')
+                    t.equal(status.details, 'OK', 'OK in 5st spanStream end')
+                    endAction()
+                }
+                originStatus.call(this.grpcDataSender.spanStream, status)
+            })
+        }
+
+        registeEventListeners()
+
         endAction = () => {
             setTimeout(() => {
                 server.tryShutdown(() => {
@@ -166,11 +185,14 @@ test('client side streaming with deadline and cancellation', function (t) {
         // 2st sendSpan
         actuals.sendSpanCount++
         this.grpcDataSender.sendSpan(span)
+        // 3st spanStream end
         this.grpcDataSender.spanStream.end()
 
-        // 3st sendSpan
+        // 4st sendSpan
         actuals.sendSpanCount++
         this.grpcDataSender.sendSpan(span)
+        registeEventListeners()
+        // 5st spanStream end
         this.grpcDataSender.spanStream.end()
 
         this.grpcDataSender.pingStream.end()

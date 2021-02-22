@@ -140,12 +140,12 @@ test('client side streaming with deadline and cancellation', function (t) {
         this.grpcDataSender.spanStream.callback = (err, response) => {
             callOrder++
 
-            if (callOrder == 1/* 1st spanStream end in callback */) {
-                t.equal(callOrder, 1, '1st spanStream end in callback')
+            if (callOrder == 1/* 3st spanStream end in callback */) {
+                t.equal(callOrder, 1, '3st spanStream end in callback')
                 t.equal(actuals.sendSpanCount, actuals.serverSpanDataCount, `span data count on server ${actuals.sendSpanCount}`)
-            } else if (callOrder == 3/* 2st spanStream end in callback */) {
-                t.equal(callOrder, 3, '2st spanStream end in callback')
-                t.equal(actuals.serverSpanDataCount, 3, `span data count on server ${actuals.sendSpanCount} on 2st spanStream end in callback`)
+            } else if (callOrder == 3/* 5st spanStream end in callback */) {
+                t.equal(callOrder, 3, '5st spanStream end in callback')
+                t.equal(actuals.serverSpanDataCount, 3, `span data count on server ${actuals.sendSpanCount} on 5st spanStream end in callback`)
             }
             originCallback.call(this.grpcDataSender.spanStream, err, response)
         }
@@ -155,14 +155,14 @@ test('client side streaming with deadline and cancellation', function (t) {
             this.grpcDataSender.spanStream.stream.removeListener('status', originStatus)
             this.grpcDataSender.spanStream.stream.on('status', (status) => {
                 callOrder++
-                if (callOrder == 2/* 1st spanStream end on stream status event */) {
-                    t.true(callOrder == 2, '1st spanStream end call Order on stream status event')
-                    t.equal(status.code, 0, 'OK on 1st stream status event')
-                    t.equal(status.details, 'OK', 'OK on 1st stream status event')
-                } else if (callOrder == 4/* 2st spanStream end on stream status event */) {
-                    t.true(callOrder == 4, '2st spanStream end call Order on stream status event')
-                    t.equal(status.code, 0, 'OK on 2st stream status event')
-                    t.equal(status.details, 'OK', 'OK on 2st stream status event')
+                if (callOrder == 2/* 3st spanStream end on stream status event */) {
+                    t.true(callOrder == 2, '3st spanStream end call Order on stream status event')
+                    t.equal(status.code, 0, 'OK on 3st stream status event')
+                    t.equal(status.details, 'OK', 'OK on 3st stream status event')
+                } else if (callOrder == 4/* 5st spanStream end on stream status event */) {
+                    t.true(callOrder == 4, '5st spanStream end call Order on stream status event')
+                    t.equal(status.code, 0, 'OK on 5st stream status event')
+                    t.equal(status.details, 'OK', 'OK on 5st stream status event')
                     endAction()
                 }
                 originStatus.call(this.grpcDataSender.spanStream, status)

@@ -69,7 +69,7 @@ const span = Object.assign(new Span({
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function sendAgentStat(call, callback) {
     call.on('data', function (statMessage) {
-
+        
     })
     call.on('error', function (error) {
         log.debug(`error: ${error}`)
@@ -82,6 +82,10 @@ function sendAgentStat(call, callback) {
 function sendSpan(call, callback) {
     call.on('data', function (spanMessage) {
         actuals.serverSpanDataCount++
+
+        if (actuals.serverSpanDataCount == 1) {
+            actuals.t.equal(actuals.serverSpanDataCount, 1, '1st sendSpan serverSpanDataCount is 1')
+        }
     })
     call.on('error', function (error) {
         log.debug(`error: ${error}`)
@@ -105,7 +109,7 @@ function pingSession(call) {
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 // stream.isReady() newRunnable(DefaultStreamTask.java)
 test('client side streaming with deadline and cancellation', function (t) {
-    t.plan(10)
+    t.plan(11)
     actuals = {}
 
     const server = new GrpcServer()

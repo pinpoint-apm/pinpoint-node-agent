@@ -105,7 +105,7 @@ function pingSession(call) {
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 // stream.isReady() newRunnable(DefaultStreamTask.java)
 test('client side streaming with deadline and cancellation', function (t) {
-    t.plan(2)
+    t.plan(4)
     actuals = {}
 
     const server = new GrpcServer()
@@ -143,7 +143,9 @@ test('client side streaming with deadline and cancellation', function (t) {
             if (callOrder == 1/* 1st and 2st sendSpans */) {
                 t.equal(callOrder, 1, '1st and 2st sendSpans')
                 t.equal(actuals.sendSpanCount, actuals.serverSpanDataCount, `span data count on server ${actuals.sendSpanCount}`)
-            } else {
+            } else if (callOrder == 2/* 3st sendSpan */) {
+                t.equal(callOrder, 2, '3st sendSpans')
+                t.equal(actuals.serverSpanDataCount, 3, `span data count on server ${actuals.sendSpanCount}`)
                 endAction()
             }
             originCallback.call(this.grpcDataSender.spanStream, err, response)

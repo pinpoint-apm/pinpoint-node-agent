@@ -179,20 +179,23 @@ test('client side streaming with deadline and cancellation', function (t) {
                     t.true(callOrder == 4, '5st spanStream end call Order on stream status event')
                     t.equal(status.code, 0, 'OK on 5st stream status event')
                     t.equal(status.details, 'OK', 'OK on 5st stream status event')
-                    // endAction()
                     setTimeout(() => {
                         // 6st sendSpan
                         actuals.sendSpanCount++
                         this.grpcDataSender.sendSpan(span)
                         registeEventListeners()
-                        // 7st spanStream end
-                        this.grpcDataSender.spanStream.end()
                     })
                 } else if (callOrder == 6/* 6st sendSpan */) {
                     t.true(callOrder == 6, '6st spanStream end call Order on stream status event')
                     t.equal(status.code, 13, 'code is 13 in 6st spanStream callback')
                     t.equal(status.details, '6st sendSpan serverSpanDataCount is 4', 'details on stream status event')
-                    endAction()
+                    setTimeout(() => {
+                        // 8st spanStream cancel
+                        actuals.sendSpanCount++
+                        this.grpcDataSender.spanStream.stream.end()
+
+                        endAction()
+                    })
                 }
                 originStatus.call(this.grpcDataSender.spanStream, status)
             })

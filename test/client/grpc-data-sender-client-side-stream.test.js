@@ -13,6 +13,7 @@ const GrpcServer = require('./grpc-server')
 const Span = require('../../lib/context/span')
 
 let endAction
+let actuals = {}
 
 const expectedSpan = {
     "traceId": {
@@ -78,10 +79,10 @@ function sendAgentStat(call, callback) {
     })
 }
 
+actuals.serverSpanDataCount = 0
 function sendSpan(call, callback) {
-    actualsCancellation.serverDataCount = 0
     call.on('data', function (spanMessage) {
-        actualsCancellation.serverDataCount++
+        actuals.serverSpanDataCount++
     })
     call.on('error', function (error) {
         log.debug(`error: ${error}`)
@@ -90,25 +91,22 @@ function sendSpan(call, callback) {
         callback(null, new Empty())
     })
 }
+actuals.serverPingCount = 0
 function pingSession(call) {
-    actualsCancellation.pingCount = 0
     call.on('data', function () {
-        actualsCancellation.serverDataCount++
+        actuals.serverPingCount++
     })
     call.on('end', () => {
         call.end()
     })
 }
 
-
-let actualsCancellation
 // https://github.com/grpc/grpc-node/issues/1542
 // https://github.com/grpc/grpc-node/pull/1616/files
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 // stream.isReady() newRunnable(DefaultStreamTask.java)
 test('client side streaming with deadline and cancellation', function (t) {
     t.plan(0)
-    actualsCancellation = {}
 
     const server = new GrpcServer()
     server.addService(services.AgentService, {
@@ -122,10 +120,10 @@ test('client side streaming with deadline and cancellation', function (t) {
     })
 
     server.startup((port) => {
-        actualsCancellation.dataCount = 1
-        actualsCancellation.t = t
-        actualsCancellation.sendSpanCount = 0
-        actualsCancellation.sendStatCount = 0
+        actuals.dataCount = 1
+        actuals.t = t
+        actuals.sendSpanCount = 0
+        actuals.sendStatCount = 0
 
         this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',

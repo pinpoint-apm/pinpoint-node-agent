@@ -115,13 +115,28 @@ test('client side streaming', function (t) {
 
 // https://github.com/pinpoint-apm/pinpoint-node-agent/issues/33#issuecomment-783891805
 test('gRPC stream write retry test', (t) => {
+    let retryCount = 0
     const given = new GrpcClientSideStream('spanStream', {}, () => {
         return {
             on: function() {
 
+            },
+            write: function() {
+                retryCount++
+
+                if (retryCount == 1) {
+                    throw new Error('[ERR_STREAM_WRITE_AFTER_END]: write after end')
+                } else {
+                    throw new Error('Unknow exception')
+                }
             }
         }
     })
+
+    t.true(given.stream, 'gRPC stream has streams')
+    given.write({})
+    t.equal(retryCount, 2, 'retry only once')
+
 
     t.end()
 })

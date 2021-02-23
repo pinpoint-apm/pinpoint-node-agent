@@ -113,11 +113,12 @@ test('client side streaming', function (t) {
     })
 })
 
+// https://github.com/pinpoint-apm/pinpoint-node-agent/issues/33#issuecomment-783891805
 test('gRPC stream write retry test', (t) => {
     const given = new GrpcClientSideStream('spanStream', {}, () => {
         return {
             on: function() {
-                
+
             }
         }
     })

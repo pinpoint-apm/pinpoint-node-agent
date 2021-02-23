@@ -7,8 +7,9 @@ const grpc = require('@grpc/grpc-js')
 'use strict'
 
 class GrpcServer {
-    constructor() {
+    constructor(portNumber = 0) {
         this.server = new grpc.Server()
+        this.portNumber = portNumber
     }
 
     addService(service, implementation) {
@@ -16,7 +17,7 @@ class GrpcServer {
     }
 
     startup(callback) {    
-        this.server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+        this.server.bindAsync(`localhost:${this.portNumber}`, grpc.ServerCredentials.createInsecure(), (err, port) => {
             this.server.start()
 
             if (err) {

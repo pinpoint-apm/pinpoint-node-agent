@@ -132,6 +132,14 @@ test('client side streaming with deadline and cancellation', function (t) {
         sendSpan: sendSpan
     })
 
+    const retry = (t) => {
+        server.startup(() => {
+            server.tryShutdown(() => {
+                t.end()
+            })
+        })
+    }
+
     server.startup((port) => {
         actuals.dataCount = 1
         actuals.t = t
@@ -215,7 +223,7 @@ test('client side streaming with deadline and cancellation', function (t) {
         endAction = () => {
             setTimeout(() => {
                 server.tryShutdown(() => {
-                    t.end()
+                    retry(t)
                 })
             }, 0)
         }

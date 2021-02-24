@@ -121,7 +121,7 @@ test('client side streaming with deadline and cancellation', function (t) {
     t.plan(26)
     actuals = {}
 
-    const server = new GrpcServer()
+    const server = new GrpcServer(5051)
     server.addService(services.AgentService, {
         pingSession: pingSession
     })

@@ -141,3 +141,31 @@ test('gRPC stream write retry test', (t) => {
 
     t.end()
 })
+
+test('gRPC stream write retry test', (t) => {
+    let retryCount = 0
+    const given = new GrpcClientSideStream('spanStream', {}, () => {
+        return {
+            on: function() {
+
+            },
+            write: function() {
+                retryCount++
+
+                if (retryCount == 1) {
+                    throw new Error('[ERR_STREAM_WRITE_AFTER_END]: write after end')
+                } else {
+                    throw new Error('Unknow exception')
+                }
+            }
+        }
+    })
+
+    t.true(given.grpcStream.stream, 'gRPC stream has streams')
+    given.write({})
+    t.equal(retryCount, 2, 'retry only once')
+    t.false(given.stream, 'gRPC stream has ended')
+
+
+    t.end()
+})

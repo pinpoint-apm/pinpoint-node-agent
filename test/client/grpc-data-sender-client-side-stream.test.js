@@ -269,17 +269,22 @@ test('gRPC client side stream reconnect test', (t) => {
             }
         }
     })
-    const fistDeadline = given.deadline
-    t.true(fistDeadline > 0, 'deadline is initialized')
+    t.true(given.deadline > 0, 'deadline is initialized')
     given.write({})
     t.deepEqual(actuals.data, {}, 'actuals data')
     t.false(actuals.ended, 'client side stream lives')
 
     given.deadline = given.deadline - (5 * 60 * 1000 + 100)
+    const fistDeadline = given.deadline
     given.write({order: 2})
     t.deepEqual(actuals.data, {order: 2}, 'actuals data is order: 2')
     t.true(actuals.ended, 'client side stream is ended')
     t.true(given.grpcStream.stream === null, 'client side stream is null')
 
+    t.equal(fistDeadline, given.deadline, 'deadline no changes')
+    given.write({order: 3})
+    t.deepEqual(actuals.data, {order: 3}, 'actuals data is order: 3')
+    t.true(given.deadline > fistDeadline, 'deadline new value')
+    
     t.end()
 })

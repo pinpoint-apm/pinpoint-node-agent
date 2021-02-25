@@ -40,7 +40,7 @@ function sendAgentStat(call, callback) {
             }
         }
     })
-    call.on('error', function(error) {
+    call.on('error', function (error) {
         serverT.true(false, 'when dealine, gRPC should never error in server call.on("error")')
         log.debug(`error: ${error}`)
     })
@@ -53,7 +53,7 @@ function sendAgentStat(call, callback) {
 function createStatCall(t) {
     const deadline = new Date()
     deadline.setMilliseconds(deadline.getMilliseconds() + 100)
-    return statClient.sendAgentStat({deadline: deadline}, (err, response) => {
+    return statClient.sendAgentStat({ deadline: deadline }, (err, response) => {
         if (err) {
             log.error(`statStream callback err: ${err} in statClient.sendAgentStat callback`)
             t.equal(err.code, grpc.status.DEADLINE_EXCEEDED, `error code grpc.status.DEADLINE_EXCEEDED in statClient.sendAgentStat callback`)
@@ -61,7 +61,7 @@ function createStatCall(t) {
             call = createStatCall(t)
             return
         }
-        
+
         if (response) {
             t.equal(callWriteOrder, callCount, 'call count compare in statClient.sendAgentStat callback')
             t.true(response, 'response is true in statClient.sendAgentStat callback')
@@ -71,7 +71,7 @@ function createStatCall(t) {
 
 function callStat(t) {
     call = createStatCall(t)
-    
+
     for (let index = 0; index < callCount; index++) {
         _.delay(function () {
             const pStatMessage = dataConvertor.convertStat({
@@ -127,4 +127,8 @@ test('client side streaming with deadline', function (t) {
             })
         }
     })
+})
+
+test('sendAgentInfo deadline', (t) => {
+    t.end()
 })

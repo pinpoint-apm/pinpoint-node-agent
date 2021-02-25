@@ -13,6 +13,8 @@ const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const { log } = require('../test-helper')
 
 var _ = require('lodash')
+const GrpcServer = require('./grpc-server')
+const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
 let statClient
 let endAction
@@ -130,5 +132,17 @@ test('client side streaming with deadline', function (t) {
 })
 
 test('sendAgentInfo deadline', (t) => {
-    t.end()
+    const server = new GrpcServer()
+
+    server.startup((port) => {
+        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
+            'agentid': '12121212',
+            'applicationname': 'applicationName',
+            'starttime': Date.now()
+        })
+
+        server.tryShutdown(() => {
+            t.end()
+        })
+    })
 })

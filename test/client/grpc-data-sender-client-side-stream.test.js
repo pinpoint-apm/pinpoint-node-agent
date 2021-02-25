@@ -152,9 +152,12 @@ test('client side streaming with deadline and cancellation', function (t) {
     }
 
     const tryShutdown = () => {
-        server.tryShutdown(() => {
-            t.end()
-        })
+        try {
+            server.tryShutdown(() => {
+                t.end()
+            })
+        } catch (error) {
+        }
     }
 
     server.startup((port) => {

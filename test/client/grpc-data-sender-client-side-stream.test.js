@@ -141,23 +141,10 @@ test('client side streaming with deadline and cancellation', function (t) {
         this.grpcDataSender.sendSpan(span)
         // 10st sendSpan when server shutdown
         this.grpcDataSender.sendSpan(span)
-        setTimeout(() => {
-            server.startup(() => {
-                // 11st sendSpan when server shutdown
-                this.grpcDataSender.sendSpan(span)
-                // 12st sendSpan and end when server shutdown
-                this.grpcDataSender.spanStream.end()
-            })
-        })
-    }
 
-    const tryShutdown = () => {
-        try {
-            server.tryShutdown(() => {
-                t.end()
-            })
-        } catch (error) {
-        }
+        server.tryShutdown(() => {
+            t.end()
+        })
     }
 
     server.startup((port) => {

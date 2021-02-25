@@ -11,6 +11,7 @@ const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const GrpcServer = require('./grpc-server')
 const Span = require('../../lib/context/span')
+const GrpcClientSideStream = require('../../lib/client/grpc-client-side-stream')
 
 let endAction
 let actuals
@@ -250,4 +251,22 @@ test('client side streaming with deadline and cancellation', function (t) {
         this.grpcDataSender.pingStream.end()
         this.grpcDataSender.statStream.end()
     })
+})
+
+
+test('gRPC client side stream reconnect test', (t) => {
+    const given = new GrpcClientSideStream('spanStream', {}, () => {
+        return {
+            on: function() {
+
+            },
+            write: function() {
+            }
+        }
+    })
+    const fistDeadline = given.deadline
+    t.true(fistDeadline > 0, 'deadline is initialized')
+    given.write({})
+    
+    t.end()
 })

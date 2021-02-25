@@ -255,18 +255,25 @@ test('client side streaming with deadline and cancellation', function (t) {
 
 
 test('gRPC client side stream reconnect test', (t) => {
+    let actuals = {}
     const given = new GrpcClientSideStream('spanStream', {}, () => {
         return {
             on: function() {
 
             },
-            write: function() {
+            write: function(data) {
+                actuals.data = data
+            },
+            end: function() {
+                actuals.ended = true
             }
         }
     })
     const fistDeadline = given.deadline
     t.true(fistDeadline > 0, 'deadline is initialized')
     given.write({})
-    
+    t.deepEqual(actuals.data, {}, 'actuals data')
+    t.false(actuals.ended, 'client side stream lives')
+
     t.end()
 })

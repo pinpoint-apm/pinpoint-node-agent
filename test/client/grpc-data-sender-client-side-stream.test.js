@@ -275,5 +275,11 @@ test('gRPC client side stream reconnect test', (t) => {
     t.deepEqual(actuals.data, {}, 'actuals data')
     t.false(actuals.ended, 'client side stream lives')
 
+    given.deadline = given.deadline - (5 * 60 * 1000 + 100)
+    given.write({order: 2})
+    t.deepEqual(actuals.data, {order: 2}, 'actuals data is order: 2')
+    t.true(actuals.ended, 'client side stream is ended')
+    t.true(given.grpcStream.stream === null, 'client side stream is null')
+
     t.end()
 })

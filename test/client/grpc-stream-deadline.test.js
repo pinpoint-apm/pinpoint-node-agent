@@ -131,9 +131,17 @@ test('client side streaming with deadline', function (t) {
     })
 })
 
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
+function requestAgentInfo() {
+
+}
+
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 test('sendAgentInfo deadline', (t) => {
     const server = new GrpcServer()
-
+    server.addService(services.AgentService, {
+        requestAgentInfo: requestAgentInfo
+    })
     server.startup((port) => {
         this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',

@@ -118,8 +118,10 @@ function pingSession(call) {
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 // stream.isReady() newRunnable(DefaultStreamTask.java)
 test('client side streaming with deadline and cancellation', function (t) {
-    t.plan(26)
+    t.plan(27)
     actuals = {}
+    // when server send stream
+    let callOrder = 0
 
     const server = new GrpcServer(5051)
     server.addService(services.AgentService, {
@@ -133,10 +135,25 @@ test('client side streaming with deadline and cancellation', function (t) {
     })
 
     const retry = (t) => {
-        server.startup(() => {
-            server.tryShutdown(() => {
-                t.end()
+        // 8st sendSpan when server shutdown
+        this.grpcDataSender.sendSpan(span)
+        // 9st sendSpan when server shutdown
+        this.grpcDataSender.sendSpan(span)
+        // 10st sendSpan when server shutdown
+        this.grpcDataSender.sendSpan(span)
+        setTimeout(() => {
+            server.startup(() => {
+                // 11st sendSpan when server shutdown
+                this.grpcDataSender.sendSpan(span)
+                // 12st sendSpan and end when server shutdown
+                this.grpcDataSender.spanStream.end()
             })
+        })
+    }
+
+    const tryShutdown = () => {
+        server.tryShutdown(() => {
+            t.end()
         })
     }
 
@@ -154,9 +171,6 @@ test('client side streaming with deadline and cancellation', function (t) {
             'starttime': Date.now()
         })
 
-        // when server send stream
-        let callOrder = 0
-
         const originCallback = this.grpcDataSender.spanStream.callback
         this.grpcDataSender.spanStream.callback = (err, response) => {
             callOrder++
@@ -173,6 +187,9 @@ test('client side streaming with deadline and cancellation', function (t) {
             } else if (callOrder == 7/* 8st when spanStream end, recovery spanstream */) {
                 t.equal(callOrder, 7, '8st when spanStream end, recovery spanstream in callback')
                 t.false(err, 'OK in 8st recovery spanstream callback')
+            } else if (callOrder == 9/* 12st sendSpan and end when server shutdown */) {
+                t.equal(callOrder, 9, '12st sendSpan and end when server shutdown in callback')
+                tryShutdown()
             }
             originCallback.call(this.grpcDataSender.spanStream, err, response)
         }

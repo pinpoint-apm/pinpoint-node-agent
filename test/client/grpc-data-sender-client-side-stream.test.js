@@ -118,7 +118,7 @@ function pingSession(call) {
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 // stream.isReady() newRunnable(DefaultStreamTask.java)
 test('client side streaming with deadline and cancellation', function (t) {
-    t.plan(27)
+    t.plan(26)
     actuals = {}
     // when server send stream
     let callOrder = 0
@@ -135,12 +135,13 @@ test('client side streaming with deadline and cancellation', function (t) {
     })
 
     const retry = () => {
-        // 8st sendSpan when server shutdown
-        this.grpcDataSender.sendSpan(span)
-        // 9st sendSpan when server shutdown
-        this.grpcDataSender.sendSpan(span)
-        // 10st sendSpan when server shutdown
-        this.grpcDataSender.sendSpan(span)
+        t.end()
+        // // 8st sendSpan when server shutdown
+        // this.grpcDataSender.sendSpan(span)
+        // // 9st sendSpan when server shutdown
+        // this.grpcDataSender.sendSpan(span)
+        // // 10st sendSpan when server shutdown
+        // this.grpcDataSender.sendSpan(span)
     }
 
     server.startup((port) => {
@@ -175,7 +176,6 @@ test('client side streaming with deadline and cancellation', function (t) {
                 t.false(err, 'OK in 8st recovery spanstream callback')
             } else if (callOrder == 9/* 12st sendSpan and end when server shutdown */) {
                 t.equal(callOrder, 9, '12st sendSpan and end when server shutdown in callback')
-                t.end()
             }
             originCallback.call(this.grpcDataSender.spanStream, err, response)
         }

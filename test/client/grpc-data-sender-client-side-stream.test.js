@@ -195,9 +195,9 @@ test('client side streaming with deadline and cancellation', function (t) {
         }
 
         const registeEventListeners = () => {
-            const originStatus = this.grpcDataSender.spanStream.stream.listeners('status')[0]
-            this.grpcDataSender.spanStream.stream.removeListener('status', originStatus)
-            this.grpcDataSender.spanStream.stream.on('status', (status) => {
+            const originStatus = this.grpcDataSender.spanStream.grpcStream.stream.listeners('status')[0]
+            this.grpcDataSender.spanStream.grpcStream.stream.removeListener('status', originStatus)
+            this.grpcDataSender.spanStream.grpcStream.stream.on('status', (status) => {
                 callOrder++
                 if (callOrder == 2/* 3st spanStream end on stream status event */) {
                     t.true(callOrder == 2, '3st spanStream end call Order on stream status event')
@@ -220,7 +220,7 @@ test('client side streaming with deadline and cancellation', function (t) {
                     setTimeout(() => {
                         // 8st when spanStream end, recovery spanstream
                         actuals.sendSpanCount++
-                        this.grpcDataSender.spanStream.stream.end()
+                        this.grpcDataSender.spanStream.grpcStream.stream.end()
                         this.grpcDataSender.sendSpan(span)
                         registeEventListeners()
                         this.grpcDataSender.spanStream.end()

@@ -133,7 +133,7 @@ test('gRPC stream write retry test', (t) => {
         }
     })
 
-    t.true(given.stream, 'gRPC stream has streams')
+    t.true(given.grpcStream.stream, 'gRPC stream has streams')
     given.write({})
     t.equal(retryCount, 2, 'retry only once')
     t.false(given.stream, 'gRPC stream has ended')

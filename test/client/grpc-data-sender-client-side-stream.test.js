@@ -141,10 +141,6 @@ test('client side streaming with deadline and cancellation', function (t) {
         this.grpcDataSender.sendSpan(span)
         // 10st sendSpan when server shutdown
         this.grpcDataSender.sendSpan(span)
-
-        // server.tryShutdown(() => {
-        //     t.end()
-        // })
     }
 
     server.startup((port) => {
@@ -179,6 +175,7 @@ test('client side streaming with deadline and cancellation', function (t) {
                 t.false(err, 'OK in 8st recovery spanstream callback')
             } else if (callOrder == 9/* 12st sendSpan and end when server shutdown */) {
                 t.equal(callOrder, 9, '12st sendSpan and end when server shutdown in callback')
+                t.end()
             }
             originCallback.call(this.grpcDataSender.spanStream, err, response)
         }

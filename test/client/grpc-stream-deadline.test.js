@@ -149,6 +149,8 @@ test('sendAgentInfo deadline', (t) => {
             'starttime': Date.now()
         })
 
+        this.grpcDataSender.sendAgentInfo({})
+
         server.tryShutdown(() => {
             t.end()
         })

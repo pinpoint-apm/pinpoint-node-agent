@@ -159,7 +159,6 @@ test('client side streaming with deadline and cancellation', function (t) {
             'starttime': Date.now()
         })
 
-        const originCallback = this.grpcDataSender.spanStream.callback
         this.grpcDataSender.spanStream.callback = (err, response) => {
             callOrder++
 
@@ -178,7 +177,6 @@ test('client side streaming with deadline and cancellation', function (t) {
             } else if (callOrder == 9/* 12st sendSpan and end when server shutdown */) {
                 t.equal(callOrder, 9, '12st sendSpan and end when server shutdown in callback')
             }
-            originCallback.call(this.grpcDataSender.spanStream, err, response)
         }
 
         const registeEventListeners = () => {

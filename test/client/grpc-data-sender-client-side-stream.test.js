@@ -205,7 +205,6 @@ test('client side streaming with deadline and cancellation', function (t) {
                     setTimeout(() => {
                         // 8st when spanStream end, recovery spanstream
                         actuals.sendSpanCount++
-                        this.grpcDataSender.spanStream.grpcStream.stream.end()
                         this.grpcDataSender.sendSpan(span)
                         registeEventListeners()
                         this.grpcDataSender.spanStream.end()

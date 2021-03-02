@@ -75,6 +75,12 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
         // when server send stream end event
         let callOrder = 0
 
+        const originGrpcStream = this.grpcDataSender.pingStream.grpcStream.endWithStream
+        this.grpcDataSender.pingStream.grpcStream.endWithStream = (stream) => {
+            this.grpcDataSender.pingStream.grpcStream.endedStream = stream
+            originGrpcStream(stream)
+        }
+
         const registeEventListeners = () => {
             const originEnd = this.grpcDataSender.pingStream.grpcStream.stream.listeners('end')[0]
             this.grpcDataSender.pingStream.grpcStream.stream.removeListener('end', originEnd)
@@ -84,7 +90,7 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                     t.equal(callOrder, 4, 'when server throw error, client call emit "error", "status" and "end" events')
                     t.true(this.grpcDataSender.pingStream.grpcStream.stream, 'when server throw error, 2st event call an end event')
                     originEnd()
-                    t.true(this.grpcDataSender.pingStream.grpcStream.stream === null, 'when server throw error, end stream and null assign')
+                    t.equal(this.grpcDataSender.pingStream.grpcStream.stream, this.grpcDataSender.pingStream.grpcStream.endedStream, 'when server throw error, end stream and null assign')
                     nextSendPingTest()
                 } else if (callOrder == 8/* 4st Cancelled on client */) {
                     t.equal(callOrder, 8, '4st Cancelled on client')
@@ -148,7 +154,7 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                         registeEventListeners()
 
                         // 7st end
-                        this.grpcDataSender.pingStream.end()
+                        this.grpcDataSender.pingStream.grpcStream.end()
                     })
                 }
                 originError(error)
@@ -187,7 +193,7 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
 
         const nextSendPingTest = () => {
             // after Server Error case, reconnect case
-            t.true(this.grpcDataSender.pingStream.grpcStream.stream === null, 'stream is null after call.cancel not found error')
+            t.equal(this.grpcDataSender.pingStream.grpcStream.stream, this.grpcDataSender.pingStream.grpcStream.endedStream, 'stream is null after call.cancel not found error')
             this.grpcDataSender.sendPing()
             registeEventListeners()
             t.true(this.grpcDataSender.pingStream.grpcStream.stream, 'when reconnect to gRPC server, after call.cancel not found error')

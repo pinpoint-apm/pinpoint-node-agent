@@ -207,7 +207,7 @@ test('client side streaming with deadline and cancellation', function (t) {
                         actuals.sendSpanCount++
                         this.grpcDataSender.sendSpan(span)
                         registeEventListeners()
-                        this.grpcDataSender.spanStream.end()
+                        this.grpcDataSender.spanStream.grpcStream.end()
                     })
                 } else if (callOrder == 8/* 8st when spanStream end, recovery spanstream */) {
                     t.equal(callOrder, 8, '8st when spanStream end, recovery on stream status event')
@@ -236,17 +236,17 @@ test('client side streaming with deadline and cancellation', function (t) {
         actuals.sendSpanCount++
         this.grpcDataSender.sendSpan(span)
         // 3st spanStream end
-        this.grpcDataSender.spanStream.end()
+        this.grpcDataSender.spanStream.grpcStream.end()
 
         // 4st sendSpan
         actuals.sendSpanCount++
         this.grpcDataSender.sendSpan(span)
         registeEventListeners()
         // 5st spanStream end
-        this.grpcDataSender.spanStream.end()
+        this.grpcDataSender.spanStream.grpcStream.end()
 
-        this.grpcDataSender.pingStream.end()
-        this.grpcDataSender.statStream.end()
+        this.grpcDataSender.pingStream.grpcStream.end()
+        this.grpcDataSender.statStream.grpcStream.end()
     })
 })
 

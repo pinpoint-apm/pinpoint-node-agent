@@ -145,14 +145,13 @@ function requestAgentInfo(call, callback) {
     } else if (agentInfo == 2) {
         _.delay(() => {
             callback(null, result)
-            tryShutdown()
         }, 100)
     }
 }
 
 let tryShutdown
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test.skip('sendAgentInfo deadline', (t) => {
+test('sendAgentInfo deadline', (t) => {
     const server = new GrpcServer()
     server.addService(services.AgentService, {
         requestAgentInfo: requestAgentInfo
@@ -186,6 +185,8 @@ test.skip('sendAgentInfo deadline', (t) => {
             t.equal(err.code, 4, '2st sendAgentInfo err.code is 4')
             t.equal(err.details, 'Deadline exceeded', '2st sendAgentInfo err.details is Deadline exceeded')
             t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendAgentInfo err.message is Deadline exceeded')
+
+            tryShutdown()
         })
 
         tryShutdown = () => {
@@ -227,12 +228,19 @@ test('sendApiMetaInfo deadline', (t) => {
             'starttime': Date.now()
         })
 
+        let apiMetaInfoResponse = 0
+
         this.grpcDataSender.sendApiMetaInfo({
             hostname: 'hostname',
             "serviceType": 1400,
         }, (err, response) => {
             t.true(response, '1st sendApiMetaInfo response is success')
             t.false(err, '1st sendApiMetaInfo err is false')
+
+            apiMetaInfoResponse++
+            if (apiMetaInfoResponse == 2) {
+                tryShutdown()
+            }
         })
 
         this.grpcDataSender.getDeadline = () => {
@@ -250,7 +258,10 @@ test('sendApiMetaInfo deadline', (t) => {
             t.equal(err.details, 'Deadline exceeded', '2st sendApiMetaInfo err.details is Deadline exceeded')
             t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendApiMetaInfo err.message is Deadline exceeded')
 
-            tryShutdown()
+            apiMetaInfoResponse++
+            if (apiMetaInfoResponse == 2) {
+                tryShutdown()
+            }
         })
 
         tryShutdown = () => {

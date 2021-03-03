@@ -197,3 +197,68 @@ test('sendAgentInfo deadline', (t) => {
         }
     })
 })
+
+let apiMetaInfo = 0
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
+function requestApiMetaData(call, callback) {
+    apiMetaInfo++
+
+    const result = new spanMessages.PResult()
+
+    if (apiMetaInfo == 1) {
+        callback(null, result)
+    } else if (apiMetaInfo == 2) {
+        _.delay(() => {
+            callback(null, result)
+            tryShutdown()
+        }, 100)
+    }
+}
+
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
+test('sendApiMetaInfo deadline', (t) => {
+    const server = new GrpcServer()
+    server.addService(services.MetadataService, {
+        requestApiMetaData: requestApiMetaData
+    })
+    server.startup((port) => {
+        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
+            'agentid': '12121212',
+            'applicationname': 'applicationName',
+            'starttime': Date.now()
+        })
+
+        this.grpcDataSender.sendApiMetaInfo({
+            hostname: 'hostname',
+            "serviceType": 1400,
+        }, (err, response) => {
+            t.true(response, '1st sendApiMetaInfo response is success')
+            t.false(err, '1st sendApiMetaInfo err is false')
+        })
+
+        this.grpcDataSender.getDeadline = () => {
+            const deadline = new Date()
+            deadline.setMilliseconds(deadline.getMilliseconds() + 100)
+            return deadline
+        }
+
+        this.grpcDataSender.sendApiMetaInfo({
+            hostname: 'hostname',
+            "serviceType": 1400,
+        }, (err, response) => {
+            t.true(response, '2st sendApiMetaInfo response')
+            // t.false(response, '2st sendApiMetaInfo response is undefined')
+            // t.equal(err.code, 4, '2st sendApiMetaInfo err.code is 4')
+            // t.equal(err.details, 'Deadline exceeded', '2st sendApiMetaInfo err.details is Deadline exceeded')
+            // t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendApiMetaInfo err.message is Deadline exceeded')
+        })
+
+        tryShutdown = () => {
+            setTimeout(() => {
+                server.tryShutdown(() => {
+                    t.end()
+                })
+            }, 0)
+        }
+    })
+})

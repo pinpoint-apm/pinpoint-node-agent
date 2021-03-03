@@ -172,12 +172,20 @@ test('sendAgentInfo deadline', (t) => {
             t.false(err, '1st sendAgentInfo err is false')
         })
 
+        this.grpcDataSender.getDeadline = () => {
+            const deadline = new Date()
+            deadline.setMilliseconds(deadline.getMilliseconds() + 100)
+            return deadline
+        }
+
         this.grpcDataSender.sendAgentInfo({
             hostname: 'hostname',
             "serviceType": 1400,
         }, (err, response) => {
-            t.true(response, '2st sendAgentInfo response is success')
-            t.false(err, '2st sendAgentInfo err is false')
+            t.false(response, '2st sendAgentInfo response is undefined')
+            t.equal(err.code, 4, '2st sendAgentInfo err.code is 4')
+            t.equal(err.details, 'Deadline exceeded', '2st sendAgentInfo err.details is Deadline exceeded')
+            t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendAgentInfo err.message is Deadline exceeded')
         })
 
         tryShutdown = () => {

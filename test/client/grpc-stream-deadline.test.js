@@ -133,11 +133,21 @@ test('client side streaming with deadline', function (t) {
     })
 })
 
+let agentInfo = 0
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function requestAgentInfo(call, callback) {
+    agentInfo++
+
     const result = new spanMessages.PResult()
-    callback(null, result)
-    tryShutdown()
+
+    if (agentInfo == 1) {
+        callback(null, result)
+    } else if (agentInfo == 2) {
+        _.delay(() => {
+            callback(null, result)
+            tryShutdown()
+        }, 100)
+    }
 }
 
 let tryShutdown
@@ -160,6 +170,14 @@ test('sendAgentInfo deadline', (t) => {
         }, (err, response) => {
             t.true(response, '1st sendAgentInfo response is success')
             t.false(err, '1st sendAgentInfo err is false')
+        })
+
+        this.grpcDataSender.sendAgentInfo({
+            hostname: 'hostname',
+            "serviceType": 1400,
+        }, (err, response) => {
+            t.true(response, '2st sendAgentInfo response is success')
+            t.false(err, '2st sendAgentInfo err is false')
         })
 
         tryShutdown = () => {

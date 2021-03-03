@@ -157,6 +157,9 @@ test('sendAgentInfo deadline', (t) => {
         this.grpcDataSender.sendAgentInfo({
             hostname: 'hostname',
             "serviceType": 1400,
+        }, (err, response) => {
+            t.true(response, '1st sendAgentInfo response is success')
+            t.false(err, '1st sendAgentInfo err is false')
         })
 
         tryShutdown = () => {

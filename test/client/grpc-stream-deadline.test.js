@@ -16,6 +16,8 @@ var _ = require('lodash')
 const GrpcServer = require('./grpc-server')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
+const spanMessages = require('../../lib/data/grpc/Span_pb')
+
 let statClient
 let endAction
 let serverT
@@ -132,10 +134,13 @@ test('client side streaming with deadline', function (t) {
 })
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
-function requestAgentInfo() {
-
+function requestAgentInfo(call, callback) {
+    const result = new spanMessages.PResult()
+    callback(null, result)
+    tryShutdown()
 }
 
+let tryShutdown
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 test('sendAgentInfo deadline', (t) => {
     const server = new GrpcServer()
@@ -149,10 +154,17 @@ test('sendAgentInfo deadline', (t) => {
             'starttime': Date.now()
         })
 
-        this.grpcDataSender.sendAgentInfo({})
-
-        server.tryShutdown(() => {
-            t.end()
+        this.grpcDataSender.sendAgentInfo({
+            hostname: 'hostname',
+            "serviceType": 1400,
         })
+
+        tryShutdown = () => {
+            setTimeout(() => {
+                server.tryShutdown(() => {
+                    t.end()
+                })
+            }, 0)
+        }
     })
 })

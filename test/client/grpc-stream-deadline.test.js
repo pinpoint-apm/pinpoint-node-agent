@@ -152,7 +152,7 @@ function requestAgentInfo(call, callback) {
 
 let tryShutdown
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('sendAgentInfo deadline', (t) => {
+test.skip('sendAgentInfo deadline', (t) => {
     const server = new GrpcServer()
     server.addService(services.AgentService, {
         requestAgentInfo: requestAgentInfo
@@ -210,7 +210,6 @@ function requestApiMetaData(call, callback) {
     } else if (apiMetaInfo == 2) {
         _.delay(() => {
             callback(null, result)
-            tryShutdown()
         }, 100)
     }
 }
@@ -246,11 +245,12 @@ test('sendApiMetaInfo deadline', (t) => {
             hostname: 'hostname',
             "serviceType": 1400,
         }, (err, response) => {
-            t.true(response, '2st sendApiMetaInfo response')
-            // t.false(response, '2st sendApiMetaInfo response is undefined')
-            // t.equal(err.code, 4, '2st sendApiMetaInfo err.code is 4')
-            // t.equal(err.details, 'Deadline exceeded', '2st sendApiMetaInfo err.details is Deadline exceeded')
-            // t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendApiMetaInfo err.message is Deadline exceeded')
+            t.false(response, '2st sendApiMetaInfo response is undefined')
+            t.equal(err.code, 4, '2st sendApiMetaInfo err.code is 4')
+            t.equal(err.details, 'Deadline exceeded', '2st sendApiMetaInfo err.details is Deadline exceeded')
+            t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendApiMetaInfo err.message is Deadline exceeded')
+
+            tryShutdown()
         })
 
         tryShutdown = () => {

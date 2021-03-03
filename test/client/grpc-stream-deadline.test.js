@@ -328,10 +328,10 @@ test('sendStringMetaInfo deadline', (t) => {
             hostname: 'hostname',
             "serviceType": 1400,
         }, (err, response) => {
-            // t.false(response, '2st sendStringMetaInfo response is undefined')
-            // t.equal(err.code, 4, '2st sendStringMetaInfo err.code is 4')
-            // t.equal(err.details, 'Deadline exceeded', '2st sendStringMetaInfo err.details is Deadline exceeded')
-            // t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendStringMetaInfo err.message is Deadline exceeded')
+            t.false(response, '2st sendStringMetaInfo response is undefined')
+            t.equal(err.code, 4, '2st sendStringMetaInfo err.code is 4')
+            t.equal(err.details, 'Deadline exceeded', '2st sendStringMetaInfo err.details is Deadline exceeded')
+            t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendStringMetaInfo err.message is Deadline exceeded')
 
             stringMetaDataResponse++
             if (stringMetaDataResponse == 2) {

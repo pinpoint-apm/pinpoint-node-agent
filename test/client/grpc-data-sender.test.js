@@ -5,14 +5,6 @@
  */
 
 const test = require('tape')
-const axios = require('axios')
-
-const {
-  log,
-  fixture,
-  util,
-  enableDataSending
-} = require('../test-helper')
 
 const Annotation = require('../../lib/context/annotation')
 const {

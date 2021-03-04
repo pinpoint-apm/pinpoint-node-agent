@@ -17,6 +17,7 @@ const shimmer = require('shimmer')
 const httpShared = require('../../lib/instrumentation/http-shared')
 const traceContext = require('../../lib/context/trace-context')
 const contextManager = require('../../lib/context/context-manager')
+const activeTrace = require('../../lib/metric/active-trace')
 
 class MockAgent extends Agent {
     startSchedule(agentId, agentStartTime) {
@@ -59,6 +60,11 @@ class MockAgent extends Agent {
 
         const traceObjectMap = contextManager.getAllObject()
         traceObjectMap.clear()
+
+        const activeTraces = activeTrace.getAllTraces()
+        activeTraces.forEach((value) => {
+            activeTrace.remove(value)
+        })
 
         this.dataSender = dataSenderMock()
         this.traceContext = traceContext.init(this.agentInfo, this.dataSender, this.config)

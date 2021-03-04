@@ -8,19 +8,19 @@ const test = require('tape')
 const { log } = require('../test-helper')
 const instManager = require('../../lib/instrumentation/inst-manager')
 
-test('load modules with versions', (t) => {
-    const agent = {
-        loadedModule: [],
-        includedModules: function(name) {
-            return !this.loadedModule.includes(name)
-        },
-        setModules: function(name) {
-            this.loadedModule.push(name)
-        }
-    }
-    instManager.init(agent)
+// test('load modules with versions', (t) => {
+//     const agent = {
+//         loadedModule: [],
+//         includedModules: function(name) {
+//             return !this.loadedModule.includes(name)
+//         },
+//         setModules: function(name) {
+//             this.loadedModule.push(name)
+//         }
+//     }
+//     instManager.init(agent)
 
-    require('http')
+//     require('http')
 
-    t.end()
-})
+//     t.end()
+// })

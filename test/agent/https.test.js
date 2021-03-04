@@ -21,7 +21,7 @@ test('initialize https module', (t) => {
         }
     }
 
-    const dut = instManager.init(agent)
+    instManager.init(agent)
     
     var loadModule = instManager.__get__('loadModule')
     loadModule('https', agent)

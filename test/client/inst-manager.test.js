@@ -4,11 +4,9 @@
  * Apache License v2.0
  */
 
-
 const test = require('tape')
-const { log } = require('../test-helper')
-const instManager = require('../../lib/instrumentation/inst-manager')
 const rewire = require('rewire')
+const instManager = rewire('../../lib/instrumentation/inst-manager')
 
 test('load modules with versions', (t) => {
     const agent = {
@@ -20,6 +18,10 @@ test('load modules with versions', (t) => {
             this.loadedModule.push(name)
         }
     }
+
+    const modules = instManager.__get__('MODULES')
+    t.equal(modules.length, 9, 'the numbers of support modules are 9')
+
     instManager.init(agent)
 
     t.end()

@@ -1,6 +1,6 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/.bin/tape ./test/**/*.test.js",
@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/pinpoint-apm/pinpoint-node-agent",
   "engines": {
-    "node": ">=8.2.0"
+    "node": "^8.13.0 || >=10.10.0"
   },
   "keywords": [
     "pinpoint",
@@ -57,10 +57,10 @@
     "distributed-tracing"
   ],
   "dependencies": {
+    "@grpc/grpc-js": "^1.2.3",
     "end-of-stream": "^1.4.1",
     "find-node-modules": "^2.1.0",
     "google-protobuf": "^3.13.0",
-    "grpc": "^1.24.3",
     "int64-buffer": "^0.99.1007",
     "internal-ip": "^3.0.1",
     "loglevel": "^1.6.1",
@@ -84,6 +84,8 @@
     "koa": "^2.6.1",
     "koa-bodyparser": "^4.2.1",
     "koa-router": "^7.4.0",
+    "lodash": "^4.17.20",
+    "mock-mongoose": "^8.0.0",
     "mongodb-core": "3.1.7",
     "mongoose": "^5.4.3",
     "npm-run-all": "^4.1.5",

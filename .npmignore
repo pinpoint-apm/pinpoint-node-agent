@@ -1,5 +1,16 @@
 # .npmignore
 node_modules
 test
-.eslintrc.js
 demo
+
+# CI
+coverage
+.eslintrc.js
+.eslintignore
+.node-version
+checkstyle-results.xml
+.github
+.vscode
+
+# gRPC
+*.proto

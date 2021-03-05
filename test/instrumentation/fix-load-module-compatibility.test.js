@@ -8,7 +8,7 @@
 
 const test = require('tape')
 const mockAgent = require('../support/agent-singleton-mock')
-const instManager = require('../../lib/instrumentation/inst-manager')
+const ModuleHook = require('../../lib/instrumentation/inst-manager')
 const Hook = require('require-in-the-middle')
 
 test(`hook.unhook() for require-in-the-middle learning test`, (t) => {
@@ -60,8 +60,8 @@ test(`all modules for require-in-the-middle learning test`, (t) => {
 test(`hook`, (t) => {
     t.plan(1)
 
-    instManager.init(mockAgent)
-    t.true(instManager.hook, 'Hook member instance created')
+    const moduleHook = new ModuleHook(mockAgent)
+    t.true(moduleHook.hook, 'Hook member instance created')
 
     // const http = require('http')
     t.end()

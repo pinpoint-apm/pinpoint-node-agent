@@ -25,7 +25,7 @@ test('load modules with versions', (t) => {
             loadModuleCount[name] = 0
         }
         loadModuleCount[name]++
-        originLoadModule.call(name, agent, m)
+        originLoadModule.call(moduleHook, name, agent, m)
     }
 
     const http1 = require('http')

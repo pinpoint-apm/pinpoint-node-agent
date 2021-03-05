@@ -7,8 +7,7 @@
 'use strict'
 
 const test = require('tape')
-const rewire = require('rewire')
-const instManager = rewire('../../lib/instrumentation/inst-manager')
+const ModuleHook = require('../../lib/instrumentation/inst-manager')
 
 test('initialize https module', (t) => {
     const agent = {
@@ -21,9 +20,9 @@ test('initialize https module', (t) => {
         }
     }
 
-    instManager.init(agent)
+    const moduleHook = new ModuleHook(agent)
     
-    var loadModule = instManager.__get__('loadModule')
+    var loadModule = moduleHook.loadModule
     loadModule('https', agent)
     loadModule('kmkm', agent)
     t.true(agent.modules.includes('https'), 'https module contains load module')

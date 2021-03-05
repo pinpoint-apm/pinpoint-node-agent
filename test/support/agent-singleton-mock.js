@@ -6,8 +6,7 @@
 
 'use strict'
 
-const { fixture, util, log } = require('../test-helper')
-const instManager = require('../../lib/instrumentation/inst-manager')
+const { fixture, log } = require('../test-helper')
 
 const enableDataSending = require('../test-helper').enableDataSending
 enableDataSending()

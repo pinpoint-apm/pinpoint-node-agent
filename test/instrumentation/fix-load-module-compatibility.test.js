@@ -64,5 +64,6 @@ test(`hook`, (t) => {
     t.true(moduleHook.hook, 'Hook member instance created')
 
     // const http = require('http')
+    moduleHook.unhook()
     t.end()
 })

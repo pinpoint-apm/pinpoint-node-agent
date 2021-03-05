@@ -28,5 +28,6 @@ test('initialize https module', (t) => {
     t.true(agent.modules.includes('https'), 'https module contains load module')
     t.equal(agent.modules.length, 1, 'module shuld be registed')
 
+    moduleHook.unhook()
     t.end()
 })

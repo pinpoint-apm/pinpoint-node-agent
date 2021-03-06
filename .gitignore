@@ -40,3 +40,6 @@ yarn.lock
 
 # lint
 checkstyle-results.xml
+
+# coverage
+.nyc_output

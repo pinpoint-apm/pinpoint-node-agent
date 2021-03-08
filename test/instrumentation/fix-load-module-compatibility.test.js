@@ -8,7 +8,7 @@
 
 const test = require('tape')
 const mockAgent = require('../support/agent-singleton-mock')
-const ModuleHook = require('../../lib/instrumentation/inst-manager')
+const ModuleHook = require('../../lib/instrumentation/module-hook')
 const Hook = require('require-in-the-middle')
 
 test(`hook.unhook() for require-in-the-middle learning test`, (t) => {

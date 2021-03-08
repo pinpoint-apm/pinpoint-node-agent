@@ -7,7 +7,7 @@
 'use strict'
 
 const test = require('tape')
-const ModuleHook = require('../../lib/instrumentation/inst-manager')
+const ModuleHook = require('../../lib/instrumentation/module-hook')
 
 test('initialize https module', (t) => {
     const agent = {

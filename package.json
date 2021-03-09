@@ -59,7 +59,6 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.2.3",
     "end-of-stream": "^1.4.1",
-    "find-node-modules": "^2.1.0",
     "google-protobuf": "^3.13.0",
     "int64-buffer": "^0.99.1007",
     "internal-ip": "^3.0.1",

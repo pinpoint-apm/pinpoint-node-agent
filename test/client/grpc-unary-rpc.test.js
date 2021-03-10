@@ -4,16 +4,16 @@
  * Apache License v2.0
  */
 
- const test = require('tape')
- const grpc = require('@grpc/grpc-js')
- 
- const services = require('../../lib/data/grpc/Service_grpc_pb')
- 
- var _ = require('lodash')
- const GrpcServer = require('./grpc-server')
- const GrpcDataSender = require('../../lib/client/grpc-data-sender')
+const test = require('tape')
 
- const spanMessages = require('../../lib/data/grpc/Span_pb')
+const services = require('../../lib/data/grpc/Service_grpc_pb')
+
+var _ = require('lodash')
+const GrpcServer = require('./grpc-server')
+const GrpcDataSender = require('../../lib/client/grpc-data-sender')
+
+const spanMessages = require('../../lib/data/grpc/Span_pb')
+const dataSenderFactory = require('../../lib/client/data-sender-factory')
 
 let agentInfo = 0
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
@@ -40,6 +40,18 @@ test('sendAgentInfo deadline', (t) => {
     })
     server.startup((port) => {
         this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
+            'agentid': '12121212',
+            'applicationname': 'applicationName',
+            'starttime': Date.now()
+        })
+
+        this.dataSender = dataSenderFactory.create({
+            collectorIp: 'localhost',
+            collectorTcpPort: port,
+            collectorStatPort: port,
+            collectorSpanPort: port,
+            enabledDataSending: true
+        }, {
             'agentid': '12121212',
             'applicationname': 'applicationName',
             'starttime': Date.now()

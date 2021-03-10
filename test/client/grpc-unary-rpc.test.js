@@ -43,7 +43,7 @@ let tryShutdown
 // DEFAULT_AGENT_INFO_SEND_INTERVAL_MS = 3 * 1000L;
 // retry 3 times per attempt
 // DEFAULT_MAX_TRY_COUNT_PER_ATTEMPT = 3;
-test('sendAgentInfo retry', (t) => {
+test('sendAgentInfo refresh', (t) => {
     const server = new GrpcServer()
     server.addService(services.AgentService, {
         requestAgentInfo: requestAgentInfo

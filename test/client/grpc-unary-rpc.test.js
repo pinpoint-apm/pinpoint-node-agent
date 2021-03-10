@@ -14,6 +14,7 @@ const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
 const spanMessages = require('../../lib/data/grpc/Span_pb')
 const dataSenderFactory = require('../../lib/client/data-sender-factory')
+const require('../../lib/data/dto/agent-info')
 
 let agentInfo = 0
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
@@ -56,6 +57,8 @@ test('sendAgentInfo deadline', (t) => {
             'applicationname': 'applicationName',
             'starttime': Date.now()
         })
+
+
 
         this.grpcDataSender.sendAgentInfo({
             hostname: 'hostname',

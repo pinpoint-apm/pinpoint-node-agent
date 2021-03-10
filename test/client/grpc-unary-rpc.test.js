@@ -10,7 +10,6 @@ const services = require('../../lib/data/grpc/Service_grpc_pb')
 
 var _ = require('lodash')
 const GrpcServer = require('./grpc-server')
-const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
 const spanMessages = require('../../lib/data/grpc/Span_pb')
 const dataSenderFactory = require('../../lib/client/data-sender-factory')
@@ -24,8 +23,10 @@ function requestAgentInfo(call, callback) {
     const result = new spanMessages.PResult()
 
     if (agentInfo == 1) {
-        callback(null, result)
-        tryShutdown()
+        _.delay(() => {
+            callback(null, result)
+            tryShutdown()
+        }, 100)
     } else if (agentInfo == 2) {
         _.delay(() => {
             callback(null, result)
@@ -35,16 +36,18 @@ function requestAgentInfo(call, callback) {
 
 let tryShutdown
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('sendAgentInfo deadline', (t) => {
+test('sendAgentInfo retry', (t) => {
     const server = new GrpcServer()
     server.addService(services.AgentService, {
         requestAgentInfo: requestAgentInfo
     })
     server.startup((port) => {
-        const agentInfo = new AgentInfo({
+        const agentInfo1 = Object.assign(new AgentInfo({
             agentId: '12121212',
             applicationName: 'applicationName',
             agentStartTime: Date.now()
+        }), {
+            ip: '1'
         })
 
         this.dataSender = dataSenderFactory.create({
@@ -53,8 +56,14 @@ test('sendAgentInfo deadline', (t) => {
             collectorStatPort: port,
             collectorSpanPort: port,
             enabledDataSending: true
-        }, agentInfo)
-        this.dataSender.send(agentInfo)
+        }, agentInfo1)
+
+        this.dataSender.dataSender.getDeadline = () => {
+            const deadline = new Date()
+            deadline.setMilliseconds(deadline.getMilliseconds() + 100)
+            return deadline
+        }
+        this.dataSender.send(agentInfo1)
 
         tryShutdown = () => {
             setTimeout(() => {

@@ -34,7 +34,6 @@ function requestAgentInfo(call, callback) {
     }
 }
 
-let tryShutdown
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 // AgentInfoSender.java
 // refresh daily
@@ -43,6 +42,7 @@ let tryShutdown
 // DEFAULT_AGENT_INFO_SEND_INTERVAL_MS = 3 * 1000L;
 // retry 3 times per attempt
 // DEFAULT_MAX_TRY_COUNT_PER_ATTEMPT = 3;
+let tryShutdown
 test('sendAgentInfo refresh', (t) => {
     const server = new GrpcServer()
     server.addService(services.AgentService, {

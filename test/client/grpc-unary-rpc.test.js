@@ -25,6 +25,7 @@ function requestAgentInfo(call, callback) {
 
     if (agentInfo == 1) {
         callback(null, result)
+        tryShutdown()
     } else if (agentInfo == 2) {
         _.delay(() => {
             callback(null, result)
@@ -40,10 +41,10 @@ test('sendAgentInfo deadline', (t) => {
         requestAgentInfo: requestAgentInfo
     })
     server.startup((port) => {
-        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
-            'agentid': '12121212',
-            'applicationname': 'applicationName',
-            'starttime': Date.now()
+        const agentInfo = new AgentInfo({
+            agentId: '12121212',
+            applicationName: 'applicationName',
+            agentStartTime: Date.now()
         })
 
         this.dataSender = dataSenderFactory.create({
@@ -52,35 +53,8 @@ test('sendAgentInfo deadline', (t) => {
             collectorStatPort: port,
             collectorSpanPort: port,
             enabledDataSending: true
-        }, {
-            'agentid': '12121212',
-            'applicationname': 'applicationName',
-            'starttime': Date.now()
-        })
-
-
-        new AgentInfo({
-            
-        })
-        this.grpcDataSender.sendAgentInfo({
-            hostname: 'hostname',
-            "serviceType": 1400,
-        }, (err, response) => {
-            t.true(response, '1st sendAgentInfo response is success')
-            t.false(err, '1st sendAgentInfo err is false')
-        })
-
-        this.grpcDataSender.sendAgentInfo({
-            hostname: 'hostname',
-            "serviceType": 1400,
-        }, (err, response) => {
-            // t.false(response, '2st sendAgentInfo response is undefined')
-            // t.equal(err.code, 4, '2st sendAgentInfo err.code is 4')
-            // t.equal(err.details, 'Deadline exceeded', '2st sendAgentInfo err.details is Deadline exceeded')
-            // t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendAgentInfo err.message is Deadline exceeded')
-
-            tryShutdown()
-        })
+        }, agentInfo)
+        this.dataSender.send(agentInfo)
 
         tryShutdown = () => {
             setTimeout(() => {

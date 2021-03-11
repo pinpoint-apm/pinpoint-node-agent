@@ -16,17 +16,11 @@ const dataSenderFactory = require('../../lib/client/data-sender-factory')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 
-let agentInfo = 0
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function requestAgentInfo(call, callback) {
-    agentInfo++
-
     const result = new spanMessages.PResult()
     _.delay(() => {
         callback(null, result)
-        if (agentInfo == 3) {
-            tryShutdown()
-        }
     }, 100)
 }
 
@@ -60,6 +54,7 @@ test('sendAgentInfo refresh', (t) => {
             return deadline
         }
         this.dataSender.dataSender.requestAgentInfo.retryInterval = 0
+
         const origin = this.dataSender.dataSender.requestAgentInfo.request
         let callbackTimes = 0
         const callback = (err, response) => {
@@ -68,6 +63,8 @@ test('sendAgentInfo refresh', (t) => {
             t.equal(callbackTimes, 1, 'callback only once called')
             t.false(response, 'retry response is undefined')
             t.equal(requestTimes, 3, 'retry requestes 3 times')
+
+            tryShutdown()
         }
 
         let requestTimes = 0
@@ -96,8 +93,8 @@ function requestApiMetaData(call, callback) {
 
     _.delay(() => {
         callback(null, result)
-        tryShutdown()
         if (apiMetaInfo == 3) {
+            tryShutdown()
         }
     }, 100)
 }
@@ -129,6 +126,13 @@ test('sendApiMetaInfo retry', (t) => {
             collectorSpanPort: port,
             enabledDataSending: true
         }, agentInfo)
+
+        this.dataSender.dataSender.requestApiMetaData.getDeadline = () => {
+            const deadline = new Date()
+            deadline.setMilliseconds(deadline.getMilliseconds() + 100)
+            return deadline
+        }
+        this.dataSender.dataSender.requestApiMetaData.retryInterval = 0
 
         this.dataSender.send(apiMetaInfo)
 

@@ -83,11 +83,8 @@ test('sendAgentInfo refresh', (t) => {
     })
 })
 
-let apiMetaInfo = 0
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function requestApiMetaData(call, callback) {
-    apiMetaInfo++
-
     const result = new spanMessages.PResult()
 
     _.delay(() => {

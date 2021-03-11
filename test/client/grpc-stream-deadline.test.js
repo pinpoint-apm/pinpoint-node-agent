@@ -171,7 +171,7 @@ test('sendAgentInfo deadline', (t) => {
             t.false(err, '1st sendAgentInfo err is false')
         })
 
-        this.grpcDataSender.getDeadline = () => {
+        this.grpcDataSender.requestAgentInfo.getDeadline = () => {
             const deadline = new Date()
             deadline.setMilliseconds(deadline.getMilliseconds() + 100)
             return deadline

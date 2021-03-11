@@ -55,7 +55,6 @@ test('sendAgentInfo refresh', (t) => {
         }
         this.dataSender.dataSender.requestAgentInfo.retryInterval = 0
 
-        const origin = this.dataSender.dataSender.requestAgentInfo.request
         let callbackTimes = 0
         const callback = (err, response) => {
             callbackTimes++
@@ -63,10 +62,10 @@ test('sendAgentInfo refresh', (t) => {
             t.equal(callbackTimes, 1, 'callback only once called')
             t.false(response, 'retry response is undefined')
             t.equal(requestTimes, 3, 'retry requestes 3 times')
-
+            
             tryShutdown()
         }
-
+        const origin = this.dataSender.dataSender.requestAgentInfo.request
         let requestTimes = 0
         this.dataSender.dataSender.requestAgentInfo.request = (data, _, timesOfRetry = 1) => {
             requestTimes++
@@ -93,9 +92,6 @@ function requestApiMetaData(call, callback) {
 
     _.delay(() => {
         callback(null, result)
-        if (apiMetaInfo == 3) {
-            tryShutdown()
-        }
     }, 100)
 }
 
@@ -134,6 +130,22 @@ test('sendApiMetaInfo retry', (t) => {
         }
         this.dataSender.dataSender.requestApiMetaData.retryInterval = 0
 
+        let callbackTimes = 0
+        const callback = (err, response) => {
+            callbackTimes++
+            t.true(err, 'retry 3 times and err deadline')
+            t.equal(callbackTimes, 1, 'callback only once called')
+            t.false(response, 'retry response is undefined')
+            t.equal(requestTimes, 3, 'retry requestes 3 times')
+            
+            tryShutdown()
+        }
+        const origin = this.dataSender.dataSender.requestApiMetaData.request
+        let requestTimes = 0
+        this.dataSender.dataSender.requestApiMetaData.request = (data, _, timesOfRetry = 1) => {
+            requestTimes++
+            origin.call(this.dataSender.dataSender.requestApiMetaData, data, callback, timesOfRetry)
+        }
         this.dataSender.send(apiMetaInfo)
 
         tryShutdown = () => {

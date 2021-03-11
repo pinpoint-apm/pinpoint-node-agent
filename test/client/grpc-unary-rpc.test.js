@@ -66,8 +66,12 @@ test('sendAgentInfo refresh', (t) => {
             t.true(err, 'retry 3 times and err deadline')
             t.equal(callbackTimes, 1, 'callback only once called')
             t.false(response, 'retry response is undefined')
+            t.equal(requestTimes, 3, 'retry requestes 3 times')
         }
-        this.dataSender.dataSender.requestAgentInfo.request = (data, _, timesOfRetry = 0) => {
+
+        let requestTimes = 0
+        this.dataSender.dataSender.requestAgentInfo.request = (data, _, timesOfRetry = 1) => {
+            requestTimes++
             origin.call(this.dataSender.dataSender.requestAgentInfo, data, callback, timesOfRetry)
         }
         this.dataSender.send(agentInfo1)

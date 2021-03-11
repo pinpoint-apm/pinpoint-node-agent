@@ -319,7 +319,7 @@ test('sendStringMetaInfo deadline', (t) => {
             }
         })
 
-        this.grpcDataSender.getDeadline = () => {
+        this.grpcDataSender.requestStringMetaData.getDeadline = () => {
             const deadline = new Date()
             deadline.setMilliseconds(deadline.getMilliseconds() + 100)
             return deadline

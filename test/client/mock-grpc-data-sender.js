@@ -27,6 +27,7 @@ class MockgRPCDataSender extends GrpcDataSender {
       }
     }
     this.requestApiMetaData = new GrpcUnaryRPC('requestApiMetaData', this.metadataClient, this.metadataClient.requestApiMetaData, 0, 0)
+    this.requestStringMetaData = new GrpcUnaryRPC('requestStringMetaData', this.metadataClient, this.metadataClient.requestStringMetaData, 0, 0)
   }
 
   initializeSpanStream() {

@@ -176,6 +176,7 @@ test('sendAgentInfo deadline', (t) => {
             deadline.setMilliseconds(deadline.getMilliseconds() + 100)
             return deadline
         }
+        this.grpcDataSender.requestAgentInfo.retryInterval = 0
 
         this.grpcDataSender.sendAgentInfo({
             hostname: 'hostname',

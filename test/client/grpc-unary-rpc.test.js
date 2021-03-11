@@ -15,6 +15,7 @@ const spanMessages = require('../../lib/data/grpc/Span_pb')
 const dataSenderFactory = require('../../lib/client/data-sender-factory')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
+const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function requestAgentInfo(call, callback) {
@@ -144,6 +145,55 @@ test('sendApiMetaInfo retry', (t) => {
             origin.call(this.dataSender.dataSender.requestApiMetaData, data, callback, timesOfRetry)
         }
         this.dataSender.send(apiMetaInfo)
+
+        tryShutdown = () => {
+            setTimeout(() => {
+                server.tryShutdown(() => {
+                    t.end()
+                })
+            }, 0)
+        }
+    })
+})
+
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
+function requestStringMetaData(call, callback) {
+    const result = new spanMessages.PResult()
+    _.delay(() => {
+        callback(null, result)
+        tryShutdown()
+    }, 100)
+}
+
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
+test('sendStringMetaInfo retry', (t) => {
+    const server = new GrpcServer()
+    server.addService(services.MetadataService, {
+        requestStringMetaData: requestStringMetaData
+    })
+    server.startup((port) => {
+        const agentInfo = Object.assign(new AgentInfo({
+            agentId: '12121212',
+            applicationName: 'applicationName',
+            agentStartTime: Date.now()
+        }), {
+            ip: '1'
+        })
+        
+        this.dataSender = dataSenderFactory.create({
+            collectorIp: 'localhost',
+            collectorTcpPort: port,
+            collectorStatPort: port,
+            collectorSpanPort: port,
+            enabledDataSending: true
+        }, agentInfo)
+        
+        const stringMetaInfo = new StringMetaInfo({
+            stringId: '12121212',
+            stringValue: 'agentInfo'
+        })
+
+        this.dataSender.send(stringMetaInfo)
 
         tryShutdown = () => {
             setTimeout(() => {

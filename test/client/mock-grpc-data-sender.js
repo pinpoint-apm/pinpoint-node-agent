@@ -6,6 +6,7 @@
 
 'use strict'
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
+const GrpcUnaryRPC = require('../../lib/client/grpc-unary-rpc')
 
 class MockgRPCDataSender extends GrpcDataSender {
   initializeClients(agentInfo, collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort) {
@@ -15,6 +16,7 @@ class MockgRPCDataSender extends GrpcDataSender {
         self.actualAgentInfo = pAgentInfo
       }
     }
+    this.requestAgentInfo = new GrpcUnaryRPC('requestAgentInfo', this.agentClient, this.agentClient.requestAgentInfo, 0, 0)
 
     this.metadataClient = {
       requestApiMetaData: function (pApiMetaData) {

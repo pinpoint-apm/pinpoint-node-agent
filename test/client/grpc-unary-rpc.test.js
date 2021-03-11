@@ -161,7 +161,6 @@ function requestStringMetaData(call, callback) {
     const result = new spanMessages.PResult()
     _.delay(() => {
         callback(null, result)
-        tryShutdown()
     }, 100)
 }
 
@@ -193,6 +192,29 @@ test('sendStringMetaInfo retry', (t) => {
             stringValue: 'agentInfo'
         })
 
+        this.dataSender.dataSender.requestStringMetaData.getDeadline = () => {
+            const deadline = new Date()
+            deadline.setMilliseconds(deadline.getMilliseconds() + 100)
+            return deadline
+        }
+        this.dataSender.dataSender.requestStringMetaData.retryInterval = 0
+
+        let callbackTimes = 0
+        const callback = (err, response) => {
+            callbackTimes++
+            t.true(err, 'retry 3 times and err deadline')
+            t.equal(callbackTimes, 1, 'callback only once called')
+            t.false(response, 'retry response is undefined')
+            t.equal(requestTimes, 3, 'retry requestes 3 times')
+            
+            tryShutdown()
+        }
+        const origin = this.dataSender.dataSender.requestStringMetaData.request
+        let requestTimes = 0
+        this.dataSender.dataSender.requestStringMetaData.request = (data, _, timesOfRetry = 1) => {
+            requestTimes++
+            origin.call(this.dataSender.dataSender.requestStringMetaData, data, callback, timesOfRetry)
+        }
         this.dataSender.send(stringMetaInfo)
 
         tryShutdown = () => {

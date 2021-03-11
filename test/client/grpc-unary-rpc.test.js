@@ -23,7 +23,9 @@ function requestAgentInfo(call, callback) {
     const result = new spanMessages.PResult()
     _.delay(() => {
         callback(null, result)
-        tryShutdown()
+        if (agentInfo == 3) {
+            tryShutdown()
+        }
     }, 100)
 }
 
@@ -51,12 +53,22 @@ test('sendAgentInfo refresh', (t) => {
             enabledDataSending: true
         }, agentInfo1)
 
-        this.dataSender.dataSender.getDeadline = () => {
+        this.dataSender.dataSender.requestAgentInfo.getDeadline = () => {
             const deadline = new Date()
             deadline.setMilliseconds(deadline.getMilliseconds() + 100)
             return deadline
         }
         this.dataSender.dataSender.requestAgentInfo.retryInterval = 0
+        const origin = this.dataSender.dataSender.requestAgentInfo.request
+        let callbackTimes = 0
+        const callback = (err, response) => {
+            callbackTimes++
+            t.true(err, 'retry 3 times and err deadline')
+            t.equal(callbackTimes, 1, 'callback only once called')
+        }
+        this.dataSender.dataSender.requestAgentInfo.request = (data, _, timesOfRetry = 0) => {
+            origin.call(this.dataSender.dataSender.requestAgentInfo, data, callback, timesOfRetry)
+        }
         this.dataSender.send(agentInfo1)
 
         tryShutdown = () => {

@@ -21,17 +21,10 @@ function requestAgentInfo(call, callback) {
     agentInfo++
 
     const result = new spanMessages.PResult()
-
-    if (agentInfo == 1) {
-        _.delay(() => {
-            callback(null, result)
-            tryShutdown()
-        }, 100)
-    } else if (agentInfo == 2) {
-        _.delay(() => {
-            callback(null, result)
-        }, 100)
-    }
+    _.delay(() => {
+        callback(null, result)
+        tryShutdown()
+    }, 100)
 }
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
@@ -63,6 +56,7 @@ test('sendAgentInfo refresh', (t) => {
             deadline.setMilliseconds(deadline.getMilliseconds() + 100)
             return deadline
         }
+        this.dataSender.dataSender.requestAgentInfo.retryInterval = 0
         this.dataSender.send(agentInfo1)
 
         tryShutdown = () => {

@@ -94,14 +94,12 @@ function requestApiMetaData(call, callback) {
 
     const result = new spanMessages.PResult()
 
-    if (apiMetaInfo == 1) {
+    _.delay(() => {
         callback(null, result)
         tryShutdown()
-    } else if (apiMetaInfo == 2) {
-        _.delay(() => {
-            callback(null, result)
-        }, 100)
-    }
+        if (apiMetaInfo == 3) {
+        }
+    }, 100)
 }
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts

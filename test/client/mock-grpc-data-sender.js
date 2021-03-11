@@ -9,7 +9,7 @@ const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const GrpcUnaryRPC = require('../../lib/client/grpc-unary-rpc')
 
 class MockgRPCDataSender extends GrpcDataSender {
-  initializeClients(agentInfo, collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort) {
+  initializeClients() {
     let self = this
     this.agentClient = {
       requestAgentInfo: function (pAgentInfo) {
@@ -51,7 +51,7 @@ class MockgRPCDataSender extends GrpcDataSender {
       end: function () {
 
       },
-      on: function (eventName, callback) {
+      on: function () {
 
       }
     }
@@ -66,7 +66,7 @@ class MockgRPCDataSender extends GrpcDataSender {
       end: function () {
 
       },
-      on: function (eventName, callback) {
+      on: function () {
 
       }
     }

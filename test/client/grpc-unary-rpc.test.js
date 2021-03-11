@@ -226,3 +226,69 @@ test('sendStringMetaInfo retry', (t) => {
         }
     })
 })
+
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
+function requestAgentInfo2(call, callback) {
+    const result = new spanMessages.PResult()
+    _.delay(() => {
+        callback(null, result)
+    }, 100)
+}
+
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
+test('sendAgentInfo schedule', (t) => {
+    const server = new GrpcServer()
+    server.addService(services.AgentService, {
+        requestAgentInfo: requestAgentInfo2
+    })
+    server.startup((port) => {
+        const agentInfo1 = Object.assign(new AgentInfo({
+            agentId: '12121212',
+            applicationName: 'applicationName',
+            agentStartTime: Date.now()
+        }), {
+            ip: '1'
+        })
+
+        this.dataSender = dataSenderFactory.create({
+            collectorIp: 'localhost',
+            collectorTcpPort: port,
+            collectorStatPort: port,
+            collectorSpanPort: port,
+            enabledDataSending: true
+        }, agentInfo1)
+
+        this.dataSender.dataSender.requestAgentInfo.getDeadline = () => {
+            const deadline = new Date()
+            deadline.setMilliseconds(deadline.getMilliseconds() + 100)
+            return deadline
+        }
+        this.dataSender.dataSender.requestAgentInfo.retryInterval = 0
+
+        let callbackTimes = 0
+        const callback = (err, response) => {
+            callbackTimes++
+            t.true(err, 'retry 3 times and err deadline')
+            t.equal(callbackTimes, 1, 'callback only once called')
+            t.false(response, 'retry response is undefined')
+            t.equal(requestTimes, 3, 'retry requestes 3 times')
+            
+            tryShutdown()
+        }
+        const origin = this.dataSender.dataSender.requestAgentInfo.request
+        let requestTimes = 0
+        this.dataSender.dataSender.requestAgentInfo.request = (data, _, timesOfRetry = 1) => {
+            requestTimes++
+            origin.call(this.dataSender.dataSender.requestAgentInfo, data, callback, timesOfRetry)
+        }
+        this.dataSender.send(agentInfo1)
+
+        tryShutdown = () => {
+            setTimeout(() => {
+                server.tryShutdown(() => {
+                    t.end()
+                })
+            }, 0)
+        }
+    })
+})

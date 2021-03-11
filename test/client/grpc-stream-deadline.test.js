@@ -244,7 +244,7 @@ test('sendApiMetaInfo deadline', (t) => {
             }
         })
 
-        this.grpcDataSender.getDeadline = () => {
+        this.grpcDataSender.requestApiMetaData.getDeadline = () => {
             const deadline = new Date()
             deadline.setMilliseconds(deadline.getMilliseconds() + 100)
             return deadline

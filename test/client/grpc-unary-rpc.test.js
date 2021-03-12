@@ -16,6 +16,22 @@ const dataSenderFactory = require('../../lib/client/data-sender-factory')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
+const DataSender = require('../../lib/client/data-sender')
+const GrpcDataSender = require('../../lib/client/grpc-data-sender')
+
+class MockGrpcDataSender extends GrpcDataSender {
+    initializeSpanStream() {
+
+    }
+
+    initializeStatStream() {
+
+    }
+
+    initializePingStream() {
+
+    }
+}
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function requestAgentInfo(call, callback) {
@@ -41,7 +57,17 @@ test('sendAgentInfo refresh', (t) => {
             ip: '1'
         })
 
-        this.dataSender = dataSenderFactory.create({
+        const create = (config, agentInfo) => {
+            return new DataSender(config, new MockGrpcDataSender(
+                config.collectorIp,
+                config.collectorTcpPort,
+                config.collectorStatPort,
+                config.collectorSpanPort,
+                agentInfo
+            ))
+        }
+
+        this.dataSender = create({
             collectorIp: 'localhost',
             collectorTcpPort: port,
             collectorStatPort: port,
@@ -63,9 +89,9 @@ test('sendAgentInfo refresh', (t) => {
             t.equal(callbackTimes, 1, 'callback only once called')
             t.false(response, 'retry response is undefined')
             t.equal(requestTimes, 3, 'retry requestes 3 times')
-            
+
             tryShutdown()
-            // this.dataSender.dataSender.agentInfoDailyScheduler.stop()
+            this.dataSender.dataSender.agentInfoDailyScheduler.stop()
         }
         const origin = this.dataSender.dataSender.requestAgentInfo.request
         let requestTimes = 0
@@ -136,7 +162,7 @@ test('sendApiMetaInfo retry', (t) => {
             t.equal(callbackTimes, 1, 'callback only once called')
             t.false(response, 'retry response is undefined')
             t.equal(requestTimes, 3, 'retry requestes 3 times')
-            
+
             tryShutdown()
         }
         const origin = this.dataSender.dataSender.requestApiMetaData.request
@@ -179,7 +205,7 @@ test('sendStringMetaInfo retry', (t) => {
         }), {
             ip: '1'
         })
-        
+
         this.dataSender = dataSenderFactory.create({
             collectorIp: 'localhost',
             collectorTcpPort: port,
@@ -187,7 +213,7 @@ test('sendStringMetaInfo retry', (t) => {
             collectorSpanPort: port,
             enabledDataSending: true
         }, agentInfo)
-        
+
         const stringMetaInfo = new StringMetaInfo({
             stringId: '12121212',
             stringValue: 'agentInfo'
@@ -207,7 +233,7 @@ test('sendStringMetaInfo retry', (t) => {
             t.equal(callbackTimes, 1, 'callback only once called')
             t.false(response, 'retry response is undefined')
             t.equal(requestTimes, 3, 'retry requestes 3 times')
-            
+
             tryShutdown()
         }
         const origin = this.dataSender.dataSender.requestStringMetaData.request
@@ -273,8 +299,9 @@ test('sendAgentInfo schedule', (t) => {
             t.equal(callbackTimes, 1, 'callback only once called')
             t.false(response, 'retry response is undefined')
             t.equal(requestTimes, 3, 'retry requestes 3 times')
-            
+
             tryShutdown()
+            this.dataSender.dataSender.agentInfoDailyScheduler.stop()
         }
         const origin = this.dataSender.dataSender.requestAgentInfo.request
         let requestTimes = 0

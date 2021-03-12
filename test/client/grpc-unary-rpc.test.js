@@ -65,6 +65,7 @@ test('sendAgentInfo refresh', (t) => {
             t.equal(requestTimes, 3, 'retry requestes 3 times')
             
             tryShutdown()
+            // this.dataSender.dataSender.agentInfoDailyScheduler.stop()
         }
         const origin = this.dataSender.dataSender.requestAgentInfo.request
         let requestTimes = 0

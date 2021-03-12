@@ -75,6 +75,10 @@ class MockgRPCDataSender extends GrpcDataSender {
   initializePingStream() {
 
   }
+
+  initializeAgentInfoScheduler() {
+    
+  }
 }
 
 module.exports = MockgRPCDataSender

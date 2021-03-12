@@ -192,6 +192,7 @@ test('sendAgentInfo deadline', (t) => {
 
         tryShutdown = () => {
             setTimeout(() => {
+                this.grpcDataSender.closeScheduler()
                 server.tryShutdown(() => {
                     t.end()
                 })

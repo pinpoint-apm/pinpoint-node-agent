@@ -285,32 +285,33 @@ test('sendAgentInfo schedule', (t) => {
             enabledDataSending: true
         }, agentInfo1)
 
-        this.dataSender.dataSender.requestAgentInfo.getDeadline = () => {
-            const deadline = new Date()
-            deadline.setMilliseconds(deadline.getMilliseconds() + 100)
-            return deadline
-        }
         this.dataSender.dataSender.requestAgentInfo.retryInterval = 0
+        const originAgentInfoRefreshInterval = this.dataSender.dataSender.agentInfoRefreshInterval
         this.dataSender.dataSender.agentInfoRefreshInterval = () => {
-            return 10000
+            return 100
         }
         this.dataSender.dataSender.initializeAgentInfoScheduler()
 
         let callbackTimes = 0
         const callback = (err, response) => {
             callbackTimes++
-            t.true(err, 'retry 3 times and err deadline')
-            t.equal(callbackTimes, 1, 'callback only once called')
-            t.false(response, 'retry response is undefined')
-            t.equal(requestTimes, 3, 'retry requestes 3 times')
 
-            tryShutdown()
-            this.dataSender.dataSender.agentInfoDailyScheduler.stop()
+            t.true(callbackTimes <= 2, 'retry call is less than 2')
+            t.true(response, 'retry by schedule')
+            
+            if (callbackTimes == 2) {
+                tryShutdown()
+            }
         }
         const origin = this.dataSender.dataSender.requestAgentInfo.request
         let requestTimes = 0
         this.dataSender.dataSender.requestAgentInfo.request = (data, _, timesOfRetry = 1) => {
             requestTimes++
+            if (requestTimes == 2) {
+                this.dataSender.dataSender.agentInfoRefreshInterval = originAgentInfoRefreshInterval
+                this.dataSender.dataSender.agentInfoDailyScheduler.stop()
+            }
+
             origin.call(this.dataSender.dataSender.requestAgentInfo, data, callback, timesOfRetry)
         }
         this.dataSender.send(agentInfo1)

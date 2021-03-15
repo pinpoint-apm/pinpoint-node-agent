@@ -291,6 +291,10 @@ test('sendAgentInfo schedule', (t) => {
             return deadline
         }
         this.dataSender.dataSender.requestAgentInfo.retryInterval = 0
+        this.dataSender.dataSender.agentInfoRefreshInterval = () => {
+            return 10000
+        }
+        this.dataSender.dataSender.initializeAgentInfoScheduler()
 
         let callbackTimes = 0
         const callback = (err, response) => {

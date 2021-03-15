@@ -1,6 +1,18 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [0.8.0] - 2021-03-15
+### Added
+- #49 Retry unary stream(requestAgentInfo, requestApiMetaData and requestStringMetaData)
+- #35 Remove find-node-modules
+- #40 Github action
+
+### Changed
+- #33 Transition to gRPC Pure JavaScript Client
+
+### Fixed
+- #34 urijs npm audit security report
+
 ## [0.7.2] - 2021-01-05
 ### Fixed
 - #27 Fix gRPC client side streaming memory leak

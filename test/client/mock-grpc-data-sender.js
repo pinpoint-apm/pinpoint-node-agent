@@ -6,15 +6,17 @@
 
 'use strict'
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
+const GrpcUnaryRPC = require('../../lib/client/grpc-unary-rpc')
 
 class MockgRPCDataSender extends GrpcDataSender {
-  initializeClients(agentInfo, collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort) {
+  initializeClients() {
     let self = this
     this.agentClient = {
       requestAgentInfo: function (pAgentInfo) {
         self.actualAgentInfo = pAgentInfo
       }
     }
+    this.requestAgentInfo = new GrpcUnaryRPC('requestAgentInfo', this.agentClient, this.agentClient.requestAgentInfo, 0, 0)
 
     this.metadataClient = {
       requestApiMetaData: function (pApiMetaData) {
@@ -24,6 +26,8 @@ class MockgRPCDataSender extends GrpcDataSender {
         self.actualStringMetaData = pStringMetaData
       }
     }
+    this.requestApiMetaData = new GrpcUnaryRPC('requestApiMetaData', this.metadataClient, this.metadataClient.requestApiMetaData, 0, 0)
+    this.requestStringMetaData = new GrpcUnaryRPC('requestStringMetaData', this.metadataClient, this.metadataClient.requestStringMetaData, 0, 0)
   }
 
   initializeSpanStream() {
@@ -47,7 +51,7 @@ class MockgRPCDataSender extends GrpcDataSender {
       end: function () {
 
       },
-      on: function (eventName, callback) {
+      on: function () {
 
       }
     }
@@ -62,7 +66,7 @@ class MockgRPCDataSender extends GrpcDataSender {
       end: function () {
 
       },
-      on: function (eventName, callback) {
+      on: function () {
 
       }
     }
@@ -70,6 +74,10 @@ class MockgRPCDataSender extends GrpcDataSender {
 
   initializePingStream() {
 
+  }
+
+  initializeAgentInfoScheduler() {
+    
   }
 }
 

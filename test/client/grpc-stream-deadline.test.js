@@ -171,11 +171,12 @@ test('sendAgentInfo deadline', (t) => {
             t.false(err, '1st sendAgentInfo err is false')
         })
 
-        this.grpcDataSender.getDeadline = () => {
+        this.grpcDataSender.requestAgentInfo.getDeadline = () => {
             const deadline = new Date()
             deadline.setMilliseconds(deadline.getMilliseconds() + 100)
             return deadline
         }
+        this.grpcDataSender.requestAgentInfo.retryInterval = 0
 
         this.grpcDataSender.sendAgentInfo({
             hostname: 'hostname',
@@ -191,6 +192,7 @@ test('sendAgentInfo deadline', (t) => {
 
         tryShutdown = () => {
             setTimeout(() => {
+                this.grpcDataSender.closeScheduler()
                 server.tryShutdown(() => {
                     t.end()
                 })
@@ -243,7 +245,7 @@ test('sendApiMetaInfo deadline', (t) => {
             }
         })
 
-        this.grpcDataSender.getDeadline = () => {
+        this.grpcDataSender.requestApiMetaData.getDeadline = () => {
             const deadline = new Date()
             deadline.setMilliseconds(deadline.getMilliseconds() + 100)
             return deadline
@@ -318,7 +320,7 @@ test('sendStringMetaInfo deadline', (t) => {
             }
         })
 
-        this.grpcDataSender.getDeadline = () => {
+        this.grpcDataSender.requestStringMetaData.getDeadline = () => {
             const deadline = new Date()
             deadline.setMilliseconds(deadline.getMilliseconds() + 100)
             return deadline

@@ -1,6 +1,6 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "0.8.0",
+  "version": "0.8.0-next.0",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/.bin/tape ./test/**/*.test.js",
@@ -66,8 +66,7 @@
     "methods": "^1.1.2",
     "require-in-the-middle": "^5.0.3",
     "semver": "^5.6.0",
-    "shimmer": "^1.2.0",
-    "utf-8-validate": "^5.0.2"
+    "shimmer": "^1.2.0"
   },
   "devDependencies": {
     "axios": "^0.21.1",
@@ -83,7 +82,6 @@
     "koa-bodyparser": "^4.2.1",
     "koa-router": "^7.4.0",
     "lodash": "^4.17.20",
-    "mock-mongoose": "^8.0.0",
     "mongodb-core": "3.1.7",
     "mongoose": "^5.4.3",
     "npm-run-all": "^4.1.5",

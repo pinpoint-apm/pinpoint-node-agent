@@ -40,7 +40,7 @@ CommonJS
 ## Agent - Collector compatibility table
 Agent Version | Collector 1.x | Collector 2.x
 ------------- | --------------- | ---------------
-0.6.x | no      | yes
+0.8.x | no      | yes
 
 ## Environment variables
 Based on the [pinpoint-config-default.json](/lib/pinpoint-config-default.json) file, only necessary parts are set as environment variables.

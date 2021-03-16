@@ -109,6 +109,39 @@ final class PinpointNodeAgentTesterTests: XCTestCase {
         
         waitForExpectations(timeout: 2 * 24 * 60 * 60)
     }
+    
+    func test_gRPCJS() {
+        let exp = expectation(description: "gRPC JS test")
+        
+        let tester = PinpointNodeAgentTester()
+        
+        let source = Timer
+                .publish(every: 1.0, on: .main, in: .common)
+                .autoconnect()
+                .scan(0) { index, _ in index + 1 }
+        
+        requestNodeServer(source, tester, URL(string: "http://localhost:3000")!)
+        requestNodeServer(source, tester, URL(string: "http://localhost:3000")!)
+        requestNodeServer(source, tester, URL(string: "http://localhost:3000")!)
+        requestNodeServer(source, tester, URL(string: "http://localhost:3000")!)
+        requestNodeServer(source, tester, URL(string: "http://localhost:3000")!)
+        
+        waitForExpectations(timeout: 2 * 24 * 60 * 60)
+    }
+    
+    fileprivate func requestNodeServer(_ source: Publishers.Scan<Publishers.Autoconnect<Timer.TimerPublisher>, Int>, _ tester: PinpointNodeAgentTester, _ url: URL) {
+        source.receive(on: DispatchQueue.global())
+            .flatMap({ index -> AnyPublisher<String, PinpointNodeAgentTester.Error> in
+                return tester.request()
+            })
+            .sink(receiveCompletion: { result in
+                print("receiveCompletion: \(result)")
+            }, receiveValue: { data in
+                let thread = Thread.current.number
+                print("receiveValue thread number: \(thread) data: \(data)")
+            })
+            .store(in: &subscriptions)
+    }
 
     static var allTests = [
         ("testExample", testPerformanceTest),

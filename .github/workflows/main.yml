@@ -11,15 +11,21 @@ jobs:
   test:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node_version:
+          - 10
+          - 12
+          - 14
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    name: Node ${{ matrix.node_version }} on ubuntu-latest
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       - name: setup node environment
         uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: ${{ matrix.node_version }}
       - run: npm install
       - run: npm test
       - name: Lint

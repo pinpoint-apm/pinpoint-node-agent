@@ -17,7 +17,6 @@ jobs:
           - 12
           - 14
           - 10.10.0
-          - 8
 
     name: Node ${{ matrix.node_version }} on ubuntu-latest
     steps:

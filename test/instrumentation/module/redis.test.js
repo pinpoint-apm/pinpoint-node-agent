@@ -7,17 +7,19 @@
 const test = require('tape')
 const axios = require('axios')
 
-const { log, fixture, util, enableDataSending } = require('../../test-helper')
+const { log } = require('../../test-helper')
 
 const agent = require('../../support/agent-singleton-mock')
 
 const express = require('express')
-const ioRedis = require('ioredis-mock')
-const Redis = require('redis-mock')
 const Koa = require('koa')
 const Router = require('koa-router')
 const koaBodyParser = require('koa-bodyparser')
-const rq = require('request')
+
+const { GenericContainer } = require("testcontainers")
+
+const ioRedis = require('ioredis-mock')
+const Redis = require('redis-mock')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -44,37 +46,37 @@ test(`${testName1} should Record the connections between express and redis.`, fu
   const PATH = `/${testName}`
 
   app.use(express.json())
-  app.use(function(req,res,next){
+  app.use(function (req, res, next) {
     req.cache = client
     next()
   })
-  app.post(PATH, function(req,res,next){
+  app.post(PATH, function (req, res, next) {
     req.accepts('application/json')
     var key = req.body.name
     var value = JSON.stringify(req.body)
-    req.cache.set(key,value,function(err,data){
-      if(err){
+    req.cache.set(key, value, function (err, data) {
+      if (err) {
         console.log(err)
-        res.send("error "+err)
+        res.send("error " + err)
         return
       }
-      req.cache.expire(key,10)
+      req.cache.expire(key, 10)
       res.json(value)
     })
   })
-  app.get(`${PATH}/:name`,function(req,res,next){
+  app.get(`${PATH}/:name`, function (req, res, next) {
     var key = req.params.name
-    req.cache.get(key, function(err,data){
-      if(err){
+    req.cache.get(key, function (err, data) {
+      if (err) {
         console.log(err)
-        res.send("error "+err)
+        res.send("error " + err)
         return
       }
       var value = JSON.parse(data)
       res.json(value)
     })
   })
-  app.use(function(req, res, next) {
+  app.use(function (req, res, next) {
     var err = new Error('Not Found')
     err.status = 404
     next(err)
@@ -107,37 +109,37 @@ test(`${testName2} should Record the connections between express and ioredis.`, 
   const PATH = `/${testName}`
 
   app.use(express.json())
-  app.use(function(req,res,next){
+  app.use(function (req, res, next) {
     req.cache = redis
     next()
   })
-  app.post(PATH, function(req,res,next){
+  app.post(PATH, function (req, res, next) {
     req.accepts('application/json')
     var key = req.body.name
     var value = JSON.stringify(req.body)
-    req.cache.set(key,value,function(err,data){
-      if(err){
+    req.cache.set(key, value, function (err, data) {
+      if (err) {
         console.log(err)
-        res.send("error "+err)
+        res.send("error " + err)
         return
       }
-      req.cache.expire(key,10)
+      req.cache.expire(key, 10)
       res.json(value)
     })
   })
-  app.get(`${PATH}/:name`,function(req,res,next){
+  app.get(`${PATH}/:name`, function (req, res, next) {
     var key = req.params.name
-    req.cache.get(key, function(err,data){
-      if(err){
+    req.cache.get(key, function (err, data) {
+      if (err) {
         console.log(err)
-        res.send("error "+err)
+        res.send("error " + err)
         return
       }
       var value = JSON.parse(data)
       res.json(value)
     })
   })
-  app.use(function(req, res, next) {
+  app.use(function (req, res, next) {
     var err = new Error('Not Found')
     err.status = 404
     next(err)
@@ -171,13 +173,13 @@ test(`${testName3} should Record the connections between koa and redis.`, functi
 
   const PATH = `/${testName}`
   app.use(koaBodyParser())
-  router.post(PATH, async function(ctx, next) {
+  router.post(PATH, async function (ctx, next) {
     console.log(ctx.request.body)
     const key = ctx.request.body.name
     const value = JSON.stringify(ctx.request.body)
 
-    client.set(key, value, function(err, data) {
-      if(err){
+    client.set(key, value, function (err, data) {
+      if (err) {
         console.log(err)
         ctx.body = `error :: ${err}`
         return
@@ -216,7 +218,7 @@ test(`${testName3} should Record the connections between koa and redis.`, functi
 const testName4 = 'koa-ioredis'
 test(`${testName4} should Record the connections between koa and ioredis.`, function (t) {
   agent.bindHttp()
-  
+
   const testName = testName4
 
   t.plan(2)
@@ -227,7 +229,7 @@ test(`${testName4} should Record the connections between koa and ioredis.`, func
 
   const PATH = `/${testName}`
   app.use(koaBodyParser())
-  router.post(PATH, async function(ctx, next) {
+  router.post(PATH, async function (ctx, next) {
     const key = ctx.request.body.name
     const value = JSON.stringify(ctx.request.body)
     await redis.set(key, value)

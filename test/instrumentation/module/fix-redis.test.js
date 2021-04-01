@@ -18,7 +18,7 @@ test(`redis destination id`, async (t) => {
 
     t.plan(6)
 
-    const trace = agent.createTraceObject()
+    agent.createTraceObject()
     const redis = require('redis')
 
     const client = redis.createClient(
@@ -68,7 +68,7 @@ test("ioredis destination id", async function (t) {
         container.getContainerIpAddress(),
     )
     redis.on("error", function (error) {
-        console.error(error);
+        console.error(error)
     })
 
     const result = await redis.set("key", "value")
@@ -115,11 +115,11 @@ test(`Fix app crash without callback function https://github.com/pinpoint-apm/pi
 
     t.plan(6)
 
-    const trace = agent.createTraceObject()
+    agent.createTraceObject()
     const redis = require('redis')
 
     const client = redis.createClient({
-        host: container.getContainerIpAddress(), 
+        host: container.getContainerIpAddress(),
         port: container.getMappedPort(6379),
         db: 3,
     })

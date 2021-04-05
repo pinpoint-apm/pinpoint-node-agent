@@ -298,7 +298,7 @@ test('sendAgentInfo schedule', (t) => {
 
             t.true(callbackTimes <= 2, 'retry call is less than 2')
             t.true(response, 'retry by schedule')
-            
+
             if (callbackTimes == 2) {
                 tryShutdown()
             }

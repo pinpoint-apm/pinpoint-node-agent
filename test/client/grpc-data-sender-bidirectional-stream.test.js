@@ -45,7 +45,7 @@ function pingSession(call) {
 }
 
 test('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
-    t.plan(34)
+    t.plan(38)
     actualsPingSession = {
         serverDataCount: 0,
         serverEndCount: 0
@@ -159,7 +159,19 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                         registeEventListeners()
 
                         // 7st end
-                        this.grpcDataSender.pingStream.grpcStream.end()
+                        if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writable !== 'undefined') {
+                            t.true(this.grpcDataSender.pingStream.grpcStream.stream.writable, 'writable is true before stream.end() on 7st end')
+                        }
+                        if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writableEnded !== 'undefined') {
+                            t.false(this.grpcDataSender.pingStream.grpcStream.stream.writableEnded, 'writableEnded is false before stream.end() on 7st end')
+                        }
+                        this.grpcDataSender.pingStream.grpcStream.stream.end()
+                        if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writable !== 'undefined') {
+                            t.false(this.grpcDataSender.pingStream.grpcStream.stream.writable, 'writable is false after stream.end() on 7st end')
+                        }
+                        if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writableEnded !== 'undefined') {
+                            t.true(this.grpcDataSender.pingStream.grpcStream.stream.writableEnded, 'writableEnded is true after stream.end() on 7st end')
+                        }
                     })
                 }
                 originError(error)

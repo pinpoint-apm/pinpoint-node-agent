@@ -24,7 +24,7 @@ let serverT
 const agentStartTime = Date.now()
 let callWriteOrder = 0
 let call
-let callCount = 10
+let callCount = 5
 let dataCount = 0
 
 function sendAgentStat(call, callback) {

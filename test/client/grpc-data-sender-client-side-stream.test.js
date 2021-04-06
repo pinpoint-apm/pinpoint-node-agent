@@ -255,15 +255,16 @@ test('gRPC client side stream reconnect test', (t) => {
     let actuals = {}
     const given = new GrpcClientSideStream('spanStream', {}, () => {
         return {
-            on: function() {
+            on: function () {
 
             },
-            write: function(data) {
+            write: function (data) {
                 actuals.data = data
             },
-            end: function() {
+            end: function () {
                 actuals.ended = true
-            }
+            },
+            writable: true
         }
     })
     t.true(given.deadline > 0, 'deadline is initialized')
@@ -273,15 +274,15 @@ test('gRPC client side stream reconnect test', (t) => {
 
     given.deadline = given.deadline - (5 * 60 * 1000 + 100)
     const fistDeadline = given.deadline
-    given.write({order: 2})
-    t.deepEqual(actuals.data, {order: 2}, 'actuals data is order: 2')
+    given.write({ order: 2 })
+    t.deepEqual(actuals.data, { order: 2 }, 'actuals data is order: 2')
     t.true(actuals.ended, 'client side stream is ended')
     t.true(given.grpcStream.stream === null, 'client side stream is null')
 
     t.equal(fistDeadline, given.deadline, 'deadline no changes')
-    given.write({order: 3})
-    t.deepEqual(actuals.data, {order: 3}, 'actuals data is order: 3')
+    given.write({ order: 3 })
+    t.deepEqual(actuals.data, { order: 3 }, 'actuals data is order: 3')
     t.true(given.deadline > fistDeadline, 'deadline new value')
-    
+
     t.end()
 })

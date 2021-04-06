@@ -10,7 +10,7 @@ const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/grpc/Service_grpc_pb')
 const dataConvertor = require('../../lib/data/grpc-data-convertor')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
-const { log} = require('../test-helper')
+const { log } = require('../test-helper')
 const GrpcClientSideStream = require('../../lib/client/grpc-client-side-stream')
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/7caf9fb3a650fe7cf7a04c0c65201997874a5f38/examples/src/grpcjs/server.ts#L53
@@ -118,16 +118,16 @@ test('gRPC stream write retry test', (t) => {
     let retryCount = 0
     const given = new GrpcClientSideStream('spanStream', {}, () => {
         return {
-            on: function() {
+            on: function () {
 
             },
-            write: function() {
+            write: function (data, callback) {
                 retryCount++
 
                 if (retryCount == 1) {
-                    throw new Error('[ERR_STREAM_WRITE_AFTER_END]: write after end')
+                    callback(new Error('[ERR_STREAM_WRITE_AFTER_END]: write after end'))
                 } else {
-                    throw new Error('Unknow exception')
+                    callback(new Error('Unknow exception'))
                 }
             }
         }

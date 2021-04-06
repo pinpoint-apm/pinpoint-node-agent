@@ -37,11 +37,6 @@ function sendAgentStat(call, callback) {
 
             const memory = agentStat.getGc()
             serverT.true(memory.getJvmmemoryheapused() >= 0, `index: ${memory.getJvmmemoryheapused()} equlity jvm memory heap used in server call.on("data")`)
-            if (dataCount == callCount) {
-                setTimeout(() => {
-                    endAction()
-                }, 0)
-            }
         }
     })
     call.on('error', function (error) {
@@ -61,20 +56,24 @@ function createStatCall(t) {
         if (err) {
             log.error(`statStream callback err: ${err} in statClient.sendAgentStat callback`)
             t.equal(err.code, grpc.status.DEADLINE_EXCEEDED, `error code grpc.status.DEADLINE_EXCEEDED in statClient.sendAgentStat callback`)
-            call.end()
-            call = createStatCall(t)
-            return
         }
 
         if (response) {
             t.equal(callWriteOrder, callCount, 'call count compare in statClient.sendAgentStat callback')
             t.true(response, 'response is true in statClient.sendAgentStat callback')
         }
+
+        setTimeout(() => {
+            endAction()
+        }, 0)
     })
 }
 
 function callStat(t) {
     call = createStatCall(t)
+    call.on('error', (error) => {
+        log.error(error)
+    })
 
     for (let index = 0; index < callCount; index++) {
         _.delay(function () {
@@ -126,7 +125,6 @@ test('client side streaming with deadline', function (t) {
             call.end()
             server.tryShutdown((error) => {
                 t.false(error, 'error is null in server.tryShutdown')
-                t.equal(dataCount, callCount, 'call count matches in server.tryShutdown')
                 t.end()
             })
         }

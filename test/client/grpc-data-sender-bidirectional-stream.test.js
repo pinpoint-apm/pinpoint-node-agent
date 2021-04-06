@@ -45,7 +45,7 @@ function pingSession(call) {
 }
 
 test('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
-    let planCount = 47
+    let planCount = 49
 
     actualsPingSession = {
         serverDataCount: 0,
@@ -186,6 +186,10 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                         t.true(this.grpcDataSender.pingStream.grpcStream.streamEnded, 'stream ended symbol is sync by stream.end()')
                         t.true(typeof this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol === 'boolean', 'stream ended symbol is boolean by stream.end()')
                         t.true(this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol, 'stream ended symbol is true by stream.end()')
+
+                        t.false(this.grpcDataSender.pingStream.grpcStream.stream === null, 'stream is not null')
+                        this.grpcDataSender.pingStream.grpcStream.end()
+                        t.true(this.grpcDataSender.pingStream.grpcStream.stream === null, 'stream is null after grpcStream.end()')
                     })
                 }
                 originError(error)

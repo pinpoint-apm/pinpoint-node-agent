@@ -187,7 +187,7 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                         t.true(typeof this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol === 'boolean', 'stream ended symbol is boolean by stream.end()')
                         t.true(this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol, 'stream ended symbol is true by stream.end()')
 
-                        t.false(this.grpcDataSender.pingStream.grpcStream.stream === null, 'stream is not null')
+                        t.true(this.grpcDataSender.pingStream.grpcStream.stream, 'stream is not null')
                         this.grpcDataSender.pingStream.grpcStream.end()
                         t.true(this.grpcDataSender.pingStream.grpcStream.stream === null, 'stream is null after grpcStream.end()')
                     })

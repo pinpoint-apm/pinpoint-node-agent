@@ -71,9 +71,9 @@ function createStatCall(t) {
 
 function callStat(t) {
     call = createStatCall(t)
-    // call.on('error', (error) => {
-    //     log.error(error)
-    // })
+    call.on('error', (error) => {
+        log.error(error)
+    })
 
     for (let index = 0; index < callCount; index++) {
         _.delay(function () {

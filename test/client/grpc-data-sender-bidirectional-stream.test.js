@@ -45,7 +45,7 @@ function pingSession(call) {
 }
 
 test('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
-    let planCount = 38
+    let planCount = 42
 
     actualsPingSession = {
         serverDataCount: 0,
@@ -166,7 +166,13 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                         if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writableEnded !== 'undefined') {
                             t.false(this.grpcDataSender.pingStream.grpcStream.stream.writableEnded, 'writableEnded is false before stream.end() on 7st end')
                         }
+
+                        t.false(this.grpcDataSender.pingStream.grpcStream.streamEnded, 'stream ended symbol not sync by writable.end()')
+                        t.true(typeof this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol === 'undefined', 'stream ended symbol not boolean by writable.end()')
                         this.grpcDataSender.pingStream.grpcStream.stream.end()
+                        t.false(this.grpcDataSender.pingStream.grpcStream.streamEnded, 'stream ended symbol not sync by writable.end()')
+                        t.true(typeof this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol === 'undefined', 'stream ended symbol not boolean by writable.end()')
+
                         if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writable !== 'undefined') {
                             t.false(this.grpcDataSender.pingStream.grpcStream.stream.writable, 'writable is false after stream.end() on 7st end')
                         }

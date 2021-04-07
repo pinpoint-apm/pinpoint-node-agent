@@ -10,6 +10,7 @@ const services = require('../../lib/data/grpc/Service_grpc_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const GrpcServer = require('./grpc-server')
+var _ = require('lodash')
 
 let actualsPingSession = {
     serverDataCount: 0,
@@ -277,6 +278,8 @@ test('ping ERR_STREAM_WRITE_AFTER_END', (t) => {
         serverDataCount: 0,
         serverEndCount: 0
     }
+    const callCount = 20
+    t.plan(1)
 
     const server = new GrpcServer()
     server.addService(services.AgentService, {
@@ -296,8 +299,28 @@ test('ping ERR_STREAM_WRITE_AFTER_END', (t) => {
             'starttime': Date.now()
         })
 
-        server.tryShutdown(() => {
-            t.end()
+        let callOrder = 0
+        const originData = this.grpcDataSender.pingStream.grpcStream.stream.listeners('data')[0]
+        this.grpcDataSender.pingStream.grpcStream.stream.removeListener('data', originData)
+        this.grpcDataSender.pingStream.grpcStream.stream.on('data', (data) => {
+            callOrder++
+            originData(data)
         })
+
+        for (let index = 0; index < callCount + 1; index++) {
+            _.delay(() => {
+                if (index == callCount - 8) {
+                    this.grpcDataSender.pingStream.grpcStream.end()
+                    process.nextTick(() => {
+                        t.true(true, `actualsPingSession.serverDataCount: ${actualsPingSession.serverDataCount}, on('data') count : ${callOrder}`)
+                        server.tryShutdown(() => {
+                            t.end()
+                        })
+                    })
+                } else {
+                    this.grpcDataSender.sendPing()
+                }
+            }, _.random(10, 150))
+        }
     })
 })

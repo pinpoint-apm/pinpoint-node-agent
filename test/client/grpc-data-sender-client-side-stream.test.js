@@ -12,6 +12,7 @@ const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const GrpcServer = require('./grpc-server')
 const Span = require('../../lib/context/span')
 const GrpcClientSideStream = require('../../lib/client/grpc-client-side-stream')
+var _ = require('lodash')
 
 let endAction
 let actuals
@@ -285,4 +286,69 @@ test('gRPC client side stream reconnect test', (t) => {
     t.true(given.deadline > fistDeadline, 'deadline new value')
 
     t.end()
+})
+
+function sendSpan1(call, callback) {
+    call.on('data', function () {
+        actualsSpanSession.serverDataCount++
+    })
+    call.on('error', function (error) {
+        log.debug(`error: ${error}`)
+    })
+    call.on('end', function () {
+        actualsSpanSession.serverEndCount++
+        callback(null, new Empty())
+    })
+}
+let actualsSpanSession
+test('spanStream ERR_STREAM_WRITE_AFTER_END', (t) => {
+    actualsSpanSession = {
+        serverDataCount: 0,
+        serverEndCount: 0
+    }
+    const callCount = 10
+
+    const server = new GrpcServer()
+    server.addService(services.AgentService, {
+        pingSession: pingSession
+    })
+    server.addService(services.StatService, {
+        sendAgentStat: sendAgentStat
+    })
+    server.addService(services.SpanService, {
+        sendSpan: sendSpan1
+    })
+
+    server.startup((port) => {
+        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
+            'agentid': '12121212',
+            'applicationname': 'applicationName',
+            'starttime': Date.now()
+        })
+
+        let callOrder = 0
+        this.grpcDataSender.spanStream.callback = () => {
+            callOrder++
+            process.nextTick(() => {
+                if (callOrder == 1) {
+                    t.true(true, `actualsSpanSession.serverDataCount: ${actualsSpanSession.serverDataCount}, on('data') count : ${callOrder}, actualsSpanSession.serverEndCount: ${actualsSpanSession.serverEndCount}`)
+                    server.shutdown()
+                    t.end()
+                }
+            })
+        }
+
+        for (let index = 0; index < callCount + 1; index++) {
+            _.delay(() => {
+                if (index == callCount - 8) {
+                    this.grpcDataSender.spanStream.grpcStream.end()
+                } else {
+                    this.grpcDataSender.sendSpan(span)
+                }
+            }, _.random(10, 150))
+        }
+
+        this.grpcDataSender.pingStream.grpcStream.end()
+        this.grpcDataSender.statStream.grpcStream.end()
+    })
 })

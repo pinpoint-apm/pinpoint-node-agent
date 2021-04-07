@@ -260,10 +260,27 @@ function pingSessionServer(call) {
 
 let actualsPingSessionServer
 
+
+function pingSession2(call) {
+    call.on('data', (ping) => {
+        actualsPingSession.serverDataCount++
+        call.write(ping)
+    })
+    call.on('end', () => {
+        actualsPingSession.serverEndCount++
+        call.end()
+    })
+}
+
 test('ping ERR_STREAM_WRITE_AFTER_END', (t) => {
+    actualsPingSession = {
+        serverDataCount: 0,
+        serverEndCount: 0
+    }
+
     const server = new GrpcServer()
     server.addService(services.AgentService, {
-        pingSession: pingSession
+        pingSession: pingSession2
     })
     server.addService(services.StatService, {
         sendAgentStat: pingSessionServer

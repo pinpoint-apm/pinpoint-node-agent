@@ -259,3 +259,28 @@ function pingSessionServer(call) {
 }
 
 let actualsPingSessionServer
+
+test('ping ERR_STREAM_WRITE_AFTER_END', (t) => {
+    const server = new GrpcServer()
+    server.addService(services.AgentService, {
+        pingSession: pingSession
+    })
+    server.addService(services.StatService, {
+        sendAgentStat: pingSessionServer
+    })
+    server.addService(services.SpanService, {
+        sendSpan: pingSessionServer
+    })
+
+    server.startup((port) => {
+        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
+            'agentid': '12121212',
+            'applicationname': 'applicationName',
+            'starttime': Date.now()
+        })
+
+        server.tryShutdown(() => {
+            t.end()
+        })
+    })
+})

@@ -160,7 +160,7 @@ test('client side streaming with deadline and cancellation', function (t) {
             'starttime': Date.now()
         })
 
-        this.grpcDataSender.spanStream.callback = (err, response) => {
+        this.grpcDataSender.spanStream.callback = (err) => {
             callOrder++
 
             if (callOrder == 1/* 3st spanStream end in callback */) {

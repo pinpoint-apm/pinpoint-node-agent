@@ -46,7 +46,7 @@ function pingSession(call) {
 }
 
 test('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
-    let planCount = 49
+    let planCount = 51
 
     actualsPingSession = {
         serverDataCount: 0,
@@ -102,7 +102,6 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                 } else if (callOrder == 14/* 7st end */) {
                     t.equal(callOrder, 14, '7st end')
                     originEnd()
-                    endAction()
                 }
             })
 
@@ -191,6 +190,41 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                         t.true(this.grpcDataSender.pingStream.grpcStream.stream, 'stream is not null')
                         this.grpcDataSender.pingStream.grpcStream.end()
                         t.true(this.grpcDataSender.pingStream.grpcStream.stream === null, 'stream is null after grpcStream.end()')
+
+                        // 8st sendPing()
+                        this.grpcDataSender.sendPing()
+                        const currentStream = this.grpcDataSender.pingStream.grpcStream.stream
+
+                        process.nextTick(() => {
+                            // 9st sendPing()
+                            this.grpcDataSender.sendPing()
+                            t.true(currentStream === this.grpcDataSender.pingStream.grpcStream.stream, 'steam reused')
+
+                            const originWrite = this.grpcDataSender.pingStream.grpcStream.write
+                            let writeCount = 0
+                            this.grpcDataSender.pingStream.grpcStream.write = (data, rewriteAfterStreamEnd = true) => {
+                                writeCount++
+                                originWrite.call(this.grpcDataSender.pingStream.grpcStream, data, rewriteAfterStreamEnd)
+                                if (writeCount == 2) {
+                                    process.nextTick(() => {
+                                        this.grpcDataSender.pingStream.grpcStream.end()
+                                        endAction()
+                                    })
+                                }
+                            }
+                            this.grpcDataSender.pingStream.grpcStream.stream.end()
+                            this.grpcDataSender.pingStream.grpcStream.stream = {
+                                writable: true,
+                                write: function (data, callback) {
+                                    currentStream.write(data, callback)
+                                },
+                                end: function () {
+                                    this.writable = false
+                                    currentStream.end()
+                                }
+                            }
+                            this.grpcDataSender.sendPing()
+                        })
                     })
                 }
                 originError(error)
@@ -225,7 +259,7 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
         if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writableEnded === 'undefined') {
             planCount = planCount - 2
         }
-        t.plan(planCount)
+        // t.plan(planCount)
 
         registeEventListeners()
         t.true(this.grpcDataSender.pingStream.grpcStream.stream, 'Ping stream is Good')

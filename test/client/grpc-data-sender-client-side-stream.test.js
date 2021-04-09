@@ -430,7 +430,7 @@ test('steam is null on HighWaterMark case', (t) => {
 })
 
 test('sendSpan throw error and then stream is HighWaterMark', (t) => {
-    t.plan(9)
+    t.plan(12)
     let streamCount = 0
     let callEndCount = 0
     let callback
@@ -488,5 +488,12 @@ test('sendSpan throw error and then stream is HighWaterMark', (t) => {
 
         given.write({})
         t.equal(writeCount, 2, 'sendSpan canceled, when HightWaterMark')
+
+        callback()
+        given.write({})
+        t.equal(writeCount, 3, 'sendSpan canceled, when HightWaterMark')
+
+        given.write({})
+        t.equal(writeCount, 3, 'sendSpan canceled, when HightWaterMark')
     })
 })

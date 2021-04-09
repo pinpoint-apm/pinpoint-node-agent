@@ -387,7 +387,7 @@ test('gRPC stream write retry test', (t) => {
 test('stream HighWaterMark method in write', (t) => {
     t.plan(4)
     let eventCount = 0
-    let given = new GrpcClientSideStream('spanStream', {}, () => {
+    const given = new GrpcClientSideStream('spanStream', {}, () => {
         return {
             on: function (eventName) {
                 eventCount++
@@ -412,7 +412,7 @@ test('stream HighWaterMark method in write', (t) => {
 
 //https://github.com/pinpoint-apm/pinpoint-node-agent/issues/67
 test('steam is null on HighWaterMark case', (t) => {
-    let given = new GrpcClientSideStream('spanStream', {}, () => {
+    const given = new GrpcClientSideStream('spanStream', {}, () => {
         return {
             on: function () {
             },
@@ -427,4 +427,66 @@ test('steam is null on HighWaterMark case', (t) => {
     given.grpcStream.stream = undefined
     t.equal(given.grpcStream.writableHighWaterMarked, undefined, 'if stream is null, writableHighWaterMarked is undefined')
     t.end()
+})
+
+test('sendSpan throw error and then stream is HighWaterMark', (t) => {
+    t.plan(9)
+    let streamCount = 0
+    let callEndCount = 0
+    let callback
+    let writeCount = 0
+    const given = new GrpcClientSideStream('spanStream', {}, () => {
+        streamCount++
+        if (streamCount == 1) {
+            return {
+                on: function () {
+                },
+                write: function (data, cb) {
+                    writeCount++
+                    process.nextTick(() => {
+                        t.equal(streamCount, 1, 'sendSpan pass an error')
+                        cb(new Error('error write'))
+                    })
+                    return true
+                },
+                once: function (eventName) {
+                },
+                end: function () {
+                    callEndCount++
+                    if (callEndCount == 1) {
+                        t.equal(streamCount, 1, 'sendSpan pass an error and then end a stream')
+                    }
+                    if (callEndCount == 2) {
+                        t.false(given.stream, 'stream is not null')
+                        t.equal(streamCount, 1, 'sendSpan pass an error and then end a stream')
+                    }
+                }
+            }
+        }
+        return {
+            on: function (eventName) {
+                if (eventName == 'error') {
+                    t.equal(streamCount, 2, 'after pass an error and then create stream')
+                }
+            },
+            write: function () {
+                writeCount++
+                return false
+            },
+            once: function (eventName, cb) {
+                callback = cb
+                t.equal(eventName, 'drain', 'once event called')
+            }
+        }
+    })
+    given.write({})
+    process.nextTick(() => {
+        t.equal(writeCount, 2, 'sendSpan throw an error and then retry sendSpan and then HightWaterMark')
+
+        given.write({})
+        t.equal(writeCount, 2, 'sendSpan canceled, when HightWaterMark')
+
+        given.write({})
+        t.equal(writeCount, 2, 'sendSpan canceled, when HightWaterMark')
+    })
 })

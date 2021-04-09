@@ -497,3 +497,23 @@ test('sendSpan throw error and then stream is HighWaterMark', (t) => {
         t.equal(writeCount, 3, 'sendSpan canceled, when HightWaterMark')
     })
 })
+
+test('stream deadline test', (t) => {
+    t.plan(2)
+    const given = new GrpcClientSideStream('spanStream', {}, () => {
+        return {
+            on: function () {
+            },
+            write: function () {
+                return false
+            },
+            once: function (eventName) {
+                t.equal(eventName, 'drain', 'once event called')
+            }
+        }
+    })
+    t.equal(given.grpcStreamDeadline, 5 * 60 * 1000, 'default dealine times')
+
+    given.setDeadlineMinutes(6)
+    t.equal(given.grpcStreamDeadline, 6 * 60 * 1000, '6 minutes dealine times')
+})

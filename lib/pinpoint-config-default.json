@@ -10,7 +10,9 @@
     "enable": true,
     "rate": 10
   },
-  "http-status-code-errors": ["5xx"],
+  "http-status-code-errors": [
+    "5xx"
+  ],
   "log-level": "WARN",
   "enable": true,
   "enabled-data-sending": true,
@@ -28,5 +30,8 @@
   },
   "redis": {
     "enable": true
+  },
+  "stream-deadline-minutes": {
+    "span": 5
   }
 }

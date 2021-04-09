@@ -141,3 +141,42 @@ test('gRPC stream write retry test', (t) => {
 
     t.end()
 })
+
+test('stream HighWaterMark method in write', (t) => {
+    t.plan(2)
+    let given = new GrpcClientSideStream('spanStream', {}, () => {
+        return {
+            on: function () {
+
+            },
+            write: function () {
+                return false
+            },
+            once: function (eventName) {
+                t.equal(eventName, 'drain', 'once event called')
+            }
+        }
+    })
+    given.write({})
+    t.true(given.grpcStream.writableHighWaterMarked, 'HightWaterMarked')
+    t.end()
+})
+
+test('steam is null on HighWaterMark case', (t) => {
+    let given = new GrpcClientSideStream('spanStream', {}, () => {
+        return {
+            on: function () {
+
+            },
+            write: function () {
+                return false
+            },
+            once: function (eventName) {
+                t.equal(eventName, 'drain', 'once event called')
+            }
+        }
+    })
+    given.grpcStream.stream = undefined
+    t.equal(given.grpcStream.writableHighWaterMarked, undefined, 'if stream is null, writableHighWaterMarked is undefined')
+    t.end()
+})

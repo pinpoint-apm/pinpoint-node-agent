@@ -353,3 +353,78 @@ test('spanStream ERR_STREAM_WRITE_AFTER_END', (t) => {
         this.grpcDataSender.statStream.grpcStream.end()
     })
 })
+
+// https://github.com/pinpoint-apm/pinpoint-node-agent/issues/33#issuecomment-783891805
+test('gRPC stream write retry test', (t) => {
+    let retryCount = 0
+    const given = new GrpcClientSideStream('spanStream', {}, () => {
+        return {
+            on: function () {
+
+            },
+            write: function (data, callback) {
+                retryCount++
+
+                if (retryCount == 1) {
+                    callback(new Error('[ERR_STREAM_WRITE_AFTER_END]: write after end'))
+                } else {
+                    callback(new Error('Unknow exception'))
+                }
+            }
+        }
+    })
+
+    t.true(given.grpcStream.stream, 'gRPC stream has streams')
+    given.write({})
+    t.equal(retryCount, 2, 'retry only once')
+    t.false(given.stream, 'gRPC stream has ended')
+
+
+    t.end()
+})
+
+//https://github.com/pinpoint-apm/pinpoint-node-agent/issues/67
+test('stream HighWaterMark method in write', (t) => {
+    t.plan(4)
+    let eventCount = 0
+    let given = new GrpcClientSideStream('spanStream', {}, () => {
+        return {
+            on: function (eventName) {
+                eventCount++
+                if (eventCount == 1) {
+                    t.equal(eventName, 'error', 'clientSideStream listen error event')
+                } else if (eventCount == 2) {
+                    t.equal(eventName, 'status', 'clientSideStream listen status event')
+                }
+            },
+            write: function () {
+                return false
+            },
+            once: function (eventName) {
+                t.equal(eventName, 'drain', 'once event called')
+            }
+        }
+    })
+    given.write({})
+    t.true(given.grpcStream.writableHighWaterMarked, 'HightWaterMarked')
+    t.end()
+})
+
+//https://github.com/pinpoint-apm/pinpoint-node-agent/issues/67
+test('steam is null on HighWaterMark case', (t) => {
+    let given = new GrpcClientSideStream('spanStream', {}, () => {
+        return {
+            on: function () {
+            },
+            write: function () {
+                return false
+            },
+            once: function (eventName) {
+                t.equal(eventName, 'drain', 'once event called')
+            }
+        }
+    })
+    given.grpcStream.stream = undefined
+    t.equal(given.grpcStream.writableHighWaterMarked, undefined, 'if stream is null, writableHighWaterMarked is undefined')
+    t.end()
+})

@@ -261,6 +261,7 @@ test('gRPC client side stream reconnect test', (t) => {
             },
             write: function (data) {
                 actuals.data = data
+                return true
             },
             end: function () {
                 actuals.ended = true

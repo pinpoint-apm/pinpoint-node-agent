@@ -5,7 +5,7 @@
  */
 
 const test = require('tape')
-const { log, fixture, util } = require('./test-helper')
+const { log } = require('./test-helper')
 
 const config = require('../lib/config')
 
@@ -49,4 +49,12 @@ test('Should be read from config file', function (t) {
   const result = config.readConfigJson(testConfig)
   log.debug(result)
   t.ok(result)
+})
+
+test('deadline config', (t) => {
+  t.plan(1)
+
+  const json = require('../lib/pinpoint-config-default')
+  const result = config.readConfigJson(json)
+  t.equal(result.streamDeadlineMinutesSpan, 5)
 })

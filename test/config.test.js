@@ -56,5 +56,5 @@ test('deadline config', (t) => {
 
   const json = require('../lib/pinpoint-config-default')
   const result = config.readConfigJson(json)
-  t.equal(result.streamDeadlineMinutesSpan, 5)
+  t.equal(result.streamDeadlineMinutesClientSide, 5)
 })

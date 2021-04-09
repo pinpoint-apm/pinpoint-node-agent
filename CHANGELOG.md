@@ -5,6 +5,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 ### Fixed
 - #63 Fix ERR_STREAM_WRITE_AFTER_END on Node v14
 - #67 gRPC client side and Bidirectional streams highWaterMark guard
+- #70 gRPC client side stream deadline configuration
 
 ## [0.8.0] - 2021-03-15
 ### Added

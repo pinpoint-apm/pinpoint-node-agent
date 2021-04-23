@@ -64,8 +64,27 @@ test('main moudle path', (t) => {
   config.clear()
   const conf = config.readRootConfigFile()
   t.deepEqual(conf, {}, 'configuration is null object')
-  const actual = config.getMainModulePath()
-  const pathObject = path.parse(actual)
-  t.deepEqual(pathObject.base, 'test', 'main module path')
+  let actual = config.getMainModulePath(require)
+  let actualParsedPath = path.parse(actual)
+  t.deepEqual(actualParsedPath.base, 'test', 'main module path')
+
+  actual = config.getMainModulePath({})
+  t.true(actual === undefined, 'config.getMainModulePath({}) return value is undefined')
+
+  actual = config.getMainModulePath()
+  t.true(actual === undefined, 'config.getMainModulePath() return value is undefined')
+
+  actual = config.getMainModulePath(null)
+  t.true(actual === undefined, 'config.getMainModulePath(null) return value is undefined')
+
+  actual = config.getMainModulePath({ main: {} })
+  t.true(actual === undefined, 'config.getMainModulePath({ main: {} }) return value is undefined')
+
+  actual = config.getMainModulePath({ main: { filename: '/test' } })
+  t.equal(actual, '/', 'config.getMainModulePath({ main: { filename: \' / test\' } }) return value is /')
+
+  actual = config.getMainModulePath({ main: { filename: '/test/test1' } })
+  t.equal(actual, '/test', 'config.getMainModulePath({ main: { filename: \' / test\' } }) return value is /')
+
   t.end()
 })

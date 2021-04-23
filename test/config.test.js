@@ -8,6 +8,7 @@ const test = require('tape')
 const { log } = require('./test-helper')
 
 const config = require('../lib/config')
+const path = require('path')
 
 test('Agent ID required field', function (t) {
   t.plan(1)
@@ -57,4 +58,14 @@ test('deadline config', (t) => {
   const json = require('../lib/pinpoint-config-default')
   const result = config.readConfigJson(json)
   t.equal(result.streamDeadlineMinutesClientSide, 5)
+})
+
+test('main moudle path', (t) => {
+  config.clear()
+  const conf = config.readRootConfigFile()
+  t.deepEqual(conf, {}, 'configuration is null object')
+  const actual = config.getMainModulePath()
+  const pathObject = path.parse(actual)
+  t.deepEqual(pathObject.base, 'test', 'main module path')
+  t.end()
 })

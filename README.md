@@ -5,7 +5,8 @@ If you have any feedback or questions,
 please post them on the [Discuss issues](https://github.com/naver/pinpoint-node-agent/issues).
 
 
-## Installation
+## Installation and getting started
+1. Install
 Install with [npm](https://www.npmjs.com/):
 ```sh
 npm install --save pinpoint-node-agent 
@@ -15,9 +16,9 @@ Install with [yarn](https://yarnpkg.com):
 yarn add pinpoint-node-agent
 ```
 
-## Quick start
-1. To run Pinpoint agent for your own applications,
-   make sure you have the prerequisites in place first.
+2. Adding a code
+
+To run Pinpoint agent for your own applications, make sure you have the prerequisites in place first.
 
 ES6
 ```ecmascript 6
@@ -29,20 +30,7 @@ CommonJS
   require('pinpoint-node-agent')
 ```
 
-## Supported Modules
-* Express 4
-* Koa(koa-router >=5.2.0 <8)
-* HTTP, HTTPS
-* Redis, ioredis(>=2.0.0 <5.0.0)
-* mongodb-core(>=1.0.0)
-* Elasticsearch Node client
-
-## Agent - Collector compatibility table
-Agent Version | Collector 1.x | Collector 2.x
-------------- | --------------- | ---------------
-0.6.x | no      | yes
-
-## Environment variables
+3. Configuration with Environment variables
 Based on the [pinpoint-config-default.json](/lib/pinpoint-config-default.json) file, only necessary parts are set as environment variables.
 
 name | default | description
@@ -57,11 +45,25 @@ PINPOINT_CONTAINER | false | Whether to use docker or kubernetes. If the PINPOIN
 PINPOINT_TRACE_EXCLUSION_URL_PATTERN |  | comma-separated string. ex) `/health_check,/admin/**` or [Unit tests](https://github.com/pinpoint-apm/pinpoint-node-agent/blob/01fcbdefe5a0ffba9c957bee0da3fb7397638182/test/utils/ant-path-matcher.test.js#L332)
 PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE | | If the app is designed so that the pathname of the URL is fixed, if the cache size is set, the pathname of the frequently used URL does not match with patterns. In case of using query for pathname like `/user/1000`, cache is unnecessarily. [Unit tests](https://github.com/pinpoint-apm/pinpoint-node-agent/blob/01fcbdefe5a0ffba9c957bee0da3fb7397638182/test/utils/ant-path-matcher.test.js#L447)
 
-## Agent ID
+### Agent ID
 The agent ID is used as the identifier per the server or node. You need to set the hostname or node identifier(The maximum length is 24) on the server.
 ```
 PINPOINT_AGENT_ID=${HOSTNAME} pm2 start ~/service/bin/pm2_start.json​
 ```
+
+
+## Supported Modules
+* Express 4
+* Koa(koa-router >=5.2.0 <8)
+* HTTP, HTTPS
+* Redis, ioredis(>=2.0.0 <5.0.0)
+* mongodb-core(>=1.0.0)
+* Elasticsearch Node client
+
+## Agent - Collector compatibility table
+Agent Version | Collector 1.x | Collector 2.x
+------------- | --------------- | ---------------
+0.6.x | no      | yes
 
 ## Sampling rate
 If you use [Performance tester for sampling rate](/demo/performance-tester), you can review while changing the sampling rate of the node agent of the Node application.

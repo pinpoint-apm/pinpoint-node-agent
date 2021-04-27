@@ -6,7 +6,7 @@ please post them on the [Discuss issues](https://github.com/naver/pinpoint-node-
 
 
 ## Installation and getting started
-1. Install
+### 1. Install
 Install with [npm](https://www.npmjs.com/):
 ```sh
 npm install --save pinpoint-node-agent 
@@ -16,7 +16,7 @@ Install with [yarn](https://yarnpkg.com):
 yarn add pinpoint-node-agent
 ```
 
-2. Adding a code
+### 2. Adding a code
 
 To run Pinpoint agent for your own applications, make sure you have the prerequisites in place first.
 
@@ -30,7 +30,7 @@ CommonJS
   require('pinpoint-node-agent')
 ```
 
-3. Configuration with Environment variables
+### 3. Configuration with Environment variables
 Based on the [pinpoint-config-default.json](/lib/pinpoint-config-default.json) file, only necessary parts are set as environment variables.
 
 name | default | description

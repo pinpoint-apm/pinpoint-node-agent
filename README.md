@@ -37,6 +37,17 @@ The'pinpoint-node-agent' require or import in the source code should be deleted.
 $ node -r pinpoint-node-agent dist/entry.js
 ```
 
+If you are using pm2, use node-args(CLI) or node_args(Ecosystem File).
+```
+module.exports = {
+  apps : [{
+    name: "app",
+    script: "./app.js",
+    'node_args': ['-r', 'pinpoint-node-agent']
+  }]
+}
+```
+
 ### 3. Configuration with Environment variables
 Based on the [pinpoint-config-default.json](/lib/pinpoint-config-default.json) file, only necessary parts are set as environment variables.
 

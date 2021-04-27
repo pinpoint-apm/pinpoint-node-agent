@@ -45,7 +45,6 @@ You must call `apm.start` before `http.createServer`.
 ```
 import apm from 'pinpoint-node-agent';
 
-....
 apm.start();
 const server = http.createServer(app);
 ```

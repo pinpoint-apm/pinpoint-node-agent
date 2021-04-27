@@ -29,24 +29,12 @@ CommonJS
 ```javascript
   require('pinpoint-node-agent')
 ```
-#### Webpack (required: above v0.8.2)
+#### Webpack with `node -r` (required: above v0.8.2)
 In Node with Webpack, if the Pinpoint Node agent cannot hook the HTTP module, it is the case that http.createServer is called first in the JS code compiled by webpack. 
 
-Choose from two alternatives below.
-
-#### 2-1. Webpack with `node -r`
 The'pinpoint-node-agent' require or import in the source code should be deleted.
 ```
-$ node -r pinpoint-node-agent dist/example-server.js
-```
-
-#### 2-2. Webpack with `agent.start()`
-You must call `apm.start` before `http.createServer`.
-```
-import apm from 'pinpoint-node-agent';
-
-apm.start();
-const server = http.createServer(app);
+$ node -r pinpoint-node-agent dist/entry.js
 ```
 
 ### 3. Configuration with Environment variables

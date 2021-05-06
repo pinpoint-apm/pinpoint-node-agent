@@ -7,7 +7,7 @@
 const test = require('tape')
 const axios = require('axios')
 
-const { log, fixture, util, enableDataSending } = require('../../test-helper')
+const { log, util } = require('../../test-helper')
 
 const agent = require('../../support/agent-singleton-mock')
 
@@ -27,7 +27,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
   t.plan(3)
 
-  const PATH = '/'+testName
+  const PATH = '/' + testName
   const app = new express()
 
   app.get(PATH, async (req, res) => {
@@ -62,7 +62,7 @@ test(`[${testName2}] Should record request in express.Router`, function (t) {
 
   t.plan(3)
 
-  const PATH = '/'+testName
+  const PATH = '/' + testName
   const app = new express()
 
   const router1 = express.Router()
@@ -103,7 +103,7 @@ test(`${testName3} Should record request taking more than 2 sec`, function (t) {
 
   t.plan(2)
 
-  const PATH = '/'+testName
+  const PATH = '/' + testName
   const app = new express()
 
   app.get(PATH, async (req, res) => {
@@ -159,7 +159,7 @@ test(`${testName4} Should record internal error in express.test.js`, function (t
     console.log('[app] error handler')
     res.json({ message: error.message })
     res.status = 500
-  });
+  })
 
   const server = app.listen(TEST_ENV.port, async function () {
     const result = await axios.get(getServerUrl(PATH))
@@ -216,7 +216,7 @@ test(`${testName5} Should record middleware`, function (t) {
 const testName6 = 'express6'
 test(`${testName6} Should record each http method`, function (t) {
   agent.bindHttp()
-  
+
   const testName = testName6
 
   t.plan(6)

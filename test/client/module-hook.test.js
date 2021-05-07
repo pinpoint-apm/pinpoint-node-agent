@@ -24,7 +24,7 @@ test('load modules with versions', (t) => {
 
     const redis = agent.moduleHook.moduleObj('redis')
     t.equal(redis.name, 'redis', 'module redis name matches')
-    t.equal(redis.version, '2.8.0', 'module redis version matches with package dependency version')
+    t.equal(redis.version, '3.1.2', 'module redis version matches with package dependency version')
 
     const koa1 = require('koa-router')
     const koa2 = require('koa-router')

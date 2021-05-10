@@ -32,6 +32,6 @@
     "enable": true
   },
   "stream-deadline-minutes": {
-    "client-side": 5
+    "client-side": 10
   }
 }

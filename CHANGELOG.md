@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
-## [0.8.2] - 2021-05-07
+## [0.8.2] - 2021-05-10
 ### Fixed
 - #73 fix require.main undefined error by webpack and node -r pinpoint-node-agent
 

@@ -44,6 +44,9 @@ test(`${testName1} Should record request in basic route`, function (t) {
     Math.random()
     await util.sleep(3000)
     res.send('ok get')
+
+    const trace = agent.traceContext.currentTraceObject()
+    log.debug(trace)
   })
   app.post(PATH, (req, res) => {
     res.send('ok post')

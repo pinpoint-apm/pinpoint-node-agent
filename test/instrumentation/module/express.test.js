@@ -53,7 +53,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
   })
 
   const server = app.listen(TEST_ENV.port, async function () {
-    const result1 = await axios.get(getServerUrl(PATH))
+    const result1 = await axios.get(getServerUrl(PATH) + '?api=test&test1=test')
     t.ok(result1.status, 200)
 
     const result2 = await axios.post(getServerUrl(PATH))

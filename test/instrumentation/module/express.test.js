@@ -8,10 +8,9 @@ const test = require('tape')
 const axios = require('axios')
 
 const { log, util } = require('../../test-helper')
-
 const agent = require('../../support/agent-singleton-mock')
-
 const express = require('express')
+const DefaultAnnotationKey = require('../../../lib/constant/annotation-key').DefaultAnnotationKey
 
 const TEST_ENV = {
   host: 'localhost',
@@ -25,7 +24,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
   const testName = testName1
 
-  t.plan(3)
+  t.plan(6)
 
   const PATH = '/' + testName
   const app = new express()
@@ -46,10 +45,14 @@ test(`${testName1} Should record request in basic route`, function (t) {
     res.send('ok get')
 
     const trace = agent.traceContext.currentTraceObject()
-    log.debug(trace)
+    t.equal(trace.span.annotations[0].key, DefaultAnnotationKey.HTTP_PARAM.name, 'HTTP param key match')
+    t.equal(trace.span.annotations[0].value.stringValue, 'api=test&test1=test', 'HTTP param value match')
   })
   app.post(PATH, (req, res) => {
     res.send('ok post')
+
+    const trace = agent.traceContext.currentTraceObject()
+    t.false(trace.span.annotations[0], 'HTTP param undefined case')
   })
 
   const server = app.listen(TEST_ENV.port, async function () {

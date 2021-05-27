@@ -1,9 +1,9 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
-## [0.8.3] - 2021-05-27
+## [0.9.0-next.0] - 2021-05-27
 ### Added
-- HTTP param
+- #87 HTTP param
 
 ## [0.8.2] - 2021-05-10
 ### Fixed

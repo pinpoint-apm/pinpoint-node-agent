@@ -1,6 +1,6 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "0.8.3",
+  "version": "0.9.0-next.0",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/.bin/tape ./test/**/*.test.js",

@@ -69,7 +69,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
     server.close()
   })
 })
-
+/*
 const testName2 = 'express2'
 test(`[${testName2}] Should record request in express.Router`, function (t) {
   agent.bindHttp()
@@ -279,4 +279,4 @@ test(`${testName6} Should record each http method`, function (t) {
 
     server.close()
   })
-})
+}) */

@@ -30,14 +30,15 @@ test(`${testName1} Should record request in basic route`, function (t) {
   const app = new express()
 
   const stackString = `Error
-    at Function.route (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/lib/instrumentation/module/express.js:64:13)
-    at Function.app.<computed> [as get] (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/application.js:481:30)
-    at Test.<anonymous> (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/test/instrumentation/module/express.test.js:33:7)
-    at Test.bound [as _cb] (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/tape/lib/test.js:80:32)
-    at Test.run (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/tape/lib/test.js:96:10)
-    at Test.bound [as run] (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/tape/lib/test.js:80:32)
-    at Immediate.next [as _onImmediate] (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/tape/lib/results.js:83:19)
-    at processImmediate (internal/timers.js:456:21)`
+  at doPatchLayer (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/lib/instrumentation/module/express.js:72:11)
+  at Function.route (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/lib/instrumentation/module/express.js:64:9)
+  at Function.app.<computed> [as get] (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/application.js:481:30)
+  at Test.<anonymous> (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/test/instrumentation/module/express.test.js:42:7)
+  at Test.bound [as _cb] (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/tape/lib/test.js:80:32)
+  at Test.run (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/tape/lib/test.js:96:10)
+  at Test.bound [as run] (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/tape/lib/test.js:80:32)
+  at Immediate.next [as _onImmediate] (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/tape/lib/results.js:83:19)
+  at processImmediate (internal/timers.js:456:21)`
 
   app.get(PATH, async (req, res) => {
     Math.random()

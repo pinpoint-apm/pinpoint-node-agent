@@ -18,7 +18,7 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-const testName1 = 'express1'
+const testName1 = 'express1'/*
 test(`${testName1} Should record request in basic route`, function (t) {
   agent.bindHttp()
 
@@ -49,6 +49,11 @@ test(`${testName1} Should record request in basic route`, function (t) {
     t.equal(trace.span.annotations[0].key, DefaultAnnotationKey.HTTP_PARAM.name, 'HTTP param key match')
     t.equal(trace.span.annotations[0].value.stringValue, 'api=test&test1=test', 'HTTP param value match')
   })
+
+  app.get('/express2', async (req, res) => {
+    res.send('ok get')
+  })
+
   app.post(PATH, (req, res) => {
     res.send('ok post')
 
@@ -70,7 +75,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
     server.close()
   })
 })
-/*
+
 const testName2 = 'express2'
 test(`[${testName2}] Should record request in express.Router`, function (t) {
   agent.bindHttp()
@@ -188,7 +193,7 @@ test(`${testName4} Should record internal error in express.test.js`, function (t
     server.close()
   })
 })
-
+*/
 const testName5 = 'express5'
 test(`${testName5} Should record middleware`, function (t) {
   agent.bindHttp()
@@ -230,6 +235,7 @@ test(`${testName5} Should record middleware`, function (t) {
   })
 })
 
+/*
 const testName6 = 'express6'
 test(`${testName6} Should record each http method`, function (t) {
   agent.bindHttp()

@@ -18,9 +18,10 @@ test('callstack', (t) => {
     at Test.bound [as run] (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/tape/lib/test.js:80:32)
     at Immediate.next [as _onImmediate] (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/tape/lib/results.js:83:19)
     at processImmediate (internal/timers.js:456:21)*/
+    const regex = /at (?<type>\w+(?=\.))?\.?(?<functionName>[^\s]+)(?: \[as (?<methodName>\w+)\])? \(.+\/(?<fileName>[^:/]+):(?<lineNumber>[0-9]+):(?<columnNumber>[0-9]+)\)$/
 
     let stack = 'at Function.app.<computed> [as get] (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/application.js:481:30)'
-    let captureGroups = stack.match(/at (?<type>\w+(?=\.))?\.?(?<functionName>[^\s]+)(?: \[as (?<methodName>\w+)\])? \(.+\/(?<fileName>[^:/]+):(?<lineNumber>[0-9]+):(?<columnNumber>[0-9]+)\)$/)
+    let captureGroups = stack.match(regex)
     if (!captureGroups || !captureGroups.groups) {
         return
     }
@@ -32,7 +33,7 @@ test('callstack', (t) => {
     t.equal(actual.lineNumber, 481, 'lineNumber')
 
     stack = 'at Test.<anonymous> (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/test/instrumentation/module/express.test.js:42:7)'
-    captureGroups = stack.match(/at (?<type>\w+(?=\.))?\.?(?<functionName>[^\s]+)(?: \[as (?<methodName>\w+)\])? \(.+\/(?<fileName>[^:/]+):(?<lineNumber>[0-9]+):(?<columnNumber>[0-9]+)\)$/)
+    captureGroups = stack.match(regex)
     actual = new MethodDescriptorBuilder('express', captureGroups.groups)
     t.equal(actual.methodName, '<anonymous>', 'methodName')
     t.equal(actual.functionName, '<anonymous>', 'functionName')

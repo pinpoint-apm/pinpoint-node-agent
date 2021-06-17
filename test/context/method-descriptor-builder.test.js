@@ -37,7 +37,9 @@ test('callstack', (t) => {
     actual = new MethodDescriptorBuilder('express', captureGroups.groups)
     t.equal(actual.methodName, '<anonymous>', 'methodName')
     t.equal(actual.functionName, '<anonymous>', 'functionName')
+    t.equal(actual.getFunctionName(), '<anonymous>', 'functionName')
     t.equal(actual.className, 'Test', 'className')
+    t.equal(actual.getClassName(), 'Test', 'className')
     t.equal(actual.fileName, 'express.test.js', 'fileName')
     t.equal(actual.lineNumber, 42, 'lineNumber')
 

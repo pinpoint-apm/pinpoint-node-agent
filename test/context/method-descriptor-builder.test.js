@@ -25,7 +25,10 @@ test('callstack', (t) => {
         return
     }
     let actual = new MethodDescriptorBuilder('express', captureGroups.groups)
-    t.equal(actual.methodName, 'get')
-    t.equal(actual.functionName, 'app.get')
+    t.equal(actual.methodName, 'get', 'methodName')
+    t.equal(actual.functionName, 'app.get', 'functionName')
+    t.equal(actual.className, 'Function', 'className')
+    t.equal(actual.fileName, 'application.js', 'fileName')
+    t.equal(actual.lineNumber, 481, 'lineNumber')
     t.end()
 })

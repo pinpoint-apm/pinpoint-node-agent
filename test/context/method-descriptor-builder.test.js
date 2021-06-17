@@ -30,5 +30,14 @@ test('callstack', (t) => {
     t.equal(actual.className, 'Function', 'className')
     t.equal(actual.fileName, 'application.js', 'fileName')
     t.equal(actual.lineNumber, 481, 'lineNumber')
+
+    stack = 'at Test.<anonymous> (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/test/instrumentation/module/express.test.js:42:7)'
+    captureGroups = stack.match(/at (?<type>\w+(?=\.))?\.?(?<functionName>[^\s]+)(?: \[as (?<methodName>\w+)\])? \(.+\/(?<fileName>[^:/]+):(?<lineNumber>[0-9]+):(?<columnNumber>[0-9]+)\)$/)
+    actual = new MethodDescriptorBuilder('express', captureGroups.groups)
+    t.equal(actual.methodName, '<anonymous>', 'methodName')
+    t.equal(actual.functionName, '<anonymous>', 'functionName')
+    t.equal(actual.className, 'Test', 'className')
+    t.equal(actual.fileName, 'express.test.js', 'fileName')
+    t.equal(actual.lineNumber, 42, 'lineNumber')
     t.end()
 })

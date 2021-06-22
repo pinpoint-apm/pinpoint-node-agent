@@ -36,7 +36,7 @@ test('callstack', (t) => {
     t.equal(actualMethodDescriptor.getModuleName(), 'express', 'MethodDescriptor moduleName')
     t.equal(actualMethodDescriptor.getFunctionName(), 'app.get', 'MethodDescriptor functionName')
     t.equal(actualMethodDescriptor.getMethodName(), 'get', 'MethodDescriptor methodName')
-    // t.equal(actualMethodDescriptor.getClassName(), 'Function', 'MethodDescriptor methodName')
+    t.equal(actualMethodDescriptor.getClassName(), 'Function', 'MethodDescriptor methodName')
 
     stack = 'at Test.<anonymous> (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/test/instrumentation/module/express.test.js:42:7)'
     captureGroups = stack.match(regex)

@@ -32,6 +32,12 @@ test('callstack', (t) => {
     t.equal(actual.fileName, 'application.js', 'fileName')
     t.equal(actual.lineNumber, 481, 'lineNumber')
 
+    let actualMethodDescriptor = actual.build()
+    t.equal(actualMethodDescriptor.getModuleName(), 'express', 'MethodDescriptor moduleName')
+    t.equal(actualMethodDescriptor.getFunctionName(), 'app.get', 'MethodDescriptor functionName')
+    t.equal(actualMethodDescriptor.getMethodName(), 'get', 'MethodDescriptor methodName')
+    // t.equal(actualMethodDescriptor.getClassName(), 'Function', 'MethodDescriptor methodName')
+
     stack = 'at Test.<anonymous> (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/test/instrumentation/module/express.test.js:42:7)'
     captureGroups = stack.match(regex)
     actual = new MethodDescriptorBuilder('express', captureGroups.groups)

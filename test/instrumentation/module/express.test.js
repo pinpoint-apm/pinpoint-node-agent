@@ -37,6 +37,8 @@ test(`${testName1} Should record request in basic route`, function (t) {
     const trace = agent.traceContext.currentTraceObject()
     t.equal(trace.span.annotations[0].key, DefaultAnnotationKey.HTTP_PARAM.name, 'HTTP param key match')
     t.equal(trace.span.annotations[0].value.stringValue, 'api=test&test1=test', 'HTTP param value match')
+
+    const spanEvent = trace.storage.storage[0]
   })
 
   app.get('/express2', async (req, res) => {

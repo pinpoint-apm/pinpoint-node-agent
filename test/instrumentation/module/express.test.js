@@ -11,6 +11,9 @@ const { log, util } = require('../../test-helper')
 const agent = require('../../support/agent-singleton-mock')
 const express = require('express')
 const DefaultAnnotationKey = require('../../../lib/constant/annotation-key').DefaultAnnotationKey
+const apiMetaService = require('../../../lib/context/api-meta-service')
+const MedthodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
+const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -38,7 +41,9 @@ test(`${testName1} Should record request in basic route`, function (t) {
     t.equal(trace.span.annotations[0].key, DefaultAnnotationKey.HTTP_PARAM.name, 'HTTP param key match')
     t.equal(trace.span.annotations[0].value.stringValue, 'api=test&test1=test', 'HTTP param value match')
 
+    const builder = new MethodDescriptorBuilder('express', 'app.get()')
     const spanEvent = trace.storage.storage[0]
+
   })
 
   app.get('/express2', async (req, res) => {

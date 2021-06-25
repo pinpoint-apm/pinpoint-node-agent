@@ -27,7 +27,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
   const testName = testName1
 
-  t.plan(6)
+  t.plan(7)
 
   const PATH = '/' + testName
   const app = new express()
@@ -41,9 +41,11 @@ test(`${testName1} Should record request in basic route`, function (t) {
     t.equal(trace.span.annotations[0].key, DefaultAnnotationKey.HTTP_PARAM.name, 'HTTP param key match')
     t.equal(trace.span.annotations[0].value.stringValue, 'api=test&test1=test', 'HTTP param value match')
 
-    const builder = new MethodDescriptorBuilder('express', 'app.get()')
+    const actualBuilder = new MethodDescriptorBuilder('express', 'app.get()')
+      .setFullName('express.app.get(path, callback)')
+    const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
     const spanEvent = trace.storage.storage[0]
-
+    t.equal(actualMethodDescriptor.apiId, spanEvent.apiId)
   })
 
   app.get('/express2', async (req, res) => {

@@ -25,7 +25,7 @@ test('callstack', (t) => {
     if (!captureGroups || !captureGroups.groups) {
         return
     }
-    let actual = new MethodDescriptorBuilder('express', captureGroups.groups)
+    let actual = MethodDescriptorBuilder.make('express', captureGroups.groups)
     t.equal(actual.methodName, 'get', 'methodName')
     t.equal(actual.functionName, 'app.get', 'functionName')
     t.equal(actual.className, 'Function', 'className')
@@ -41,7 +41,7 @@ test('callstack', (t) => {
 
     stack = 'at Test.<anonymous> (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/test/instrumentation/module/express.test.js:42:7)'
     captureGroups = stack.match(regex)
-    actual = new MethodDescriptorBuilder('express', captureGroups.groups)
+    actual = MethodDescriptorBuilder.make('express', captureGroups.groups)
     t.equal(actual.methodName, '<anonymous>', 'methodName')
     t.equal(actual.functionName, '<anonymous>', 'functionName')
     t.equal(actual.getFunctionName(), '<anonymous>', 'functionName')
@@ -52,7 +52,7 @@ test('callstack', (t) => {
 
     stack = 'at Test.bound [as _cb] (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/tape/lib/test.js:80:32)'
     captureGroups = stack.match(regex)
-    actual = new MethodDescriptorBuilder('express', captureGroups.groups)
+    actual = MethodDescriptorBuilder.make('express', captureGroups.groups)
     t.equal(actual.methodName, '_cb', 'methodName')
     t.equal(actual.functionName, 'bound', 'functionName')
     t.equal(actual.className, 'Test', 'className')

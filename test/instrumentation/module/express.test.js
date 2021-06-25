@@ -27,7 +27,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
   const testName = testName1
 
-  t.plan(7)
+  t.plan(15)
 
   const PATH = '/' + testName
   const app = new express()
@@ -45,7 +45,15 @@ test(`${testName1} Should record request in basic route`, function (t) {
       .setFullName('express.app.get(path, callback)')
     const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
     const spanEvent = trace.storage.storage[0]
-    t.equal(actualMethodDescriptor.apiId, spanEvent.apiId)
+    t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+    t.equal(actualMethodDescriptor.apiDescriptor, 'app.get(path, callback)', 'apiDescriptor')
+    t.equal(actualMethodDescriptor.className, 'Function', 'className')
+    t.equal(actualMethodDescriptor.fileName, 'application.js', 'fileName')
+    t.equal(actualMethodDescriptor.fullName, 'express.app.get(path, callback)', 'fullName')
+    t.equal(actualMethodDescriptor.lineNumber, 481, 'lineNumber')
+    t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
+    t.equal(actualMethodDescriptor.moduleName, 'express', 'moduleName')
+    t.equal(actualMethodDescriptor.objectPath, 'app.get', 'objectPath')
   })
 
   app.get('/express2', async (req, res) => {

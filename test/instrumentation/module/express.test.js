@@ -12,7 +12,6 @@ const agent = require('../../support/agent-singleton-mock')
 const express = require('express')
 const DefaultAnnotationKey = require('../../../lib/constant/annotation-key').DefaultAnnotationKey
 const apiMetaService = require('../../../lib/context/api-meta-service')
-const MedthodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 
 const TEST_ENV = {

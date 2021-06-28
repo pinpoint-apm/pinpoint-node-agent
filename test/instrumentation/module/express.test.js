@@ -26,37 +26,46 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
   const testName = testName1
 
-  t.plan(15)
+  t.plan(17)
 
   const PATH = '/' + testName
   const app = new express()
 
   app.get(PATH, async (req, res) => {
-    Math.random()
-    await util.sleep(3000)
-    res.send('ok get')
+    process.nextTick(() => {
+      res.send('ok get')
 
-    const trace = agent.traceContext.currentTraceObject()
-    t.equal(trace.span.annotations[0].key, DefaultAnnotationKey.HTTP_PARAM.name, 'HTTP param key match')
-    t.equal(trace.span.annotations[0].value.stringValue, 'api=test&test1=test', 'HTTP param value match')
+      const trace = agent.traceContext.currentTraceObject()
+      t.equal(trace.span.annotations[0].key, DefaultAnnotationKey.HTTP_PARAM.name, 'HTTP param key match')
+      t.equal(trace.span.annotations[0].value.stringValue, 'api=test&test1=test', 'HTTP param value match')
 
-    const actualBuilder = new MethodDescriptorBuilder('express', 'app.get()')
-      .setFullName('express.app.get(path, callback)')
-    const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-    const spanEvent = trace.storage.storage[0]
-    t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-    t.equal(actualMethodDescriptor.apiDescriptor, 'app.get(path, callback)', 'apiDescriptor')
-    t.equal(actualMethodDescriptor.className, 'Function', 'className')
-    t.equal(actualMethodDescriptor.fileName, 'application.js', 'fileName')
-    t.equal(actualMethodDescriptor.fullName, 'express.app.get(path, callback)', 'fullName')
-    t.equal(actualMethodDescriptor.lineNumber, 481, 'lineNumber')
-    t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-    t.equal(actualMethodDescriptor.moduleName, 'express', 'moduleName')
-    t.equal(actualMethodDescriptor.objectPath, 'app.get', 'objectPath')
+      const actualBuilder = new MethodDescriptorBuilder('express', 'app.get()')
+        .setFullName('express.app.get(path, callback)')
+      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+      const spanEvent = trace.storage.storage[0]
+      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+      t.equal(actualMethodDescriptor.apiDescriptor, 'app.get(path, callback)', 'apiDescriptor')
+      t.equal(actualMethodDescriptor.className, 'Function', 'className')
+      t.equal(actualMethodDescriptor.fileName, 'application.js', 'fileName')
+      t.equal(actualMethodDescriptor.fullName, 'express.app.get(path, callback)', 'fullName')
+      t.equal(actualMethodDescriptor.lineNumber, 481, 'lineNumber')
+      t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
+      t.equal(actualMethodDescriptor.moduleName, 'express', 'moduleName')
+      t.equal(actualMethodDescriptor.objectPath, 'app.get', 'objectPath')
+    })
   })
 
   app.get('/express2', async (req, res) => {
-    res.send('ok get')
+    process.nextTick(() => {
+      res.send('ok get')
+
+      const trace = agent.traceContext.currentTraceObject()
+      const actualBuilder = new MethodDescriptorBuilder('express', 'app.get()')
+        .setFullName('express.app.get(path, callback)')
+      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+      const spanEvent = trace.storage.storage[0]
+      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+    })
   })
 
   app.post(PATH, (req, res) => {
@@ -72,6 +81,9 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
     const result2 = await axios.post(getServerUrl(PATH))
     t.ok(result2.status, 200)
+
+    const result3 = await axios.get(getServerUrl('/express2'))
+    t.ok(result3.status, 200)
 
     const traceMap = agent.traceContext.getAllTraceObject()
     log.info(traceMap.size)

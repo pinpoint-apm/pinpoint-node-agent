@@ -26,7 +26,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
   const testName = testName1
 
-  t.plan(25)
+  t.plan(27)
 
   const PATH = '/' + testName
   const app = new express()
@@ -77,10 +77,19 @@ test(`${testName1} Should record request in basic route`, function (t) {
   })
 
   app.post(PATH, (req, res) => {
-    res.send('ok post')
+    process.nextTick(() => {
+      res.send('ok post')
 
-    const trace = agent.traceContext.currentTraceObject()
-    t.false(trace.span.annotations[0], 'HTTP param undefined case')
+      const trace = agent.traceContext.currentTraceObject()
+      t.false(trace.span.annotations[0], 'HTTP param undefined case')
+
+      const actualBuilder = new MethodDescriptorBuilder('express', 'app.post()')
+        .setFullName('express.app.post(path, callback)')
+      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+      const spanEvent = trace.storage.storage[0]
+      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+      t.equal(actualMethodDescriptor.apiDescriptor, 'app.post(path, callback)', 'apiDescriptor')
+    })
   })
 
   const server = app.listen(TEST_ENV.port, async function () {

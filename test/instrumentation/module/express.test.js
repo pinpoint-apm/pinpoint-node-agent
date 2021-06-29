@@ -26,7 +26,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
   const testName = testName1
 
-  t.plan(27)
+  t.plan(34)
 
   const PATH = '/' + testName
   const app = new express()
@@ -89,6 +89,13 @@ test(`${testName1} Should record request in basic route`, function (t) {
       const spanEvent = trace.storage.storage[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.equal(actualMethodDescriptor.apiDescriptor, 'app.post(path, callback)', 'apiDescriptor')
+      t.equal(actualMethodDescriptor.className, 'Function', 'className')
+      t.equal(actualMethodDescriptor.fileName, 'application.js', 'fileName')
+      t.equal(actualMethodDescriptor.fullName, 'express.app.post(path, callback)', 'fullName')
+      t.equal(actualMethodDescriptor.lineNumber, 481, 'lineNumber')
+      t.equal(actualMethodDescriptor.methodName, 'post', 'methodName')
+      t.equal(actualMethodDescriptor.moduleName, 'express', 'moduleName')
+      t.equal(actualMethodDescriptor.objectPath, 'app.post', 'objectPath')
     })
   })
 

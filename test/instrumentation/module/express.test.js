@@ -26,7 +26,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
   const testName = testName1
 
-  t.plan(36)
+  t.plan(40)
 
   const PATH = '/' + testName
   const app = new express()
@@ -67,6 +67,8 @@ test(`${testName1} Should record request in basic route`, function (t) {
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       const spanEvent = trace.storage.storage[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+      t.equal(spanEvent.annotations[0].key, -1, 'parameter')
+      t.equal(spanEvent.annotations[0].value.stringValue, '/express2', 'parameter value matching')
       t.equal(actualMethodDescriptor.apiDescriptor, 'app.get(path, callback)', 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, 'Function', 'className')
       t.equal(actualMethodDescriptor.fileName, 'application.js', 'fileName')
@@ -90,6 +92,8 @@ test(`${testName1} Should record request in basic route`, function (t) {
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       const spanEvent = trace.storage.storage[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+      t.equal(spanEvent.annotations[0].key, -1, 'parameter')
+      t.equal(spanEvent.annotations[0].value.stringValue, '/express1', 'parameter value matching')
       t.equal(actualMethodDescriptor.apiDescriptor, 'app.post(path, callback)', 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, 'Function', 'className')
       t.equal(actualMethodDescriptor.fileName, 'application.js', 'fileName')

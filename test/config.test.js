@@ -57,7 +57,7 @@ test('deadline config', (t) => {
 
   const json = require('../lib/pinpoint-config-default')
   const result = config.readConfigJson(json)
-  t.equal(result.streamDeadlineMinutesClientSide, 5)
+  t.equal(result.streamDeadlineMinutesClientSide, 10)
 })
 
 test('main moudle path', (t) => {
@@ -66,7 +66,7 @@ test('main moudle path', (t) => {
   t.deepEqual(conf, {}, 'configuration is null object')
   let actual = config.getMainModulePath(require)
   let actualParsedPath = path.parse(actual)
-  t.deepEqual(actualParsedPath.base, 'test', 'main module path')
+  t.deepEqual(actualParsedPath.base, 'bin', 'main module path')
 
   actual = config.getMainModulePath({})
   t.true(actual === undefined, 'config.getMainModulePath({}) return value is undefined')

@@ -14,5 +14,5 @@ test('Should initialize agent', function (t) {
 
   const agent = require('./support/agent-singleton-mock')
   t.ok(agent)
-  t.equal(agent.pinpointClient.agentInfo.agentVersion, '0.8.1-next.3', 'agent version from package.json')
+  t.equal(agent.pinpointClient.agentInfo.agentVersion, '0.9.0-next.1', 'agent version from package.json')
 })

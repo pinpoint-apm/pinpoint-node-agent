@@ -26,7 +26,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
   const testName = testName1
 
-  t.plan(40)
+  t.plan(41)
 
   const PATH = '/' + testName
   const app = new express()
@@ -54,6 +54,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
       t.equal(actualMethodDescriptor.moduleName, 'express', 'moduleName')
       t.equal(actualMethodDescriptor.objectPath, 'app.get', 'objectPath')
+      t.true(actualMethodDescriptor.location.length > 0, 'location')
     })
   })
 

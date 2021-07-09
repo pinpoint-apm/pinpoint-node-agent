@@ -7,7 +7,7 @@
 const test = require('tape')
 const axios = require('axios')
 
-const { log, util } = require('../../test-helper')
+const { log } = require('../../test-helper')
 const agent = require('../../support/agent-singleton-mock')
 const express = require('express')
 const DefaultAnnotationKey = require('../../../lib/constant/annotation-key').DefaultAnnotationKey

@@ -18,5 +18,9 @@ test('makeMethodDescriptorBuilderByFileName', (t) => {
     let actualMethodDescriptor = actual.build()
     t.equal(actualMethodDescriptor.getAPIInfo(), 'Object.Module._extensions..js (internal/modules/cjs/loader.js)')
 
+    actual = methodDescriptorBuilder(undefined, 'at new functionName (internal/modules/cjs/loader.js:699:10)')
+    t.false(actual)
+    // t.equal(actual.className, 'Object', 'className')
+
     t.end()
 })

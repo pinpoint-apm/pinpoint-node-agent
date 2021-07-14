@@ -5,7 +5,7 @@
  */
 
 const test = require('tape')
-const { captureNamedGroup, methodDescriptorBuilder } = require('../../lib/context/make-method-descriptor-builder')
+const { captureNamedGroup } = require('../../lib/context/make-method-descriptor-builder')
 const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
 
 test('makeMethodDescriptorBuilder', (t) => {

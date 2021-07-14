@@ -29,5 +29,15 @@ test('makeMethodDescriptorBuilderByFileName', (t) => {
     actualMethodDescriptor = actual.build()
     t.equal(actualMethodDescriptor.getAPIInfo(), 'Object.Module._extensions..js (internal/modules/cjs/loader.js)')
 
+    actual = captureNamedGroup('at async functionName (internal/modules/cjs/loader.js:699:10)')
+    t.equal(actual.className, undefined, 'className')
+    t.equal(actual.fileName, 'loader.js', 'fileName')
+    t.equal(actual.functionName, 'FunctionName')
+    t.equal(actual.lineNumber, '699', 'lineNumber')
+    t.equal(actual.location, 'internal/modules/cjs/')
+
+    actualMethodDescriptor = MethodDescriptorBuilder.make(undefined, actual).build()
+    t.equal(actualMethodDescriptor.getAPIInfo(), 'FunctionName (internal/modules/cjs/loader.js)')
+
     t.end()
 })

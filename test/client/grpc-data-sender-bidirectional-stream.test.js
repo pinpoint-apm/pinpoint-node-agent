@@ -221,6 +221,9 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                                 end: function () {
                                     this.writable = false
                                     currentStream.end()
+                                },
+                                once: function (eventName, cb) {
+                                    currentStream.once(eventName, cb)
                                 }
                             }
                             this.grpcDataSender.sendPing()

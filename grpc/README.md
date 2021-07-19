@@ -6,10 +6,6 @@ $ export PATH="$PATH:$(npm bin -g)"
 $ grpc_tools_node_protoc --version
 libprotoc 3.14.0
 
-$ grpc_tools_node_protoc --js_out=import_style=commonjs,binary:../ --grpc_out=grpc_js:../  --plugin=protoc-gen-grpc=`which grpc_tools_node_protoc_plugin` Span.proto
-$ grpc_tools_node_protoc --js_out=import_style=commonjs,binary:../ --grpc_out=grpc_js:../  --plugin=protoc-gen-grpc=`which grpc_tools_node_protoc_plugin` Service.proto
-$ grpc_tools_node_protoc --js_out=import_style=commonjs,binary:../ --grpc_out=grpc_js:../  --plugin=protoc-gen-grpc=`which grpc_tools_node_protoc_plugin` Cmd.proto
-$ grpc_tools_node_protoc --js_out=import_style=commonjs,binary:../ --grpc_out=grpc_js:../  --plugin=protoc-gen-grpc=`which grpc_tools_node_protoc_plugin` Annotation.proto
-$ grpc_tools_node_protoc --js_out=import_style=commonjs,binary:../ --grpc_out=grpc_js:../  --plugin=protoc-gen-grpc=`which grpc_tools_node_protoc_plugin` Stat.proto
-$ grpc_tools_node_protoc --js_out=import_style=commonjs,binary:../ --grpc_out=grpc_js:../  --plugin=protoc-gen-grpc=`which grpc_tools_node_protoc_plugin` ThreadDump.proto
+$ cd grpc-idl/proto
+$ grpc_tools_node_protoc --js_out=import_style=commonjs,binary:../../../lib/data --grpc_out=grpc_js:../../../lib/data --plugin=protoc-gen-grpc=`which grpc_tools_node_protoc_plugin` v1/*.proto
 ```

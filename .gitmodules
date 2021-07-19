@@ -1,3 +1,0 @@
-[submodule "grpc/pinpoint-grpc-idl"]
-	path = grpc/pinpoint-grpc-idl
-	url = https://github.com/feelform/pinpoint-grpc-idl.git

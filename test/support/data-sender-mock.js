@@ -20,12 +20,17 @@ const DataSender = require('../../lib/client/data-sender')
 const MockgRPCDataSender = require('../client/mock-grpc-data-sender')
 
 class MockDataSender extends DataSender {
+  constructor(config, dataSender) {
+    super(config, dataSender)
+    this.mockAPIMetaInfos = []
+  }
+
   send(data) {
     if (data instanceof AgentInfo) {
       this.mockAgentInfo = data
       this.dataSender.sendAgentInfo(data)
     } else if (data instanceof ApiMetaInfo) {
-      this.mockAPIMetaInfo = data
+      this.mockAPIMetaInfos.push(data)
       this.dataSender.sendApiMetaInfo(data)
     } else if (data instanceof StringMetaInfo) {
       this.mockMetaInfo = data

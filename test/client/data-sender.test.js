@@ -44,7 +44,7 @@ test('Should send api meta info', function (t) {
   const apiMetaInfo = ApiMetaInfo.create(methodDescriptor)
   dataSender.send(apiMetaInfo)
 
-  t.equal(dataSender.mockAPIMetaInfo, apiMetaInfo, "span is equal in datasender")
+  t.equal(dataSender.mockAPIMetaInfos[0], apiMetaInfo, "span is equal in datasender")
 })
 
 test('Should send string meta info', function (t) {

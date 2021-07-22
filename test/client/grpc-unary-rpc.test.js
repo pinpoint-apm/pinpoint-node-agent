@@ -197,9 +197,11 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
             ip: '1'
         })
         const apiMetaInfo = new ApiMetaInfo({
-            apiId: '12121212',
-            apiInfo: agentInfo,
-            type: 1400
+            apiId: 12121212,
+            apiInfo: 'express.Function.app.get(path, callback)',
+            type: 1400,
+            lineNumber: 481,
+            location: 'node_modules/express/lib/application.js',
         })
 
         this.dataSender = dataSenderFactory.create({
@@ -211,8 +213,10 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
         }, agentInfo)
 
         let callbackTimes = 0
-        const callback = () => {
+        const callback = (error, response) => {
             callbackTimes++
+            t.false(error, 'error is undefined')
+            t.true(response, 'response')
             t.equal(callbackTimes, 1, 'callback only once called')
             t.equal(requestTimes, 1, 'requestes one time')
 
@@ -222,7 +226,11 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
         let requestTimes = 0
         this.dataSender.dataSender.requestApiMetaData.request = (data, _, timesOfRetry = 1) => {
             requestTimes++
-            t.equal(data.getApiid(), '12121212', 'apiId')
+            t.equal(data.getApiid(), 12121212, 'apiId')
+            t.equal(data.getApiinfo(), 'express.Function.app.get(path, callback)', 'Apiinfo')
+            t.equal(data.getType(), 1400, 'type')
+            t.equal(data.getLine(), 481, 'line')
+            t.equal(data.getLocation(), '', 'location')
             origin.call(this.dataSender.dataSender.requestApiMetaData, data, callback, timesOfRetry)
         }
         this.dataSender.send(apiMetaInfo)

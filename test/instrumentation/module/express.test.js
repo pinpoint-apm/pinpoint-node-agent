@@ -80,7 +80,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
       const actualGetAPIMetaInfo = apiMetaService.dataSender.mockAPIMetaInfos[0]
       t.equal(actualGetAPIMetaInfo.apiInfo, 'express.Function.app.get(path, callback)', 'apiInfo')
       t.equal(actualGetAPIMetaInfo.lineNumber, 481, 'apiInfo')
-      t.true(actualGetAPIMetaInfo.location.endsWith('node_modules/express/lib//application.js'), 'location')
+      t.true(actualGetAPIMetaInfo.location.endsWith('node_modules/express/lib/application.js'), 'location')
       const actualUserCodeAPIMetaInfo = apiMetaService.dataSender.mockAPIMetaInfos[1]
     })
   })

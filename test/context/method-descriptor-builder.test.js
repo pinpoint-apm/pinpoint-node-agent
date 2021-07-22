@@ -19,7 +19,6 @@ test('callstack', (t) => {
     t.equal(actual.methodName, 'get', 'methodName')
     t.equal(actual.functionName, 'app.get', 'functionName')
     t.equal(actual.className, 'Function', 'className')
-    t.equal(actual.fileName, 'application.js', 'fileName')
     t.equal(actual.lineNumber, 481, 'lineNumber')
 
     let actualMethodDescriptor = actual.build()
@@ -37,7 +36,6 @@ test('callstack', (t) => {
     t.equal(actual.getFunctionName(), '<anonymous>', 'functionName')
     t.equal(actual.className, 'Test', 'className')
     t.equal(actual.getClassName(), 'Test', 'className')
-    t.equal(actual.fileName, 'express.test.js', 'fileName')
     t.equal(actual.lineNumber, 42, 'lineNumber')
 
     stack = 'at Test.bound [as _cb] (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/tape/lib/test.js:80:32)'
@@ -46,7 +44,6 @@ test('callstack', (t) => {
     t.equal(actual.methodName, '_cb', 'methodName')
     t.equal(actual.functionName, 'bound', 'functionName')
     t.equal(actual.className, 'Test', 'className')
-    t.equal(actual.fileName, 'test.js', 'fileName')
     t.equal(actual.lineNumber, 80, 'lineNumber')
 
     t.end()

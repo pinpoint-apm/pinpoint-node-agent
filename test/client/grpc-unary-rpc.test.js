@@ -230,7 +230,7 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
             t.equal(data.getApiinfo(), 'express.Function.app.get(path, callback)', 'Apiinfo')
             t.equal(data.getType(), 1400, 'type')
             t.equal(data.getLine(), 481, 'line')
-            t.equal(data.getLocation(), '', 'location')
+            t.equal(data.getLocation(), 'node_modules/express/lib/application.js', 'location')
             origin.call(this.dataSender.dataSender.requestApiMetaData, data, callback, timesOfRetry)
         }
         this.dataSender.send(apiMetaInfo)

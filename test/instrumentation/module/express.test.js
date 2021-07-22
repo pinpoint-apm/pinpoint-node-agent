@@ -14,7 +14,6 @@ const DefaultAnnotationKey = require('../../../lib/constant/annotation-key').Def
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const dataSenderMock = require('../../support/data-sender-mock')
-apiMetaService.init(dataSenderMock())
 
 const TEST_ENV = {
   host: 'localhost',

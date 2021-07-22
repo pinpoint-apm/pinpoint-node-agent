@@ -13,7 +13,6 @@ const express = require('express')
 const DefaultAnnotationKey = require('../../../lib/constant/annotation-key').DefaultAnnotationKey
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
-const dataSenderMock = require('../../support/data-sender-mock')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -47,9 +46,8 @@ test(`${testName1} Should record request in basic route`, function (t) {
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.equal(spanEvent.annotations[0].key, -1, 'parameter')
       t.equal(spanEvent.annotations[0].value.stringValue, '/express1', 'parameter value matching')
-      t.true(actualMethodDescriptor.apiDescriptor.startsWith('express.Function.app.get(path, callback) ('), 'apiDescriptor')
+      t.true(actualMethodDescriptor.apiDescriptor.startsWith('express.Function.app.get(path, callback)'), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, 'Function', 'className')
-      t.equal(actualMethodDescriptor.fileName, 'application.js', 'fileName')
       t.equal(actualMethodDescriptor.fullName, 'express.app.get(path, callback)', 'fullName')
       t.equal(actualMethodDescriptor.lineNumber, 481, 'lineNumber')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
@@ -71,14 +69,19 @@ test(`${testName1} Should record request in basic route`, function (t) {
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.equal(spanEvent.annotations[0].key, -1, 'parameter')
       t.equal(spanEvent.annotations[0].value.stringValue, '/express2', 'parameter value matching')
-      t.true(actualMethodDescriptor.apiDescriptor.startsWith('express.Function.app.get(path, callback) ('), 'apiDescriptor')
+      t.true(actualMethodDescriptor.apiDescriptor.startsWith('express.Function.app.get(path, callback)'), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, 'Function', 'className')
-      t.equal(actualMethodDescriptor.fileName, 'application.js', 'fileName')
       t.equal(actualMethodDescriptor.fullName, 'express.app.get(path, callback)', 'fullName')
       t.equal(actualMethodDescriptor.lineNumber, 481, 'lineNumber')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
       t.equal(actualMethodDescriptor.moduleName, 'express', 'moduleName')
       t.equal(actualMethodDescriptor.objectPath, 'app.get', 'objectPath')
+
+      const actualGetAPIMetaInfo = apiMetaService.dataSender.mockAPIMetaInfos[0]
+      t.equal(actualGetAPIMetaInfo.apiInfo, 'express.Function.app.get(path, callback)', 'apiInfo')
+      t.equal(actualGetAPIMetaInfo.lineNumber, 481, 'apiInfo')
+      t.true(actualGetAPIMetaInfo.location.endsWith('node_modules/express/lib//application.js'), 'location')
+      const actualUserCodeAPIMetaInfo = apiMetaService.dataSender.mockAPIMetaInfos[1]
     })
   })
 
@@ -96,9 +99,8 @@ test(`${testName1} Should record request in basic route`, function (t) {
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.equal(spanEvent.annotations[0].key, -1, 'parameter')
       t.equal(spanEvent.annotations[0].value.stringValue, '/express1', 'parameter value matching')
-      t.true(actualMethodDescriptor.apiDescriptor.startsWith('express.Function.app.post(path, callback) ('), 'apiDescriptor')
+      t.true(actualMethodDescriptor.apiDescriptor.startsWith('express.Function.app.post(path, callback)'), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, 'Function', 'className')
-      t.equal(actualMethodDescriptor.fileName, 'application.js', 'fileName')
       t.equal(actualMethodDescriptor.fullName, 'express.app.post(path, callback)', 'fullName')
       t.equal(actualMethodDescriptor.lineNumber, 481, 'lineNumber')
       t.equal(actualMethodDescriptor.methodName, 'post', 'methodName')

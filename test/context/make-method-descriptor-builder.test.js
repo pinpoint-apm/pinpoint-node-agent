@@ -17,7 +17,7 @@ test('makeMethodDescriptorBuilder', (t) => {
     t.equal(actual.location, 'internal/modules/cjs/')
 
     let actualMethodDescriptor = MethodDescriptorBuilder.make(undefined, actual).build()
-    t.equal(actualMethodDescriptor.getAPIInfo(), 'FunctionName (internal/modules/cjs/loader.js)')
+    t.equal(actualMethodDescriptor.getApiDescriptor(), 'FunctionName()')
 
     actual = captureNamedGroup('at Object.Module._extensions..js (internal/modules/cjs/loader.js:699:10)')
     t.equal(actual.type, 'Object', 'className')
@@ -27,7 +27,7 @@ test('makeMethodDescriptorBuilder', (t) => {
     t.equal(actual.location, 'internal/modules/cjs/')
 
     actualMethodDescriptor = MethodDescriptorBuilder.make(undefined, actual).build()
-    t.equal(actualMethodDescriptor.getAPIInfo(), 'Object.Module._extensions..js (internal/modules/cjs/loader.js)')
+    t.equal(actualMethodDescriptor.getApiDescriptor(), 'Object.Module._extensions..js()')
 
     actual = captureNamedGroup('at async functionName (internal/modules/cjs/loader.js:699:10)')
     t.equal(actual.type, undefined, 'className')
@@ -37,7 +37,7 @@ test('makeMethodDescriptorBuilder', (t) => {
     t.equal(actual.location, 'internal/modules/cjs/')
 
     actualMethodDescriptor = MethodDescriptorBuilder.make(undefined, actual).build()
-    t.equal(actualMethodDescriptor.getAPIInfo(), 'FunctionName (internal/modules/cjs/loader.js)')
+    t.equal(actualMethodDescriptor.getApiDescriptor(), 'FunctionName()')
 
     t.end()
 })

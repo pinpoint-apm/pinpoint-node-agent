@@ -183,6 +183,60 @@ test('sendApiMetaInfo retry', (t) => {
     })
 })
 
+test('sendApiMetaInfo lineNumber and location', (t) => {
+    const server = new GrpcServer()
+    server.addService(services.MetadataService, {
+        requestApiMetaData: requestApiMetaData
+    })
+    server.startup((port) => {
+        const agentInfo = Object.assign(new AgentInfo({
+            agentId: '12121212',
+            applicationName: 'applicationName',
+            agentStartTime: Date.now()
+        }), {
+            ip: '1'
+        })
+        const apiMetaInfo = new ApiMetaInfo({
+            apiId: '12121212',
+            apiInfo: agentInfo,
+            type: 1400
+        })
+
+        this.dataSender = dataSenderFactory.create({
+            collectorIp: 'localhost',
+            collectorTcpPort: port,
+            collectorStatPort: port,
+            collectorSpanPort: port,
+            enabledDataSending: true
+        }, agentInfo)
+
+        let callbackTimes = 0
+        const callback = () => {
+            callbackTimes++
+            t.equal(callbackTimes, 1, 'callback only once called')
+            t.equal(requestTimes, 1, 'requestes one time')
+
+            tryShutdown()
+        }
+        const origin = this.dataSender.dataSender.requestApiMetaData.request
+        let requestTimes = 0
+        this.dataSender.dataSender.requestApiMetaData.request = (data, _, timesOfRetry = 1) => {
+            requestTimes++
+            t.equal(data.getApiid(), '12121212', 'apiId')
+            origin.call(this.dataSender.dataSender.requestApiMetaData, data, callback, timesOfRetry)
+        }
+        this.dataSender.send(apiMetaInfo)
+
+        tryShutdown = () => {
+            setTimeout(() => {
+                server.tryShutdown(() => {
+                    t.end()
+                })
+            }, 0)
+        }
+    })
+})
+
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function requestStringMetaData(call, callback) {
     const result = new spanMessages.PResult()
@@ -254,59 +308,6 @@ test('sendStringMetaInfo retry', (t) => {
     })
 })
 
-test('sendStringMetaInfo lineNumber and location', (t) => {
-    const server = new GrpcServer()
-    server.addService(services.MetadataService, {
-        requestStringMetaData: requestStringMetaData
-    })
-    server.startup((port) => {
-        const agentInfo = Object.assign(new AgentInfo({
-            agentId: '12121212',
-            applicationName: 'applicationName',
-            agentStartTime: Date.now()
-        }), {
-            ip: '1'
-        })
-
-        this.dataSender = dataSenderFactory.create({
-            collectorIp: 'localhost',
-            collectorTcpPort: port,
-            collectorStatPort: port,
-            collectorSpanPort: port,
-            enabledDataSending: true
-        }, agentInfo)
-
-        const stringMetaInfo = new StringMetaInfo({
-            stringId: '12121212',
-            stringValue: 'agentInfo'
-        })
-
-
-        let callbackTimes = 0
-        const callback = (err, response) => {
-            callbackTimes++
-            t.equal(callbackTimes, 1, 'callback only once called')
-            t.equal(requestTimes, 1, 'requestes one times')
-
-            tryShutdown()
-        }
-        const origin = this.dataSender.dataSender.requestStringMetaData.request
-        let requestTimes = 0
-        this.dataSender.dataSender.requestStringMetaData.request = (data, _, timesOfRetry = 1) => {
-            requestTimes++
-            origin.call(this.dataSender.dataSender.requestStringMetaData, data, callback, timesOfRetry)
-        }
-        this.dataSender.send(stringMetaInfo)
-
-        tryShutdown = () => {
-            setTimeout(() => {
-                server.tryShutdown(() => {
-                    t.end()
-                })
-            }, 0)
-        }
-    })
-})
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function requestAgentInfo2(call, callback) {

@@ -113,6 +113,12 @@ test(`${testName1} Should record request in basic route`, function (t) {
     next(new Error('error case'))
   })
 
+  // app.use((error, req, res, next) => {
+  //   console.log('[app] error handler')
+  //   res.status = 500
+  //   res.json({ message: error.message })
+  // })
+
   const server = app.listen(TEST_ENV.port, async function () {
     const result1 = await axios.get(getServerUrl(PATH) + '?api=test&test1=test')
     t.ok(result1.status, 200)
@@ -126,7 +132,9 @@ test(`${testName1} Should record request in basic route`, function (t) {
     try {
       var result4 = await axios.get(getServerUrl('/express3'))
     } catch (error) {
-      // t.ok(result4.status, 200)
+      if (result4) {
+        t.ok(result4.status, 200)
+      }
     }
 
     const traceMap = agent.traceContext.getAllTraceObject()

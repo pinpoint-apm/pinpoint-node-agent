@@ -108,27 +108,28 @@ test(`${testName1} Should record request in basic route`, function (t) {
   })
 
   app.get('/express3', async (req, res, next) => {
-    next(new Error('error case'))
+    process.nextTick(() => {
+      next(new Error('error case'))
+    })
   })
-
   app.use(function (err, req, res, next) {
     res.status(500).send('Something broke!')
   })
 
   const server = app.listen(TEST_ENV.port, async function () {
     const result1 = await axios.get(getServerUrl(PATH) + '?api=test&test1=test')
-    t.ok(result1.status, 200)
+    t.equal(result1.status, 200)
 
     const result2 = await axios.post(getServerUrl(PATH))
-    t.ok(result2.status, 200)
+    t.equal(result2.status, 200)
 
     const result3 = await axios.get(getServerUrl('/express2'))
-    t.ok(result3.status, 200)
+    t.equal(result3.status, 200)
 
     try {
-      var result4 = await axios.get(getServerUrl('/express3'))
+      await axios.get(getServerUrl('/express3'))
     } catch (error) {
-      t.ok(error.response.status, 200)
+      t.equal(error.response.status, 500)
     }
 
     const traceMap = agent.traceContext.getAllTraceObject()

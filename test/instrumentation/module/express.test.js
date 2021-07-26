@@ -107,12 +107,21 @@ test(`${testName1} Should record request in basic route`, function (t) {
     })
   })
 
+  let errorOrder = 0
   app.get('/express3', async (req, res, next) => {
     process.nextTick(() => {
+      errorOrder++
       next(new Error('error case'))
+
+      errorOrder++
+      const trace = agent.traceContext.currentTraceObject()
+      const spanEvent = trace.storage.storage[2]
+      t.equal(spanEvent.annotations[0].key, 12, 'parameter')
+      t.equal(spanEvent.annotations[0].value.stringValue, 'express.middleware.[anonymous]', 'parameter value matching')
     })
   })
   app.use(function (err, req, res, next) {
+    t.equal(errorOrder, 1, 'error order')
     res.status(500).send('Something broke!')
   })
 

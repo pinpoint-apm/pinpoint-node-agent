@@ -13,6 +13,7 @@ const express = require('express')
 const DefaultAnnotationKey = require('../../../lib/constant/annotation-key').DefaultAnnotationKey
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
+const semver = require('semver')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -108,12 +109,11 @@ test(`${testName1} Should record request in basic route`, function (t) {
   })
 
   let errorOrder = 0
-  app.get('/express3', async (req, res, next) => {
-    process.nextTick(() => {
-      errorOrder++
-      next(new Error('error case'))
+  app.get('/express3', (req, res, next) => {
+    errorOrder++
+    throw new Error('error case')
 
-      errorOrder++
+    process.nextTick(() => {
       const trace = agent.traceContext.currentTraceObject()
       const spanEvent = trace.storage.storage[2]
       t.equal(spanEvent.annotations[0].key, 12, 'parameter')

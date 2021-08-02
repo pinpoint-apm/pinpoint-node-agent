@@ -158,7 +158,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
     try {
       await axios.get(getServerUrl('/express4'))
     } catch (error) {
-      t.equal(error.response.status, 500)
+      t.equal(error.response.status, 500, 'axios.get(getServerUrl(/express4))')
     }
 
     const traceMap = agent.traceContext.getAllTraceObject()

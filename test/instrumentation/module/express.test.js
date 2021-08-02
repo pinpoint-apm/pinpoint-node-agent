@@ -381,3 +381,8 @@ test(`${testName6} Should record each http method`, function (t) {
     server.close()
   })
 }) */
+
+test('semver test', (t) => {
+  t.false(semver.satisfies('5.0.0', '^4.0.0'), 'express version')
+  t.end()
+})

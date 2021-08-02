@@ -109,8 +109,11 @@ test(`${testName1} Should record request in basic route`, function (t) {
   })
 
   let errorOrder = 0
+  const express3Symbol = Symbol('express3')
+  let pathSymbol
   app.get('/express3', (req, res, next) => {
     errorOrder++
+    pathSymbol = express3Symbol
     throw new Error('error case')
 
     process.nextTick(() => {
@@ -121,7 +124,9 @@ test(`${testName1} Should record request in basic route`, function (t) {
     })
   })
   app.use(function (err, req, res, next) {
-    t.equal(errorOrder, 1, 'error order')
+    if (pathSymbol == express3Symbol) {
+      t.equal(errorOrder, 1, 'error order')
+    }
     res.status(500).send('Something broke!')
   })
 

@@ -109,23 +109,32 @@ test(`${testName1} Should record request in basic route`, function (t) {
   })
 
   let errorOrder = 0
-  const express3Symbol = Symbol('express3')
   let pathSymbol
+
+  const express3Symbol = Symbol('express3')
   app.get('/express3', (req, res, next) => {
     errorOrder++
     pathSymbol = express3Symbol
     throw new Error('error case')
+  })
+
+  const express4Symbol = Symbol('express4')
+  app.get('/express4', (req, res, next) => {
+    errorOrder++
+    pathSymbol = express4Symbol
+    next(new Error('error case'))
 
     process.nextTick(() => {
       const trace = agent.traceContext.currentTraceObject()
-      const spanEvent = trace.storage.storage[2]
-      t.equal(spanEvent.annotations[0].key, 12, 'parameter')
-      t.equal(spanEvent.annotations[0].value.stringValue, 'express.middleware.[anonymous]', 'parameter value matching')
     })
   })
+
   app.use(function (err, req, res, next) {
     if (pathSymbol == express3Symbol) {
-      t.equal(errorOrder, 1, 'error order')
+      t.equal(errorOrder, 1, 'express3 error order')
+    }
+    if (pathSymbol === express4Symbol) {
+      t.equal(errorOrder, 2, 'express4 error order')
     }
     res.status(500).send('Something broke!')
   })
@@ -142,6 +151,12 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
     try {
       await axios.get(getServerUrl('/express3'))
+    } catch (error) {
+      t.equal(error.response.status, 500)
+    }
+
+    try {
+      await axios.get(getServerUrl('/express4'))
     } catch (error) {
       t.equal(error.response.status, 500)
     }

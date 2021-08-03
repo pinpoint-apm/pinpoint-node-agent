@@ -386,3 +386,14 @@ test('semver test', (t) => {
   t.false(semver.satisfies('5.0.0', '^4.0.0'), 'express version')
   t.end()
 })
+
+test('express version check', (t) => {
+  const hook = require('../../../lib/instrumentation/module/express')
+  const expected = { name: 'module' }
+  let actual = hook(null, '5.0', expected)
+  t.equal(actual.name, 'module', 'express version 5.0 test')
+
+  actual = hook(null, '5.0.0', expected)
+  t.equal(actual.name, 'module', 'express version 5.0.0 test')
+  t.end()
+})

@@ -27,7 +27,7 @@ test(`redis destination id`, async (t) => {
     )
 
     client.on("error", function (error) {
-        console.error(error);
+        console.error(error)
     })
 
     client.set("key", "value", async function (error) {
@@ -81,7 +81,7 @@ test("ioredis destination id", async function (t) {
 
         const spanevent = agent.dataSender.mockSpanChunk.spanEventList[1]
         t.equal(spanevent.destinationId, "Redis", "Redis destionation ID check")
-        t.equal(spanevent.endPoint, `localhost:${port}`)
+        t.true(spanevent.endPoint.endsWith(`:${port}`), `localhost:${port}`)
 
         redis.quit()
         agent.completeTraceObject(trace)
@@ -127,7 +127,7 @@ test(`Fix app crash without callback function https://github.com/pinpoint-apm/pi
     client.select(2)
 
     client.on("error", function (error) {
-        console.error(error);
+        console.error(error)
     })
 
     client.set("key", "value", async function (error) {

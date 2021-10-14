@@ -146,20 +146,20 @@ test(`${testName1} Should record request in basic route`, function (t) {
     const result2 = await axios.post(getServerUrl(PATH))
     t.equal(result2.status, 200)
 
-    const result3 = await axios.get(getServerUrl('/express2'))
-    t.equal(result3.status, 200)
+    // const result3 = await axios.get(getServerUrl('/express2'))
+    // t.equal(result3.status, 200)
 
-    try {
-      await axios.get(getServerUrl('/express3'))
-    } catch (error) {
-      t.equal(error.response.status, 500)
-    }
+    // try {
+    //   await axios.get(getServerUrl('/express3'))
+    // } catch (error) {
+    //   t.equal(error.response.status, 500)
+    // }
 
-    try {
-      await axios.get(getServerUrl('/express4'))
-    } catch (error) {
-      t.equal(error.response.status, 500, 'axios.get(getServerUrl(/express4))')
-    }
+    // try {
+    //   await axios.get(getServerUrl('/express4'))
+    // } catch (error) {
+    //   t.equal(error.response.status, 500, 'axios.get(getServerUrl(/express4))')
+    // }
 
     const traceMap = agent.traceContext.getAllTraceObject()
     log.info(traceMap.size)

@@ -56,34 +56,6 @@ test(`${testName1} Should record request in basic route`, function (t) {
     })
   })
 
-  app.get('/express2', async (req, res) => {
-    process.nextTick(() => {
-      res.send('ok get')
-
-      const trace = agent.traceContext.currentTraceObject()
-      const actualBuilder = new MethodDescriptorBuilder('express', 'app.get()')
-        .setFullName('express.app.get(path, callback)')
-      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      const spanEvent = trace.storage.storage[1]
-      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.equal(spanEvent.annotations[0].key, -1, 'parameter')
-      t.equal(spanEvent.annotations[0].value.stringValue, '/express2', 'parameter value matching')
-      t.true(actualMethodDescriptor.apiDescriptor.startsWith('express.Function.app.get(path, callback)'), 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, 'Function', 'className')
-      t.equal(actualMethodDescriptor.fullName, 'express.app.get(path, callback)', 'fullName')
-      t.equal(actualMethodDescriptor.lineNumber, 481, 'lineNumber')
-      t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-      t.equal(actualMethodDescriptor.moduleName, 'express', 'moduleName')
-      t.equal(actualMethodDescriptor.objectPath, 'app.get', 'objectPath')
-
-      const actualGetAPIMetaInfo = apiMetaService.dataSender.mockAPIMetaInfos[0]
-      t.equal(actualGetAPIMetaInfo.apiInfo, 'express.Function.app.get(path, callback)', 'apiInfo')
-      t.equal(actualGetAPIMetaInfo.lineNumber, 481, 'apiInfo')
-      t.true(actualGetAPIMetaInfo.location.endsWith('node_modules/express/lib/application.js'), 'location')
-      const actualUserCodeAPIMetaInfo = apiMetaService.dataSender.mockAPIMetaInfos[1]
-    })
-  })
-
   app.post(PATH, (req, res) => {
     process.nextTick(() => {
       res.send('ok post')
@@ -107,37 +79,65 @@ test(`${testName1} Should record request in basic route`, function (t) {
       t.equal(actualMethodDescriptor.objectPath, 'app.post', 'objectPath')
     })
   })
-
-  let errorOrder = 0
-  let pathSymbol
-
-  const express3Symbol = Symbol('express3')
-  app.get('/express3', (req, res, next) => {
-    errorOrder++
-    pathSymbol = express3Symbol
-    throw new Error('error case')
-  })
-
-  const express4Symbol = Symbol('express4')
-  app.get('/express4', (req, res, next) => {
-    errorOrder++
-    pathSymbol = express4Symbol
-    next(new Error('error case'))
-
-    process.nextTick(() => {
-      const trace = agent.traceContext.currentTraceObject()
+  /*
+    app.get('/express2', async (req, res) => {
+      process.nextTick(() => {
+        res.send('ok get')
+  
+        const trace = agent.traceContext.currentTraceObject()
+        const actualBuilder = new MethodDescriptorBuilder('express', 'app.get()')
+          .setFullName('express.app.get(path, callback)')
+        const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+        const spanEvent = trace.storage.storage[1]
+        t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+        t.equal(spanEvent.annotations[0].key, -1, 'parameter')
+        t.equal(spanEvent.annotations[0].value.stringValue, '/express2', 'parameter value matching')
+        t.true(actualMethodDescriptor.apiDescriptor.startsWith('express.Function.app.get(path, callback)'), 'apiDescriptor')
+        t.equal(actualMethodDescriptor.className, 'Function', 'className')
+        t.equal(actualMethodDescriptor.fullName, 'express.app.get(path, callback)', 'fullName')
+        t.equal(actualMethodDescriptor.lineNumber, 481, 'lineNumber')
+        t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
+        t.equal(actualMethodDescriptor.moduleName, 'express', 'moduleName')
+        t.equal(actualMethodDescriptor.objectPath, 'app.get', 'objectPath')
+  
+        const actualGetAPIMetaInfo = apiMetaService.dataSender.mockAPIMetaInfos[0]
+        t.equal(actualGetAPIMetaInfo.apiInfo, 'express.Function.app.get(path, callback)', 'apiInfo')
+        t.equal(actualGetAPIMetaInfo.lineNumber, 481, 'apiInfo')
+        t.true(actualGetAPIMetaInfo.location.endsWith('node_modules/express/lib/application.js'), 'location')
+        const actualUserCodeAPIMetaInfo = apiMetaService.dataSender.mockAPIMetaInfos[1]
+      })
     })
-  })
-
-  app.use(function (err, req, res, next) {
-    if (pathSymbol == express3Symbol) {
-      t.equal(errorOrder, 1, 'express3 error order')
-    }
-    if (pathSymbol === express4Symbol) {
-      t.equal(errorOrder, 2, 'express4 error order')
-    }
-    res.status(500).send('Something broke!')
-  })
+  
+    let errorOrder = 0
+    let pathSymbol
+  
+    const express3Symbol = Symbol('express3')
+    app.get('/express3', (req, res, next) => {
+      errorOrder++
+      pathSymbol = express3Symbol
+      throw new Error('error case')
+    })
+  
+    const express4Symbol = Symbol('express4')
+    app.get('/express4', (req, res, next) => {
+      errorOrder++
+      pathSymbol = express4Symbol
+      next(new Error('error case'))
+  
+      process.nextTick(() => {
+        const trace = agent.traceContext.currentTraceObject()
+      })
+    })
+  
+    app.use(function (err, req, res, next) {
+      if (pathSymbol == express3Symbol) {
+        t.equal(errorOrder, 1, 'express3 error order')
+      }
+      if (pathSymbol === express4Symbol) {
+        t.equal(errorOrder, 2, 'express4 error order')
+      }
+      res.status(500).send('Something broke!')
+    })*/
 
   const server = app.listen(TEST_ENV.port, async function () {
     const result1 = await axios.get(getServerUrl(PATH) + '?api=test&test1=test')

@@ -43,7 +43,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
         .setLineNumber(481)
         .setFileName('application.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      const spanEvent = trace.storage.storage[1]
+      let spanEvent = trace.storage.storage[1]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.equal(spanEvent.annotations[0].key, -1, 'parameter')
       t.equal(spanEvent.annotations[0].value.stringValue, '/express1', 'parameter value matching')
@@ -55,6 +55,14 @@ test(`${testName1} Should record request in basic route`, function (t) {
       t.equal(actualMethodDescriptor.moduleName, 'express', 'moduleName')
       t.equal(actualMethodDescriptor.objectPath, 'app.get', 'objectPath')
       t.true(actualMethodDescriptor.location.length > 0, 'location')
+
+      const actualAppGetApiMetaInfo = apiMetaService.dataSender.mockAPIMetaInfos[0]
+      spanEvent = trace.storage.storage[1]
+      t.equal(actualAppGetApiMetaInfo.apiId, spanEvent.apiId, 'apiId')
+      t.equal(actualAppGetApiMetaInfo.apiInfo, 'express.Function.app.get(path, callback)', 'apiInfo')
+      t.equal(actualAppGetApiMetaInfo.type, 0, 'type')
+      t.equal(actualAppGetApiMetaInfo.lineNumber, 481, 'line number')
+      t.true(actualAppGetApiMetaInfo.location.endsWith('application.js'), 'location')
     })
   })
 

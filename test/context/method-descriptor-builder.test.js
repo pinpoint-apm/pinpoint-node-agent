@@ -20,6 +20,7 @@ test('callstack', (t) => {
     t.equal(actual.functionName, 'app.get', 'functionName')
     t.equal(actual.className, 'Function', 'className')
     t.equal(actual.lineNumber, 481, 'lineNumber')
+    t.equal(actual.getCacheId(), 'express.app.get():481:application.js', `cache ID check`)
 
     let actualMethodDescriptor = actual.build()
     t.equal(actualMethodDescriptor.getModuleName(), 'express', 'MethodDescriptor moduleName')

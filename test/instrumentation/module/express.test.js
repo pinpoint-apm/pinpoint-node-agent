@@ -39,7 +39,9 @@ test(`${testName1} Should record request in basic route`, function (t) {
       t.equal(trace.span.annotations[0].value.stringValue, 'api=test&test1=test', 'HTTP param value match')
 
       const actualBuilder = new MethodDescriptorBuilder('express', 'app.get')
-        .setFullName('express.app.get(path, callback)')
+        .setParameterDescriptor('(path, callback)')
+        .setLineNumber(481)
+        .setFileName('application.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       const spanEvent = trace.storage.storage[1]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
@@ -63,8 +65,10 @@ test(`${testName1} Should record request in basic route`, function (t) {
       const trace = agent.traceContext.currentTraceObject()
       t.false(trace.span.annotations[0], 'HTTP param undefined case')
 
-      const actualBuilder = new MethodDescriptorBuilder('express', 'app.post()')
-        .setFullName('express.app.post(path, callback)')
+      const actualBuilder = new MethodDescriptorBuilder('express', 'app.post')
+        .setParameterDescriptor('(path, callback)')
+        .setLineNumber(481)
+        .setFileName('application.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       const spanEvent = trace.storage.storage[1]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')

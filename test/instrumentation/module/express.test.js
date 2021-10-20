@@ -63,6 +63,10 @@ test(`${testName1} Should record request in basic route`, function (t) {
       t.equal(actualAppGetApiMetaInfo.type, 0, 'type')
       t.equal(actualAppGetApiMetaInfo.lineNumber, 481, 'line number')
       t.true(actualAppGetApiMetaInfo.location.endsWith('application.js'), 'location')
+
+      const actualHandleApiMetaInfo = apiMetaService.dataSender.mockAPIMetaInfos[1]
+      spanEvent = trace.storage.storage[0]
+      t.equal(actualHandleApiMetaInfo.apiId, spanEvent.apiId, 'apiId')
     })
   })
 

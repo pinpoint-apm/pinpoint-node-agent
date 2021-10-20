@@ -67,6 +67,10 @@ test(`${testName1} Should record request in basic route`, function (t) {
       const actualHandleApiMetaInfo = apiMetaService.dataSender.mockAPIMetaInfos[1]
       spanEvent = trace.storage.storage[0]
       t.equal(actualHandleApiMetaInfo.apiId, spanEvent.apiId, 'apiId')
+      t.equal(actualHandleApiMetaInfo.apiInfo, 'Test.<anonymous>()', 'apiInfo')
+      t.equal(actualHandleApiMetaInfo.type, 0, 'type')
+      t.equal(actualHandleApiMetaInfo.lineNumber, 33, 'line number')
+      t.true(actualHandleApiMetaInfo.location.endsWith('express.test.js'), 'location')
     })
   })
 

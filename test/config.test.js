@@ -57,7 +57,7 @@ test('deadline config', (t) => {
 
   const json = require('../lib/pinpoint-config-default')
   const result = config.readConfigJson(json)
-  t.equal(result.streamDeadlineMinutesClientSide, 5)
+  t.equal(result.streamDeadlineMinutesClientSide, 10)
 })
 
 test('main moudle path', (t) => {
@@ -87,4 +87,27 @@ test('main moudle path', (t) => {
   t.equal(actual, '/test', 'config.getMainModulePath({ main: { filename: \' / test\' } }) return value is /')
 
   t.end()
+})
+
+// https://github.com/pinpoint-apm/pinpoint/blob/master/commons/src/main/java/com/navercorp/pinpoint/common/util/IdValidateUtils.java
+// public static final String ID_PATTERN_VALUE = "[a-zA-Z0-9\\._\\-]+";
+// https://github.com/pinpoint-apm/pinpoint/blob/master/bootstraps/bootstrap/src/main/java/com/navercorp/pinpoint/bootstrap/IdValidator.java
+// https://github.com/pinpoint-apm/pinpoint/blob/master/commons/src/main/java/com/navercorp/pinpoint/common/PinpointConstants.java
+// public final class PinpointConstants {
+//   public static final int APPLICATION_NAME_MAX_LEN = 24;
+//   public static final int AGENT_ID_MAX_LEN = 24;
+// }
+test('Agent ID length check', (t) => {
+  config.clear()
+  process.env['PINPOINT_AGENT_ID'] = "agentId"
+  process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
+  process.env['PINPOINT_COLLECTOR_IP'] = "192.168.78.79"
+
+  const given = config.getConfig()
+  t.true(given.enable, 'configuration agentId, Name, ApplicationName enable agent id')
+
+  t.end()
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+  delete process.env.PINPOINT_COLLECTOR_IP
 })

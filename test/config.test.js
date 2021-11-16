@@ -101,13 +101,71 @@ test('Agent ID length check', (t) => {
   config.clear()
   process.env['PINPOINT_AGENT_ID'] = "agentId"
   process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
-  process.env['PINPOINT_COLLECTOR_IP'] = "192.168.78.79"
 
-  const given = config.getConfig()
+  let given = config.getConfig()
   t.true(given.enable, 'configuration agentId, Name, ApplicationName enable agent id')
 
-  t.end()
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME
-  delete process.env.PINPOINT_COLLECTOR_IP
+
+  config.clear()
+  process.env['PINPOINT_AGENT_ID'] = "agentIdagentIdagentIdage"
+  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappication"
+
+  given = config.getConfig()
+  t.true(given.enable, 'maxlength agentID and application Name')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_AGENT_ID'] = "agentIdagentIdagentIdageE"
+  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappication"
+
+  given = config.getConfig()
+  t.false(given.enable, 'maxlength agentID error')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_AGENT_ID'] = "agentIdagentIdagentIdage"
+  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappicationE"
+
+  given = config.getConfig()
+  t.false(given.enable, 'maxlength application Name error')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_AGENT_ID'] = "~"
+  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappication"
+
+  given = config.getConfig()
+  t.false(given.enable, 'invalide agent ID')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_AGENT_ID'] = "agentIdagentIdagentIdage"
+  process.env['PINPOINT_APPLICATION_NAME'] = "~"
+
+  given = config.getConfig()
+  t.false(given.enable, 'invalide application name')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappication"
+
+  given = config.getConfig()
+  t.false(given.enable, 'agent ID nullable test')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  t.end()
 })

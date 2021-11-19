@@ -31,9 +31,6 @@ items:
       strategy: {}
       template:
         metadata:
-          annotations:
-            kompose.cmd: kompose convert -f docker-compose.yml --out kube.yml
-            kompose.version: 1.26.0 (HEAD)
           creationTimestamp: null
           labels:
             io.kompose.service: redis

@@ -3,9 +3,6 @@ items:
   - apiVersion: v1
     kind: Service
     metadata:
-      annotations:
-        kompose.cmd: kompose convert -f docker-compose.yml --out kube.yml
-        kompose.version: 1.26.0 (HEAD)
       creationTimestamp: null
       labels:
         io.kompose.service: redis
@@ -15,9 +12,6 @@ items:
         - name: "6379"
           port: 6379
           targetPort: 6379
-        - name: 6379-tcp
-          port: 6379
-          targetPort: 6379
       selector:
         io.kompose.service: redis
     status:
@@ -25,9 +19,6 @@ items:
   - apiVersion: apps/v1
     kind: Deployment
     metadata:
-      annotations:
-        kompose.cmd: kompose convert -f docker-compose.yml --out kube.yml
-        kompose.version: 1.26.0 (HEAD)
       creationTimestamp: null
       labels:
         io.kompose.service: redis

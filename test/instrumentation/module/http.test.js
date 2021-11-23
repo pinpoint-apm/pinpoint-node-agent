@@ -23,9 +23,9 @@ test(`outgoing request URL escape a bug`, async (t) => {
             t.true(agent.dataSender.mockSpanChunk.spanEventList.length == 2, `spanEventList`)
 
             const spanEvent = agent.dataSender.mockSpanChunk.spanEventList[1]
-            
+
             t.equal(spanEvent.annotations[0].value.stringValue, "GET", "URL")
-            t.equal(spanEvent.annotations[1].value.stringValue, "eonet.sci.gsfc.nasa.gov/api/v2.1/categories", "URL")
+            t.equal(spanEvent.annotations[1].value.stringValue, "eonet.gsfc.nasa.gov/api/v2.1/categories", "URL")
             agent.completeTraceObject(trace)
         })
 })

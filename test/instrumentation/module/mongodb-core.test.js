@@ -19,7 +19,7 @@ test(`mongodb`, async (t) => {
     const trace = agent.createTraceObject()
     const Server = require('mongodb-core').Server
     var server = new Server({
-        host: container.getContainerIpAddress(),
+        host: container.getHost(),
         port: container.getMappedPort(27017),
         reconnect: true,
         reconnectInterval: 50
@@ -44,27 +44,27 @@ test(`mongodb`, async (t) => {
                 },
                 ordered: true
             }, async function (err, results) {
-                t.equal(null, err);
-                t.equal(2, results.result.n);
+                t.equal(null, err)
+                t.equal(2, results.result.n)
 
                 server.destroy()
                 await container.stop()
                 agent.completeTraceObject(trace)
                 t.end()
-            });
-        });
-    });
+            })
+        })
+    })
 
     server.on('close', function () {
         console.log('mongodb-core.test.js closed')
         t.end()
-    });
+    })
 
     server.on('reconnect', function () {
-        console.log('mongodb-core.test.js reconnect');
-    });
+        console.log('mongodb-core.test.js reconnect')
+    })
 
     // Start connection
-    server.connect();
+    server.connect()
 
 })

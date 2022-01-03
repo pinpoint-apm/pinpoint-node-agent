@@ -6,7 +6,7 @@
 
 
 const test = require('tape')
-const services = require('../../lib/data/grpc/Service_grpc_pb')
+const services = require('../../lib/data/v1/Service_grpc_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const GrpcServer = require('./grpc-server')
@@ -221,6 +221,9 @@ test('when ping stream write throw a error, gRPC bidirectional stream Ping end e
                                 end: function () {
                                     this.writable = false
                                     currentStream.end()
+                                },
+                                once: function (eventName, cb) {
+                                    currentStream.once(eventName, cb)
                                 }
                             }
                             this.grpcDataSender.sendPing()

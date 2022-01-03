@@ -5,7 +5,7 @@
  */
 
 const test = require('tape')
-const services = require('../../lib/data/grpc/Service_grpc_pb')
+const services = require('../../lib/data/v1/Service_grpc_pb')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
@@ -274,7 +274,7 @@ test('gRPC client side stream reconnect test', (t) => {
     t.deepEqual(actuals.data, {}, 'actuals data')
     t.false(actuals.ended, 'client side stream lives')
 
-    given.deadline = given.deadline - (5 * 60 * 1000 + 100)
+    given.deadline = given.deadline - (10 * 60 * 1000 + 100)
     const fistDeadline = given.deadline
     given.write({ order: 2 })
     t.deepEqual(actuals.data, { order: 2 }, 'actuals data is order: 2')
@@ -512,7 +512,7 @@ test('stream deadline test', (t) => {
             }
         }
     })
-    t.equal(given.grpcStreamDeadline, 5 * 60 * 1000, 'default dealine times')
+    t.equal(given.grpcStreamDeadline, 10 * 60 * 1000, 'default dealine times')
 
     given.setDeadlineMinutes(6)
     t.equal(given.grpcStreamDeadline, 6 * 60 * 1000, '6 minutes dealine times')

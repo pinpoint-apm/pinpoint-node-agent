@@ -21,7 +21,7 @@ test(`fix redis call stack depth`, async (t) => {
     const redis = require('redis')
     const client = redis.createClient(
         container.getMappedPort(6379),
-        container.getContainerIpAddress(),
+        container.getHost(),
     )
 
     client.set("key", "value", async function (error) {

@@ -33,6 +33,10 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
 
   router.get(PATH, async (ctx, next) => {
     ctx.body = 'ok. get'
+    process.nextTick(() => {
+
+      const trace = agent.traceContext.currentTraceObject()
+    })
   })
   router.post(PATH, async (ctx, next) => {
     ctx.body = 'ok. post'

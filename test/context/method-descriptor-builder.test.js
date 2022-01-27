@@ -7,7 +7,7 @@
 const test = require('tape')
 
 const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
-test('callstack', (t) => {
+test('express callstack', (t) => {
     const regex = /at (?<type>\w+(?=\.))?\.?(?<functionName>[^\s]+)(?: \[as (?<methodName>\w+)\])? \(.+\/(?<fileName>[^:/]+):(?<lineNumber>[0-9]+):(?<columnNumber>[0-9]+)\)$/
 
     let stack = 'at Function.app.<computed> [as get] (/Users/feelform/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/application.js:481:30)'

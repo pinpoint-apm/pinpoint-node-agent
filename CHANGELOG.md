@@ -11,6 +11,10 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 ### Added
 - #87 HTTP param
 
+## [0.8.3] - 2021-11-19
+### Fixed
+- #93 Fix Agent ID length validator
+
 ## [0.8.2] - 2021-05-10
 ### Fixed
 - #73 fix require.main undefined error by webpack and node -r pinpoint-node-agent

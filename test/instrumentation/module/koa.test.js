@@ -12,6 +12,9 @@ const agent = require('../../support/agent-singleton-mock')
 const Koa = require('koa')
 const Router = require('koa-router')
 
+const apiMetaService = require('../../../lib/context/api-meta-service')
+const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
+
 const TEST_ENV = {
   host: 'localhost',
   port: 5006,
@@ -20,6 +23,7 @@ const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 const testName1 = 'koa-router1'
 test(`${testName1} Should record request in basic route koa.test.js`, function (t) {
+  agent.bindHttp()
   const testName = testName1
 
   t.plan(3)
@@ -30,7 +34,15 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
 
   router.get(PATH, async (ctx, next) => {
     ctx.body = 'ok. get'
-    const trace = agent.traceContext.currentTraceObject()
+
+    agent.callbackTraceClose((trace) => {
+      let actualBuilder = new MethodDescriptorBuilder('koa', 'get')
+        .setParameterDescriptor('(ctx, next)')
+        .setLineNumber(35)
+        .setFileName('koa.test.js')
+      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+      let spanEvent = trace.storage.storage[0]
+    })
   })
   router.post(PATH, async (ctx, next) => {
     ctx.body = 'ok. post'

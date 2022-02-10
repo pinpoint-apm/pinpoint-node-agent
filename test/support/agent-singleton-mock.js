@@ -77,9 +77,15 @@ class MockAgent extends Agent {
         shimmer.unwrap(http, 'request')
     }
 
-    resetAgent(callback) {
-        this.pinpointClient = new MockPinpointClient(this.config, this.agentInfo, this.dataSender)
+    callbackTraceClose(callback) {
+        const trace = this.traceContext.currentTraceObject()
+        const origin = trace.close
+        trace.close = () => {
+            callback(trace)
+            origin.apply(trace, arguments)
+        }
     }
+
 }
 
 const agent = new MockAgent(fixture.config)

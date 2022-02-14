@@ -33,7 +33,7 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
     ctx.body = 'ok. get'
 
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.span.annotations[0].key, DefaultAnnotationKey.HTTP_STATUS_CODE.name, 'HTTP param key match')
+      t.equal(trace.span.annotations[0].key, DefaultAnnotationKey.HTTP_STATUS_CODE.name, 'HTTP status code')
       t.equal(trace.span.annotations[0].value.intValue, 200, 'response status is 200')
 
       let actualBuilder = new MethodDescriptorBuilder('koa', 'get')

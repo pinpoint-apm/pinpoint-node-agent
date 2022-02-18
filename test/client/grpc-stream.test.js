@@ -74,14 +74,6 @@ function callStat(t) {
             }
         })
         call.write(pStatMessage, () => {
-            if (index == 0) {
-                t.true(call.call.nextCall.call.pendingWrite, "1st message is pendingWrite")
-                t.equal(call.call.nextCall.call.channel.subchannelPool.pool[`dns:localhost:${actualPort}`].length, 2, 'subchannel pool no related to call.write')
-            } else if (index == 1) {
-                t.equal(call.call.nextCall.call.channel.subchannelPool.pool[`dns:localhost:${actualPort}`].length, 2, `subchannel count`)
-            } else if (index == 10) {
-                t.equal(call.call.nextCall.call.channel.subchannelPool.pool[`dns:localhost:${actualPort}`].length, 2, 'subchannel pool no related to call.write')
-            }
         })
     }
     call.end()

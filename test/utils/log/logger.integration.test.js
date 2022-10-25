@@ -6,7 +6,7 @@
 
 'use strict'
 const test = require('tape')
-const { getLog } = require('../../../lib/supports')
+const { getLog, clearLog } = require('../../../lib/supports')
 const Agent = require('../../../lib/agent')
 const { clear, getConfig } = require('../../../lib/config')
 
@@ -42,13 +42,15 @@ test('no config logger', (t) => {
     t.end()
 })
 
-test('config loading logger', (t) => {
+test('logger full cycle', (t) => {
     clear()
+    clearLog()
+    let actual = getLog()
+    t.true(actual.adaptor.output.output === console, 'when no configuration loaded, logs use console output')
     getConfig()
-    const actual = getLog()
-    actual.debug('a debug message')
-    actual.info('a info message')
-    actual.warn('a warn message')
-    actual.error('a error message')
+
+    actual = getLog()
+    t.equal(actual.adaptor.output.log.constructor.name, 'Logger', 'default logger use LogLevel')
+    t.equal(actual.adaptor.output.log.getLevel(), 3, 'configuration log level from pinpoint-node-agent.json')
     t.end()
 })

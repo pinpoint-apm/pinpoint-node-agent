@@ -6,7 +6,7 @@
 
 'use strict'
 const test = require('tape')
-const { getLog, clearLog } = require('../../../lib/supports')
+const { getLog, setLog } = require('../../../lib/supports')
 const Agent = require('../../../lib/agent')
 const { clear, getConfig } = require('../../../lib/config')
 
@@ -44,7 +44,7 @@ test('no config logger', (t) => {
 
 test('logger full cycle', (t) => {
     clear()
-    clearLog()
+    setLog(null)
     let actual = getLog()
     t.true(actual.adaptor.output.output === console, 'when no configuration loaded, logs use console output')
     getConfig()

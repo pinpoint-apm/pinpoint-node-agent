@@ -17,7 +17,7 @@ test(`fix redis call stack depth`, async (t) => {
 
     t.plan(2)
 
-    const trace = agent.createTraceObject()
+    agent.createTraceObject()
     const redis = require('redis')
     const client = redis.createClient(
         container.getMappedPort(6379),

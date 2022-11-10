@@ -45,7 +45,7 @@ function pingSession(call) {
     })
 }
 
-test('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
+test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
     let planCount = 51
 
     actualsPingSession = {

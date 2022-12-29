@@ -53,7 +53,7 @@ test.skip(`fix express call stack depth`, async (t) => {
 
     const router1 = express.Router()
     router1.get(path, async (req, res) => {
-        const result = await axios.get(`https://eonet.sci.gsfc.nasa.gov/api/v2.1/categories`)
+        const result = await axios.get(`https://github.com`)
         t.equal(result.status, 200)
         res.send('ok router1')
     })

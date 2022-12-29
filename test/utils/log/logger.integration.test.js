@@ -12,6 +12,7 @@ const { clear, getConfig } = require('../../../lib/config')
 
 test('no config logger', (t) => {
     clear()
+    setLog(null)
     const actual = getLog()
     new Agent()
     t.equal(actual.adaptor.constructor.name, 'LoggerOutputAdaptor', 'log adaptor')

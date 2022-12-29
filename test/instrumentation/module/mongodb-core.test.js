@@ -10,7 +10,7 @@ const {
     GenericContainer
 } = require("testcontainers")
 
-test(`mongodb`, async (t) => {
+test.skip(`mongodb`, async (t) => {
     const container = await new GenericContainer("mongo")
         .withExposedPorts(27017)
         .start()

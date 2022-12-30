@@ -56,8 +56,6 @@ function callStat(t) {
             t.true(response, 'response is true')
         }
     })
-    t.equal(call.call.nextCall.call.filterStack.filters.length, 4, `Filter is (4) [CallCredentialsFilter, DeadlineFilter, MaxMessageSizeFilter, CompressionFilter]`)
-    t.equal(call.call.nextCall.call.options.deadline, Infinity, 'deadline default is Infinity')
     t.true(typeof call.call.nextCall.call.channel.subchannelPool.pool[`dns:localhost:${actualPort}`] === 'undefined', 'subchannel pool no related to call.write')
 
     for (let index = 0; index < messageCount; index++) {

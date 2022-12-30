@@ -32,8 +32,6 @@ packages/**/.npmrc
 
 .vscode
 
-package-lock.json
-
 yarn.lock
 
 .node-version

@@ -17,7 +17,7 @@ test(`span and spanEvent call stack`, async (t) => {
     t.equal(trace.callStack.length, 0, "callstack is 0")
     t.equal(agent.traceContext.currentTraceObject(), trace, "current trace is current asyncId trace object")
 
-    axios.get(`https://naver.com`)
+    axios.get(`https://github.com`)
         .then(function (response) {
             t.true(response.status == 200)
             t.equal(agent.traceContext.currentTraceObject(), trace, "current trace is current asyncId trace object")
@@ -25,7 +25,7 @@ test(`span and spanEvent call stack`, async (t) => {
             t.equal(agent.dataSender.mockSpanChunk.spanEventList[1].annotations[0].key, 12, "APIDesc key")
             t.equal(agent.dataSender.mockSpanChunk.spanEventList[1].annotations[0].value.stringValue, "GET", "APIDesc stringValue")
             t.equal(agent.dataSender.mockSpanChunk.spanEventList[1].annotations[1].key, 40, "HTTP.URL key")
-            t.equal(agent.dataSender.mockSpanChunk.spanEventList[1].annotations[1].value.stringValue, 'www.naver.com/', "HTTP.URL stringValue")
+            t.equal(agent.dataSender.mockSpanChunk.spanEventList[1].annotations[1].value.stringValue, 'github.com/', "HTTP.URL stringValue")
             t.equal(agent.dataSender.mockSpanChunk.spanEventList[1].annotations[2].key, 46, "HTTP.status.code")
             t.equal(agent.dataSender.mockSpanChunk.spanEventList[1].annotations[2].value.intValue, 200, "HTTP.status.code stringValue")
             agent.completeTraceObject(trace)

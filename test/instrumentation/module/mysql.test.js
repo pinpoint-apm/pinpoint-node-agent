@@ -9,7 +9,12 @@ const { MySqlContainer } = require("testcontainers")
 const mysql = require('mysql')
 
 test(`MySql Query`, async (t) => {
-    const container = await new MySqlContainer('mysql:5.7.40').start()
+    const container = await new MySqlContainer('mysql:5.7.40')
+                                .withCopyFilesToContainer([{
+                                    source: "./fixtures/mysql.sql", 
+                                    target: "/docker-entrypoint-initdb.d/mysql.sql"
+                                }])
+                                .start()
 
     const connection = mysql.createConnection({
         host: container.getHost(),

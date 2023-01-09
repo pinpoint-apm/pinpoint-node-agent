@@ -6,11 +6,11 @@
 
 const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
-const { GenericContainer } = require("testcontainers")
+const { GenericContainer } = require('testcontainers')
 const { addressStringOf } = require('../../../lib/utils/convert-utils')
 
 test(`redis destination id`, async (t) => {
-    const container = await new GenericContainer("redis")
+    const container = await new GenericContainer('redis')
         .withExposedPorts(6379)
         .start()
 

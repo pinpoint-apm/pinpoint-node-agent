@@ -85,7 +85,7 @@
     "redis-mock": "^0.49.0",
     "rimraf": "^2.6.2",
     "tape": "^4.9.1",
-    "testcontainers": "7.24.0",
+    "testcontainers": "^9.1.1",
     "typescript": "^4.8.3"
   }
 }

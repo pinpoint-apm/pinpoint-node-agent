@@ -7,12 +7,15 @@
 const test = require('tape')
 const { MySqlContainer } = require("testcontainers")
 const mysql = require('mysql')
+const path = require('path')
 
+const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')
 test(`MySql Query`, async (t) => {
+    const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer('mysql:5.7.40')
         .withCopyFilesToContainer([{
-            source: "./fixtures/mysql.sql",
-            target: "/docker-entrypoint-initdb.d/mysql.sql"
+            source: source,
+            target: '/docker-entrypoint-initdb.d/mysql.sql'
         }])
         .start()
 
@@ -36,9 +39,9 @@ test(`MySql Query`, async (t) => {
         }
         console.log('connected as id ' + connection.threadId)
     })
-    connection.query('SELECT * FROM member', async function (error, results) {
+    connection.query('SELECT DATABASE() as res', async function (error, results) {
         if (error) throw error
-        t.equal(results[0].res, 1, 'rows SELECT 1 as res')
+        t.equal(results[0].res, 'test', 'test database validation as res')
 
         connection.end()
         await container.stop()

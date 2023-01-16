@@ -13,10 +13,13 @@ const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')
 test(`MySql Query`, async (t) => {
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer('mysql:5.7.40')
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/mysql.sql'
-        }])
+        .withEnvironment({
+            'MYSQL_DATABASE': 'test'
+        })
+        // .withCopyFilesToContainer([{
+        //     source: source,
+        //     target: '/docker-entrypoint-initdb.d/mysql.sql'
+        // }])
         .start()
 
     const stream = await container.logs()

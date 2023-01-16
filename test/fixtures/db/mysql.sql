@@ -1,5 +1,3 @@
-USE test;
-
 CREATE TABLE member
 (
     id     varchar(11) not null primary key,

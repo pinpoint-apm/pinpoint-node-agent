@@ -10,7 +10,7 @@ const mysql = require('mysql')
 const path = require('path')
 
 const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')
-test(`MySql Query`, async (t) => {
+test(`testcontainer docker-entrypoint-initdb.d learning test`, async (t) => {
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
@@ -43,9 +43,14 @@ test(`MySql Query`, async (t) => {
         }
         console.log('connected as id ' + connection.threadId)
     })
+
     connection.query('SELECT DATABASE() as res', async function (error, results) {
         if (error) throw error
-        t.equal(results[0].res, 'test', 'test database validation as res')
+        t.equal(results[0].res, 'test', 'SELECT DATABASE() as res')
+    })
+    connection.query(`SHOW TABLES`, async function (error, results) {
+        if (error) throw error
+        t.equal(results[0].Tables_in_test, 'member', 'SHOW TABLES')
 
         connection.end()
         await container.stop()

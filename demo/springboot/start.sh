@@ -1,7 +1,7 @@
 #!/bin/bash
 
-AGENT_PATH=~/Downloads/pinpoint-agent-2.1.0
-SPRING_BOOT_OPT="-javaagent:$AGENT_PATH/pinpoint-bootstrap-2.1.0.jar -Dpinpoint.agentId=express-spring-sampleid -Dpinpoint.applicationName=express-spring-sample"
+AGENT_PATH=~/Downloads/pinpoint-agent-2.5.1
+SPRING_BOOT_OPT="-javaagent:$AGENT_PATH/pinpoint-bootstrap-2.5.1.jar -Dpinpoint.agentId=express-spring-sampleid -Dpinpoint.applicationName=express-spring-sample"
 
 # echo $AGENT_PATH
 # echo $GRADLE_OPTS

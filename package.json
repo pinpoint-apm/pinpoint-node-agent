@@ -1,10 +1,10 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "0.8.3",
+  "version": "0.8.4-next.1",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/tape ./test/**/*.test.js",
-    "lint": "./node_modules/.bin/eslint -f checkstyle ./lib > checkstyle-result.xml;exit 0",
+    "test": "tape ./test/**/*.test.js",
+    "lint": "eslint -f checkstyle ./lib > checkstyle-result.xml;exit 0",
     "coverage": "nyc --reporter=lcov --reporter=text-summary npm run test"
   },
   "description": "Pinpoint node agent provided by NAVER",
@@ -13,8 +13,6 @@
     "url": "https://github.com/pinpoint-apm/pinpoint-node-agent"
   },
   "contributors": [
-    "Lee Jun Hee <jundol.lee@navercorp.com> (https://github.com/intojun)",
-    "Bae Keun Bae <with.earth.u@gmail.com> (https://github.com/withearth)",
     "Yongseok Kang <feelform@gmail.com> (https://github.com/feelform)"
   ],
   "license": "Apache-2.0",
@@ -65,15 +63,14 @@
     "loglevel": "^1.6.1",
     "methods": "^1.1.2",
     "require-in-the-middle": "^5.0.3",
-    "semver": "^5.6.0",
+    "semver": "^7.5.3",
     "shimmer": "^1.2.0"
   },
   "devDependencies": {
     "axios": "^0.21.1",
-    "elasticsearch": "^15.4.1",
-    "eslint": "^7.19.0",
+    "eslint": "^8.43.0",
     "eslint-config-prettier": "^3.1.0",
-    "eslint-plugin-import": "^2.2.0",
+    "eslint-plugin-import": "^2.25.2",
     "express": "^4.16.4",
     "install": "^0.13.0",
     "ioredis": "^4.3.0",
@@ -82,17 +79,18 @@
     "koa-bodyparser": "^4.2.1",
     "koa-router": "^7.4.0",
     "lodash": "^4.17.20",
-    "mongodb-core": "3.1.7",
     "mongoose": "^5.4.3",
-    "npm-run-all": "^1.7.0",
     "nyc": "^15.1.0",
-    "redis": ">=3.1.1",
+    "redis": "^3.1.2",
     "redis-mock": "^0.49.0",
-    "request": "^2.88.0",
-    "rewire": "^4.0.1",
     "rimraf": "^2.6.2",
-    "tap-spec": "^5.0.0",
     "tape": "^4.9.1",
     "testcontainers": "^2.8.0"
+  },
+  "resolutions": {
+    "semver": "^7.5.3"
+  },
+  "volta": {
+    "node": "16.20.1"
   }
 }

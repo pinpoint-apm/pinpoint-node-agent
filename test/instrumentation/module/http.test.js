@@ -16,7 +16,7 @@ test(`outgoing request URL escape a bug`, async (t) => {
     const trace = agent.createTraceObject()
     t.true(trace)
 
-    axios.get(`https://eonet.sci.gsfc.nasa.gov/api/v2.1/categories`)
+    axios.get(`https://naver.com`)
         .then(function (response) {
             t.true(response.status == 200)
 
@@ -25,7 +25,7 @@ test(`outgoing request URL escape a bug`, async (t) => {
             const spanEvent = agent.dataSender.mockSpanChunk.spanEventList[1]
             
             t.equal(spanEvent.annotations[0].value.stringValue, "GET", "URL")
-            t.equal(spanEvent.annotations[1].value.stringValue, "eonet.sci.gsfc.nasa.gov/api/v2.1/categories", "URL")
+            t.equal(spanEvent.annotations[1].value.stringValue, "www.naver.com/", "URL")
             agent.completeTraceObject(trace)
         })
 })

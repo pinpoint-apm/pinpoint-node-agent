@@ -16,7 +16,7 @@ router.get('/', function(req, res, next) {
     console.log(`${callcount} ioredis data ${data}`)
   })
 
-  axios.get(`https://eonet.sci.gsfc.nasa.gov/api/v2.1/categories`)
+  axios.get(`https://naver.com`)
   .then(function (response) {
     console.log(`response ${response}`)
     res.render('index', { title: 'Express' });

@@ -18,6 +18,8 @@ const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const DataSender = require('../../lib/client/data-sender')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
+const MethodDescriptorBuilder2 = require('../../lib/context/method-descriptor-builder2')
+const MethodType = require('../../lib/constant/method-type')
 
 class MockGrpcDataSender extends GrpcDataSender {
     initializeSpanStream() {
@@ -196,13 +198,16 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
         }), {
             ip: '1'
         })
-        const apiMetaInfo = new ApiMetaInfo({
-            apiId: 12121212,
-            apiInfo: 'express.Function.app.get(path, callback)',
-            type: 1400,
-            lineNumber: 481,
-            location: 'node_modules/express/lib/application.js',
-        })
+
+        const apiMetaInfo = ApiMetaInfo.create(new MethodDescriptorBuilder2()
+            .setApiId(12121212)
+            .setClassName('Router')
+            .setMethodName('get')
+            .setType(1400)
+            .setLineNumber(481)
+            .setLocation('node_modules/express/lib/application.js')
+            .build()
+        )
 
         this.dataSender = dataSenderFactory.create({
             collectorIp: 'localhost',
@@ -227,7 +232,7 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
         this.dataSender.dataSender.requestApiMetaData.request = (data, _, timesOfRetry = 1) => {
             requestTimes++
             t.equal(data.getApiid(), 12121212, 'apiId')
-            t.equal(data.getApiinfo(), 'express.Function.app.get(path, callback)', 'Apiinfo')
+            t.equal(data.getApiinfo(), 'Router.get', 'Apiinfo')
             t.equal(data.getType(), 1400, 'type')
             t.equal(data.getLine(), 481, 'line')
             t.equal(data.getLocation(), 'node_modules/express/lib/application.js', 'location')

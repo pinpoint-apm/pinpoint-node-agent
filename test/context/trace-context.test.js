@@ -5,13 +5,13 @@
  */
 
 const test = require('tape')
-const { log, fixture, util } = require('../test-helper')
+const { fixture, util } = require('../test-helper')
 
-const ServiceTypeCode = require('../../lib/constant/service-type').ServiceTypeCode
+const ServiceType = require('../../lib/context/service-type')
 const TraceContext = require('../../lib/context/trace-context')
-const GeneralMethodDescriptor = require('../../lib/constant/method-descriptor').GeneralMethodDescriptor
 const dataSenderMock = require('../support/data-sender-mock')
 const RequestHeaderUtils = require('../../lib/instrumentation/request-header-utils')
+const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
 
 test('Should create continued trace and add span info', function (t) {
   t.plan(2)
@@ -24,10 +24,10 @@ test('Should create continued trace and add span info', function (t) {
 
   t.equal(traceContext.currentTraceObject().traceId.transactionId.toString(), transactionId.toString())
 
-  trace.spanRecorder.recordServiceType(ServiceTypeCode.express)
-  trace.spanRecorder.recordApi(GeneralMethodDescriptor.SERVER_REQUEST)
+  trace.spanRecorder.recordServiceType(ServiceType.express)
+  trace.spanRecorder.recordApi(defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor)
 
-  t.equal(traceContext.currentTraceObject().span.serviceType, ServiceTypeCode.express)
+  t.equal(traceContext.currentTraceObject().span.serviceType, ServiceType.express)
   traceContext.completeTraceObject(trace)
 })
 
@@ -38,12 +38,12 @@ test('Should begin/end trace block asynchronously', async function (t) {
   const traceContext = TraceContext.init(fixture.getAgentInfo(), dataSenderMock())
   const startedTrace = traceContext.newTraceObject(true)
   const spanRecorder = startedTrace.spanRecorder
-  spanRecorder.recordServiceType(ServiceTypeCode.express)
+  spanRecorder.recordServiceType(ServiceType.express)
 
   const currentTrace = traceContext.currentTraceObject()
   const spanEventRecorder = currentTrace.traceBlockBegin()
-  spanEventRecorder.recordServiceType(ServiceTypeCode.express)
-  spanEventRecorder.recordApi(GeneralMethodDescriptor.SERVER_REQUEST)
+  spanEventRecorder.recordServiceType(ServiceType.express)
+  spanEventRecorder.recordApi(defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor)
 
   t.equal(traceContext.currentTraceObject().callStack.length, 1)
 

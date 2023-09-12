@@ -14,9 +14,9 @@ const {
 const Span = require('../../lib/context/span')
 const SpanEvent = require('../../lib/context/span-event')
 const SpanEventRecorder = require('../../lib/context/span-event-recorder')
-
-const ServiceTypeCode = require('../../lib/constant/service-type').ServiceTypeCode
-const GeneralMethodDescriptor = require('../../lib/constant/method-descriptor').GeneralMethodDescriptor
+const ServiceType = require('../../lib/context/service-type')
+const agent = require('../support/agent-singleton-mock')
+const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
 
 test('Should create span event recorder', async function (t) {
   t.plan(2)
@@ -24,8 +24,8 @@ test('Should create span event recorder', async function (t) {
   const span = new Span(fixture.getTraceId(), fixture.getAgentInfo())
   const spanEvent = new SpanEvent(span.spanId, 0)
   const spanEventRecorder = new SpanEventRecorder(spanEvent, span)
-  spanEventRecorder.recordServiceType(ServiceTypeCode.express)
-  spanEventRecorder.recordApi(GeneralMethodDescriptor.SERVER_REQUEST)
+  spanEventRecorder.recordServiceType(ServiceType.express)
+  spanEventRecorder.recordApi(defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor)
   t.ok(spanEventRecorder.spanEvent)
 
   spanEventRecorder.spanEvent.startTime = Date.now()
@@ -34,7 +34,6 @@ test('Should create span event recorder', async function (t) {
   t.ok(spanEventRecorder.spanEvent.endElapsed > 0)
 })
 
-const agent = require('../support/agent-singleton-mock')
 test.skip(`spanevent with async_hooks`, async function (t) {
   agent.bindHttp()
 
@@ -42,7 +41,7 @@ test.skip(`spanevent with async_hooks`, async function (t) {
 
   const trace = agent.createTraceObject()
   trace.startSpanEvent(new SpanEventRecorder.builder()
-    .setServiceType(ServiceTypeCode.redis)
+    .setServiceType(ServiceType.redis)
     .setApiDesc('redis.get.call')
     .setDestinationId('destinationId')
     .setEndPointIP('127.0.0.1')

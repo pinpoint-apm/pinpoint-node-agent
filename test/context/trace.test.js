@@ -6,7 +6,7 @@
 
 const test = require('tape')
 const { log, fixture, util } = require('../test-helper')
-const ServiceTypeCode = require('../../lib/constant/service-type').ServiceTypeCode
+const ServiceType = require('../../lib/context/service-type')
 const Trace = require('../../lib/context/trace')
 
 test('Should begin/end trace block', async function (t) {
@@ -16,7 +16,7 @@ test('Should begin/end trace block', async function (t) {
   const agentInfo = fixture.getAgentInfo()
   const trace = new Trace(traceId, agentInfo)
   const spanEventRecorder = trace.traceBlockBegin()
-  spanEventRecorder.recordServiceType(ServiceTypeCode.express)
+  spanEventRecorder.recordServiceType(ServiceType.express)
 
   t.equal(trace.sequence, 1)
 

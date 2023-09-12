@@ -6,18 +6,20 @@
 
 const test = require('tape')
 
-const services = require('../../lib/data/grpc/Service_grpc_pb')
+const services = require('../../lib/data/v1/Service_grpc_pb')
 
 var _ = require('lodash')
 const GrpcServer = require('./grpc-server')
 
-const spanMessages = require('../../lib/data/grpc/Span_pb')
+const spanMessages = require('../../lib/data/v1/Span_pb')
 const dataSenderFactory = require('../../lib/client/data-sender-factory')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const DataSender = require('../../lib/client/data-sender')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
+const MethodDescriptorBuilder2 = require('../../lib/context/method-descriptor-builder2')
+const MethodType = require('../../lib/constant/method-type')
 
 class MockGrpcDataSender extends GrpcDataSender {
     initializeSpanStream() {
@@ -183,6 +185,71 @@ test('sendApiMetaInfo retry', (t) => {
     })
 })
 
+test('sendApiMetaInfo lineNumber and location', (t) => {
+    const server = new GrpcServer()
+    server.addService(services.MetadataService, {
+        requestApiMetaData: requestApiMetaData
+    })
+    server.startup((port) => {
+        const agentInfo = Object.assign(new AgentInfo({
+            agentId: '12121212',
+            applicationName: 'applicationName',
+            agentStartTime: Date.now()
+        }), {
+            ip: '1'
+        })
+
+        const apiMetaInfo = ApiMetaInfo.create(new MethodDescriptorBuilder2()
+            .setApiId(12121212)
+            .setClassName('Router')
+            .setMethodName('get')
+            .setType(1400)
+            .setLineNumber(481)
+            .setLocation('node_modules/express/lib/application.js')
+            .build()
+        )
+
+        this.dataSender = dataSenderFactory.create({
+            collectorIp: 'localhost',
+            collectorTcpPort: port,
+            collectorStatPort: port,
+            collectorSpanPort: port,
+            enabledDataSending: true
+        }, agentInfo)
+
+        let callbackTimes = 0
+        const callback = (error, response) => {
+            callbackTimes++
+            t.false(error, 'error is undefined')
+            t.true(response, 'response')
+            t.equal(callbackTimes, 1, 'callback only once called')
+            t.equal(requestTimes, 1, 'requestes one time')
+
+            tryShutdown()
+        }
+        const origin = this.dataSender.dataSender.requestApiMetaData.request
+        let requestTimes = 0
+        this.dataSender.dataSender.requestApiMetaData.request = (data, _, timesOfRetry = 1) => {
+            requestTimes++
+            t.equal(data.getApiid(), 12121212, 'apiId')
+            t.equal(data.getApiinfo(), 'Router.get', 'Apiinfo')
+            t.equal(data.getType(), 1400, 'type')
+            t.equal(data.getLine(), 481, 'line')
+            t.equal(data.getLocation(), 'node_modules/express/lib/application.js', 'location')
+            origin.call(this.dataSender.dataSender.requestApiMetaData, data, callback, timesOfRetry)
+        }
+        this.dataSender.send(apiMetaInfo)
+
+        tryShutdown = () => {
+            setTimeout(() => {
+                server.tryShutdown(() => {
+                    t.end()
+                })
+            }, 0)
+        }
+    })
+})
+
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function requestStringMetaData(call, callback) {
     const result = new spanMessages.PResult()
@@ -253,6 +320,7 @@ test('sendStringMetaInfo retry', (t) => {
         }
     })
 })
+
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function requestAgentInfo2(call, callback) {

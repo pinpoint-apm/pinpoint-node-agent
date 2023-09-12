@@ -1,9 +1,22 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [0.9.0-next.1] - 2021-06-10
+### Added
+- #86 Express with method name
+- #101 middleware code level visibility 
+<img width="1241" alt="Screen Shot 2021-12-13 at 11 15 20 PM" src="https://user-images.githubusercontent.com/616895/145830104-07774978-f56b-4090-b6e9-eeff0d880945.png">
+
+>>>>>>> 7d1ec7d (#87 Express with method name)
+## [0.9.0-next.0] - 2021-05-27
+### Added
+- #87 HTTP param
+>>>>>>> 685d7b7 (#87 v0.9.0-next.0)
+
 ## [0.8.3] - 2021-11-19
 ### Fixed
 - #93 Fix Agent ID length validator
+- HTTP param
 
 ## [0.8.2] - 2021-05-10
 ### Fixed

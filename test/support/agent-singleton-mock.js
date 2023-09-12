@@ -17,6 +17,8 @@ const httpShared = require('../../lib/instrumentation/http-shared')
 const traceContext = require('../../lib/context/trace-context')
 const contextManager = require('../../lib/context/context-manager')
 const activeTrace = require('../../lib/metric/active-trace')
+const apiMetaService = require('../../lib/context/api-meta-service')
+const { setDataSender } = require('../../lib/client/data-sender-factory')
 
 class MockAgent extends Agent {
     startSchedule(agentId, agentStartTime) {
@@ -31,6 +33,7 @@ class MockAgent extends Agent {
 
     bindHttp(json) {
         this.cleanHttp()
+        apiMetaService.init(dataSenderMock())
 
         if (!json) {
             json = require('../pinpoint-config-test')
@@ -43,7 +46,7 @@ class MockAgent extends Agent {
         const http = require('http')
         log.debug('shimming http.Server.prototype.emit function')
         shimmer.wrap(http && http.Server && http.Server.prototype, 'emit', httpShared.instrumentRequest(agent, 'http'))
-      
+
         log.debug('shimming http.request function')
         shimmer.wrap(http, 'request', httpShared.traceOutgoingRequest(agent, 'http'))
 
@@ -54,6 +57,9 @@ class MockAgent extends Agent {
             traceSet.add(trace)
         }
         for (const trace of traceSet) {
+            if (typeof trace.completed === 'function' && trace.completed()) {
+                continue
+            }
             this.traceContext.completeTraceObject(trace)
         }
 
@@ -66,18 +72,25 @@ class MockAgent extends Agent {
         })
 
         this.dataSender = dataSenderMock()
+        setDataSender(this.dataSender)
         this.traceContext = traceContext.init(this.agentInfo, this.dataSender, this.config)
     }
 
-    cleanHttp() {        
+    cleanHttp() {
         const http = require('http')
         shimmer.unwrap(http && http.Server && http.Server.prototype, 'emit')
         shimmer.unwrap(http, 'request')
     }
 
-    resetAgent(callback) {
-        this.pinpointClient = new MockPinpointClient(this.config, this.agentInfo, this.dataSender)
+    callbackTraceClose(callback) {
+        const trace = this.traceContext.currentTraceObject()
+        const origin = trace.close
+        trace.close = () => {
+            origin.apply(trace, arguments)
+            callback(trace)
+        }
     }
+
 }
 
 const agent = new MockAgent(fixture.config)

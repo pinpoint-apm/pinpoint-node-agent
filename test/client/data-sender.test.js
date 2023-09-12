@@ -15,7 +15,7 @@ const dataSender = dataSenderMock()
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const agentInfo = AgentInfo.create(fixture.config, Date.now())
 const MethodDescriptor = require('../../lib/context/method-descriptor')
-const MethodType = require('../../lib/constant/method-type').MethodType
+const MethodType = require('../../lib/constant/method-type')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 
@@ -44,7 +44,7 @@ test('Should send api meta info', function (t) {
   const apiMetaInfo = ApiMetaInfo.create(methodDescriptor)
   dataSender.send(apiMetaInfo)
 
-  t.equal(dataSender.mockAPIMetaInfo, apiMetaInfo, "span is equal in datasender")
+  t.equal(dataSender.mockAPIMetaInfos[0], apiMetaInfo, "span is equal in datasender")
 })
 
 test('Should send string meta info', function (t) {

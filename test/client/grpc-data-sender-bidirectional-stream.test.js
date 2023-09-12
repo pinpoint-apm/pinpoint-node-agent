@@ -6,7 +6,7 @@
 
 
 const test = require('tape')
-const services = require('../../lib/data/grpc/Service_grpc_pb')
+const services = require('../../lib/data/v1/Service_grpc_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const GrpcServer = require('./grpc-server')
@@ -221,6 +221,9 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                                 end: function () {
                                     this.writable = false
                                     currentStream.end()
+                                },
+                                once: function (eventName, cb) {
+                                    currentStream.once(eventName, cb)
                                 }
                             }
                             this.grpcDataSender.sendPing()
@@ -294,67 +297,3 @@ function pingSessionServer(call) {
 }
 
 let actualsPingSessionServer
-
-
-function pingSession2(call) {
-    call.on('data', (ping) => {
-        actualsPingSession.serverDataCount++
-        call.write(ping)
-    })
-    call.on('end', () => {
-        actualsPingSession.serverEndCount++
-        call.end()
-    })
-}
-
-test.skip('ping ERR_STREAM_WRITE_AFTER_END', (t) => {
-    actualsPingSession = {
-        serverDataCount: 0,
-        serverEndCount: 0
-    }
-    const callCount = 20
-    t.plan(1)
-
-    const server = new GrpcServer()
-    server.addService(services.AgentService, {
-        pingSession: pingSession2
-    })
-    server.addService(services.StatService, {
-        sendAgentStat: pingSessionServer
-    })
-    server.addService(services.SpanService, {
-        sendSpan: pingSessionServer
-    })
-
-    server.startup((port) => {
-        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
-            'agentid': '12121212',
-            'applicationname': 'applicationName',
-            'starttime': Date.now()
-        })
-
-        let callOrder = 0
-        const originData = this.grpcDataSender.pingStream.grpcStream.stream.listeners('data')[0]
-        this.grpcDataSender.pingStream.grpcStream.stream.removeListener('data', originData)
-        this.grpcDataSender.pingStream.grpcStream.stream.on('data', (data) => {
-            callOrder++
-            originData(data)
-        })
-
-        for (let index = 0; index < callCount + 1; index++) {
-            _.delay(() => {
-                if (index == callCount - 8) {
-                    this.grpcDataSender.pingStream.grpcStream.end()
-                    process.nextTick(() => {
-                        t.true(true, `actualsPingSession.serverDataCount: ${actualsPingSession.serverDataCount}, on('data') count : ${callOrder}`)
-                        server.tryShutdown(() => {
-                            t.end()
-                        })
-                    })
-                } else {
-                    this.grpcDataSender.sendPing()
-                }
-            }, _.random(10, 150))
-        }
-    })
-})

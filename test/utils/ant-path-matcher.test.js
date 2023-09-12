@@ -316,7 +316,7 @@ test('map insertion order learning test', (t) => {
     map1.delete(1)
     t.equal(map1.size, 1)
 
-    iterator1 = map1[Symbol.iterator]();
+    iterator1 = map1[Symbol.iterator]()
     index = 0
     for (const item of iterator1) {
         if (index == 0) {

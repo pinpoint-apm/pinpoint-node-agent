@@ -5,6 +5,9 @@ name: CI
 # Controls when the action will run. 
 on: [push, pull_request_target]
 
+permissions:
+  checks: write # needed for coverage
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
@@ -14,14 +17,13 @@ jobs:
     strategy:
       matrix:
         node_version:
-          - 12
           - 14
-          - 10.10.0
+          - 16
+          - 18
 
     name: Node ${{ matrix.node_version }} on ubuntu-latest
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: setup node environment
         uses: actions/setup-node@v2
         with:
@@ -33,11 +35,11 @@ jobs:
       - uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/checkstyle-result.xml'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Coverage
         run: npm run coverage
+
       - name: Report coverage
-        uses: romeovs/lcov-reporter-action@v0.2.21
+        uses: romeovs/lcov-reporter-action@2a28ec3e25fb7eae9cb537e9141603486f810d1a
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           lcov-file: ./coverage/lcov.info
+          github-token: ${{ secrets.ACTIONS_TOKEN }}

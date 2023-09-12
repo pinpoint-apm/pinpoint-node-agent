@@ -18,24 +18,29 @@ const Span = require('../../lib/context/span')
 const SpanChunk = require('../../lib/context/span-chunk')
 const DataSender = require('../../lib/client/data-sender')
 const MockgRPCDataSender = require('../client/mock-grpc-data-sender')
+const SqlMetaData = require('../../lib/client/sql-meta-data')
 
 class MockDataSender extends DataSender {
+  constructor(config, dataSender) {
+    super(config, dataSender)
+    this.mockAPIMetaInfos = []
+    this.mockSpanChunks = []
+  }
+
   send(data) {
+    super.send(data)
     if (data instanceof AgentInfo) {
       this.mockAgentInfo = data
-      this.dataSender.sendAgentInfo(data)
     } else if (data instanceof ApiMetaInfo) {
-      this.mockAPIMetaInfo = data
-      this.dataSender.sendApiMetaInfo(data)
+      this.mockAPIMetaInfos.push(data)
     } else if (data instanceof StringMetaInfo) {
       this.mockMetaInfo = data
-      this.dataSender.sendStringMetaInfo(data)
     } else if (data instanceof Span) {
       this.mockSpan = data
-      this.dataSender.sendSpan(data)
     } else if (data instanceof SpanChunk) {
-      this.mockSpanChunk = data
-      this.dataSender.sendSpanChunk(data)
+      this.mockSpanChunks.push(data)
+    } else if (data instanceof SqlMetaData) {
+      this.mockSqlMetaData = data
     }
   }
 }

@@ -6,11 +6,11 @@
 
 const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
-const { GenericContainer } = require("testcontainers")
+const { GenericContainer } = require('testcontainers')
 const { addressStringOf } = require('../../../lib/utils/convert-utils')
 
 test(`redis destination id`, async (t) => {
-    const container = await new GenericContainer("redis")
+    const container = await new GenericContainer('redis')
         .withExposedPorts(6379)
         .start()
 
@@ -23,11 +23,11 @@ test(`redis destination id`, async (t) => {
 
     const client = redis.createClient(
         container.getMappedPort(6379),
-        container.getContainerIpAddress(),
+        container.getHost(),
     )
 
     client.on("error", function (error) {
-        console.error(error);
+        console.error(error)
     })
 
     client.set("key", "value", async function (error) {
@@ -65,7 +65,7 @@ test("ioredis destination id", async function (t) {
     const port = container.getMappedPort(6379)
     const redis = new Redis(
         port,
-        container.getContainerIpAddress(),
+        container.getHost(),
     )
     redis.on("error", function (error) {
         console.error(error)
@@ -77,11 +77,11 @@ test("ioredis destination id", async function (t) {
     redis.get("key", async function (error, data) {
         t.equal(data, "value", "redis value validation")
 
-        t.true(agent.dataSender.mockSpanChunk.spanEventList.length > 0, "a spanEventList should has one chunk")
+        t.true(agent.dataSender.mockSpanChunks[0].spanEventList.length > 0, "a spanEventList should has one chunk")
 
-        const spanevent = agent.dataSender.mockSpanChunk.spanEventList[1]
+        const spanevent = agent.dataSender.mockSpanChunks[0].spanEventList[1]
         t.equal(spanevent.destinationId, "Redis", "Redis destionation ID check")
-        t.equal(spanevent.endPoint, `localhost:${port}`)
+        t.true(spanevent.endPoint.endsWith(`:${port}`), `localhost:${port}`)
 
         redis.quit()
         agent.completeTraceObject(trace)
@@ -119,7 +119,7 @@ test(`Fix app crash without callback function https://github.com/pinpoint-apm/pi
     const redis = require('redis')
 
     const client = redis.createClient({
-        host: container.getContainerIpAddress(),
+        host: container.getHost(),
         port: container.getMappedPort(6379),
         db: 3,
     })
@@ -127,7 +127,7 @@ test(`Fix app crash without callback function https://github.com/pinpoint-apm/pi
     client.select(2)
 
     client.on("error", function (error) {
-        console.error(error);
+        console.error(error)
     })
 
     client.set("key", "value", async function (error) {

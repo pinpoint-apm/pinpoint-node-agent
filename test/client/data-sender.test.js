@@ -15,7 +15,7 @@ const dataSender = dataSenderMock()
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const agentInfo = AgentInfo.create(fixture.config, Date.now())
 const MethodDescriptor = require('../../lib/context/method-descriptor')
-const MethodType = require('../../lib/constant/method-type').MethodType
+const MethodType = require('../../lib/constant/method-type')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 

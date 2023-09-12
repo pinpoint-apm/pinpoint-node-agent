@@ -11,7 +11,7 @@ const { log } = require('../../test-helper')
 const agent = require('../../support/agent-singleton-mock')
 const Koa = require('koa')
 const Router = require('koa-router')
-const DefaultAnnotationKey = require('../../../lib/constant/annotation-key').DefaultAnnotationKey
+const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 
@@ -33,18 +33,18 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
     ctx.body = 'ok. get'
 
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.span.annotations[0].key, DefaultAnnotationKey.HTTP_STATUS_CODE.name, 'HTTP status code')
-      t.equal(trace.span.annotations[0].value.intValue, 200, 'response status is 200')
+      t.equal(trace.span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code')
+      t.equal(trace.span.annotations[0].value, 200, 'response status is 200')
 
       let actualBuilder = new MethodDescriptorBuilder('koa', 'get')
         .setParameterDescriptor('(ctx, next)')
         .setLineNumber(32)
         .setFileName('koa.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.storage.storage[0]
+      let spanEvent = trace.span.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.equal(spanEvent.annotations[0].key, -1, 'parameter')
-      t.equal(spanEvent.annotations[0].value.stringValue, '/koa-router1', 'parameter value matching')
+      t.equal(spanEvent.annotations[0].value, '/koa-router1', 'parameter value matching')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith('koa.Router.get(ctx, next)'), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, 'Router', 'className')
       t.equal(actualMethodDescriptor.fullName, 'koa.get(ctx, next)', 'fullName')

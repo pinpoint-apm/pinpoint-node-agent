@@ -16,16 +16,15 @@ test(`outgoing request URL escape a bug`, async (t) => {
     const trace = agent.createTraceObject()
     t.true(trace)
 
-    axios.get(`https://github.com`)
+    axios.get(`https://naver.com`)
         .then(function (response) {
             t.true(response.status == 200)
 
-            t.true(agent.dataSender.mockSpanChunk.spanEventList.length == 2, `spanEventList`)
+            t.true(agent.dataSender.mockSpanChunks[0].spanEventList.length == 2, `spanEventList`)
 
-            const spanEvent = agent.dataSender.mockSpanChunk.spanEventList[1]
-
-            t.equal(spanEvent.annotations[0].value.stringValue, "GET", "URL")
-            t.equal(spanEvent.annotations[1].value.stringValue, "github.com/", "URL")
+            const spanEvent = agent.dataSender.mockSpanChunks[0].spanEventList[1]
+            t.equal(spanEvent.annotations[0].value, "GET", "URL")
+            t.equal(spanEvent.annotations[1].value, "naver.com/", "URL")
             agent.completeTraceObject(trace)
         })
 })

@@ -43,6 +43,13 @@ class MockDataSender extends DataSender {
       this.mockSqlMetaData = data
     }
   }
+
+  findSpanChunk(asyncId) {
+    return this.mockSpanChunks.find(spanChunk => spanChunk.localAsyncId.asyncId === asyncId)
+  }
+  findSpanEvent(apiId) {
+    return this.mockSpan.spanEventList.find(event => event.apiId === apiId)
+  }
 }
 
 const dataSender = () => {

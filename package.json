@@ -5,7 +5,7 @@
   "types": "index.d.ts",
   "type": "commonjs",
   "scripts": {
-    "test": "tape ./test/**/*.test.js",
+    "test": "tape 'test/**/*.test.js'",
     "lint": "eslint -f checkstyle ./lib > checkstyle-result.xml;exit 0",
     "coverage": "nyc --reporter=lcov --reporter=text-summary npm run test"
   },
@@ -85,8 +85,11 @@
     "redis": "^3.1.2",
     "redis-mock": "^0.49.0",
     "rimraf": "^2.6.2",
-    "tape": "^4.9.1",
+    "tape": "^4.16.0",
     "testcontainers": "^9.10.1",
     "typescript": "^4.8.3"
+  },
+  "volta": {
+    "node": "18.18.2"
   }
 }

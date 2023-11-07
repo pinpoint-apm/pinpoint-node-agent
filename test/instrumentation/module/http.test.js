@@ -16,7 +16,7 @@ test(`outgoing request URL escape a bug`, async (t) => {
     const trace = agent.createTraceObject()
     t.true(trace)
 
-    axios.get(`https://naver.com`)
+    axios.get(`https://www.naver.com`)
         .then(function (response) {
             t.true(response.status == 200)
 
@@ -24,7 +24,7 @@ test(`outgoing request URL escape a bug`, async (t) => {
 
             const spanEvent = agent.dataSender.mockSpanChunks[0].spanEventList[1]
             t.equal(spanEvent.annotations[0].value, "GET", "URL")
-            t.equal(spanEvent.annotations[1].value, "naver.com/", "URL")
+            t.equal(spanEvent.annotations[1].value, "www.naver.com/", "URL")
             agent.completeTraceObject(trace)
         })
 })

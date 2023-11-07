@@ -1,0 +1,6 @@
+{
+  "exclude": [
+    "lib/data/v1/**",
+    "test/**"
+  ]
+}

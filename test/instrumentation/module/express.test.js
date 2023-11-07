@@ -14,7 +14,7 @@ const annotationKey = require('../../../lib/constant/annotation-key')
 const { expected } = require('../../fixtures/instrument-support')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const semver = require('semver')
-const MethodDescriptorBuilder2 = require('../../../lib/context/method-descriptor-builder2')
+const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -40,7 +40,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
       t.equal(trace.span.annotations[1].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
       t.equal(trace.span.annotations[1].value, 200, 'response status is 200')
 
-      let actualBuilder = new MethodDescriptorBuilder2(expected('get', 'app.get'))
+      let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
         .setClassName(expected('app', 'Function'))
         .setLineNumber(34)
         .setFileName('express.test.js')
@@ -63,7 +63,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
       t.equal(trace.span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, '/express1 HTTP STATUS CODE in annotation zero')
       t.equal(trace.span.annotations[0].value, 200, '/express1 HTTP STATUS CODE value in annotation zero')
   
-      let actualBuilder = new MethodDescriptorBuilder2(expected('post', 'app.post'))
+      let actualBuilder = new MethodDescriptorBuilder(expected('post', 'app.post'))
         .setClassName(expected('app', 'Function'))
         .setLineNumber(59)
         .setFileName('express.test.js')
@@ -82,7 +82,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
     res.send('ok get')
 
     agent.callbackTraceClose((trace) => {
-      let actualBuilder = new MethodDescriptorBuilder2(expected('get', 'app.get'))
+      let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
         .setClassName(expected('app', 'Function'))
         .setLineNumber(81)
         .setFileName('express.test.js')
@@ -164,7 +164,7 @@ function throwHandleTest(trace, t) {
   t.equal(trace.span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), '/express3 HTTP_STATUS_CODE annotationKey matching')
   t.equal(trace.span.annotations[0].value, 500, '/express3 HTTP_STATUS_CODE value matching')
 
-  let actualBuilder = new MethodDescriptorBuilder2(expected('get', 'app.get'))
+  let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
     .setClassName(expected('app', 'Function'))
     .setLineNumber(104)
     .setFileName('express.test.js')
@@ -179,7 +179,7 @@ function throwHandleTest(trace, t) {
   t.equal(spanEvent.sequence, 0, 'sequence')
   t.equal(spanEvent.depth, 1, 'spanEvent.depth')
 
-  actualBuilder = new MethodDescriptorBuilder2('use')
+  actualBuilder = new MethodDescriptorBuilder('use')
     .setClassName('Router')
     .setLineNumber(117)
     .setFileName('express.test.js')
@@ -198,7 +198,7 @@ function throwHandleTest(trace, t) {
 }
 
 function nextErrorHandleTest(trace, t) {
-  let actualBuilder = new MethodDescriptorBuilder2(expected('get', 'app.get'))
+  let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
     .setClassName(expected('app', 'Function'))
     .setLineNumber(111)
     .setFileName('express.test.js')
@@ -213,7 +213,7 @@ function nextErrorHandleTest(trace, t) {
   t.equal(spanEvent.sequence, 0, 'sequence')
   t.equal(spanEvent.depth, 1, 'spanEvent.depth')
 
-  actualBuilder = new MethodDescriptorBuilder2('use')
+  actualBuilder = new MethodDescriptorBuilder('use')
     .setClassName('Router')
     .setLineNumber(117)
     .setFileName('express.test.js')
@@ -367,7 +367,7 @@ test(`${testName5} Should record middleware`, function (t) {
 
   app.get(PATH, (req, res) => {
     agent.callbackTraceClose((trace) =>{
-      let actualBuilder = new MethodDescriptorBuilder2(expected('get', 'app.get'))
+      let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
         .setClassName(expected('app', 'Function'))
         .setLineNumber(368)
         .setFileName('express.test.js')
@@ -382,7 +382,7 @@ test(`${testName5} Should record middleware`, function (t) {
       t.equal(spanEvent.sequence, 2, 'sequence')
       t.equal(spanEvent.depth, 1, 'spanEvent.depth')
   
-      actualBuilder = new MethodDescriptorBuilder2('use')
+      actualBuilder = new MethodDescriptorBuilder('use')
         .setClassName('Router')
         .setLineNumber(358)
         .setFileName('express.test.js')
@@ -397,7 +397,7 @@ test(`${testName5} Should record middleware`, function (t) {
       t.equal(spanEvent.sequence, 1, 'sequence')
       t.equal(spanEvent.depth, 1, 'spanEvent.depth')
   
-      actualBuilder = new MethodDescriptorBuilder2('use')
+      actualBuilder = new MethodDescriptorBuilder('use')
         .setClassName('Router')
         .setLineNumber(353)
         .setFileName('express.test.js')

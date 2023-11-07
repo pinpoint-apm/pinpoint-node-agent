@@ -13,7 +13,7 @@ const Koa = require('koa')
 const Router = require('koa-router')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
-const MethodDescriptorBuilder2 = require('../../../lib/context/method-descriptor-builder2')
+const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -36,7 +36,7 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
       t.equal(trace.span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code')
       t.equal(trace.span.annotations[0].value, 200, 'response status is 200')
 
-      let actualBuilder = new MethodDescriptorBuilder2('get')
+      let actualBuilder = new MethodDescriptorBuilder('get')
         .setClassName('Router')
         .setLineNumber(32)
         .setFileName('koa.test.js')

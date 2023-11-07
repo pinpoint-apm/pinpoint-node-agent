@@ -11,7 +11,7 @@ const apiMetaService = require('../../lib/context/api-meta-service')
 const { ServiceTypeCode } = require('../../lib/constant/service-type')
 const express = require('express')
 const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
-const MethodDescriptorBuilder2 = require('../../lib/context/method-descriptor-builder2')
+const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
 const { expected } = require('../fixtures/instrument-support')
 
 test.skip(`span and spanEvent call stack`, async (t) => {
@@ -70,7 +70,7 @@ test(`fix express call stack depth`, async (t) => {
         t.equal(agent.dataSender.mockSpan.spanEventList.length, 4, `span has 6 span events`)
         t.equal(agent.dataSender.mockSpan.apiId, defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.getApiId(), 'nodeServerMethodDescriptor apiId')
         
-        let actualBuilder = new MethodDescriptorBuilder2('use')
+        let actualBuilder = new MethodDescriptorBuilder('use')
         .setClassName('Router')
         .setLineNumber(52)
         .setFileName('callstack.test.js')
@@ -81,7 +81,7 @@ test(`fix express call stack depth`, async (t) => {
         t.equal(actualSpanEvent.depth, 1, 'use(jsonParser) depth')
         t.equal(actualSpanEvent.serviceType, ServiceTypeCode.express, 'use(jsonParser) serviceType')
 
-        actualBuilder = new MethodDescriptorBuilder2('use')
+        actualBuilder = new MethodDescriptorBuilder('use')
             .setClassName('Router')
             .setLineNumber(53)
             .setFileName('callstack.test.js')

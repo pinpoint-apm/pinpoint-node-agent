@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         node_version:
-          - 14
+          - 14          
           - 16
           - 18
 
@@ -37,9 +37,12 @@ jobs:
           path: '**/checkstyle-result.xml'
       - name: Coverage
         run: npm run coverage
-
+      # ... Generate LCOV files or download it from a different job
+      - name: Setup LCOV
+        uses: hrishikesh-kadam/setup-lcov@v1
       - name: Report coverage
-        uses: romeovs/lcov-reporter-action@2a28ec3e25fb7eae9cb537e9141603486f810d1a
+        uses: zgosalvez/github-actions-report-lcov@v3
         with:
-          lcov-file: ./coverage/lcov.info
+          coverage-files: coverage/lcov.info
           github-token: ${{ secrets.ACTIONS_TOKEN }}
+          update-comment: true

@@ -18,7 +18,7 @@ const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const DataSender = require('../../lib/client/data-sender')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
-const MethodDescriptorBuilder2 = require('../../lib/context/method-descriptor-builder2')
+const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
 const MethodType = require('../../lib/constant/method-type')
 
 class MockGrpcDataSender extends GrpcDataSender {
@@ -199,7 +199,7 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
             ip: '1'
         })
 
-        const apiMetaInfo = ApiMetaInfo.create(new MethodDescriptorBuilder2()
+        const apiMetaInfo = ApiMetaInfo.create(new MethodDescriptorBuilder()
             .setApiId(12121212)
             .setClassName('Router')
             .setMethodName('get')

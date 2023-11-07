@@ -10,6 +10,7 @@ const IdGenerator = require('../lib/context/id-generator')
 
 const testConfig= require('./pinpoint-config-test')
 const config = require('../lib/config').getConfig(testConfig)
+const { namedGroupLocationFileName, namedGroupTypeMethod } = require('../lib/instrumentation/call-stack')
 
 const getTransactionId = () => {
   const agentId = config.agentId
@@ -29,9 +30,15 @@ const getAgentInfo = () => ({
   agentStartTime: Date.now(),
 })
 
+const captureNamedGroup = (callSite) => {
+  return Object.assign({}, namedGroupLocationFileName([callSite], 0)
+                          , namedGroupTypeMethod([callSite], 0))
+}
+
 module.exports = {
   config,
   getTransactionId,
   getTraceId,
   getAgentInfo,
+  captureNamedGroup,
 }

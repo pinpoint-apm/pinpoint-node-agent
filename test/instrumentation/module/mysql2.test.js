@@ -10,7 +10,7 @@ const agent = require('../../support/agent-singleton-mock')
 const { MySqlContainer } = require('testcontainers')
 const mysql = require('mysql2')
 const mysqlp = require('mysql2/promise')
-const MethodDescriptorBuilder2 = require('../../../lib/context/method-descriptor-builder2')
+const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const sqlMetadataService = require('../../../lib/instrumentation/sql/sql-metadata-service')
 const annotationKey = require('../../../lib/constant/annotation-key')
@@ -72,7 +72,7 @@ test(`getConnection query hooking`, async (t) => {
     })
 
     agent.callbackTraceClose((trace) => {
-        let actualBuilder = new MethodDescriptorBuilder2('createConnection')
+        let actualBuilder = new MethodDescriptorBuilder('createConnection')
             .setLineNumber(39)
             .setFileName('mysql2.test.js')
         let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -81,7 +81,7 @@ test(`getConnection query hooking`, async (t) => {
         t.equal(createConnectionSpanEvent.endPoint, 'localhost', 'endPoint in createConnection spanEvent')
         t.equal(createConnectionSpanEvent.destinationId, 'test', 'destinationId in createConnection spanEvent')
 
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('Connection')
             .setLineNumber(48)
             .setFileName('mysql2.test.js')
@@ -99,7 +99,7 @@ test(`getConnection query hooking`, async (t) => {
         t.equal(actualQueryAnnotation.value.stringValue2, 'a', 'stringValue2 in query annotation')
         t.equal(actualParsingResult.sql.normalizedSql, 'SELECT * FROM member WHERE id = ?', 'normalizedSql in query annotation')
 
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('Connection')
             .setLineNumber(56)
             .setFileName('mysql2.test.js')
@@ -117,7 +117,7 @@ test(`getConnection query hooking`, async (t) => {
         t.equal(actualQueryAnnotation.value.stringValue2, 'c,cname,2023-08-18', 'stringValue2 in query annotation')
         t.equal(actualParsingResult.sql.normalizedSql, 'INSERT INTO member (id, name, joined) VALUES (?, ?, ?)', 'normalizedSql in query annotation')
 
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('Connection')
             .setLineNumber(60)
             .setFileName('mysql2.test.js')
@@ -135,7 +135,7 @@ test(`getConnection query hooking`, async (t) => {
         t.equal(actualQueryAnnotation.value.stringValue2, 'cname2,c', 'stringValue2 in query annotation')
         t.equal(actualParsingResult.sql.normalizedSql, 'UPDATE member SET name = ? WHERE id = ?', 'normalizedSql in query annotation')
 
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('Connection')
             .setLineNumber(64)
             .setFileName('mysql2.test.js')
@@ -194,7 +194,7 @@ test(`getConnection promise query hooking`, async (t) => {
     })
 
     agent.callbackTraceClose((trace) => {
-        let actualBuilder = new MethodDescriptorBuilder2('createConnection')
+        let actualBuilder = new MethodDescriptorBuilder('createConnection')
             .setLineNumber(175)
             .setFileName('mysql2.test.js')
         let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -203,7 +203,7 @@ test(`getConnection promise query hooking`, async (t) => {
         t.equal(createConnectionSpanEvent.endPoint, 'localhost', 'endPoint in createConnection spanEvent')
         t.equal(createConnectionSpanEvent.destinationId, 'test', 'destinationId in createConnection spanEvent')
 
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('Connection')
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
         let querySpanEvent = trace.span.spanEventList[1]
@@ -260,7 +260,7 @@ test(`Connection Pool with query hooking`, async (t) => {
     })
 
     agent.callbackTraceClose((trace) => {
-        let actualBuilder = new MethodDescriptorBuilder2('createPool')
+        let actualBuilder = new MethodDescriptorBuilder('createPool')
             .setLineNumber(240)
             .setFileName('mysql2.test.js')
         let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -272,7 +272,7 @@ test(`Connection Pool with query hooking`, async (t) => {
         t.equal(actualSpanEvent.depth, 1, 'depth in createPool spanEvent')
         t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'serviceType in createPool spanEvent')
 
-        actualBuilder = new MethodDescriptorBuilder2('getConnection')
+        actualBuilder = new MethodDescriptorBuilder('getConnection')
             .setClassName('Pool')
             .setLineNumber(143)
             .setFileName('pool.js')
@@ -285,7 +285,7 @@ test(`Connection Pool with query hooking`, async (t) => {
         t.equal(actualSpanEvent.depth, 1, 'depth in Pool.getConnection() spanEvent')
         t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'serviceType in Pool.getConnection() spanEvent')
 
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('PoolConnection')
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
         actualSpanEvent = trace.span.spanEventList[2]
@@ -345,7 +345,7 @@ test(`Cluster with query`, async (t) => {
     t.equal(results[0].joined.toISOString().slice(0, 10), '2023-01-17', 'joined in SELECT query hooking')
 
     agent.callbackTraceClose((trace) => {
-        let actualBuilder = new MethodDescriptorBuilder2('createPoolCluster')
+        let actualBuilder = new MethodDescriptorBuilder('createPoolCluster')
             .setLineNumber(545)
             .setFileName('promise.js')
         let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -355,7 +355,7 @@ test(`Cluster with query`, async (t) => {
         t.equal(actualSpanEvent.depth, 1, 'depth in createPoolCluster spanEvent')
         t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'serviceType in createPoolCluster spanEvent')
 
-        actualBuilder = new MethodDescriptorBuilder2('of')
+        actualBuilder = new MethodDescriptorBuilder('of')
             .setLineNumber(169)
             .setFileName('pool_cluster.js')
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -365,7 +365,7 @@ test(`Cluster with query`, async (t) => {
         t.equal(actualSpanEvent.depth, 1, 'depth in PoolCluster.of() spanEvent')
         t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'serviceType in PoolCluster.of() spanEvent')
 
-        actualBuilder = new MethodDescriptorBuilder2('getConnection')
+        actualBuilder = new MethodDescriptorBuilder('getConnection')
             .setClassName('Pool')
             .setLineNumber(177)
             .setFileName('pool_cluster.js')
@@ -390,7 +390,7 @@ test(`Cluster with query`, async (t) => {
         t.equal(actualSpanChunk.spanEventList[1].depth, 2, 'depth in spanChunk in PoolCluster.getConnection()')
         t.equal(actualSpanChunk.spanEventList[1].serviceType, mysqlServiceType.getCode(), 'serviceType in spanChunk in PoolCluster.getConnection()')
 
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('PoolConnection')
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
         actualSpanEvent = trace.span.spanEventList[3]

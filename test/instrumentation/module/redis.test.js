@@ -16,7 +16,7 @@ const Koa = require('koa')
 const Router = require('koa-router')
 const koaBodyParser = require('koa-bodyparser')
 
-const { GenericContainer } = require("testcontainers")
+const { GenericContainer } = require('testcontainers')
 
 const ioRedis = require('ioredis-mock')
 const Redis = require('redis-mock')

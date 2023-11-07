@@ -5,12 +5,12 @@
  */
 
 const test = require('tape')
-const { MySqlContainer } = require("testcontainers")
+const { MySqlContainer } = require('testcontainers')
 const path = require('path')
 const agent = require('../../support/agent-singleton-mock')
 const mysql = require('mysql')
 const apiMetaService = require('../../../lib/context/api-meta-service')
-const MethodDescriptorBuilder2 = require('../../../lib/context/method-descriptor-builder2')
+const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const sqlMetadataService = require('../../../lib/instrumentation/sql/sql-metadata-service')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
@@ -61,7 +61,7 @@ test(`getConnection query hooking`, async (t) => {
         const trace = agent.currentTraceObject()
         trace.close()
 
-        let actualBuilder = new MethodDescriptorBuilder2('createConnection')
+        let actualBuilder = new MethodDescriptorBuilder('createConnection')
             .setLineNumber(38)
             .setFileName('mysql.test.js')
         let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -70,7 +70,7 @@ test(`getConnection query hooking`, async (t) => {
         t.equal(createConnectionSpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
         t.equal(actualMethodDescriptor.apiId, createConnectionSpanEvent.apiId, 'apiId')
 
-        actualBuilder = new MethodDescriptorBuilder2('connect')
+        actualBuilder = new MethodDescriptorBuilder('connect')
             .setClassName('Connection')
             .setLineNumber(47)
             .setFileName('mysql.test.js')
@@ -80,7 +80,7 @@ test(`getConnection query hooking`, async (t) => {
         t.equal(connectionSpanEvent.sequence, 1, 'connection spanEvent sequence')
         t.equal(actualMethodDescriptor.apiId, connectionSpanEvent.apiId, 'apiId')
         
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
         .setClassName('Connection')
         .setLineNumber(53)
         .setFileName('mysql.test.js')
@@ -156,7 +156,7 @@ test(`connection with query`, async (t) => {
     })
     
     agent.callbackTraceClose((trace) => {
-        let actualBuilder = new MethodDescriptorBuilder2('createConnection')
+        let actualBuilder = new MethodDescriptorBuilder('createConnection')
             .setLineNumber(113)
             .setFileName('mysql.test.js')
         let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -165,7 +165,7 @@ test(`connection with query`, async (t) => {
         t.equal(createConnectionSpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
         t.equal(actualMethodDescriptor.apiId, createConnectionSpanEvent.apiId, 'apiId')
     
-        actualBuilder = new MethodDescriptorBuilder2('connect')
+        actualBuilder = new MethodDescriptorBuilder('connect')
             .setClassName('Connection')
             .setLineNumber(122)
             .setFileName('mysql.test.js')
@@ -175,7 +175,7 @@ test(`connection with query`, async (t) => {
         t.equal(connectionSpanEvent.sequence, 1, 'connection spanEvent sequence')
         t.equal(actualMethodDescriptor.apiId, connectionSpanEvent.apiId, 'apiId')
     
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('Connection')
             .setLineNumber(129)
             .setFileName('mysql.test.js')
@@ -191,7 +191,7 @@ test(`connection with query`, async (t) => {
         t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'the query annotation value')
         t.equal(actualParsingResult.sql.normalizedSql, 'SELECT DATABASE() as res', 'the query annotation squl normalizedSql')
     
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('Connection')
             .setLineNumber(133)
             .setFileName('mysql.test.js')
@@ -207,7 +207,7 @@ test(`connection with query`, async (t) => {
         t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'the query annotation value')
         t.equal(actualParsingResult.sql.normalizedSql, 'SHOW TABLES', 'the query annotation squl normalizedSql')
     
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('Connection')
             .setLineNumber(137)
             .setFileName('mysql.test.js')
@@ -225,7 +225,7 @@ test(`connection with query`, async (t) => {
         t.equal(actualQueryAnnotation.value.stringValue2, 'a', 'the query annotation value stringValue2 is bind value')
         t.equal(actualParsingResult.sql.normalizedSql, 'SELECT * FROM `member` WHERE id = ?', 'the query annotation sql normalizedSql')
     
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('Connection')
             .setLineNumber(140)
             .setFileName('mysql.test.js')
@@ -306,7 +306,7 @@ test(`Connection Pool with query`, async (t) => {
     })
 
     agent.callbackTraceClose((trace) => {
-        let actualBuilder = new MethodDescriptorBuilder2('createPool')
+        let actualBuilder = new MethodDescriptorBuilder('createPool')
                 .setLineNumber(266)
                 .setFileName('mysql.test.js')
         let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -318,7 +318,7 @@ test(`Connection Pool with query`, async (t) => {
         t.equal(actualSpanEvent.depth, 1, 'createPool spanEvent depth')
         t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'createPool spanEvent serviceType')
 
-        actualBuilder = new MethodDescriptorBuilder2('getConnection')
+        actualBuilder = new MethodDescriptorBuilder('getConnection')
             .setClassName('Pool')
             .setLineNumber(277)
             .setFileName('mysql.test.js')
@@ -343,7 +343,7 @@ test(`Connection Pool with query`, async (t) => {
         t.equal(actualSpanChunk.spanEventList[1].sequence, 1, 'spanChunk spanEventList[1].sequence is 1')
         t.equal(actualSpanChunk.spanEventList[1].serviceType, mysqlServiceType.getCode(), 'spanChunk spanEventList[1].serviceType is null')
 
-        actualBuilder = new MethodDescriptorBuilder2('getConnection')
+        actualBuilder = new MethodDescriptorBuilder('getConnection')
             .setClassName('Pool')
             .setLineNumber(202)
             .setFileName('Pool.js')
@@ -368,7 +368,7 @@ test(`Connection Pool with query`, async (t) => {
         t.equal(actualSpanChunk.spanEventList[1].sequence, 1, 'spanChunk spanEventList[1].sequence is 1 on pool.query')
         t.equal(actualSpanChunk.spanEventList[1].serviceType, mysqlServiceType.getCode(), 'spanChunk spanEventList[1].serviceType is null on pool.query')
 
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('PoolConnection')
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
         actualSpanEvent = trace.span.spanEventList[3]
@@ -397,7 +397,7 @@ test(`Connection Pool with query`, async (t) => {
         }
         asyncSpanChunkMatcher(actualSpanEvent)
 
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('PoolConnection')
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
         actualSpanEvent = trace.span.spanEventList[4]
@@ -474,7 +474,7 @@ test(`Cluster with query`, async (t) => {
     })
     
     agent.callbackTraceClose((trace) => {
-        let actualBuilder = new MethodDescriptorBuilder2('createPoolCluster')
+        let actualBuilder = new MethodDescriptorBuilder('createPoolCluster')
                 .setLineNumber(429)
                 .setFileName('mysql.test.js')
         let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -484,7 +484,7 @@ test(`Cluster with query`, async (t) => {
         t.equal(actualSpanEvent.depth, 1, 'createPoolCluster spanEvent depth')
         t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'createPoolCluster spanEvent serviceType')
 
-        actualBuilder = new MethodDescriptorBuilder2('of')
+        actualBuilder = new MethodDescriptorBuilder('of')
             .setLineNumber(142)
             .setFileName('PoolCluster.js')
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -494,7 +494,7 @@ test(`Cluster with query`, async (t) => {
         t.equal(actualSpanEvent.sequence, 1, 'PoolCluster.of spanEvent sequence in poolCluster.getConnection')
         t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'PoolCluster.of spanEvent serviceType in poolCluster.getConnection')
 
-        actualBuilder = new MethodDescriptorBuilder2('getConnection')
+        actualBuilder = new MethodDescriptorBuilder('getConnection')
             .setClassName('Pool')
             .setLineNumber(145)
             .setFileName('PoolCluster.js')
@@ -519,7 +519,7 @@ test(`Cluster with query`, async (t) => {
         t.equal(actualSpanChunk.spanEventList[1].sequence, 1, 'spanChunk spanEventList[1].sequence is 1 in poolCluster.getConnection')
         t.equal(actualSpanChunk.spanEventList[1].serviceType, mysqlServiceType.getCode(), 'spanChunk spanEventList[1].serviceType is null in poolCluster.getConnection')
 
-        actualBuilder = new MethodDescriptorBuilder2('query')
+        actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('PoolConnection')
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
         actualSpanEvent = trace.span.spanEventList[3]

@@ -24,7 +24,7 @@ const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 const testName1 = 'express1'
 test(`${testName1} Should record request in basic route`, function (t) {
-  agent.bindHttp()
+  agent.bindHttpWithCallSite()
 
   const testName = testName1
 
@@ -233,7 +233,7 @@ function nextErrorHandleTest(trace, t) {
 
 const testName2 = 'express2'
 test(`[${testName2}] Should record request in express.Router`, function (t) {
-  agent.bindHttp()
+  agent.bindHttpWithCallSite()
 
   const testName = testName2
 
@@ -273,7 +273,7 @@ test(`[${testName2}] Should record request in express.Router`, function (t) {
 
 const testName3 = 'express3'
 test(`${testName3} Should record request taking more than 2 sec`, function (t) {
-  agent.bindHttp()
+  agent.bindHttpWithCallSite()
 
   const testName = testName3
 
@@ -343,7 +343,7 @@ test(`${testName4} Should record internal error in express.test.js`, function (t
 
 const testName5 = 'express5'
 test(`${testName5} Should record middleware`, function (t) {
-  agent.bindHttp()
+  agent.bindHttpWithCallSite()
 
   const testName = testName5
 
@@ -427,7 +427,7 @@ test(`${testName5} Should record middleware`, function (t) {
 
 const testName6 = 'express6'
 test(`${testName6} Should record each http method`, function (t) {
-  agent.bindHttp()
+  agent.bindHttpWithCallSite()
 
   const testName = testName6
 
@@ -492,3 +492,180 @@ test('express version check', (t) => {
   t.equal(actual.name, 'module', 'express version 5.0.0 test')
   t.end()
 })
+
+test('express without callSite', (t) => {
+  agent.bindHttp()
+
+  const app = new express()
+
+  app.get('/express1', async (req, res) => {
+    res.send('ok get')
+
+    agent.callbackTraceClose((trace) => {
+      t.equal(trace.span.annotations[0].key, annotationKey.HTTP_PARAM.code, 'HTTP param key match')
+      t.equal(trace.span.annotations[0].value, 'api=test&test1=test', 'HTTP param value match')
+      t.equal(trace.span.annotations[1].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
+      t.equal(trace.span.annotations[1].value, 200, 'response status is 200')
+
+      let actualBuilder = new MethodDescriptorBuilder('get')
+        .setClassName('Router')
+      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+      let spanEvent = trace.span.spanEventList[0]
+      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
+      t.equal(actualMethodDescriptor.className, 'Router', 'className')
+      t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
+    })
+  })
+
+
+  app.post('/express1', (req, res) => {
+    res.send('ok post')
+
+    agent.callbackTraceClose((trace) => {
+      t.equal(trace.span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, '/express1 HTTP STATUS CODE in annotation zero')
+      t.equal(trace.span.annotations[0].value, 200, '/express1 HTTP STATUS CODE value in annotation zero')
+  
+      let actualBuilder = new MethodDescriptorBuilder('post')
+        .setClassName('Router')
+      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+      let spanEvent = trace.span.spanEventList[0]
+      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.post', 'apiDescriptor')
+      t.equal(actualMethodDescriptor.className, 'Router', 'className')
+      t.equal(actualMethodDescriptor.methodName, 'post', 'methodName')
+    })
+  })
+
+  app.get('/express2', async (req, res) => {
+    res.send('ok get')
+
+    agent.callbackTraceClose((trace) => {
+      let actualBuilder = new MethodDescriptorBuilder('get')
+        .setClassName('Router')
+      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+      let spanEvent = trace.span.spanEventList[0]
+      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
+      t.equal(actualMethodDescriptor.className, 'Router', 'className')
+      t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
+    })
+  })
+
+  let errorOrder = 0
+  let pathSymbol
+
+  const express3Symbol = Symbol('express3')
+  app.get('/express3', (req, res, next) => {
+    errorOrder++
+    pathSymbol = express3Symbol
+    throw new Error('error case')
+  })
+
+  const express4Symbol = Symbol('express4')
+  app.get('/express4', (req, res, next) => {
+    errorOrder++
+    pathSymbol = express4Symbol
+    next(new Error('error case'))
+  })
+
+  app.use(function (err, req, res, next) {
+    if (pathSymbol == express3Symbol) {
+      t.equal(errorOrder, 1, 'express3 error order')
+    }
+    if (pathSymbol === express4Symbol) {
+      t.equal(errorOrder, 2, 'express4 error order')
+    }
+
+    agent.callbackTraceClose((trace) => {
+      if (errorOrder == 1) {
+        throwHandleTestWithoutCallSite(trace, t)
+      } else if (errorOrder == 2) {
+        nextErrorHandleTestWithoutCallSite(trace, t)
+      }
+    })
+
+    res.status(500).send('Something broke!')
+  })
+
+  const server = app.listen(TEST_ENV.port, async function () {
+    const result1 = await axios.get(getServerUrl('/express1') + '?api=test&test1=test')
+    t.equal(result1.status, 200)
+
+    const result2 = await axios.post(getServerUrl('/express1'))
+    t.equal(result2.status, 200)
+
+    const result3 = await axios.get(getServerUrl('/express2'))
+    t.equal(result3.status, 200)
+
+    try {
+      await axios.get(getServerUrl('/express3'))
+    } catch (error) {
+      t.equal(error.response.status, 500)
+    }
+
+    try {
+      await axios.get(getServerUrl('/express4'))
+    } catch (error) {
+      t.equal(error.response.status, 500, 'axios.get(getServerUrl(/express4))')
+    }
+
+    t.end()
+    server.close()
+  })
+})
+
+function throwHandleTestWithoutCallSite(trace, t) {
+  t.equal(trace.span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), '/express3 HTTP_STATUS_CODE annotationKey matching')
+  t.equal(trace.span.annotations[0].value, 500, '/express3 HTTP_STATUS_CODE value matching')
+
+  let actualBuilder = new MethodDescriptorBuilder('get')
+    .setClassName('Router')
+  const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+  let spanEvent = trace.span.spanEventList[1]
+  t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+  t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
+  t.equal(actualMethodDescriptor.className, 'Router', 'className')
+  t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
+  t.equal(spanEvent.sequence, 0, 'sequence')
+  t.equal(spanEvent.depth, 1, 'spanEvent.depth')
+
+  actualBuilder = new MethodDescriptorBuilder('use')
+    .setClassName('Router')
+  const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+  spanEvent = trace.span.spanEventList[0]
+  t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+  t.equal(actualErrorMethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
+  t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
+  t.equal(actualErrorMethodDescriptor.methodName, 'use', 'methodName')
+  t.equal(spanEvent.sequence, 1, 'sequence')
+  t.equal(spanEvent.depth, 2, 'spanEvent.depth')
+  t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:562:11'), 'error case')
+}
+
+function nextErrorHandleTestWithoutCallSite(trace, t) {
+  let actualBuilder = new MethodDescriptorBuilder('get')
+    .setClassName('Router')
+  const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+  let spanEvent = trace.span.spanEventList[1]
+  t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+  t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
+  t.equal(actualMethodDescriptor.className, 'Router', 'className')
+  t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
+  t.equal(spanEvent.sequence, 0, 'sequence')
+  t.equal(spanEvent.depth, 1, 'spanEvent.depth')
+
+  actualBuilder = new MethodDescriptorBuilder('use')
+    .setClassName('Router')
+  const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+  spanEvent = trace.span.spanEventList[0]
+  t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+  t.equal(actualErrorMethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
+  t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
+  t.equal(actualErrorMethodDescriptor.methodName, 'use', 'methodName')
+  t.equal(spanEvent.sequence, 1, 'sequence')
+  t.equal(spanEvent.depth, 2, 'spanEvent.depth')
+  t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:569:10'), 'error case')
+}

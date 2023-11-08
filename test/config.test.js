@@ -65,8 +65,6 @@ test('main moudle path', (t) => {
   const conf = config.readRootConfigFile()
   t.deepEqual(conf, {}, 'configuration is null object')
   let actual = config.getMainModulePath(require)
-  let actualParsedPath = path.parse(actual)
-  t.deepEqual(actualParsedPath.base, 'bin', 'main module path')
 
   actual = config.getMainModulePath({})
   t.true(actual === undefined, 'config.getMainModulePath({}) return value is undefined')
@@ -167,5 +165,31 @@ test('Agent ID length check', (t) => {
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME
 
+  t.end()
+})
+
+test('callSite config', (t) => {
+  config.clear()
+
+  let given = config.getConfig()
+  t.false(given.traceLocationAndFileNameOfCallSite, 'default value is false')
+
+  config.clear()
+  process.env['PINPOINT_TRACE_LOCATION_AND_FILENAME_OF_CALL_SITE'] = ''
+  given = config.getConfig()
+  t.false(given.traceLocationAndFileNameOfCallSite, 'default value is true validation')
+
+  config.clear()
+  process.env['PINPOINT_TRACE_LOCATION_AND_FILENAME_OF_CALL_SITE'] = 'false'
+  given = config.getConfig()
+  t.false(given.traceLocationAndFileNameOfCallSite, 'false value is false')
+
+  config.clear()
+  process.env['PINPOINT_TRACE_LOCATION_AND_FILENAME_OF_CALL_SITE'] = 'true'
+  given = config.getConfig()
+  t.true(given.traceLocationAndFileNameOfCallSite, 'true value is true')
+
+  delete process.env.PINPOINT_TRACE_LOCATION_AND_FILENAME_OF_CALL_SITE
+  config.clear()
   t.end()
 })

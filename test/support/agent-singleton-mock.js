@@ -37,6 +37,8 @@ class MockAgent extends Agent {
 
         if (!json) {
             json = require('../pinpoint-config-test')
+        } else {
+            json = Object.assign({}, json, require('../pinpoint-config-test'))
         }
         require('../../lib/config').clear()
         const config = require('../../lib/config').getConfig(json)
@@ -91,6 +93,9 @@ class MockAgent extends Agent {
         }
     }
 
+    bindHttpWithCallSite() {
+        this.bindHttp({ 'trace-location-and-filename-of-call-site': true })
+    }
 }
 
 const agent = new MockAgent(fixture.config)

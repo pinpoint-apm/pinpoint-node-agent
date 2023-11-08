@@ -20,7 +20,7 @@ const ServiceType = require('../../../lib/context/service-type')
 
 const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')
 test(`getConnection query hooking`, async (t) => {
-    agent.bindHttp()
+    agent.bindHttpWithCallSite()
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
@@ -95,7 +95,7 @@ test(`getConnection query hooking`, async (t) => {
 })
 
 test(`connection with query`, async (t) => {
-    agent.bindHttp()
+    agent.bindHttpWithCallSite()
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
@@ -248,7 +248,7 @@ test(`connection with query`, async (t) => {
 })
 
 test(`Connection Pool with query`, async (t) => {
-    agent.bindHttp()
+    agent.bindHttpWithCallSite()
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()
     .withCommand(['--default-authentication-plugin=mysql_native_password'])
@@ -411,7 +411,7 @@ test(`Connection Pool with query`, async (t) => {
 })
 
 test(`Cluster with query`, async (t) => {
-    agent.bindHttp()
+    agent.bindHttpWithCallSite()
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()
     .withCommand(['--default-authentication-plugin=mysql_native_password'])

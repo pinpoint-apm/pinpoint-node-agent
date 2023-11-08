@@ -12,7 +12,7 @@ const enableDataSending = require('../test-helper').enableDataSending
 enableDataSending()
 const Agent = require('../../lib/agent')
 const dataSenderMock = require('./data-sender-mock')
-const shimmer = require('../../lib/shimmer')
+const shimmer = require('@pinpoint-apm/shimmer')
 const httpShared = require('../../lib/instrumentation/http-shared')
 const traceContext = require('../../lib/context/trace-context')
 const contextManager = require('../../lib/context/context-manager')

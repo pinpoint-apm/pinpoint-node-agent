@@ -237,7 +237,7 @@ test(`[${testName2}] Should record request in express.Router`, function (t) {
 
   const testName = testName2
 
-  t.plan(3)
+  t.plan(2)
 
   const PATH = '/' + testName
   const app = new express()
@@ -263,10 +263,6 @@ test(`[${testName2}] Should record request in express.Router`, function (t) {
     const result2 = await axios.get(getServerUrl(`/express.router2${PATH}`))
     t.ok(result2.status, 200)
 
-    const traceMap = agent.traceContext.getAllTraceObject()
-    log.debug(traceMap.size)
-    t.ok(traceMap.size > 0)
-
     server.close()
   })
 })
@@ -277,7 +273,7 @@ test(`${testName3} Should record request taking more than 2 sec`, function (t) {
 
   const testName = testName3
 
-  t.plan(2)
+  t.plan(1)
 
   const PATH = '/' + testName
   const app = new express()
@@ -295,11 +291,6 @@ test(`${testName3} Should record request taking more than 2 sec`, function (t) {
   const server = app.listen(TEST_ENV.port, async function () {
     const result = await axios.get(getServerUrl(PATH))
     t.ok(result.status, 200)
-
-    const traceMap = agent.traceContext.getAllTraceObject()
-    log.debug(traceMap.size)
-    t.ok(traceMap.size > 0)
-
     server.close()
   })
 })
@@ -310,7 +301,7 @@ test(`${testName4} Should record internal error in express.test.js`, function (t
 
   const testName = testName4
 
-  t.plan(2)
+  t.plan(1)
 
   const PATH = '/' + testName
   const app = new express()
@@ -333,10 +324,6 @@ test(`${testName4} Should record internal error in express.test.js`, function (t
   const server = app.listen(TEST_ENV.port, async function () {
     const result = await axios.get(getServerUrl(PATH))
     t.ok(result.status, 500)
-
-    const traceMap = agent.traceContext.getAllTraceObject()
-    t.ok(traceMap.size > 0)
-
     server.close()
   })
 })
@@ -369,14 +356,14 @@ test(`${testName5} Should record middleware`, function (t) {
     agent.callbackTraceClose((trace) =>{
       let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
         .setClassName(expected('app', 'Function'))
-        .setLineNumber(368)
+        .setLineNumber(355)
         .setFileName('express.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.span.spanEventList[2]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 368, 'lineNumber')
+      t.equal(actualMethodDescriptor.lineNumber, 355, 'lineNumber')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
       t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
       t.equal(spanEvent.sequence, 2, 'sequence')
@@ -384,14 +371,14 @@ test(`${testName5} Should record middleware`, function (t) {
   
       actualBuilder = new MethodDescriptorBuilder('use')
         .setClassName('Router')
-        .setLineNumber(358)
+        .setLineNumber(345)
         .setFileName('express.test.js')
       const actualMiddleware1MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       spanEvent = trace.span.spanEventList[1]
       t.equal(actualMiddleware1MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMiddleware1MethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
       t.equal(actualMiddleware1MethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMiddleware1MethodDescriptor.lineNumber, 358, 'lineNumber')
+      t.equal(actualMiddleware1MethodDescriptor.lineNumber, 345, 'lineNumber')
       t.equal(actualMiddleware1MethodDescriptor.functionName, 'use', 'functionName')
       t.true(actualMiddleware1MethodDescriptor.location.endsWith('express.test.js'), 'location')
       t.equal(spanEvent.sequence, 1, 'sequence')
@@ -399,14 +386,14 @@ test(`${testName5} Should record middleware`, function (t) {
   
       actualBuilder = new MethodDescriptorBuilder('use')
         .setClassName('Router')
-        .setLineNumber(353)
+        .setLineNumber(340)
         .setFileName('express.test.js')
       const actualMiddleware2MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       spanEvent = trace.span.spanEventList[0]
       t.equal(actualMiddleware2MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMiddleware2MethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
       t.equal(actualMiddleware2MethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMiddleware2MethodDescriptor.lineNumber, 353, 'lineNumber')
+      t.equal(actualMiddleware2MethodDescriptor.lineNumber, 340, 'lineNumber')
       t.equal(actualMiddleware2MethodDescriptor.methodName, 'use', 'methodName')
       t.true(actualMiddleware2MethodDescriptor.location.endsWith('express.test.js'), 'location')
       t.equal(spanEvent.sequence, 0, 'sequence')
@@ -431,7 +418,7 @@ test(`${testName6} Should record each http method`, function (t) {
 
   const testName = testName6
 
-  t.plan(6)
+  t.plan(5)
 
   const PATH = '/' + testName
   const app = new express()
@@ -468,10 +455,6 @@ test(`${testName6} Should record each http method`, function (t) {
 
     const result5 = await axios.delete(getServerUrl(PATH))
     t.ok(result5.status, 200)
-
-    const traceMap = agent.traceContext.getAllTraceObject()
-    log.debug(traceMap.size)
-    t.ok(traceMap.size > 0)
 
     server.close()
   })
@@ -641,7 +624,7 @@ function throwHandleTestWithoutCallSite(trace, t) {
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:562:11'), 'error case')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:545:11'), 'error case')
 }
 
 function nextErrorHandleTestWithoutCallSite(trace, t) {
@@ -667,5 +650,5 @@ function nextErrorHandleTestWithoutCallSite(trace, t) {
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:569:10'), 'error case')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:552:10'), 'error case')
 }

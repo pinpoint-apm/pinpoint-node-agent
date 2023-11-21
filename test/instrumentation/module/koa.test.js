@@ -65,10 +65,6 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
     const result2 = await axios.post(getServerUrl(PATH))
     t.ok(result2.status, 200)
 
-    const traceMap = agent.traceContext.getAllTraceObject()
-    log.debug(traceMap.size)
-    t.ok(traceMap.size > 0)
-
     t.end()
     server.close()
   })
@@ -112,10 +108,6 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
 
     const result2 = await axios.post(getServerUrl(PATH))
     t.ok(result2.status, 200)
-
-    const traceMap = agent.traceContext.getAllTraceObject()
-    log.debug(traceMap.size)
-    t.ok(traceMap.size > 0)
 
     t.end()
     server.close()

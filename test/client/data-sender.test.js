@@ -5,8 +5,6 @@
  */
 
 const test = require('tape')
-const axios = require('axios')
-
 
 const { fixture } = require('../test-helper')
 const Trace = require('../../lib/context/trace')
@@ -14,20 +12,9 @@ const dataSenderMock = require('../support/data-sender-mock')
 const dataSender = dataSenderMock()
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const agentInfo = AgentInfo.create(fixture.config, Date.now())
-const MethodDescriptor = require('../../lib/context/method-descriptor')
-const MethodType = require('../../lib/constant/method-type')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
-
-// const { log, fixture, util, enableDataSending } = require('../test-helper')
-// enableDataSending()
-
-// const Trace = require('../../lib/context/trace')
-// const dataSenderFactory = require('../../lib/client/data-sender-factory')
-
-// const GRPC_ENABLE = false
-// fixture.config['grpcEnable'] = GRPC_ENABLE
-// const dataSender = dataSenderFactory.create(fixture.config, agentInfo)
+const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
 
 test('Should send agent info', function (t) {
   t.plan(1)
@@ -40,7 +27,7 @@ test('Should send agent info', function (t) {
 test('Should send api meta info', function (t) {
   t.plan(1)
 
-  const methodDescriptor = new MethodDescriptor('http', 'Server', 'request', MethodType.WEB_REQUEST, 'Node Server Process')
+  const methodDescriptor = defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor
   const apiMetaInfo = ApiMetaInfo.create(methodDescriptor)
   dataSender.send(apiMetaInfo)
 

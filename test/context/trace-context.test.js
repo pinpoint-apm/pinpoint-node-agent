@@ -12,6 +12,7 @@ const TraceContext = require('../../lib/context/trace-context')
 const dataSenderMock = require('../support/data-sender-mock')
 const RequestHeaderUtils = require('../../lib/instrumentation/request-header-utils')
 const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
+const localStorage = require('../../lib/instrumentation/context/local-storage')
 
 test('Should create continued trace and add span info', function (t) {
   t.plan(2)
@@ -21,14 +22,15 @@ test('Should create continued trace and add span info', function (t) {
   const traceContext = TraceContext.init(fixture.getAgentInfo(), dataSenderMock())
 
   const trace = traceContext.continueTraceObject(traceId)
-
-  t.equal(traceContext.currentTraceObject().traceId.transactionId.toString(), transactionId.toString())
-
-  trace.spanRecorder.recordServiceType(ServiceType.express)
-  trace.spanRecorder.recordApi(defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor)
-
-  t.equal(traceContext.currentTraceObject().span.serviceType, ServiceType.express)
-  traceContext.completeTraceObject(trace)
+  localStorage.run(trace, () => {
+    t.equal(traceContext.currentTraceObject().traceId.transactionId.toString(), transactionId.toString())
+  
+    trace.spanRecorder.recordServiceType(ServiceType.express)
+    trace.spanRecorder.recordApi(defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor)
+  
+    t.equal(traceContext.currentTraceObject().span.serviceType, ServiceType.express)
+    traceContext.completeTraceObject(trace)
+  })
 })
 
 test('Should begin/end trace block asynchronously', async function (t) {
@@ -37,26 +39,29 @@ test('Should begin/end trace block asynchronously', async function (t) {
   // start trace and write span info
   const traceContext = TraceContext.init(fixture.getAgentInfo(), dataSenderMock())
   const startedTrace = traceContext.newTraceObject(true)
-  const spanRecorder = startedTrace.spanRecorder
-  spanRecorder.recordServiceType(ServiceType.express)
 
-  const currentTrace = traceContext.currentTraceObject()
-  const spanEventRecorder = currentTrace.traceBlockBegin()
-  spanEventRecorder.recordServiceType(ServiceType.express)
-  spanEventRecorder.recordApi(defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor)
-
-  t.equal(traceContext.currentTraceObject().callStack.length, 1)
-
-  const anotherContext = traceContext.currentTraceObject()
-  t.equal(anotherContext.traceId, currentTrace.traceId)
-
-  const spanEventRecorder2 = anotherContext.traceBlockBegin()
-  t.equal(traceContext.currentTraceObject().callStack.length, 2)
-
-  anotherContext.traceBlockEnd(spanEventRecorder2)
-
-  currentTrace.traceBlockEnd(spanEventRecorder)
-  t.equal(traceContext.currentTraceObject().callStack.length, 0, "traceBolckEnd callstack length is zero")
+  localStorage.run(startedTrace, () => {
+    const spanRecorder = startedTrace.spanRecorder
+    spanRecorder.recordServiceType(ServiceType.express)
+  
+    const currentTrace = traceContext.currentTraceObject()
+    const spanEventRecorder = currentTrace.traceBlockBegin()
+    spanEventRecorder.recordServiceType(ServiceType.express)
+    spanEventRecorder.recordApi(defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor)
+  
+    t.equal(traceContext.currentTraceObject().callStack.length, 1)
+  
+    const anotherContext = traceContext.currentTraceObject()
+    t.equal(anotherContext.traceId, currentTrace.traceId)
+  
+    const spanEventRecorder2 = anotherContext.traceBlockBegin()
+    t.equal(traceContext.currentTraceObject().callStack.length, 2)
+  
+    anotherContext.traceBlockEnd(spanEventRecorder2)
+  
+    currentTrace.traceBlockEnd(spanEventRecorder)
+    t.equal(traceContext.currentTraceObject().callStack.length, 0, "traceBolckEnd callstack length is zero")
+  })
 })
 
 test('Should complete trace ', async function (t) {

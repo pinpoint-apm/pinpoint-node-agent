@@ -7,12 +7,11 @@
 const test = require('tape')
 const axios = require('axios')
 const http = require('http')
-
-const { log, fixture, util } = require('../test-helper')
-
+const { fixture } = require('../test-helper')
 const RequestHeaderUtils = require('../../lib/instrumentation/request-header-utils')
 const agent = require('../support/agent-singleton-mock')
 const PinpointHeader = require('../../lib/constant/http-header').PinpointHeader
+const localStorage = require('../../lib/instrumentation/context/local-storage')
 
 const headers = {
   'Pinpoint-TraceID': fixture.getTraceId().transactionId.toString(),
@@ -50,10 +49,10 @@ test('Should write pinpoint header', async function (t) {
   })
   .on('request', (req, res) => {
     const trace = agent.createTraceObject()
-
-    const writtenReq = RequestHeaderUtils.write(req, agent)
-
-    t.equal(writtenReq.headers[PinpointHeader.HTTP_TRACE_ID], trace.traceId.transactionId.toString(), "trace ID new ID was added in Header")
+    localStorage.run(trace, () => {
+      const writtenReq = RequestHeaderUtils.write(req, agent)
+      t.equal(writtenReq.headers[PinpointHeader.HTTP_TRACE_ID], trace.traceId.transactionId.toString(), "trace ID new ID was added in Header")
+    })
   })
   .listen(5005, async function() {
     await axios.get(`http://${endPoint}${rpcName}?q=1`)

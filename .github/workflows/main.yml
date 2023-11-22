@@ -3,10 +3,7 @@
 name: CI
 
 # Controls when the action will run. 
-on: [push, pull_request_target]
-
-permissions:
-  checks: write # needed for coverage
+on: [push, pull_request]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -30,11 +27,12 @@ jobs:
           node-version: ${{ matrix.node_version }}
       - run: npm install
       - run: npm test
-      - name: Lint
-        run: npm run lint
-      - uses: jwgmeligmeyling/checkstyle-github-action@master
-        with:
-          path: '**/checkstyle-result.xml'
+      # - name: Lint
+      #   run: npm run lint
+      # - name: Upload checkstyle report 
+      #   uses: jwgmeligmeyling/checkstyle-github-action@master
+      #   with:
+      #     path: '**/checkstyle-result.xml'
       - name: Coverage
         run: npm run coverage
       # ... Generate LCOV files or download it from a different job

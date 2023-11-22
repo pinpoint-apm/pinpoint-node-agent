@@ -6,7 +6,6 @@
 
 const test = require('tape')
 const axios = require('axios')
-
 const { log, util } = require('../../test-helper')
 const agent = require('../../support/agent-singleton-mock')
 const express = require('express')
@@ -42,14 +41,14 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
       let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
         .setClassName(expected('app', 'Function'))
-        .setLineNumber(34)
+        .setLineNumber(33)
         .setFileName('express.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.span.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 34, 'lineNumber')
+      t.equal(actualMethodDescriptor.lineNumber, 33, 'lineNumber')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
       t.true(actualMethodDescriptor.location.length > 0, 'location')
     })
@@ -65,14 +64,14 @@ test(`${testName1} Should record request in basic route`, function (t) {
   
       let actualBuilder = new MethodDescriptorBuilder(expected('post', 'app.post'))
         .setClassName(expected('app', 'Function'))
-        .setLineNumber(59)
+        .setLineNumber(58)
         .setFileName('express.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.span.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.post', 'Function.app.post')), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 59, 'lineNumber')
+      t.equal(actualMethodDescriptor.lineNumber, 58, 'lineNumber')
       t.equal(actualMethodDescriptor.methodName, 'post', 'methodName')
       t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
     })
@@ -84,14 +83,14 @@ test(`${testName1} Should record request in basic route`, function (t) {
     agent.callbackTraceClose((trace) => {
       let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
         .setClassName(expected('app', 'Function'))
-        .setLineNumber(81)
+        .setLineNumber(80)
         .setFileName('express.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.span.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 81, 'lineNumber')
+      t.equal(actualMethodDescriptor.lineNumber, 80, 'lineNumber')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
       t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
     })
@@ -166,14 +165,14 @@ function throwHandleTest(trace, t) {
 
   let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
     .setClassName(expected('app', 'Function'))
-    .setLineNumber(104)
+    .setLineNumber(103)
     .setFileName('express.test.js')
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
   let spanEvent = trace.span.spanEventList[1]
   t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
   t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-  t.equal(actualMethodDescriptor.lineNumber, 104, 'lineNumber')
+  t.equal(actualMethodDescriptor.lineNumber, 103, 'lineNumber')
   t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
   t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
   t.equal(spanEvent.sequence, 0, 'sequence')
@@ -181,33 +180,33 @@ function throwHandleTest(trace, t) {
 
   actualBuilder = new MethodDescriptorBuilder('use')
     .setClassName('Router')
-    .setLineNumber(117)
+    .setLineNumber(116)
     .setFileName('express.test.js')
   const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
   spanEvent = trace.span.spanEventList[0]
   t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.true(actualErrorMethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
-  t.equal(actualErrorMethodDescriptor.lineNumber, 117, 'lineNumber')
+  t.equal(actualErrorMethodDescriptor.lineNumber, 116, 'lineNumber')
   t.equal(actualErrorMethodDescriptor.methodName, 'use', 'methodName')
   t.true(actualErrorMethodDescriptor.location.endsWith('express.test.js'), 'location')
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:107:11'), 'error case')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:106:11'), 'error case')
 }
 
 function nextErrorHandleTest(trace, t) {
   let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
     .setClassName(expected('app', 'Function'))
-    .setLineNumber(111)
+    .setLineNumber(110)
     .setFileName('express.test.js')
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
   let spanEvent = trace.span.spanEventList[1]
   t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
   t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-  t.equal(actualMethodDescriptor.lineNumber, 111, 'lineNumber')
+  t.equal(actualMethodDescriptor.lineNumber, 110, 'lineNumber')
   t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
   t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
   t.equal(spanEvent.sequence, 0, 'sequence')
@@ -215,20 +214,20 @@ function nextErrorHandleTest(trace, t) {
 
   actualBuilder = new MethodDescriptorBuilder('use')
     .setClassName('Router')
-    .setLineNumber(117)
+    .setLineNumber(116)
     .setFileName('express.test.js')
   const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
   spanEvent = trace.span.spanEventList[0]
   t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.true(actualErrorMethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
-  t.equal(actualErrorMethodDescriptor.lineNumber, 117, 'lineNumber')
+  t.equal(actualErrorMethodDescriptor.lineNumber, 116, 'lineNumber')
   t.equal(actualErrorMethodDescriptor.methodName, 'use', 'methodName')
   t.true(actualErrorMethodDescriptor.location.endsWith('express.test.js'), 'location')
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:114:10'), 'error case')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:113:10'), 'error case')
 }
 
 const testName2 = 'express2'
@@ -356,14 +355,14 @@ test(`${testName5} Should record middleware`, function (t) {
     agent.callbackTraceClose((trace) =>{
       let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
         .setClassName(expected('app', 'Function'))
-        .setLineNumber(355)
+        .setLineNumber(354)
         .setFileName('express.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.span.spanEventList[2]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 355, 'lineNumber')
+      t.equal(actualMethodDescriptor.lineNumber, 354, 'lineNumber')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
       t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
       t.equal(spanEvent.sequence, 2, 'sequence')
@@ -371,14 +370,14 @@ test(`${testName5} Should record middleware`, function (t) {
   
       actualBuilder = new MethodDescriptorBuilder('use')
         .setClassName('Router')
-        .setLineNumber(345)
+        .setLineNumber(344)
         .setFileName('express.test.js')
       const actualMiddleware1MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       spanEvent = trace.span.spanEventList[1]
       t.equal(actualMiddleware1MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMiddleware1MethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
       t.equal(actualMiddleware1MethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMiddleware1MethodDescriptor.lineNumber, 345, 'lineNumber')
+      t.equal(actualMiddleware1MethodDescriptor.lineNumber, 344, 'lineNumber')
       t.equal(actualMiddleware1MethodDescriptor.functionName, 'use', 'functionName')
       t.true(actualMiddleware1MethodDescriptor.location.endsWith('express.test.js'), 'location')
       t.equal(spanEvent.sequence, 1, 'sequence')
@@ -386,14 +385,14 @@ test(`${testName5} Should record middleware`, function (t) {
   
       actualBuilder = new MethodDescriptorBuilder('use')
         .setClassName('Router')
-        .setLineNumber(340)
+        .setLineNumber(339)
         .setFileName('express.test.js')
       const actualMiddleware2MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       spanEvent = trace.span.spanEventList[0]
       t.equal(actualMiddleware2MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMiddleware2MethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
       t.equal(actualMiddleware2MethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMiddleware2MethodDescriptor.lineNumber, 340, 'lineNumber')
+      t.equal(actualMiddleware2MethodDescriptor.lineNumber, 339, 'lineNumber')
       t.equal(actualMiddleware2MethodDescriptor.methodName, 'use', 'methodName')
       t.true(actualMiddleware2MethodDescriptor.location.endsWith('express.test.js'), 'location')
       t.equal(spanEvent.sequence, 0, 'sequence')
@@ -624,7 +623,7 @@ function throwHandleTestWithoutCallSite(trace, t) {
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:545:11'), 'error case')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:544:11'), 'error case')
 }
 
 function nextErrorHandleTestWithoutCallSite(trace, t) {
@@ -650,5 +649,5 @@ function nextErrorHandleTestWithoutCallSite(trace, t) {
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:552:10'), 'error case')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:551:10'), 'error case')
 }

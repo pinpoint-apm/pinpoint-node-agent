@@ -75,8 +75,7 @@ PINPOINT_AGENT_ID=${HOSTNAME} pm2 start ~/service/bin/pm2_start.json​
 * Koa(koa-router >=5.2.0 <8)
 * HTTP, HTTPS
 * Redis, ioredis(>=2.0.0 <5.0.0)
-* mongodb-core(>=1.0.0)
-* Elasticsearch Node client
+* mysql and mysql2
 
 ## Agent - Collector compatibility table
 Agent Version | Collector 1.x | Collector 2.x

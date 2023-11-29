@@ -24,7 +24,7 @@ test(`outgoing request URL escape a bug`, async (t) => {
     
                 t.true(agent.dataSender.mockSpanChunks[0].spanEventList.length == 2, `spanEventList`)
     
-                const spanEvent = agent.dataSender.mockSpanChunks[0].spanEventList[1]
+                const spanEvent = agent.dataSender.mockSpanChunks[0].spanEventList[0]
                 t.equal(spanEvent.annotations[0].value, "GET", "URL")
                 t.equal(spanEvent.annotations[1].value, "www.naver.com/", "URL")
                 agent.completeTraceObject(trace)

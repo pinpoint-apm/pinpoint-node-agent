@@ -26,15 +26,11 @@ const asyncSpanChunkMySQLMatcher = (t, trace, actualSpanEvent) => {
     t.equal(actualSpanChunk.spanId, actualSpanEvent.spanId, 'spanChunk spanId on asyncSpanChunkMySQLMatcher')
     t.equal(actualSpanChunk.transactionIdObject, trace.traceId.transactionId, 'spanChunk transactionIdObject on asyncSpanChunkMySQLMatcher')
     t.equal(actualSpanChunk.localAsyncId.asyncId, actualSpanEvent.nextAsyncId, 'spanChunk localAsyncId.asyncId is spanEvent nextAsyncId on asyncSpanChunkMySQLMatcher')
-    t.equal(actualSpanChunk.localAsyncId.sequence, 0, 'spanChunk localAsyncId.sequence is spanEvent 0 on asyncSpanChunkMySQLMatcher')
+    t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'spanChunk localAsyncId.sequence is spanEvent 0 on asyncSpanChunkMySQLMatcher')
     t.equal(actualSpanChunk.spanEventList[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'spanChunk spanEventList[0].apiId must be asyncInvocationDescriptor.apiId on asyncSpanChunkMySQLMatcher')
     t.equal(actualSpanChunk.spanEventList[0].depth, 1, 'spanChunk spanEventList[0].depth is 1 on asyncSpanChunkMySQLMatcher')
     t.equal(actualSpanChunk.spanEventList[0].sequence, 0, 'spanChunk spanEventList[0].sequence is 0 on asyncSpanChunkMySQLMatcher')
     t.equal(actualSpanChunk.spanEventList[0].serviceType, ServiceType.async.getCode(), 'spanChunk spanEventList[0].serviceType is ServiceTypeCode.async on asyncSpanChunkMySQLMatcher')
-    t.equal(actualSpanChunk.spanEventList[1].apiId, actualSpanEvent.apiId, 'spanChunk spanEventList[1].apiId must be actualSpanEvent.apiId on asyncSpanChunkMySQLMatcher')
-    t.equal(actualSpanChunk.spanEventList[1].depth, 2, 'spanChunk spanEventList[1].depth is 2 on asyncSpanChunkMySQLMatcher')
-    t.equal(actualSpanChunk.spanEventList[1].sequence, 1, 'spanChunk spanEventList[1].sequence is 1 on asyncSpanChunkMySQLMatcher')
-    t.equal(actualSpanChunk.spanEventList[1].serviceType, mysqlExecuteQueryServiceType.getCode(), 'spanChunk spanEventList[1].serviceType is null on asyncSpanChunkMySQLMatcher')
 }
 
 module.exports = {

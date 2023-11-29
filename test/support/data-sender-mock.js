@@ -6,11 +6,6 @@
 
 'use strict'
 
-const {
-  fixture,
-  util,
-  log
-} = require('../test-helper')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')

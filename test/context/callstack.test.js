@@ -106,7 +106,7 @@ test(`fix express call stack depth`, async (t) => {
         let actualSpanChunk = agent.dataSender.mockSpanChunks[0]
         t.equal(actualSpanChunk.agentId, agent.dataSender.mockSpan.agentId, 'await axios.get(`https://naver.com`) spanchunk agentId')
         t.equal(actualSpanChunk.localAsyncId.asyncId, 1, 'await axios.get(`https://naver.com`) spanchunk localAsyncId.asyncId')
-        t.equal(actualSpanChunk.localAsyncId.sequence, 0, 'await axios.get(`https://naver.com`) spanchunk localAsyncId.sequence')
+        t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'await axios.get(`https://naver.com`) spanchunk localAsyncId.sequence')
 
         t.end()
         server.close()
@@ -172,7 +172,7 @@ test('fix express call stack depth without callSite', async (t) => {
         let actualSpanChunk = agent.dataSender.mockSpanChunks[0]
         t.equal(actualSpanChunk.agentId, agent.dataSender.mockSpan.agentId, 'await axios.get(`https://naver.com`) spanchunk agentId')
         t.equal(actualSpanChunk.localAsyncId.asyncId, 2, 'await axios.get(`https://naver.com`) spanchunk localAsyncId.asyncId')
-        t.equal(actualSpanChunk.localAsyncId.sequence, 0, 'await axios.get(`https://naver.com`) spanchunk localAsyncId.sequence')
+        t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'await axios.get(`https://naver.com`) spanchunk localAsyncId.sequence')
 
         t.end()
         server.close()

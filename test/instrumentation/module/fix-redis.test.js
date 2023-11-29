@@ -83,7 +83,7 @@ test("ioredis destination id", async function (t) {
     
             t.true(agent.dataSender.mockSpanChunks[0].spanEventList.length > 0, "a spanEventList should has one chunk")
     
-            const spanevent = agent.dataSender.mockSpanChunks[0].spanEventList[1]
+            const spanevent = agent.dataSender.mockSpanChunks[0].spanEventList[0]
             t.equal(spanevent.destinationId, "Redis", "Redis destionation ID check")
             t.true(spanevent.endPoint.endsWith(`:${port}`), `localhost:${port}`)
     

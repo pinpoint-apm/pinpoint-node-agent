@@ -32,19 +32,26 @@ class MockgRPCDataSender extends GrpcDataSender {
     this.requestApiMetaData = new GrpcUnaryRPC('requestApiMetaData', this.metadataClient, this.metadataClient.requestApiMetaData, 0, 0)
     this.requestStringMetaData = new GrpcUnaryRPC('requestStringMetaData', this.metadataClient, this.metadataClient.requestStringMetaData, 0, 0)
     this.requestSqlMetaData = new GrpcUnaryRPC('requestSqlMetaData', this.metadataClient, this.metadataClient.requestSqlMetaData, 0, 0)
+    this.actualSpans = []
+  }
+
+  get actualSpan () {
+    return this.actualSpans[this.actualSpans.length - 1]
   }
 
   initializeSpanStream() {
     let self = this
     this.spanStream = {
       write: function (span) {
-        self.actualSpan = span
+        self.actualSpans.push(span)
       },
       end: function () {
 
       }
     }
   }
+
+  
 
   initializeProfilerStream() {
     let self = this

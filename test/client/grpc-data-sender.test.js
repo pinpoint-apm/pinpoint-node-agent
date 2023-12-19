@@ -138,7 +138,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
       "type": "Buffer",
       "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 170, 166, 204, 244, 173, 46, 0]
     },
-    "transactionIdObject": {
+    "transactionId": {
       "agentId": "express-node-sample-id",
       "agentStartTime": 1592872080170,
       "sequence": 0
@@ -267,7 +267,7 @@ test('sendSpanChunk redis.GET.end', (t) => {
       "type": "Buffer",
       "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 170, 166, 204, 244, 173, 46, 0]
     },
-    "transactionIdObject": {
+    "transactionId": {
       "agentId": "express-node-sample-id",
       "agentStartTime": 1592872080170,
       "sequence": 0

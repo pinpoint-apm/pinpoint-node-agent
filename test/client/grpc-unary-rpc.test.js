@@ -6,12 +6,12 @@
 
 const test = require('tape')
 
-const services = require('../../lib/data/grpc/Service_grpc_pb')
+const services = require('../../lib/data/v1/Service_grpc_pb')
 
 var _ = require('lodash')
 const GrpcServer = require('./grpc-server')
 
-const spanMessages = require('../../lib/data/grpc/Span_pb')
+const spanMessages = require('../../lib/data/v1/Span_pb')
 const dataSenderFactory = require('../../lib/client/data-sender-factory')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')

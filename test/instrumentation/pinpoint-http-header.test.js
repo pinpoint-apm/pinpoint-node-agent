@@ -7,10 +7,6 @@
 const test = require('tape')
 const axios = require('axios')
 const express = require('express')
-
-const {
-  fixture
-} = require('../test-helper')
 const agent = require('../support/agent-singleton-mock')
 
 const TEST_ENV = {
@@ -38,14 +34,6 @@ function outgoingRequest(t, sampling) {
 
   let actualTrace
   app.get(PATH, async (req, res) => {
-    const https = require('https')
-    const options = {
-      hostname: 'naver.com',
-      port: 443,
-      path: '/',
-      method: 'GET'
-    }
-
     actualTrace = agent.currentTraceObject()
 
     const result1 = await axios.get(getServerUrl(OUTGOING_PATH))

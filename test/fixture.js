@@ -18,8 +18,8 @@ const getTransactionId = () => {
 }
 
 const getTraceId = (transactionId) => {
-  const spanId = IdGenerator.next
-  return new TraceId(transactionId || getTransactionId(), spanId.toString())
+  const spanId = IdGenerator.stringValueOfNext()
+  return new TraceId(transactionId || getTransactionId(), spanId)
 }
 
 const getAgentInfo = () => ({

@@ -1,6 +1,6 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "0.8.4-next.1",
+  "version": "0.8.4-next.2",
   "main": "index.js",
   "scripts": {
     "test": "tape ./test/**/*.test.js",
@@ -67,7 +67,7 @@
     "shimmer": "^1.2.0"
   },
   "devDependencies": {
-    "axios": "^0.21.1",
+    "axios": "^1.6.2",
     "eslint": "^8.43.0",
     "eslint-config-prettier": "^3.1.0",
     "eslint-plugin-import": "^2.25.2",
@@ -84,13 +84,13 @@
     "redis": "^3.1.2",
     "redis-mock": "^0.49.0",
     "rimraf": "^2.6.2",
-    "tape": "^4.9.1",
+    "tape": "^4.16.0",
     "testcontainers": "^2.8.0"
   },
   "resolutions": {
     "semver": "^7.5.3"
   },
   "volta": {
-    "node": "16.20.1"
+    "node": "12.22.12"
   }
 }

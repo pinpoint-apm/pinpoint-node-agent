@@ -6,7 +6,7 @@
 
 
 const test = require('tape')
-const services = require('../../lib/data/grpc/Service_grpc_pb')
+const services = require('../../lib/data/v1/Service_grpc_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const GrpcServer = require('./grpc-server')

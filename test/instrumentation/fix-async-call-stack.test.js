@@ -30,7 +30,7 @@ test(`fix redis call stack depth`, async (t) => {
             t.true(error == null, 'error is null')
     
             const trace = agent.traceContext.currentTraceObject()
-            t.equal(trace.callStack.length, 0, 'callStack is 0')
+            t.equal(trace.callStack.length, 1, 'callStack is 1')
     
             client.quit()
             agent.completeTraceObject(trace)

@@ -172,8 +172,8 @@ function incomingRequest(t, sampled) {
       t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.agentStartTime, "string")
       t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.sequence, "string")
     }
-    t.end()
     server.close()
+    t.end()
   })
 }
 
@@ -241,7 +241,7 @@ test('incomming request by User', (t) => {
     t.equal(typeof agent.dataSender.mockSpan.parentSpanId, "string")
     t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.agentStartTime, "string")
     t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.sequence, "string")
-    t.end()
     server.close()
+    t.end()
   })
 })

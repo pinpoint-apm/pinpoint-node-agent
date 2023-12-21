@@ -40,7 +40,7 @@ class MockDataSender extends DataSender {
   }
 
   findSpanChunk(asyncId) {
-    return this.mockSpanChunks.find(spanChunk => spanChunk.localAsyncId.asyncId === asyncId)
+    return this.mockSpanChunks.find(spanChunk => spanChunk.localAsyncId.asyncId === (asyncId.asyncId || asyncId))
   }
   findSpanEvent(apiId) {
     return this.mockSpan.spanEventList.find(event => event.apiId === apiId)

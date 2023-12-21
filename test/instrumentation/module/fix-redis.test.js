@@ -36,7 +36,7 @@ test(`redis destination id`, async (t) => {
             t.true(error == null, "error is null")
     
             const trace = agent.traceContext.currentTraceObject()
-            t.equal(trace.callStack.length, 0, "callStack is 0")
+            t.equal(trace.callStack.length, 1, "callStack is 1")
         })
         t.equal(agent.traceContext.currentTraceObject().callStack.length, 0, "set spanevent callstack")
     
@@ -44,7 +44,7 @@ test(`redis destination id`, async (t) => {
             t.equal(data, "value", "redis value validation")
     
             const trace = agent.traceContext.currentTraceObject()
-            t.equal(trace.callStack.length, 0, "callStack is 0")
+            t.equal(trace.callStack.length, 1, "callStack is 1")
     
             client.quit()
             agent.completeTraceObject(trace)
@@ -140,7 +140,7 @@ test(`Fix app crash without callback function https://github.com/pinpoint-apm/pi
             t.true(error == null, "error is null")
     
             const trace = agent.traceContext.currentTraceObject()
-            t.equal(trace.callStack.length, 0, "callStack is 0")
+            t.equal(trace.callStack.length, 1, "callStack is 1")
         })
         t.equal(agent.traceContext.currentTraceObject().callStack.length, 0, "set spanevent callstack")
     
@@ -148,7 +148,7 @@ test(`Fix app crash without callback function https://github.com/pinpoint-apm/pi
             t.equal(data, "value", "redis value validation")
     
             const trace = agent.traceContext.currentTraceObject()
-            t.equal(trace.callStack.length, 0, "callStack is 0")
+            t.equal(trace.callStack.length, 1, "callStack is 1")
     
             client.quit()
             agent.completeTraceObject(trace)

@@ -18,6 +18,7 @@ const activeTrace = require('../../lib/metric/active-trace')
 const apiMetaService = require('../../lib/context/api-meta-service')
 const { setDataSender } = require('../../lib/client/data-sender-factory')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
+const { cleanup } = require('../fixture')
 
 class MockAgent extends Agent {
     startSchedule(agentId, agentStartTime) {
@@ -64,6 +65,7 @@ class MockAgent extends Agent {
     }
 
     cleanHttp() {
+        cleanup()
         const http = require('http')
         shimmer.unwrap(http && http.Server && http.Server.prototype, 'emit')
         shimmer.unwrap(http, 'request')
@@ -80,6 +82,13 @@ class MockAgent extends Agent {
 
     bindHttpWithCallSite() {
         this.bindHttp({ 'trace-location-and-filename-of-call-site': true })
+    }
+
+    completeTraceObject(trace) {
+        if (!trace || !trace.spanRecorder || !trace.span) {
+            return
+        }
+        this.traceContext.markElapsedTimeAndCloseTraceAndRemoveActiveTrace(trace)
     }
 }
 

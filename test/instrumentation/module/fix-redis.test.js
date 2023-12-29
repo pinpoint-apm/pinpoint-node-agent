@@ -80,16 +80,18 @@ test("ioredis destination id", async function (t) {
     
         redis.get("key", async function (error, data) {
             t.equal(data, "value", "redis value validation")
-    
-            t.true(agent.dataSender.mockSpanChunks[0].spanEventList.length > 0, "a spanEventList should has one chunk")
-    
-            const spanevent = agent.dataSender.mockSpanChunks[0].spanEventList[0]
-            t.equal(spanevent.destinationId, "Redis", "Redis destionation ID check")
-            t.true(spanevent.endPoint.endsWith(`:${port}`), `localhost:${port}`)
-    
-            redis.quit()
-            agent.completeTraceObject(trace)
-            await container.stop()
+
+            setImmediate(async () => {
+                t.true(agent.dataSender.mockSpanChunks[0].spanEventList.length > 0, "a spanEventList should has one chunk")
+        
+                const spanevent = trace.storage.storage[0]
+                t.equal(spanevent.destinationId, "Redis", "Redis destionation ID check")
+                t.true(spanevent.endPoint.endsWith(`:${port}`), `localhost:${port}`)
+        
+                redis.quit()
+                agent.completeTraceObject(trace)
+                await container.stop()
+            })
         })
     })
 })

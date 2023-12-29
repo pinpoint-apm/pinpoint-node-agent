@@ -1,6 +1,6 @@
 /**
  * Pinpoint Node.js Agent
- * Copyright 2023-present NAVER Corp.
+ * Copyright 2020-present NAVER Corp.
  * Apache License v2.0
  */
 
@@ -9,7 +9,6 @@
 const semver = require('semver')
 const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
 const ServiceType = require('../../lib/context/service-type')
-const mysqlExecuteQueryServiceType = require('../../lib/instrumentation/module/mysql/mysql-execute-query-service-type')
 
 const expected = (expected1, exprected2) => {
     if (semver.satisfies(process.versions.node, '<17.0')) {

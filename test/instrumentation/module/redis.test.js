@@ -430,7 +430,7 @@ test(`${testName3} should Record the connections between koa and redis.`, async 
 })
 
 const testName4 = 'koa-ioredis'
-test.skip(`${testName4} should Record the connections between koa and ioredis.`, async function (t) {
+test(`${testName4} should Record the connections between koa and ioredis.`, async function (t) {
   agent.bindHttp()
   const container = await new GenericContainer('redis')
     .withExposedPorts(6379)
@@ -460,10 +460,28 @@ test.skip(`${testName4} should Record the connections between koa and ioredis.`,
     // ])
 
 
-    redis.get(key)
+    redis.get(key, (err, result) => {
+      if (err) {
+        console.error(err)
+      } else {
+        console.log(result)
+      }
+    })
 
-    redis.get(key)
-    redis.get(key)
+    redis.get(key, (err, result) => {
+      if (err) {
+        console.error(err)
+      } else {
+        console.log(result)
+      }
+    })
+    redis.get(key, (err, result) => {
+      if (err) {
+        console.error(err)
+      } else {
+        console.log(result)
+      }
+    })
 
     ctx.body = 'test'
   })
@@ -472,8 +490,9 @@ test.skip(`${testName4} should Record the connections between koa and ioredis.`,
 
   const server = app.listen(TEST_ENV.port, async () => {
     console.log('Step1.')
-    // const rstPush = await axios.post(getServerUrl(PATH), redisData)
-    // t.ok(rstPush.status, 200)
+    const rstPush = await axios.post(getServerUrl(PATH), redisData)
+    t.ok(rstPush.status, 200)
+
     console.log('Step2.')
     const rstGet = await axios.get(getServerUrl(`${PATH}/jundol`))
     t.ok(rstGet.status, 200)

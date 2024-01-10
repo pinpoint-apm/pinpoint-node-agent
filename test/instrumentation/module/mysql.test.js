@@ -192,8 +192,8 @@ test(`connection with query`, async (t) => {
             let actualParsingResult = sqlMetadataService.cacheSql('SELECT DATABASE() as res')
             let actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'the query annotation key')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'the query annotation value')
-            t.equal(actualParsingResult.sql.normalizedSql, 'SELECT DATABASE() as res', 'the query annotation squl normalizedSql')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'the query annotation value')
+            t.equal(actualParsingResult.result.sql.normalizedSql, 'SELECT DATABASE() as res', 'the query annotation squl normalizedSql')
         
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
@@ -208,8 +208,8 @@ test(`connection with query`, async (t) => {
             actualParsingResult = sqlMetadataService.cacheSql('SHOW TABLES')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'the query annotation key')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'the query annotation value')
-            t.equal(actualParsingResult.sql.normalizedSql, 'SHOW TABLES', 'the query annotation squl normalizedSql')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'the query annotation value')
+            t.equal(actualParsingResult.result.sql.normalizedSql, 'SHOW TABLES', 'the query annotation squl normalizedSql')
         
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
@@ -224,10 +224,10 @@ test(`connection with query`, async (t) => {
             actualParsingResult = sqlMetadataService.cacheSql('SELECT * FROM `member` WHERE id = ?')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'the query annotation key')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'the query annotation value')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'the query annotation value')
             t.equal(actualQueryAnnotation.value.stringValue1, '', 'the query annotation value stringValue1 is sql normalizedSql parsedParameters')
             t.equal(actualQueryAnnotation.value.stringValue2, 'a', 'the query annotation value stringValue2 is bind value')
-            t.equal(actualParsingResult.sql.normalizedSql, 'SELECT * FROM `member` WHERE id = ?', 'the query annotation sql normalizedSql')
+            t.equal(actualParsingResult.result.sql.normalizedSql, 'SELECT * FROM `member` WHERE id = ?', 'the query annotation sql normalizedSql')
         
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
@@ -242,10 +242,10 @@ test(`connection with query`, async (t) => {
             actualParsingResult = sqlMetadataService.cacheSql('INSERT INTO `member` (id, name, joined) VALUES (?, ?, ?)')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'the query annotation key')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'the query annotation value')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'the query annotation value')
             t.equal(actualQueryAnnotation.value.stringValue1, '', 'the query annotation value stringValue1 is sql normalizedSql parsedParameters')
             t.equal(actualQueryAnnotation.value.stringValue2, 'c,cname,2023-08-18', 'the query annotation value stringValue2 is bind value')
-            t.equal(actualParsingResult.sql.normalizedSql, 'INSERT INTO `member` (id, name, joined) VALUES (?, ?, ?)', 'the query annotation sql normalizedSql')
+            t.equal(actualParsingResult.result.sql.normalizedSql, 'INSERT INTO `member` (id, name, joined) VALUES (?, ?, ?)', 'the query annotation sql normalizedSql')
         
             t.end()
         })
@@ -288,11 +288,11 @@ test(`Connection Pool with query`, async (t) => {
             })
             queryIndex++
             if (queryIndex == 2) {
-                setImmediate(async () => {
+                setTimeout(async () => {
                     trace.close()
                     pool.end()
                     await container.stop()
-                })
+                }, 1000)
             }
         })
         
@@ -303,11 +303,11 @@ test(`Connection Pool with query`, async (t) => {
             t.equal(results[0].joined.getDate(), new Date('2022-07-27T00:00:00+09:00').getDate(), 'SELECT member joined')
             queryIndex++
             if (queryIndex == 2) {
-                setImmediate(async () => {
+                setTimeout(async () => {
                     trace.close()
                     pool.end()
                     await container.stop()
-                })
+                }, 1000)
             }
         })
     

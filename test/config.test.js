@@ -188,8 +188,14 @@ test('callSite config', (t) => {
   process.env['PINPOINT_TRACE_LOCATION_AND_FILENAME_OF_CALL_SITE'] = 'true'
   given = config.getConfig()
   t.true(given.traceLocationAndFileNameOfCallSite, 'true value is true')
-
   delete process.env.PINPOINT_TRACE_LOCATION_AND_FILENAME_OF_CALL_SITE
+
+  config.clear()
+  process.env['PINPOINT_PROFILER_SQL_STAT'] = 'true'
+  given = config.getConfig()
+  t.true(given.profilerSqlStat, 'profilerSqlStat is true')
+  delete process.env.PINPOINT_PROFILER_SQL_STAT
+
   config.clear()
   t.end()
 })

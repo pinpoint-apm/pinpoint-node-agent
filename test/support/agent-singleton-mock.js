@@ -19,6 +19,8 @@ const apiMetaService = require('../../lib/context/api-meta-service')
 const { setDataSender } = require('../../lib/client/data-sender-factory')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const { cleanup } = require('../fixture')
+const sqlMetaDataService = require('../../lib/instrumentation/sql/sql-metadata-service')
+const SimpleCache = require('../../lib/utils/simple-cache')
 
 class MockAgent extends Agent {
     startSchedule(agentId, agentStartTime) {
@@ -34,16 +36,18 @@ class MockAgent extends Agent {
     bindHttp(json) {
         this.cleanHttp()
         apiMetaService.init(dataSenderMock())
-
+        
         if (!json) {
             json = require('../pinpoint-config-test')
         } else {
-            json = Object.assign({}, json, require('../pinpoint-config-test'))
+            json = Object.assign({}, require('../pinpoint-config-test'), json)
         }
         require('../../lib/config').clear()
         const config = require('../../lib/config').getConfig(json)
         this.config = config
-
+        
+        sqlMetaDataService.cache = new SimpleCache(1024)
+        
         httpShared.clearPathMatcher()
         const http = require('http')
         log.debug('shimming http.Server.prototype.emit function')

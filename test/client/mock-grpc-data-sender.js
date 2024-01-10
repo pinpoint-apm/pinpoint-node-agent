@@ -27,11 +27,15 @@ class MockgRPCDataSender extends GrpcDataSender {
       },
       requestSqlMetaData: function (pSqlMetaData) {
         self.actualSqlMetaData = pSqlMetaData
+      },
+      requestSqlUidMetaData: function (pSqlUidMetaData) {
+        self.actualSqlUidMetaData = pSqlUidMetaData
       }
     }
     this.requestApiMetaData = new GrpcUnaryRPC('requestApiMetaData', this.metadataClient, this.metadataClient.requestApiMetaData, 0, 0)
     this.requestStringMetaData = new GrpcUnaryRPC('requestStringMetaData', this.metadataClient, this.metadataClient.requestStringMetaData, 0, 0)
     this.requestSqlMetaData = new GrpcUnaryRPC('requestSqlMetaData', this.metadataClient, this.metadataClient.requestSqlMetaData, 0, 0)
+    this.requestSqlUidMetaData = new GrpcUnaryRPC('requestSqlUidMetaData', this.metadataClient, this.metadataClient.requestSqlUidMetaData, 0, 0)
     this.actualSpans = []
   }
 

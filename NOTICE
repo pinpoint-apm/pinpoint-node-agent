@@ -147,3 +147,9 @@ https://github.com/spring-projects/spring-framework
 Apache License 2.0, https://github.com/spring-projects/spring-framework/blob/master/LICENSE.txt
 
 =====
+
+murmur-128 v1.0.0
+https://github.com/LinusU/murmur-128
+MIT https://github.com/LinusU/murmur-128/blob/master/package.json
+MIT https://github.com/LinusU/fmix/blob/master/package.json
+MIT https://github.com/LinusU/encode-utf8/blob/master/package.json

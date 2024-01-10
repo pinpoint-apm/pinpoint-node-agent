@@ -55,13 +55,11 @@
     "@pinpoint-apm/shimmer": "^1.2.2",
     "end-of-stream": "^1.4.1",
     "google-protobuf": "^3.13.0",
-    "int64-buffer": "^0.99.1007",
     "internal-ip": "^3.0.1",
     "loglevel": "^1.6.1",
-    "methods": "^1.1.2",
+    "murmur-128": "^1.0.0",
     "require-in-the-middle": "^5.0.3",
-    "semver": "^7.5.3",
-    "shimmer": "^1.2.0"
+    "semver": "^7.5.3"
   },
   "devDependencies": {
     "@types/semver": "^7.3.13",

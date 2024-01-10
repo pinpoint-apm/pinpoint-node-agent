@@ -20,7 +20,7 @@ const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant
 const ServiceType = require('../../../lib/context/service-type')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
 const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')
-const { asyncSpanChunkMySQLMatcher } = require('../../fixtures/instrument-support')
+
 
 test(`getConnection query hooking`, async (t) => {
     agent.bindHttpWithCallSite()
@@ -97,10 +97,10 @@ test(`getConnection query hooking`, async (t) => {
             let actualParsingResult = sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = ?')
             let actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'intValue in query annotation')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'intValue in query annotation')
             t.equal(actualQueryAnnotation.value.stringValue1, '', 'stringValue1 in query annotation')
             t.equal(actualQueryAnnotation.value.stringValue2, 'a', 'stringValue2 in query annotation')
-            t.equal(actualParsingResult.sql.normalizedSql, 'SELECT * FROM member WHERE id = ?', 'normalizedSql in query annotation')
+            t.equal(actualParsingResult.result.sql.normalizedSql, 'SELECT * FROM member WHERE id = ?', 'normalizedSql in query annotation')
     
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
@@ -115,10 +115,10 @@ test(`getConnection query hooking`, async (t) => {
             actualParsingResult = sqlMetadataService.cacheSql('INSERT INTO member (id, name, joined) VALUES (?, ?, ?)')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'intValue in query annotation')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'intValue in query annotation')
             t.equal(actualQueryAnnotation.value.stringValue1, '', 'stringValue1 in query annotation')
             t.equal(actualQueryAnnotation.value.stringValue2, 'c,cname,2023-08-18', 'stringValue2 in query annotation')
-            t.equal(actualParsingResult.sql.normalizedSql, 'INSERT INTO member (id, name, joined) VALUES (?, ?, ?)', 'normalizedSql in query annotation')
+            t.equal(actualParsingResult.result.sql.normalizedSql, 'INSERT INTO member (id, name, joined) VALUES (?, ?, ?)', 'normalizedSql in query annotation')
     
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
@@ -133,10 +133,10 @@ test(`getConnection query hooking`, async (t) => {
             actualParsingResult = sqlMetadataService.cacheSql('UPDATE member SET name = ? WHERE id = ?')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'intValue in query annotation')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'intValue in query annotation')
             t.equal(actualQueryAnnotation.value.stringValue1, '', 'stringValue1 in query annotation')
             t.equal(actualQueryAnnotation.value.stringValue2, 'cname2,c', 'stringValue2 in query annotation')
-            t.equal(actualParsingResult.sql.normalizedSql, 'UPDATE member SET name = ? WHERE id = ?', 'normalizedSql in query annotation')
+            t.equal(actualParsingResult.result.sql.normalizedSql, 'UPDATE member SET name = ? WHERE id = ?', 'normalizedSql in query annotation')
     
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
@@ -151,10 +151,10 @@ test(`getConnection query hooking`, async (t) => {
             actualParsingResult = sqlMetadataService.cacheSql('DELETE FROM member WHERE id = ?')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'intValue in query annotation')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'intValue in query annotation')
             t.equal(actualQueryAnnotation.value.stringValue1, '', 'stringValue1 in query annotation')
             t.equal(actualQueryAnnotation.value.stringValue2, 'c', 'stringValue2 in query annotation')
-            t.equal(actualParsingResult.sql.normalizedSql, 'DELETE FROM member WHERE id = ?', 'normalizedSql in query annotation')
+            t.equal(actualParsingResult.result.sql.normalizedSql, 'DELETE FROM member WHERE id = ?', 'normalizedSql in query annotation')
             t.end()
         })
     })
@@ -221,10 +221,10 @@ test(`getConnection promise query hooking`, async (t) => {
             let actualParsingResult = sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = ?')
             let actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'intValue in query annotation')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'intValue in query annotation')
             t.equal(actualQueryAnnotation.value.stringValue1, '', 'stringValue1 in query annotation')
             t.equal(actualQueryAnnotation.value.stringValue2, 'a', 'stringValue2 in query annotation')
-            t.equal(actualParsingResult.sql.normalizedSql, 'SELECT * FROM member WHERE id = ?', 'normalizedSql in query annotation')
+            t.equal(actualParsingResult.result.sql.normalizedSql, 'SELECT * FROM member WHERE id = ?', 'normalizedSql in query annotation')
         })
     })
 })

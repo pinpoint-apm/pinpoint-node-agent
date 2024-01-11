@@ -1,15 +1,15 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
-## [0.9.0-next.1] - 2021-06-10
+## [0.9.0-next.3] - 2024-01-11
 ### Added
 - #86 Express with method name
-- #101 middleware code level visibility 
-<img width="1241" alt="Screen Shot 2021-12-13 at 11 15 20 PM" src="https://user-images.githubusercontent.com/616895/145830104-07774978-f56b-4090-b6e9-eeff0d880945.png">
-
-## [0.9.0-next.0] - 2021-05-27
-### Added
+- #155 SQL UID
+- #140 AsyncLocalStorage above node@16.4
+- #150 location and filename and linenumber
 - #87 HTTP param
+### Fixed
+- #101 Nested Async call
 
 ## [0.8.3] - 2021-11-19
 ### Fixed

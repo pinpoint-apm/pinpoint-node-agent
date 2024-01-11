@@ -2,6 +2,8 @@
 node_modules
 test
 demo
+.idea/
+grpc/
 
 # CI
 coverage
@@ -9,6 +11,7 @@ coverage
 .eslintignore
 .node-version
 checkstyle-results.xml
+checkstyle-result.xml
 .github
 .vscode
 

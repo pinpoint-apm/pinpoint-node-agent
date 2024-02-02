@@ -1,6 +1,6 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "0.9.0-next.3",
+  "version": "0.9.0-next.4",
   "main": "index.js",
   "types": "index.d.ts",
   "type": "commonjs",
@@ -87,8 +87,5 @@
     "tape": "^4.16.0",
     "testcontainers": "^9.10.1",
     "typescript": "^4.8.3"
-  },
-  "volta": {
-    "node": "18.18.2"
   }
 }

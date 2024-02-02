@@ -261,19 +261,19 @@ test(`Connection Pool with query hooking`, async (t) => {
         t.equal(rows[0].name, 'name1', 'name in SELECT query hooking')
         t.equal(rows[0].joined.toISOString().slice(0, 10), '2023-01-17', 'joined in SELECT query hooking')
     
-        setImmediate(() => {
+        setTimeout(() => {
             trace.close()
             pool.end()
             container.stop()
             t.end()
-        })
+        }, 1000)
     
         agent.callbackTraceClose((trace) => {
             let actualBuilder = new MethodDescriptorBuilder('createPool')
                 .setLineNumber(249)
                 .setFileName('mysql2.test.js')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            let actualSpanEvent = trace.span.spanEventList[0]
+            let actualSpanEvent = trace.span.spanEventList.find( spanEvent => spanEvent.sequence == 0)
             t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in createPool spanEvent')
             t.equal(actualSpanEvent.endPoint, 'localhost', 'endPoint in createPool spanEvent')
             t.equal(actualSpanEvent.destinationId, 'test', 'destinationId in createPool spanEvent')
@@ -286,7 +286,7 @@ test(`Connection Pool with query hooking`, async (t) => {
                 .setLineNumber(143)
                 .setFileName('pool.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            actualSpanEvent = trace.span.spanEventList[1]
+            actualSpanEvent = trace.span.spanEventList.find( spanEvent => spanEvent.sequence == 1)
             t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in Pool.getConnection() spanEvent')
             t.equal(actualSpanEvent.endPoint, 'localhost', 'endPoint in Pool.getConnection() spanEvent')
             t.equal(actualSpanEvent.destinationId, 'test', 'destinationId in Pool.getConnection() spanEvent')

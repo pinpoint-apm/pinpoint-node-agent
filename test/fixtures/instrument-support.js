@@ -10,9 +10,16 @@ const semver = require('semver')
 const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
 const ServiceType = require('../../lib/context/service-type')
 
-const expected = (expected1, exprected2) => {
+const expected = (expected1, expected2) => {
     if (semver.satisfies(process.versions.node, '<17.0')) {
-        return exprected2
+        return expected2
+    }
+    return expected1
+}
+
+const expectedGreaterThanAboveNode14 = (expected1, expected2) => {
+    if (semver.satisfies(process.versions.node, '<15.0')) {
+        return expected2
     }
     return expected1
 }
@@ -34,5 +41,6 @@ const asyncSpanChunkMySQLMatcher = (t, trace, actualSpanEvent) => {
 
 module.exports = {
     expected,
-    asyncSpanChunkMySQLMatcher
+    asyncSpanChunkMySQLMatcher,
+    expectedGreaterThanAboveNode14
 }

@@ -6,14 +6,16 @@
     "start": "node ./bin/www"
   },
   "dependencies": {
-    "axios": "^0.19.2",
+    "axios": "^1.6.7",
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
-    "express": "~4.16.1",
+    "express": "^4.18.2",
     "http-errors": "~1.6.3",
-    "ioredis": "^4.17.3",
-    "jade": "~1.11.0",
+    "ioredis": "^5.3.2",
+    "jade": "^1.9.2",
     "morgan": "~1.9.1",
-    "pinpoint-node-agent": "^0.7.0-rc.0"
+    "mysql": "^2.18.1",
+    "mysql2": "^3.9.1",
+    "pinpoint-node-agent": "^0.8.4-next.1"
   }
 }

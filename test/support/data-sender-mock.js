@@ -20,6 +20,7 @@ class MockDataSender extends DataSender {
     super(config, dataSender)
     this.mockAPIMetaInfos = []
     this.mockSpanChunks = []
+    this.mockSpans = []
   }
 
   send(data) {
@@ -32,6 +33,7 @@ class MockDataSender extends DataSender {
       this.mockMetaInfo = data
     } else if (data instanceof Span) {
       this.mockSpan = data
+      this.mockSpans.push(data)
     } else if (data instanceof SpanChunk) {
       this.mockSpanChunks.push(data)
     } else if (data instanceof SqlMetaData) {

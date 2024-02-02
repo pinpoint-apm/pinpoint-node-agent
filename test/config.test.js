@@ -195,7 +195,17 @@ test('callSite config', (t) => {
   given = config.getConfig()
   t.true(given.profilerSqlStat, 'profilerSqlStat is true')
   delete process.env.PINPOINT_PROFILER_SQL_STAT
+  t.end()
+})
+
+test('sampling Rate', (t) => {
+  config.clear()
+  let conf = require('../lib/config').getConfig()
+  t.equal(conf.sampleRate, 10, 'default sampling rate is 10')
 
   config.clear()
+  conf = require('../lib/config').getConfig({ 'sampling': { 'rate': 20} })
+  t.equal(conf.sampleRate, 20, 'sampling rate is 20')
+
   t.end()
 })

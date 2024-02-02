@@ -117,14 +117,16 @@ function incomingRequest(t, sampled) {
     const trace = agent.currentTraceObject()
     const headers = config.headers
 
-    expectedTransactionId = trace.traceId.transactionId.toString()
-    expectedSpanId = trace.traceId.spanId
-    t.equal(expectedTransactionId, headers['pinpoint-traceid'])
-    t.equal(expectedSpanId, headers['pinpoint-spanid'])
-    t.equal(trace.traceId.parentSpanId, headers['pinpoint-pspanid'])
+    if (trace.traceId) {      
+      expectedTransactionId = trace.traceId.transactionId.toString()
+      expectedSpanId = trace.traceId.spanId
+      t.equal(expectedTransactionId, headers['pinpoint-traceid'])
+      t.equal(expectedSpanId, headers['pinpoint-spanid'])
+      t.equal(trace.traceId.parentSpanId, headers['pinpoint-pspanid'])
+    }
     if (sampled == undefined) {
       t.equal(trace.sampling, true)
-    } else {
+    } else if (trace.traceId) {
       t.equal(trace.sampling, sampled)
     }
 

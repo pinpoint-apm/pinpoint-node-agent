@@ -5,22 +5,52 @@ const axios = require('axios');
 const IORedis = require('ioredis');
 const ioRedis = new IORedis(6379);
 
-let callcount = 0
+const mysql = require('mysql');
+const mysql2p = require('mysql2/promise');
+const mysql2 = require('mysql2');
+
 /* GET home page. */
 router.get('/', function(req, res, next) {
-
   ioRedis.set("keyio", "value", function(error) {
-    console.log(`${callcount} ioredis set `)
+    // console.log(`ioredis set `)
   })
   ioRedis.get("keyio", function(error, data) {
-    console.log(`${callcount} ioredis data ${data}`)
+    // console.log(`ioredis data ${data}`)
   })
 
-  axios.get(`https://naver.com`)
-  .then(function (response) {
-    console.log(`response ${response}`)
-    res.render('index', { title: 'Express' });
-  })
-});
+  var connection = mysql.createConnection({
+    host: 'localhost',
+    user: 'user',
+    password: 'password-pinpoint',
+    database: 'sample',
+    port: 33066,
+    acquireTimeout: 1000000,
+  });
 
-module.exports = router;
+  connection.connect();
+
+  connection.query('SELECT id, name FROM users', function (error, results, fields) {
+    if (error) throw error;
+    console.log('The solution is: ', results[0]);
+  });
+
+  connection.query('SELECT id, name FROM users WHERE id = ? AND name like ?', [1, 'name*'], async function (error, results, fields) {
+    if (error) throw error;
+    // console.log('The solution is: ', results[0]);
+
+    connection.query('SELECT id, name FROM users WHERE name like ?', ['b*'], function (error, results, fields) {
+      // https://stackoverflow.com/questions/32715273/node-mysql-throwing-connection-timeout
+      connection.destroy()
+    })
+
+    await axios.get(`http://localhost:3000/api`)
+  });
+
+  res.render('index', { title: 'Express' });
+})
+
+router.get('/api', function(req, res, next) {
+  res.status(200).json({ "result": "ok" })
+})
+
+module.exports = router

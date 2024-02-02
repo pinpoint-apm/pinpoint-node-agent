@@ -21,6 +21,7 @@ const localStorage = require('../../lib/instrumentation/context/local-storage')
 const { cleanup } = require('../fixture')
 const sqlMetaDataService = require('../../lib/instrumentation/sql/sql-metadata-service')
 const SimpleCache = require('../../lib/utils/simple-cache')
+const sampler = require('../../lib/sampler/sampler')
 
 class MockAgent extends Agent {
     startSchedule(agentId, agentStartTime) {
@@ -47,6 +48,7 @@ class MockAgent extends Agent {
         this.config = config
         
         sqlMetaDataService.cache = new SimpleCache(1024)
+        this.traceContext.isSampling = sampler.getIsSampling(config.sampling, config.sampleRate)
         
         httpShared.clearPathMatcher()
         const http = require('http')
@@ -88,12 +90,6 @@ class MockAgent extends Agent {
         this.bindHttp({ 'trace-location-and-filename-of-call-site': true })
     }
 
-    completeTraceObject(trace) {
-        if (!trace || !trace.spanRecorder || !trace.span) {
-            return
-        }
-        this.traceContext.markElapsedTimeAndCloseTraceAndRemoveActiveTrace(trace)
-    }
 }
 
 const agent = new MockAgent(fixture.config)

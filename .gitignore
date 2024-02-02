@@ -2,6 +2,7 @@
 
 /.idea
 *.iml
+**/.DS_Store
 
 # dependencies
 node_modules

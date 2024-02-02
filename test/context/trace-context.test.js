@@ -19,6 +19,7 @@ test('Should create continued trace and add span info', function (t) {
 
   const transactionId = fixture.getTransactionId()
   const traceId = fixture.getTraceId(transactionId)
+  traceId.sampled = true
   const traceContext = TraceContext.init(fixture.getAgentInfo(), dataSenderMock())
 
   const trace = traceContext.continueTraceObject(traceId)

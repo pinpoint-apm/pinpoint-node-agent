@@ -5,12 +5,7 @@
  */
 
 const test = require('tape')
-const {
-  log,
-  fixture,
-  util
-} = require('../test-helper')
-
+const { fixture, util } = require('../test-helper')
 const Span = require('../../lib/context/span')
 const SpanEvent = require('../../lib/context/span-event')
 const SpanEventRecorder = require('../../lib/context/span-event-recorder')
@@ -32,24 +27,4 @@ test('Should create span event recorder', async function (t) {
   await util.sleep(101)
   spanEventRecorder.spanEvent.markElapsedTime()
   t.ok(spanEventRecorder.spanEvent.endElapsed > 0)
-})
-
-test.skip(`spanevent with async_hooks`, async function (t) {
-  agent.bindHttp()
-
-  t.plan(5)
-
-  const trace = agent.createTraceObject()
-  trace.startSpanEvent(new SpanEventRecorder.builder()
-    .setServiceType(ServiceType.redis)
-    .setApiDesc('redis.get.call')
-    .setDestinationId('destinationId')
-    .setEndPointIP('127.0.0.1')
-    .setEndPointPort(9334))
-
-  t.true(trace.callStack.length == 1, `spanEvent call stack is one`)
-  t.equal(trace.spanEventRecorder.spanEvent.serviceType, ServiceTypeCode.redis, "redis")
-  t.equal(trace.spanEventRecorder.spanEvent.annotations[0].value.stringValue, 'redis.get.call', 'redis call')
-  t.equal(trace.spanEventRecorder.spanEvent.destinationId, 'destinationId', 'destinationId')
-  t.equal(trace.spanEventRecorder.spanEvent.endPoint, '127.0.0.1:9334', 'endpoint')
 })

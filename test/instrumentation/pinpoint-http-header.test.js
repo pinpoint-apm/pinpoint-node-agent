@@ -61,7 +61,7 @@ function outgoingRequest(t, sampling) {
       t.equal(actualTrace.traceId.spanId, headers['pinpoint-pspanid'])
       t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
       t.equal(agent.config.serviceType, Number(headers['pinpoint-papptype']))
-      t.equal(actualTrace.traceId.flag.toString(), headers['pinpoint-flags'])
+      t.equal(actualTrace.traceId.flag, headers['pinpoint-flags'])
     } else {
       // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
       t.equal('s0', headers['pinpoint-sampled'])
@@ -127,7 +127,7 @@ function incomingRequest(t, sampled) {
     if (sampled == undefined) {
       t.equal(trace.sampling, true)
     } else if (trace.traceId) {
-      t.equal(trace.sampling, sampled)
+      t.equal(trace.canSampled(), sampled)
     }
 
     const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
@@ -202,7 +202,7 @@ test('incomming request by User', (t) => {
     t.equal(typeof expectedTransactionId, "string")
     t.equal(typeof expectedSpanId, "string")
     t.equal(trace.traceId.parentSpanId, "-1")
-    t.equal(trace.sampling, true)
+    t.equal(trace.canSampled(), true)
     t.equal(typeof trace.traceId.transactionId.agentStartTime, "string")
     t.equal(typeof trace.traceId.transactionId.sequence, "string")
     

@@ -227,7 +227,7 @@ async function outgoingRequest(t, path, expectedSampling, expectUnits) {
                 t.equal(actualTrace.traceId.spanId, headers['pinpoint-pspanid'])
                 t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
                 t.equal(agent.config.serviceType, Number(headers['pinpoint-papptype']))
-                t.equal(actualTrace.traceId.flag.toString(), headers['pinpoint-flags'])
+                t.equal(actualTrace.traceId.flag, headers['pinpoint-flags'])
             } else {
                 // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
                 // TODO: Think about for outgoing request pinpoint-sampled

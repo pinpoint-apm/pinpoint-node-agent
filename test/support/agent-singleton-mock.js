@@ -22,6 +22,8 @@ const { cleanup } = require('../fixture')
 const sqlMetaDataService = require('../../lib/instrumentation/sql/sql-metadata-service')
 const SimpleCache = require('../../lib/utils/simple-cache')
 const sampler = require('../../lib/sampler/sampler')
+const transactionIdGenerator = require('../../lib/context/sequence-generators').transactionIdGenerator
+const closedTraceWrapped = Symbol('closedTraceWrapped')
 
 class MockAgent extends Agent {
     startSchedule(agentId, agentStartTime) {
@@ -37,7 +39,7 @@ class MockAgent extends Agent {
     bindHttp(json) {
         this.cleanHttp()
         apiMetaService.init(dataSenderMock())
-        
+
         if (!json) {
             json = require('../pinpoint-config-test')
         } else {
@@ -46,10 +48,14 @@ class MockAgent extends Agent {
         require('../../lib/config').clear()
         const config = require('../../lib/config').getConfig(json)
         this.config = config
-        
+
         sqlMetaDataService.cache = new SimpleCache(1024)
         this.traceContext.isSampling = sampler.getIsSampling(config.sampling, config.sampleRate)
-        
+        if (sampler.getSamplingCountGenerator()) {
+            sampler.getSamplingCountGenerator().reset()
+        }
+        transactionIdGenerator.reset()
+
         httpShared.clearPathMatcher()
         const http = require('http')
         log.debug('shimming http.Server.prototype.emit function')
@@ -68,6 +74,8 @@ class MockAgent extends Agent {
         this.dataSender = dataSenderMock()
         setDataSender(this.dataSender)
         this.traceContext = traceContext.init(this.agentInfo, this.dataSender, this.config)
+
+        this.closedTraces = []
     }
 
     cleanHttp() {
@@ -79,17 +87,30 @@ class MockAgent extends Agent {
 
     callbackTraceClose(callback) {
         const trace = this.traceContext.currentTraceObject()
+        const closedTrace = this.closedTraces.find((closedTrace) => trace === closedTrace)
+        if (closedTrace) {
+            callback(closedTrace)
+            return
+        }
+
         const origin = trace.close
-        trace.close = () => {
+        trace.close = function () {
             origin.apply(trace, arguments)
             callback(trace)
         }
+        trace[closedTraceWrapped] = true
     }
 
     bindHttpWithCallSite() {
         this.bindHttp({ 'trace-location-and-filename-of-call-site': true })
     }
 
+    completeTraceObject(trace) {
+        super.completeTraceObject(trace)
+        if (!trace[closedTraceWrapped]) {
+            this.closedTraces.push(trace)
+        }
+    }
 }
 
 const agent = new MockAgent(fixture.config)

@@ -70,7 +70,7 @@ test('nested request HTTP', async function (t) {
     agent.callbackTraceClose((trace) => {
       const actualRequestData = RequestHeaderUtils.read(req)
       t.equal(actualRequestData.endPoint, 'localhost:5005', 'http://localhost:5005/test endPoint')
-      t.equal(actualRequestData.flags, null, 'http://localhost:5005/test flags')
+      t.equal(actualRequestData.flags, undefined, 'http://localhost:5005/test flags')
       t.equal(actualRequestData.host, null, 'http://localhost:5005/test host')
       t.equal(actualRequestData.isRoot, true, 'http://localhost:5005/test isRoot')
       t.equal(actualRequestData.parentApplicationName, null, 'http://localhost:5005/test parentApplicationName')
@@ -113,7 +113,7 @@ test('nested request HTTP', async function (t) {
     actualAssertsOn5006 = (actualTraceOn5005) => {
       const actualRequestData = RequestHeaderUtils.read(req)
       t.equal(actualRequestData.endPoint, 'localhost:5006', 'http://localhost:5006/test endPoint')
-      t.equal(actualRequestData.flags, 0, 'http://localhost:5006/test flags')
+      t.equal(actualRequestData.flags, undefined, 'http://localhost:5006/test flags')
       t.equal(actualRequestData.host, 'localhost:5006', 'http://localhost:5006/test host')
       t.equal(actualRequestData.isRoot, false, 'http://localhost:5006/test isRoot')
       t.equal(actualRequestData.parentApplicationName, 'node.test.app', 'http://localhost:5006/test parentApplicationName')
@@ -121,7 +121,7 @@ test('nested request HTTP', async function (t) {
       t.equal(actualRequestData.parentSpanId, actualTraceOn5005.traceId.spanId, 'http://localhost:5006/test parentSpanId')
       // t.equal(actualRequestData.remoteAddress, '127.0.0.1', 'http://localhost:5006/test remoteAddress')
       t.equal(actualRequestData.rpcName, '/test', 'http://localhost:5006/test rpcName')
-      t.equal(actualRequestData.sampled, true, 'http://localhost:5006/test sampled')
+      t.equal(actualRequestData.sampled, null, 'http://localhost:5006/test header sampled')
       t.equal(actualRequestData.spanId, actualTraceOn5006.traceId.spanId, 'http://localhost:5006/test spanId')
       t.equal(actualRequestData.transactionId.toString(), actualTraceOn5006.traceId.transactionId.toString(), 'http://localhost:5006/test transactionId')
       t.equal(actualTraceOn5006.traceId.transactionId.sequence, actualTransactionIdSequence, `http://localhost:5006/test transactionId sequence is ${actualTransactionIdSequence}`)

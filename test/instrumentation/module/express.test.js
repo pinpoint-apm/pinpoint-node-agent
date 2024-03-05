@@ -672,10 +672,15 @@ test('incoming request by Disable Trace requests', (t) => {
     agent.callbackTraceClose((trace) => {
       if (actualRequestCount == 1) {
         t.equal(actualTraceIdSequence, parseInt(trace.traceId.transactionId.sequence), 'transaction id sequence equals transactionIdGenerator.sequence')
-        actualTraceIdSequence = transactionIdGenerator.sequence
+        t.equal(actualTraceIdSequence, 0, 'first request transactionIdGenerator.sequence is 0')
+      } else if (actualRequestCount == 4) {
+        t.equal(actualTraceIdSequence, parseInt(trace.traceId.transactionId.sequence), 'transaction id sequence equals transactionIdGenerator.sequence')
+        t.equal(actualTraceIdSequence, 1, 'fourth request transactionIdGenerator.sequence is 1')
       } else {
         t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
+        t.equal(actualTraceIdSequence, transactionIdGenerator.sequence, 'DisableTrace transaction no updated transactionIdGenerator.sequence')
       }
+      actualTraceIdSequence = transactionIdGenerator.sequence
       rootPathTraces.push(trace)
     })
   })
@@ -684,15 +689,37 @@ test('incoming request by Disable Trace requests', (t) => {
   const apiPathTraces = []
   app.get('/api', async (req, res) => {
     apiRequests.push(req)
+
+    const result = await axios.get(getServerUrl('/api2'))
+    t.equal(result.status, 200, 'api2 request status code is 200')
+    t.equal(result.data, 'ok /api2 get', 'api request data is ok /api2 get')
     res.send('ok /api get')
 
     agent.callbackTraceClose((trace) => {
-      if (actualRequestCount == 1) {
+      if (actualRequestCount == 1 || actualRequestCount == 4) {
         t.equal(actualTraceIdSequence, parseInt(trace.traceId.transactionId.sequence), 'API transaction id sequence equals transactionIdGenerator.sequence')
       } else {
         t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
+        t.equal(actualTraceIdSequence, transactionIdGenerator.sequence, 'API DisableTrace transaction no updated transactionIdGenerator.sequence')
       }
       apiPathTraces.push(trace)
+    })
+  })
+
+  const apiRequests2 = []
+  const apiPathTraces2 = []
+  app.get('/api2', async (req, res) => {
+    apiRequests2.push(req)
+    res.send('ok /api2 get')
+
+    agent.callbackTraceClose((trace) => {
+      if (actualRequestCount == 1 || actualRequestCount == 4) {
+        t.equal(actualTraceIdSequence, parseInt(trace.traceId.transactionId.sequence), 'API transaction id sequence equals transactionIdGenerator.sequence')
+      } else {
+        t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
+        t.equal(actualTraceIdSequence, transactionIdGenerator.sequence, 'API DisableTrace transaction no updated transactionIdGenerator.sequence')
+      }
+      apiPathTraces2.push(trace)
     })
   })
 
@@ -742,6 +769,9 @@ test('incoming request by Disable Trace requests', (t) => {
     actualApiRequest = apiRequests[2]
     t.equal(actualApiRequest.url, '/api', 'Third request is DisableTrace api request url is /api')
     t.equal(actualApiRequest.headers['pinpoint-sampled'], 's0', 'Third request is DisableTrace api request pinpoint-sampled header is s0')
+
+    const result4 = await axios.get(getServerUrl('/'))
+    t.equal(result4.status, 200, 'third / request status code is 200')
 
     t.end()
     server.close()

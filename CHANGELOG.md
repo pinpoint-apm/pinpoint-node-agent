@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
-## [0.9.0-next.4] - 2024-01-30
+## [0.9.0-next.4] - 2024-03-05
 ### Added
 - #86 Express with method name
 - #155 SQL UID
@@ -10,6 +10,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 - #87 HTTP param
 ### Fixed
 - #101 Nested Async call
+- #171 Fix DisableTrace outgoing request HTTP header
 
 ## [0.8.3] - 2021-11-19
 ### Fixed

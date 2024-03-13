@@ -8,7 +8,6 @@ const test = require('tape')
 const { log } = require('./test-helper')
 
 const config = require('../lib/config')
-const path = require('path')
 
 test('Agent ID required field', function (t) {
   t.plan(1)
@@ -164,6 +163,45 @@ test('Agent ID length check', (t) => {
 
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME
+
+  t.end()
+})
+
+test('Agent ID length check with environment PINPOINT_UNSTABLE_ID_MAX_LEN ', (t) => {
+  config.clear()
+  process.env['PINPOINT_AGENT_ID'] = "agentIdagentIdagentIdageE"
+  process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
+  
+  let given = config.getConfig()
+  t.equal(given.unstableIdMaxLen, undefined)
+  t.false(given.enable, 'maxlength agentID error')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_AGENT_ID'] = "agentId"
+  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappicationE"
+  
+  given = config.getConfig()
+  t.equal(given.unstableIdMaxLen, undefined)
+  t.false(given.enable, 'maxlength application Name error')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+  
+  config.clear()
+  process.env['PINPOINT_AGENT_ID'] = "agentIdagentIdagentIdageE"
+  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappicationE"
+  process.env['PINPOINT_UNSTABLE_ID_MAX_LEN'] = 100
+
+  given = config.getConfig()
+  t.equal(given.unstableIdMaxLen, 100)
+  t.true(given.enable, 'maxlength agentID and application Name')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+  delete process.env.PINPOINT_UNSTABLE_ID_MAX_LEN
 
   t.end()
 })

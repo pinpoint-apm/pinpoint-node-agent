@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
-## [0.9.0-next.4] - 2024-03-05
+## [0.9.0] - 2024-04-30
 ### Added
 - #86 Express with method name
 - #155 SQL UID

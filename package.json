@@ -1,6 +1,6 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "0.8.4-next.1",
+  "version": "0.8.4-next.2",
   "main": "index.js",
   "scripts": {
     "test": "tape ./test/**/*.test.js",
@@ -89,8 +89,5 @@
   },
   "resolutions": {
     "semver": "^7.5.3"
-  },
-  "volta": {
-    "node": "16.20.1"
   }
 }

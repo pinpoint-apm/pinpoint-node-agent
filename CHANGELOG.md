@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [0.8.4] - 2024-05-03
+### Fixed
+- #186 Change error log level to info log
+
 ## [0.8.3] - 2021-11-19
 ### Fixed
 - #93 Fix Agent ID length validator

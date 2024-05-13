@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [0.8.5] - 2024-05-13
+### Fixed
+- #190 Remove JSON.stringify on Info Logger
+
 ## [0.8.4] - 2024-05-03
 ### Changed
 - #186 Change error log level to info log

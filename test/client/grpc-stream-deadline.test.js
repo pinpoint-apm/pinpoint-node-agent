@@ -14,7 +14,7 @@ const { log } = require('../test-helper')
 
 var _ = require('lodash')
 const GrpcServer = require('./grpc-server')
-const GrpcDataSender = require('../../lib/client/grpc-data-sender')
+const GrpcDataSender = require('../../lib/client/grpc-data-sender2')
 
 const spanMessages = require('../../lib/data/v1/Span_pb')
 

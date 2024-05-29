@@ -14,9 +14,9 @@ jobs:
     strategy:
       matrix:
         node_version:
-          - 14          
           - 16
           - 18
+          - 20
 
     name: Node ${{ matrix.node_version }} on ubuntu-latest
     steps:

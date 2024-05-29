@@ -7,9 +7,11 @@
 const test = require('tape')
 const axios = require('axios')
 const http = require('http')
+const https = require('https')
 const { fixture } = require('../test-helper')
 const RequestHeaderUtils = require('../../lib/instrumentation/request-header-utils')
 const agent = require('../support/agent-singleton-mock')
+agent.bindHttp()
 const PinpointHeader = require('../../lib/constant/http-header').PinpointHeader
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const express = require('express')
@@ -53,7 +55,11 @@ test('Should write pinpoint header', async function (t) {
     })
   })
   .listen(5005, async function() {
-    await axios.get(`http://${endPoint}${rpcName}?q=1`)
+    await axios.get(`http://${endPoint}${rpcName}?q=1`, {
+      timeout: 1000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
     server.close()
     t.end()
   })

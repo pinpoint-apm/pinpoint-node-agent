@@ -17,7 +17,7 @@ const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const DataSender = require('../../lib/client/data-sender')
-const GrpcDataSender = require('../../lib/client/grpc-data-sender2')
+const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
 const MethodType = require('../../lib/constant/method-type')
 

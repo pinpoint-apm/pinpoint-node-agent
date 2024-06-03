@@ -5,7 +5,7 @@
  */
 
 'use strict'
-const GrpcDataSender = require('../../lib/client/grpc-data-sender2')
+const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const GrpcUnaryRPC = require('../../lib/client/grpc-unary-rpc')
 
 class MockgRPCDataSender extends GrpcDataSender {

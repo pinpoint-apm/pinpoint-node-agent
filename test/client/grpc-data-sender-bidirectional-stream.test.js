@@ -8,7 +8,7 @@
 const test = require('tape')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const { log } = require('../test-helper')
-const GrpcDataSender = require('../../lib/client/grpc-data-sender2')
+const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const GrpcServer = require('./grpc-server')
 var _ = require('lodash')
 

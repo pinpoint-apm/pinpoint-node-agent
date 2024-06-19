@@ -51,7 +51,7 @@
     "distributed-tracing"
   ],
   "dependencies": {
-    "@grpc/grpc-js": "^1.10.8",
+    "@grpc/grpc-js": "^1.10.9",
     "@pinpoint-apm/shimmer": "^1.2.2",
     "end-of-stream": "^1.4.1",
     "google-protobuf": "^3.13.0",

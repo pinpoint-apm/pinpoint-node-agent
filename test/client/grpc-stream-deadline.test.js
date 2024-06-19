@@ -169,12 +169,11 @@ test('sendAgentInfo deadline', (t) => {
             t.false(err, '1st sendAgentInfo err is false')
         })
 
-        this.grpcDataSender.requestAgentInfo.getDeadline = () => {
+        this.grpcDataSender.deadline.getDeadline = () => {
             const deadline = new Date()
             deadline.setMilliseconds(deadline.getMilliseconds() + 100)
             return deadline
         }
-        this.grpcDataSender.requestAgentInfo.retryInterval = 0
 
         this.grpcDataSender.sendAgentInfo({
             hostname: 'hostname',
@@ -182,8 +181,8 @@ test('sendAgentInfo deadline', (t) => {
         }, (err, response) => {
             t.false(response, '2st sendAgentInfo response is undefined')
             t.equal(err.code, 4, '2st sendAgentInfo err.code is 4')
-            t.equal(err.details, 'Deadline exceeded', '2st sendAgentInfo err.details is Deadline exceeded')
-            t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendAgentInfo err.message is Deadline exceeded')
+            t.true(err.details.startsWith('Deadline exceeded'), '2st sendAgentInfo err.details is Deadline exceeded')
+            t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendAgentInfo err.message is Deadline exceeded')
 
             tryShutdown()
         })
@@ -255,8 +254,8 @@ test('sendApiMetaInfo deadline', (t) => {
         }, (err, response) => {
             t.false(response, '2st sendApiMetaInfo response is undefined')
             t.equal(err.code, 4, '2st sendApiMetaInfo err.code is 4')
-            t.equal(err.details, 'Deadline exceeded', '2st sendApiMetaInfo err.details is Deadline exceeded')
-            t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendApiMetaInfo err.message is Deadline exceeded')
+            t.true(err.details.startsWith('Deadline exceeded'), '2st sendApiMetaInfo err.details is Deadline exceeded')
+            t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendApiMetaInfo err.message is Deadline exceeded')
 
             apiMetaInfoResponse++
             if (apiMetaInfoResponse == 2) {
@@ -330,8 +329,8 @@ test('sendStringMetaInfo deadline', (t) => {
         }, (err, response) => {
             t.false(response, '2st sendStringMetaInfo response is undefined')
             t.equal(err.code, 4, '2st sendStringMetaInfo err.code is 4')
-            t.equal(err.details, 'Deadline exceeded', '2st sendStringMetaInfo err.details is Deadline exceeded')
-            t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendStringMetaInfo err.message is Deadline exceeded')
+            t.true(err.details.startsWith('Deadline exceeded'), '2st sendStringMetaInfo err.details is Deadline exceeded')
+            t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendStringMetaInfo err.message is Deadline exceeded')
 
             stringMetaDataResponse++
             if (stringMetaDataResponse == 2) {

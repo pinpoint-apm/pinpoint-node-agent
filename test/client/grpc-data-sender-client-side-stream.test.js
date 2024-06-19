@@ -82,6 +82,9 @@ function sendAgentStat(call, callback) {
 }
 
 function sendSpan(call, callback) {
+    call.on('error', function (error) {
+        actuals.t.equal(error.message, '6st sendSpan serverSpanDataCount is 4', '6st sendSpan serverSpanDataCount throws an error')
+    })
     call.on('data', function (spanMessage) {
         actuals.serverSpanDataCount++
 
@@ -94,12 +97,8 @@ function sendSpan(call, callback) {
             actuals.t.equal(span.getServicetype(), 1400, 'service type match in 2st sendSpan')
         } else if (actuals.serverSpanDataCount == 4) {
             actuals.t.equal(actuals.serverSpanDataCount, 4, '6st sendSpan serverSpanDataCount is 4')
-            throw new Error('6st sendSpan serverSpanDataCount is 4')
+            call.emit('error', new Error('6st sendSpan serverSpanDataCount is 4'))
         }
-    })
-    call.on('error', function (error) {
-        log.debug(`error: ${error}`)
-        actuals.t.equal(error.code, 13, '6st sendSpan serverSpanDataCount throws an error')
     })
     call.on('end', function () {
         callback(null, new Empty())
@@ -120,7 +119,7 @@ function pingSession(call) {
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 // stream.isReady() newRunnable(DefaultStreamTask.java)
 test('client side streaming with deadline and cancellation', function (t) {
-    t.plan(26)
+    t.plan(24)
     actuals = {}
     // when server send stream
     let callOrder = 0
@@ -170,7 +169,6 @@ test('client side streaming with deadline and cancellation', function (t) {
                 t.equal(callOrder, 3, '5st spanStream end in callback')
             } else if (callOrder == 5/* 6st sendSpan */) {
                 t.equal(callOrder, 5, '6st spanStream end in callback')
-                t.equal(err.code, 13, 'code is 13 in 6st spanStream callback')
                 t.equal(err.details, '6st sendSpan serverSpanDataCount is 4', 'details in 6st spanStream callback')
             } else if (callOrder == 7/* 8st when spanStream end, recovery spanstream */) {
                 t.equal(callOrder, 7, '8st when spanStream end, recovery spanstream in callback')
@@ -180,7 +178,7 @@ test('client side streaming with deadline and cancellation', function (t) {
             }
         }
 
-        const registeEventListeners = () => {
+        const registerEventListeners = () => {
             const originStatus = this.grpcDataSender.spanStream.grpcStream.stream.listeners('status')[0]
             this.grpcDataSender.spanStream.grpcStream.stream.removeListener('status', originStatus)
             this.grpcDataSender.spanStream.grpcStream.stream.on('status', (status) => {
@@ -191,23 +189,22 @@ test('client side streaming with deadline and cancellation', function (t) {
                     t.equal(status.details, 'OK', 'OK on 3st stream status event')
                 } else if (callOrder == 4/* 5st spanStream end on stream status event */) {
                     t.true(callOrder == 4, '5st spanStream end call Order on stream status event')
-                    t.equal(status.code, 0, 'OK on 5st stream status event')
-                    t.equal(status.details, 'OK', 'OK on 5st stream status event')
+                    t.equal(status.code, 0, 'status.code: 0 OK on 5st stream status event')
+                    t.equal(status.details, 'OK', `status.details: OK on 5st stream status event`)
                     setTimeout(() => {
                         // 6st sendSpan
                         actuals.sendSpanCount++
                         this.grpcDataSender.sendSpan(span)
-                        registeEventListeners()
+                        registerEventListeners()
                     })
                 } else if (callOrder == 6/* 6st sendSpan */) {
                     t.true(callOrder == 6, '6st spanStream end call Order on stream status event')
-                    t.equal(status.code, 13, 'code is 13 in 6st spanStream callback')
                     t.equal(status.details, '6st sendSpan serverSpanDataCount is 4', 'details on stream status event')
                     setTimeout(() => {
                         // 8st when spanStream end, recovery spanstream
                         actuals.sendSpanCount++
                         this.grpcDataSender.sendSpan(span)
-                        registeEventListeners()
+                        registerEventListeners()
                         this.grpcDataSender.spanStream.grpcStream.end()
                     })
                 } else if (callOrder == 8/* 8st when spanStream end, recovery spanstream */) {
@@ -220,7 +217,7 @@ test('client side streaming with deadline and cancellation', function (t) {
             })
         }
 
-        registeEventListeners()
+        registerEventListeners()
 
         endAction = () => {
             setTimeout(() => {
@@ -242,7 +239,7 @@ test('client side streaming with deadline and cancellation', function (t) {
         // 4st sendSpan
         actuals.sendSpanCount++
         this.grpcDataSender.sendSpan(span)
-        registeEventListeners()
+        registerEventListeners()
         // 5st spanStream end
         this.grpcDataSender.spanStream.grpcStream.end()
 

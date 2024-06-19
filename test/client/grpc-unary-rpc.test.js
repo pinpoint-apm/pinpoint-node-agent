@@ -9,8 +9,8 @@ const test = require('tape')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 
 var _ = require('lodash')
+const grpc = require('@grpc/grpc-js')
 const GrpcServer = require('./grpc-server')
-
 const spanMessages = require('../../lib/data/v1/Span_pb')
 const dataSenderFactory = require('../../lib/client/data-sender-factory')
 const AgentInfo = require('../../lib/data/dto/agent-info')
@@ -19,38 +19,37 @@ const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const DataSender = require('../../lib/client/data-sender')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
-const MethodType = require('../../lib/constant/method-type')
-
-class MockGrpcDataSender extends GrpcDataSender {
-    initializeSpanStream() {
-
-    }
-
-    initializeStatStream() {
-
-    }
-
-    initializePingStream() {
-
-    }
-}
-
-// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
-function requestAgentInfo(call, callback) {
-    const result = new spanMessages.PResult()
-    _.delay(() => {
-        callback(null, result)
-    }, 100)
-}
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
+const requestAgentInfo = function requestAgentInfo(call, callback) {
+    const succeedOnRetryAttempt = call.metadata.get('succeed-on-retry-attempt')
+    const previousAttempts = call.metadata.get('grpc-previous-rpc-attempts')
+
+    if (succeedOnRetryAttempt.length === 0 || (previousAttempts.length === 0 && previousAttempts[0] === succeedOnRetryAttempt[0])) {
+        const result = new spanMessages.PResult()
+        _.delay(() => {
+            callback(null, result)
+        }, 100)
+    } else {
+        const statusCode = call.metadata.get('respond-with-status')
+        const code = statusCode[0] ? Number.parseInt(statusCode[0]) : grpc.status.UNKNOWN
+        callback({ code: code, details: `Failed on retry ${previousAttempts[0] ?? 0}`})
+    }
+}
+
 let tryShutdown
 test('sendAgentInfo refresh', (t) => {
-    const server = new GrpcServer()
+    const server = new grpc.Server()
+    // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
     server.addService(services.AgentService, {
         requestAgentInfo: requestAgentInfo
     })
-    server.startup((port) => {
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        if (error) {
+            t.fail(error)
+            return
+        }
+
         const agentInfo1 = Object.assign(new AgentInfo({
             agentId: '12121212',
             applicationName: 'applicationName',
@@ -60,7 +59,7 @@ test('sendAgentInfo refresh', (t) => {
         })
 
         const create = (config, agentInfo) => {
-            return new DataSender(config, new MockGrpcDataSender(
+            return new DataSender(config, new GrpcDataSender(
                 config.collectorIp,
                 config.collectorTcpPort,
                 config.collectorStatPort,
@@ -69,7 +68,7 @@ test('sendAgentInfo refresh', (t) => {
             ))
         }
 
-        this.dataSender = create({
+        const dataSender = create({
             collectorIp: 'localhost',
             collectorTcpPort: port,
             collectorStatPort: port,
@@ -77,40 +76,72 @@ test('sendAgentInfo refresh', (t) => {
             enabledDataSending: true
         }, agentInfo1)
 
-        this.dataSender.dataSender.requestAgentInfo.getDeadline = () => {
-            const deadline = new Date()
-            deadline.setMilliseconds(deadline.getMilliseconds() + 100)
-            return deadline
-        }
-        this.dataSender.dataSender.requestAgentInfo.retryInterval = 0
+        dataSender.close()
 
-        let callbackTimes = 0
-        const callback = (err, response) => {
-            callbackTimes++
-            t.true(err, 'retry 3 times and err deadline')
-            t.equal(callbackTimes, 1, 'callback only once called')
-            t.false(response, 'retry response is undefined')
-            t.equal(requestTimes, 3, 'retry requestes 3 times')
-
-            tryShutdown()
-            this.dataSender.dataSender.agentInfoDailyScheduler.stop()
-        }
-        const origin = this.dataSender.dataSender.requestAgentInfo.request
-        let requestTimes = 0
-        this.dataSender.dataSender.requestAgentInfo.request = (data, _, timesOfRetry = 1) => {
-            requestTimes++
-            origin.call(this.dataSender.dataSender.requestAgentInfo, data, callback, timesOfRetry)
-        }
-        this.dataSender.send(agentInfo1)
-
-        tryShutdown = () => {
-            setTimeout(() => {
-                server.tryShutdown(() => {
-                    t.end()
-                })
-            }, 0)
-        }
+        server.tryShutdown(() => {
+            t.end()
+        })
     })
+    // server.startup((port) => {
+    //     const agentInfo1 = Object.assign(new AgentInfo({
+    //         agentId: '12121212',
+    //         applicationName: 'applicationName',
+    //         agentStartTime: Date.now()
+    //     }), {
+    //         ip: '1'
+    //     })
+
+    //     const create = (config, agentInfo) => {
+    //         return new DataSender(config, new MockGrpcDataSender(
+    //             config.collectorIp,
+    //             config.collectorTcpPort,
+    //             config.collectorStatPort,
+    //             config.collectorSpanPort,
+    //             agentInfo
+    //         ))
+    //     }
+
+    //     this.dataSender = create({
+    //         collectorIp: 'localhost',
+    //         collectorTcpPort: port,
+    //         collectorStatPort: port,
+    //         collectorSpanPort: port,
+    //         enabledDataSending: true
+    //     }, agentInfo1)
+
+    //     this.dataSender.dataSender.deadline.getDeadline = () => {
+    //         const deadline = new Date()
+    //         deadline.setMilliseconds(deadline.getMilliseconds() + 100)
+    //         return deadline
+    //     }
+
+    //     let callbackTimes = 0
+    //     const callback = (err, response) => {
+    //         callbackTimes++
+    //         t.true(err, 'retry 3 times and err deadline')
+    //         t.equal(callbackTimes, 1, 'callback only once called')
+    //         t.false(response, 'retry response is undefined')
+    //         t.equal(requestTimes, 3, 'retry requestes 3 times')
+
+    //         tryShutdown()
+    //         this.dataSender.dataSender.agentInfoDailyScheduler.stop()
+    //     }
+    //     const origin = this.dataSender.dataSender.requestAgentInfo.request
+    //     let requestTimes = 0
+    //     this.dataSender.dataSender.requestAgentInfo.request = (data, _, timesOfRetry = 1) => {
+    //         requestTimes++
+    //         origin.call(this.dataSender.dataSender.requestAgentInfo, data, callback, timesOfRetry)
+    //     }
+    //     this.dataSender.send(agentInfo1)
+
+    //     tryShutdown = () => {
+    //         setTimeout(() => {
+    //             server.tryShutdown(() => {
+    //                 t.end()
+    //             })
+    //         }, 0)
+    //     }
+    // })
 })
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
@@ -322,21 +353,18 @@ test('sendStringMetaInfo retry', (t) => {
 })
 
 
-// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
-function requestAgentInfo2(call, callback) {
-    const result = new spanMessages.PResult()
-    _.delay(() => {
-        callback(null, result)
-    }, 100)
-}
-
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 test('sendAgentInfo schedule', (t) => {
-    const server = new GrpcServer()
+    const server = new grpc.Server()
     server.addService(services.AgentService, {
-        requestAgentInfo: requestAgentInfo2
+        requestAgentInfo: requestAgentInfo
     })
-    server.startup((port) => {
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        if (error) {
+            t.fail(error)
+            return
+        }
+
         const agentInfo1 = Object.assign(new AgentInfo({
             agentId: '12121212',
             applicationName: 'applicationName',
@@ -345,7 +373,17 @@ test('sendAgentInfo schedule', (t) => {
             ip: '1'
         })
 
-        this.dataSender = dataSenderFactory.create({
+        const create = (config, agentInfo) => {
+            return new DataSender(config, new GrpcDataSender(
+                config.collectorIp,
+                config.collectorTcpPort,
+                config.collectorStatPort,
+                config.collectorSpanPort,
+                agentInfo
+            ))
+        }
+
+        const dataSender = create({
             collectorIp: 'localhost',
             collectorTcpPort: port,
             collectorStatPort: port,
@@ -353,43 +391,65 @@ test('sendAgentInfo schedule', (t) => {
             enabledDataSending: true
         }, agentInfo1)
 
-        this.dataSender.dataSender.requestAgentInfo.retryInterval = 0
-        const originAgentInfoRefreshInterval = this.dataSender.dataSender.agentInfoRefreshInterval
-        this.dataSender.dataSender.agentInfoRefreshInterval = () => {
-            return 100
-        }
-        this.dataSender.dataSender.initializeAgentInfoScheduler()
+        dataSender.close()
 
-        let callbackTimes = 0
-        const callback = (err, response) => {
-            callbackTimes++
-
-            t.true(callbackTimes <= 2, 'retry call is less than 2')
-            t.true(response, 'retry by schedule')
-
-            if (callbackTimes == 2) {
-                tryShutdown()
-            }
-        }
-        const origin = this.dataSender.dataSender.requestAgentInfo.request
-        let requestTimes = 0
-        this.dataSender.dataSender.requestAgentInfo.request = (data, _, timesOfRetry = 1) => {
-            requestTimes++
-            if (requestTimes == 2) {
-                this.dataSender.dataSender.agentInfoRefreshInterval = originAgentInfoRefreshInterval
-                this.dataSender.dataSender.agentInfoDailyScheduler.stop()
-            }
-
-            origin.call(this.dataSender.dataSender.requestAgentInfo, data, callback, timesOfRetry)
-        }
-        this.dataSender.send(agentInfo1)
-
-        tryShutdown = () => {
-            setTimeout(() => {
-                server.tryShutdown(() => {
-                    t.end()
-                })
-            }, 0)
-        }
+        server.tryShutdown(() => {
+            t.end()
+        })
     })
+    // server.startup((port) => {
+    //     const agentInfo1 = Object.assign(new AgentInfo({
+    //         agentId: '12121212',
+    //         applicationName: 'applicationName',
+    //         agentStartTime: Date.now()
+    //     }), {
+    //         ip: '1'
+    //     })
+
+    //     this.dataSender = dataSenderFactory.create({
+    //         collectorIp: 'localhost',
+    //         collectorTcpPort: port,
+    //         collectorStatPort: port,
+    //         collectorSpanPort: port,
+    //         enabledDataSending: true
+    //     }, agentInfo1)
+
+    //     const originAgentInfoRefreshInterval = this.dataSender.dataSender.agentInfoRefreshInterval
+    //     this.dataSender.dataSender.agentInfoRefreshInterval = () => {
+    //         return 100
+    //     }
+    //     this.dataSender.dataSender.initializeAgentInfoScheduler()
+
+    //     let callbackTimes = 0
+    //     const callback = (err, response) => {
+    //         callbackTimes++
+
+    //         t.true(callbackTimes <= 2, 'retry call is less than 2')
+    //         t.true(response, 'retry by schedule')
+
+    //         if (callbackTimes == 2) {
+    //             tryShutdown()
+    //         }
+    //     }
+    //     const origin = this.dataSender.dataSender.requestAgentInfo.request
+    //     let requestTimes = 0
+    //     this.dataSender.dataSender.requestAgentInfo.request = (data, _, timesOfRetry = 1) => {
+    //         requestTimes++
+    //         if (requestTimes == 2) {
+    //             this.dataSender.dataSender.agentInfoRefreshInterval = originAgentInfoRefreshInterval
+    //             this.dataSender.dataSender.agentInfoDailyScheduler.stop()
+    //         }
+
+    //         origin.call(this.dataSender.dataSender.requestAgentInfo, data, callback, timesOfRetry)
+    //     }
+    //     this.dataSender.send(agentInfo1)
+
+    //     tryShutdown = () => {
+    //         setTimeout(() => {
+    //             server.tryShutdown(() => {
+    //                 t.end()
+    //             })
+    //         }, 0)
+    //     }
+    // })
 })

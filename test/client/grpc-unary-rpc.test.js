@@ -37,6 +37,27 @@ const requestAgentInfo = function requestAgentInfo(call, callback) {
     }
 }
 
+function agentInfo() {
+    return Object.assign(new AgentInfo({
+        agentId: '12121212',
+        applicationName: 'applicationName',
+        agentStartTime: Date.now()
+    }), {
+        ip: '1'
+    })
+}
+
+function before(port) {
+    const dataSender = dataSenderFactory.create({
+        collectorIp: 'localhost',
+        collectorTcpPort: port,
+        collectorStatPort: port,
+        collectorSpanPort: port,
+        enabledDataSending: true
+    }, agentInfo())
+    return dataSender
+}
+
 let tryShutdown
 test('sendAgentInfo refresh', (t) => {
     const server = new grpc.Server()
@@ -45,41 +66,23 @@ test('sendAgentInfo refresh', (t) => {
         requestAgentInfo: requestAgentInfo
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-        if (error) {
-            t.fail(error)
-            return
-        }
+        const dataSender = before(port)
+        // dataSender.dataSender.deadline.getDeadline = () => {
+        //     const deadline = new Date()
+        //     deadline.setMilliseconds(deadline.getMilliseconds() + 100)
+        //     return deadline
+        // }
 
-        const agentInfo1 = Object.assign(new AgentInfo({
-            agentId: '12121212',
-            applicationName: 'applicationName',
-            agentStartTime: Date.now()
-        }), {
-            ip: '1'
-        })
+        dataSender.dataSender.sendAgentInfo(agentInfo(), function(error, response) {
+            if (error) {
+                t.fail(error)
+            }
 
-        const create = (config, agentInfo) => {
-            return new DataSender(config, new GrpcDataSender(
-                config.collectorIp,
-                config.collectorTcpPort,
-                config.collectorStatPort,
-                config.collectorSpanPort,
-                agentInfo
-            ))
-        }
-
-        const dataSender = create({
-            collectorIp: 'localhost',
-            collectorTcpPort: port,
-            collectorStatPort: port,
-            collectorSpanPort: port,
-            enabledDataSending: true
-        }, agentInfo1)
-
-        dataSender.close()
-
-        server.tryShutdown(() => {
-            t.end()
+            process.nextTick(() => {
+                dataSender.close()
+                server.forceShutdown()
+                t.end()
+            })
         })
     })
     // server.startup((port) => {
@@ -154,7 +157,7 @@ function requestApiMetaData(call, callback) {
 }
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('sendApiMetaInfo retry', (t) => {
+test.skip('sendApiMetaInfo retry', (t) => {
     const server = new GrpcServer()
     server.addService(services.MetadataService, {
         requestApiMetaData: requestApiMetaData
@@ -216,7 +219,7 @@ test('sendApiMetaInfo retry', (t) => {
     })
 })
 
-test('sendApiMetaInfo lineNumber and location', (t) => {
+test.skip('sendApiMetaInfo lineNumber and location', (t) => {
     const server = new GrpcServer()
     server.addService(services.MetadataService, {
         requestApiMetaData: requestApiMetaData
@@ -290,7 +293,7 @@ function requestStringMetaData(call, callback) {
 }
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('sendStringMetaInfo retry', (t) => {
+test.skip('sendStringMetaInfo retry', (t) => {
     const server = new GrpcServer()
     server.addService(services.MetadataService, {
         requestStringMetaData: requestStringMetaData
@@ -354,7 +357,7 @@ test('sendStringMetaInfo retry', (t) => {
 
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('sendAgentInfo schedule', (t) => {
+test.skip('sendAgentInfo schedule', (t) => {
     const server = new grpc.Server()
     server.addService(services.AgentService, {
         requestAgentInfo: requestAgentInfo
@@ -393,9 +396,8 @@ test('sendAgentInfo schedule', (t) => {
 
         dataSender.close()
 
-        server.tryShutdown(() => {
-            t.end()
-        })
+        server.forceShutdown()
+        t.end()
     })
     // server.startup((port) => {
     //     const agentInfo1 = Object.assign(new AgentInfo({

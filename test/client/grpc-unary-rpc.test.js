@@ -24,12 +24,19 @@ const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-bui
 const requestAgentInfo = function requestAgentInfo(call, callback) {
     const succeedOnRetryAttempt = call.metadata.get('succeed-on-retry-attempt')
     const previousAttempts = call.metadata.get('grpc-previous-rpc-attempts')
+    const delayTime = call.metadata.get('delay-time')
+
+    console.log('succeed-on-retry-attempt', succeedOnRetryAttempt)
+    console.log('grpc-previous-rpc-attempts', previousAttempts)
+    console.log('delay-time', delayTime)
 
     if (succeedOnRetryAttempt.length === 0 || (previousAttempts.length === 0 && previousAttempts[0] === succeedOnRetryAttempt[0])) {
         const result = new spanMessages.PResult()
-        _.delay(() => {
-            callback(null, result)
-        }, 100)
+        result.setSuccess(true)
+        result.setMessage(`succeed-on-retry-attempt: ${succeedOnRetryAttempt[0]}, grpc-previous-rpc-attempts: ${previousAttempts[0]}, delay-time: ${delayTime[0]}`)
+        callback(null, result)
+        // _.delay(() => {
+        // }, parseInt(delayTime[0] || 0))
     } else {
         const statusCode = call.metadata.get('respond-with-status')
         const code = statusCode[0] ? Number.parseInt(statusCode[0]) : grpc.status.UNKNOWN
@@ -65,25 +72,46 @@ test('sendAgentInfo refresh', (t) => {
     server.addService(services.AgentService, {
         requestAgentInfo: requestAgentInfo
     })
+    let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-        const dataSender = before(port)
-        // dataSender.dataSender.deadline.getDeadline = () => {
-        //     const deadline = new Date()
-        //     deadline.setMilliseconds(deadline.getMilliseconds() + 100)
-        //     return deadline
-        // }
+        dataSender = before(port)
 
         dataSender.dataSender.sendAgentInfo(agentInfo(), function(error, response) {
             if (error) {
                 t.fail(error)
             }
-
-            process.nextTick(() => {
-                dataSender.close()
-                server.forceShutdown()
-                t.end()
-            })
+            t.true(response.getSuccess(), '1st PResult.success is true')
+            t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined, delay-time: undefined', '1st PResult.message is "succeed-on-retry-attempt: 0, grpc-previous-rpc-attempts: 0, delay-time: 0"')
         })
+        
+        const origin = dataSender.dataSender.deadline.getDeadline
+        // dataSender.dataSender.deadline.getDeadline = () => {
+        //     const deadline = new Date()
+        //     deadline.setMilliseconds(deadline.getMilliseconds() + 100)
+        //     return deadline
+        // }
+        // const metadata = new grpc.Metadata()
+        // metadata.set('succeed-on-retry-attempt', '1')
+        dataSender.dataSender.sendAgentInfo(agentInfo(), function(error) {
+            if (error) {
+                t.fail(error)
+            }
+        })
+        dataSender.dataSender.deadline.getDeadline = origin
+
+        dataSender.dataSender.sendAgentInfo(agentInfo(), function(error, response) {
+            if (error) {
+                t.fail(error)
+            }
+            t.true(response.getSuccess(), '3st PResult.success is true')
+            t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined, delay-time: undefined', '3st PResult.message is "succeed-on-retry-attempt: 0, grpc-previous-rpc-attempts: 0, delay-time: 0"')
+            t.end()
+        })
+    })
+
+    t.teardown(() => {
+        dataSender.close()
+        server.forceShutdown()
     })
     // server.startup((port) => {
     //     const agentInfo1 = Object.assign(new AgentInfo({

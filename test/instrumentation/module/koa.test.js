@@ -14,6 +14,8 @@ const Router = require('koa-router')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
+const http = require('http')
+const https = require('https')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -38,7 +40,7 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
 
       let actualBuilder = new MethodDescriptorBuilder('get')
         .setClassName('Router')
-        .setLineNumber(32)
+        .setLineNumber(34)
         .setFileName('koa.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.span.spanEventList[0]
@@ -47,7 +49,7 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
       t.equal(spanEvent.annotations[0].value, '/koa-router1', 'parameter value matching')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith('Router.get'), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 32, 'lineNumber')
+      t.equal(actualMethodDescriptor.lineNumber, 34, 'lineNumber')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
       t.true(actualMethodDescriptor.location.length > 0, 'location')
     })
@@ -103,7 +105,11 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
   app.use(router.routes()).use(router.allowedMethods())
 
   const server = app.listen(TEST_ENV.port, async () => {
-    const result1 = await axios.get(getServerUrl(PATH))
+    const result1 = await axios.get(getServerUrl(PATH), {
+      timeout: 3000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
     t.ok(result1.status, 200)
 
     const result2 = await axios.post(getServerUrl(PATH))

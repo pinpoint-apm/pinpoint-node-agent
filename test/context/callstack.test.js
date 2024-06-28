@@ -13,6 +13,8 @@ const express = require('express')
 const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
 const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
+const http = require('http')
+const https = require('https')
 
 test(`span and spanEvent call stack`, async (t) => {
     agent.bindHttp()
@@ -74,7 +76,7 @@ test(`fix express call stack depth`, async (t) => {
         
         let actualBuilder = new MethodDescriptorBuilder('use')
                                 .setClassName('Router')
-                                .setLineNumber(54)
+                                .setLineNumber(56)
                                 .setFileName('callstack.test.js')
         let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
         let actualSpanEvent = agent.dataSender.mockSpan.spanEventList[0]
@@ -85,7 +87,7 @@ test(`fix express call stack depth`, async (t) => {
 
         actualBuilder = new MethodDescriptorBuilder('use')
                             .setClassName('Router')
-                            .setLineNumber(55)
+                            .setLineNumber(57)
                             .setFileName('callstack.test.js')
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
         actualSpanEvent = agent.dataSender.mockSpan.spanEventList[1]
@@ -136,7 +138,11 @@ test('fix express call stack depth without callSite', async (t) => {
     app.use('/router1', router1)
     
     const server = app.listen(TEST_ENV.port, async function () {
-        const result1 = await axios.get(getServerUrl(`/router1${path}`))
+        const result1 = await axios.get(getServerUrl(`/router1${path}`), {
+            timeout: 1000,
+            httpAgent: new http.Agent({ keepAlive: false }),
+            httpsAgent: new https.Agent({ keepAlive: false }),
+        })
         t.ok(result1.status, 200)
         t.ok(result1.data, 'ok router1')
 

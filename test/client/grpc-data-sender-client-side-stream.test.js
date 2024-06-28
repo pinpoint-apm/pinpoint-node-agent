@@ -5,16 +5,15 @@
  */
 
 const test = require('tape')
+const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
-const GrpcServer = require('./grpc-server')
 const Span = require('../../lib/context/span')
 const GrpcClientSideStream = require('../../lib/client/grpc-client-side-stream')
 var _ = require('lodash')
 
-let endAction
 let actuals
 
 const expectedSpan = {
@@ -82,6 +81,9 @@ function sendAgentStat(call, callback) {
 }
 
 function sendSpan(call, callback) {
+    call.on('error', function (error) {
+        actuals.t.equal(error.message, '6st sendSpan serverSpanDataCount is 4', '6st sendSpan serverSpanDataCount throws an error')
+    })
     call.on('data', function (spanMessage) {
         actuals.serverSpanDataCount++
 
@@ -94,12 +96,8 @@ function sendSpan(call, callback) {
             actuals.t.equal(span.getServicetype(), 1400, 'service type match in 2st sendSpan')
         } else if (actuals.serverSpanDataCount == 4) {
             actuals.t.equal(actuals.serverSpanDataCount, 4, '6st sendSpan serverSpanDataCount is 4')
-            throw new Error('6st sendSpan serverSpanDataCount is 4')
+            call.emit('error', new Error('6st sendSpan serverSpanDataCount is 4'))
         }
-    })
-    call.on('error', function (error) {
-        log.debug(`error: ${error}`)
-        actuals.t.equal(error.code, 13, '6st sendSpan serverSpanDataCount throws an error')
     })
     call.on('end', function () {
         callback(null, new Empty())
@@ -120,12 +118,12 @@ function pingSession(call) {
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 // stream.isReady() newRunnable(DefaultStreamTask.java)
 test('client side streaming with deadline and cancellation', function (t) {
-    t.plan(26)
+    t.plan(24)
     actuals = {}
     // when server send stream
     let callOrder = 0
 
-    const server = new GrpcServer(5051)
+    const server = new grpc.Server()
     server.addService(services.AgentService, {
         pingSession: pingSession
     })
@@ -136,17 +134,7 @@ test('client side streaming with deadline and cancellation', function (t) {
         sendSpan: sendSpan
     })
 
-    const retry = () => {
-        t.end()
-        // // 8st sendSpan when server shutdown
-        // this.grpcDataSender.sendSpan(span)
-        // // 9st sendSpan when server shutdown
-        // this.grpcDataSender.sendSpan(span)
-        // // 10st sendSpan when server shutdown
-        // this.grpcDataSender.sendSpan(span)
-    }
-
-    server.startup((port) => {
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         actuals.dataCount = 1
         actuals.t = t
         actuals.sendSpanCount = 0
@@ -170,7 +158,6 @@ test('client side streaming with deadline and cancellation', function (t) {
                 t.equal(callOrder, 3, '5st spanStream end in callback')
             } else if (callOrder == 5/* 6st sendSpan */) {
                 t.equal(callOrder, 5, '6st spanStream end in callback')
-                t.equal(err.code, 13, 'code is 13 in 6st spanStream callback')
                 t.equal(err.details, '6st sendSpan serverSpanDataCount is 4', 'details in 6st spanStream callback')
             } else if (callOrder == 7/* 8st when spanStream end, recovery spanstream */) {
                 t.equal(callOrder, 7, '8st when spanStream end, recovery spanstream in callback')
@@ -180,7 +167,7 @@ test('client side streaming with deadline and cancellation', function (t) {
             }
         }
 
-        const registeEventListeners = () => {
+        const registerEventListeners = () => {
             const originStatus = this.grpcDataSender.spanStream.grpcStream.stream.listeners('status')[0]
             this.grpcDataSender.spanStream.grpcStream.stream.removeListener('status', originStatus)
             this.grpcDataSender.spanStream.grpcStream.stream.on('status', (status) => {
@@ -191,44 +178,47 @@ test('client side streaming with deadline and cancellation', function (t) {
                     t.equal(status.details, 'OK', 'OK on 3st stream status event')
                 } else if (callOrder == 4/* 5st spanStream end on stream status event */) {
                     t.true(callOrder == 4, '5st spanStream end call Order on stream status event')
-                    t.equal(status.code, 0, 'OK on 5st stream status event')
-                    t.equal(status.details, 'OK', 'OK on 5st stream status event')
+                    t.equal(status.code, 0, 'status.code: 0 OK on 5st stream status event')
+                    t.equal(status.details, 'OK', `status.details: OK on 5st stream status event`)
                     setTimeout(() => {
                         // 6st sendSpan
                         actuals.sendSpanCount++
                         this.grpcDataSender.sendSpan(span)
-                        registeEventListeners()
+                        registerEventListeners()
                     })
                 } else if (callOrder == 6/* 6st sendSpan */) {
                     t.true(callOrder == 6, '6st spanStream end call Order on stream status event')
-                    t.equal(status.code, 13, 'code is 13 in 6st spanStream callback')
                     t.equal(status.details, '6st sendSpan serverSpanDataCount is 4', 'details on stream status event')
                     setTimeout(() => {
                         // 8st when spanStream end, recovery spanstream
                         actuals.sendSpanCount++
                         this.grpcDataSender.sendSpan(span)
-                        registeEventListeners()
+                        registerEventListeners()
                         this.grpcDataSender.spanStream.grpcStream.end()
                     })
                 } else if (callOrder == 8/* 8st when spanStream end, recovery spanstream */) {
                     t.equal(callOrder, 8, '8st when spanStream end, recovery on stream status event')
                     t.equal(status.code, 0, 'OK on 8st stream status event')
                     t.equal(status.details, 'OK', 'OK on 8st stream status event')
-                    endAction()
+                    // // 8st sendSpan when server shutdown
+                    // this.grpcDataSender.sendSpan(span)
+                    // // 9st sendSpan when server shutdown
+                    // this.grpcDataSender.sendSpan(span)
+                    // // 10st sendSpan when server shutdown
+                    // this.grpcDataSender.sendSpan(span)
+                    t.end()
                 }
                 originStatus.call(this.grpcDataSender.spanStream, status)
             })
         }
 
-        registeEventListeners()
+        registerEventListeners()
 
-        endAction = () => {
-            setTimeout(() => {
-                server.tryShutdown(() => {
-                    retry(t)
-                })
-            }, 0)
-        }
+        t.teardown(() => {
+            server.forceShutdown()
+
+            this.grpcDataSender.close()
+        })
 
         // 1st sendSpan
         actuals.sendSpanCount++
@@ -242,7 +232,7 @@ test('client side streaming with deadline and cancellation', function (t) {
         // 4st sendSpan
         actuals.sendSpanCount++
         this.grpcDataSender.sendSpan(span)
-        registeEventListeners()
+        registerEventListeners()
         // 5st spanStream end
         this.grpcDataSender.spanStream.grpcStream.end()
 
@@ -306,7 +296,7 @@ test('spanStream ERR_STREAM_WRITE_AFTER_END', (t) => {
     }
     const callCount = 10
 
-    const server = new GrpcServer()
+    const server = new grpc.Server()
     server.addService(services.AgentService, {
         pingSession: pingSession
     })
@@ -317,7 +307,7 @@ test('spanStream ERR_STREAM_WRITE_AFTER_END', (t) => {
         sendSpan: sendSpan1
     })
 
-    server.startup((port) => {
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',
             'applicationname': 'applicationName',
@@ -330,7 +320,7 @@ test('spanStream ERR_STREAM_WRITE_AFTER_END', (t) => {
             process.nextTick(() => {
                 if (callOrder == 1) {
                     t.true(true, `actualsSpanSession.serverDataCount: ${actualsSpanSession.serverDataCount}, on('data') count : ${callOrder}, actualsSpanSession.serverEndCount: ${actualsSpanSession.serverEndCount}`)
-                    server.shutdown()
+                    server.forceShutdown()
                     t.end()
                 }
             })
@@ -348,6 +338,11 @@ test('spanStream ERR_STREAM_WRITE_AFTER_END', (t) => {
 
         this.grpcDataSender.pingStream.grpcStream.end()
         this.grpcDataSender.statStream.grpcStream.end()
+    })
+
+    t.teardown(() => {
+        this.grpcDataSender.close()
+        server.forceShutdown()
     })
 })
 

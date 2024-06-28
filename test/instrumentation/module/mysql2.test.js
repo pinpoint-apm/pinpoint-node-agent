@@ -283,7 +283,7 @@ test(`Connection Pool with query hooking`, async (t) => {
     
             actualBuilder = new MethodDescriptorBuilder('getConnection')
                 .setClassName('Pool')
-                .setLineNumber(143)
+                .setLineNumber(144)
                 .setFileName('pool.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             actualSpanEvent = trace.span.spanEventList.find( spanEvent => spanEvent.sequence == 1)
@@ -306,7 +306,7 @@ test(`Connection Pool with query hooking`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('PoolConnection')
-                .setLineNumber(153)
+                .setLineNumber(154)
                 .setFileName('pool.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             actualSpanEvent = actualSpanChunk.spanEventList[0]

@@ -8,7 +8,8 @@ const test = require('tape')
 const AntPathMatcher = require('../../lib/utils/ant-path-matcher')
 const axios = require('axios')
 const express = require('express')
-
+const http = require('http')
+const https = require('https')
 const agent = require('../support/agent-singleton-mock')
 let pathMatcher = new AntPathMatcher()
 
@@ -237,7 +238,11 @@ async function outgoingRequest(t, path, expectedSampling, expectUnits) {
         })
 
         const server = app.listen(TEST_ENV.port, async () => {
-            const result1 = await axios.get(getServerUrl(PATH))
+            const result1 = await axios.get(getServerUrl(PATH), {
+                timeout: 3000,
+                httpAgent: new http.Agent({ keepAlive: false }),
+                httpsAgent: new https.Agent({ keepAlive: false }),
+            })
             t.equal(result1.status, 200, `sampling is ${sampling}, response status 200 ok`)
 
             if (expectUnits) {

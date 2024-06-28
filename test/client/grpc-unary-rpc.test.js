@@ -19,16 +19,13 @@ const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const DataSender = require('../../lib/client/data-sender')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
+const CallArgumentsBuilder = require('../../lib/client/call-arguments-builder')
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 const requestAgentInfo = function requestAgentInfo(call, callback) {
     const succeedOnRetryAttempt = call.metadata.get('succeed-on-retry-attempt')
     const previousAttempts = call.metadata.get('grpc-previous-rpc-attempts')
     const delayTime = call.metadata.get('delay-time')
-
-    console.log('succeed-on-retry-attempt', succeedOnRetryAttempt)
-    console.log('grpc-previous-rpc-attempts', previousAttempts)
-    console.log('delay-time', delayTime)
 
     if (succeedOnRetryAttempt.length === 0 || (previousAttempts.length === 0 && previousAttempts[0] === succeedOnRetryAttempt[0])) {
         const result = new spanMessages.PResult()
@@ -40,7 +37,7 @@ const requestAgentInfo = function requestAgentInfo(call, callback) {
     } else {
         const statusCode = call.metadata.get('respond-with-status')
         const code = statusCode[0] ? Number.parseInt(statusCode[0]) : grpc.status.UNKNOWN
-        callback({ code: code, details: `Failed on retry ${previousAttempts[0] ?? 0}`})
+        callback({ code: code, details: `Failed on retry ${previousAttempts[0] ?? 0}` })
     }
 }
 
@@ -66,7 +63,7 @@ function before(port) {
 }
 
 let tryShutdown
-test('sendAgentInfo refresh', (t) => {
+test('AgentInfo with retries enabled but not configured', (t) => {
     const server = new grpc.Server()
     // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
     server.addService(services.AgentService, {
@@ -76,103 +73,79 @@ test('sendAgentInfo refresh', (t) => {
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         dataSender = before(port)
 
-        dataSender.dataSender.sendAgentInfo(agentInfo(), function(error, response) {
+        let callArguments = new CallArgumentsBuilder(function (error, response) {
             if (error) {
                 t.fail(error)
             }
             t.true(response.getSuccess(), '1st PResult.success is true')
-            t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined, delay-time: undefined', '1st PResult.message is "succeed-on-retry-attempt: 0, grpc-previous-rpc-attempts: 0, delay-time: 0"')
-        })
-        
-        const origin = dataSender.dataSender.deadline.getDeadline
-        // dataSender.dataSender.deadline.getDeadline = () => {
-        //     const deadline = new Date()
-        //     deadline.setMilliseconds(deadline.getMilliseconds() + 100)
-        //     return deadline
-        // }
-        // const metadata = new grpc.Metadata()
-        // metadata.set('succeed-on-retry-attempt', '1')
-        dataSender.dataSender.sendAgentInfo(agentInfo(), function(error) {
-            if (error) {
-                t.fail(error)
-            }
-        })
-        dataSender.dataSender.deadline.getDeadline = origin
+            t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined, delay-time: undefined', '1st PResult.message is "succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined, delay-time: undefined"')
+        }).build()
+        dataSender.dataSender.sendAgentInfo(agentInfo(), callArguments)
 
-        dataSender.dataSender.sendAgentInfo(agentInfo(), function(error, response) {
+        callArguments = new CallArgumentsBuilder(function (error) {
+            t.equal(error.details, 'Failed on retry 0', '2nd error.details is "Failed on retry 0"')
+        }).setMetadata('succeed-on-retry-attempt', '1')
+        .build()
+        dataSender.dataSender.sendAgentInfo(agentInfo(), callArguments)
+
+        callArguments = new CallArgumentsBuilder(function (error, response) {
             if (error) {
                 t.fail(error)
             }
             t.true(response.getSuccess(), '3st PResult.success is true')
-            t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined, delay-time: undefined', '3st PResult.message is "succeed-on-retry-attempt: 0, grpc-previous-rpc-attempts: 0, delay-time: 0"')
+            t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined, delay-time: undefined', '3st PResult.message is "succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined, delay-time: undefined"')
             t.end()
-        })
+        }).build()
+        dataSender.dataSender.sendAgentInfo(agentInfo(), callArguments)
     })
 
     t.teardown(() => {
         dataSender.close()
         server.forceShutdown()
     })
-    // server.startup((port) => {
-    //     const agentInfo1 = Object.assign(new AgentInfo({
-    //         agentId: '12121212',
-    //         applicationName: 'applicationName',
-    //         agentStartTime: Date.now()
-    //     }), {
-    //         ip: '1'
-    //     })
+})
 
-    //     const create = (config, agentInfo) => {
-    //         return new DataSender(config, new MockGrpcDataSender(
-    //             config.collectorIp,
-    //             config.collectorTcpPort,
-    //             config.collectorStatPort,
-    //             config.collectorSpanPort,
-    //             agentInfo
-    //         ))
-    //     }
+test('AgentInfo with retries enabled and configured', (t) => {
+    const server = new grpc.Server()
+    // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
+    server.addService(services.AgentService, {
+        requestAgentInfo: requestAgentInfo
+    })
 
-    //     this.dataSender = create({
-    //         collectorIp: 'localhost',
-    //         collectorTcpPort: port,
-    //         collectorStatPort: port,
-    //         collectorSpanPort: port,
-    //         enabledDataSending: true
-    //     }, agentInfo1)
+    let dataSender
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        dataSender = before(port)
 
-    //     this.dataSender.dataSender.deadline.getDeadline = () => {
-    //         const deadline = new Date()
-    //         deadline.setMilliseconds(deadline.getMilliseconds() + 100)
-    //         return deadline
-    //     }
+        let callArguments = new CallArgumentsBuilder(function (error, response) {
+            if (error) {
+                t.fail(error)
+            }
+            t.true(response.getSuccess(), '1st PResult.success is true')
+            t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined, delay-time: undefined', '1st PResult.message is "succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined, delay-time: undefined"')
+        }).build()
+        dataSender.dataSender.sendAgentInfo(agentInfo(), callArguments)
 
-    //     let callbackTimes = 0
-    //     const callback = (err, response) => {
-    //         callbackTimes++
-    //         t.true(err, 'retry 3 times and err deadline')
-    //         t.equal(callbackTimes, 1, 'callback only once called')
-    //         t.false(response, 'retry response is undefined')
-    //         t.equal(requestTimes, 3, 'retry requestes 3 times')
+        callArguments = new CallArgumentsBuilder(function (error) {
+            t.equal(error.details, 'Failed on retry 0', '2nd error.details is "Failed on retry 0"')
+        }).setMetadata('succeed-on-retry-attempt', '1')
+        .build()
+        dataSender.dataSender.sendAgentInfo(agentInfo(), callArguments)
 
-    //         tryShutdown()
-    //         this.dataSender.dataSender.agentInfoDailyScheduler.stop()
-    //     }
-    //     const origin = this.dataSender.dataSender.requestAgentInfo.request
-    //     let requestTimes = 0
-    //     this.dataSender.dataSender.requestAgentInfo.request = (data, _, timesOfRetry = 1) => {
-    //         requestTimes++
-    //         origin.call(this.dataSender.dataSender.requestAgentInfo, data, callback, timesOfRetry)
-    //     }
-    //     this.dataSender.send(agentInfo1)
+        callArguments = new CallArgumentsBuilder(function (error, response) {
+            if (error) {
+                t.fail(error)
+            }
+            t.true(response.getSuccess(), '3st PResult.success is true')
+            t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined, delay-time: undefined', '3st PResult.message is "succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined, delay-time: undefined"')
+            t.end()
+        }).build()
+        dataSender.dataSender.sendAgentInfo(agentInfo(), callArguments)
+    })
 
-    //     tryShutdown = () => {
-    //         setTimeout(() => {
-    //             server.tryShutdown(() => {
-    //                 t.end()
-    //             })
-    //         }, 0)
-    //     }
-    // })
+    t.teardown(() => {
+        dataSender.close()
+        server.forceShutdown()
+    })
 })
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts

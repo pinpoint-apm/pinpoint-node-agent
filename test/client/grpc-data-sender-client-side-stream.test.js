@@ -5,16 +5,15 @@
  */
 
 const test = require('tape')
+const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
-const GrpcServer = require('./grpc-server')
 const Span = require('../../lib/context/span')
 const GrpcClientSideStream = require('../../lib/client/grpc-client-side-stream')
 var _ = require('lodash')
 
-let endAction
 let actuals
 
 const expectedSpan = {
@@ -124,7 +123,7 @@ test('client side streaming with deadline and cancellation', function (t) {
     // when server send stream
     let callOrder = 0
 
-    const server = new GrpcServer(5051)
+    const server = new grpc.Server()
     server.addService(services.AgentService, {
         pingSession: pingSession
     })
@@ -135,17 +134,7 @@ test('client side streaming with deadline and cancellation', function (t) {
         sendSpan: sendSpan
     })
 
-    const retry = () => {
-        t.end()
-        // // 8st sendSpan when server shutdown
-        // this.grpcDataSender.sendSpan(span)
-        // // 9st sendSpan when server shutdown
-        // this.grpcDataSender.sendSpan(span)
-        // // 10st sendSpan when server shutdown
-        // this.grpcDataSender.sendSpan(span)
-    }
-
-    server.startup((port) => {
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         actuals.dataCount = 1
         actuals.t = t
         actuals.sendSpanCount = 0
@@ -211,7 +200,13 @@ test('client side streaming with deadline and cancellation', function (t) {
                     t.equal(callOrder, 8, '8st when spanStream end, recovery on stream status event')
                     t.equal(status.code, 0, 'OK on 8st stream status event')
                     t.equal(status.details, 'OK', 'OK on 8st stream status event')
-                    endAction()
+                    // // 8st sendSpan when server shutdown
+                    // this.grpcDataSender.sendSpan(span)
+                    // // 9st sendSpan when server shutdown
+                    // this.grpcDataSender.sendSpan(span)
+                    // // 10st sendSpan when server shutdown
+                    // this.grpcDataSender.sendSpan(span)
+                    t.end()
                 }
                 originStatus.call(this.grpcDataSender.spanStream, status)
             })
@@ -219,13 +214,11 @@ test('client side streaming with deadline and cancellation', function (t) {
 
         registerEventListeners()
 
-        endAction = () => {
-            setTimeout(() => {
-                server.tryShutdown(() => {
-                    retry(t)
-                })
-            }, 0)
-        }
+        t.teardown(() => {
+            server.forceShutdown()
+
+            this.grpcDataSender.close()
+        })
 
         // 1st sendSpan
         actuals.sendSpanCount++
@@ -303,7 +296,7 @@ test('spanStream ERR_STREAM_WRITE_AFTER_END', (t) => {
     }
     const callCount = 10
 
-    const server = new GrpcServer()
+    const server = new grpc.Server()
     server.addService(services.AgentService, {
         pingSession: pingSession
     })
@@ -314,7 +307,7 @@ test('spanStream ERR_STREAM_WRITE_AFTER_END', (t) => {
         sendSpan: sendSpan1
     })
 
-    server.startup((port) => {
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',
             'applicationname': 'applicationName',
@@ -327,7 +320,7 @@ test('spanStream ERR_STREAM_WRITE_AFTER_END', (t) => {
             process.nextTick(() => {
                 if (callOrder == 1) {
                     t.true(true, `actualsSpanSession.serverDataCount: ${actualsSpanSession.serverDataCount}, on('data') count : ${callOrder}, actualsSpanSession.serverEndCount: ${actualsSpanSession.serverEndCount}`)
-                    server.shutdown()
+                    server.forceShutdown()
                     t.end()
                 }
             })
@@ -345,6 +338,11 @@ test('spanStream ERR_STREAM_WRITE_AFTER_END', (t) => {
 
         this.grpcDataSender.pingStream.grpcStream.end()
         this.grpcDataSender.statStream.grpcStream.end()
+    })
+
+    t.teardown(() => {
+        this.grpcDataSender.close()
+        server.forceShutdown()
     })
 })
 

@@ -37,12 +37,12 @@ jobs:
       - name: Coverage
         run: npm run coverage
       # ... Generate LCOV files or download it from a different job
-      - name: Setup LCOV
-        uses: hrishikesh-kadam/setup-lcov@v1
-      - name: Report coverage
-        uses: zgosalvez/github-actions-report-lcov@v3
-        with:
-          coverage-files: coverage/lcov.info
-          artifact-name: code-coverage-report
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          update-comment: true
+      # - name: Setup LCOV
+      #   uses: hrishikesh-kadam/setup-lcov@v1
+      # - name: Report coverage
+      #   uses: zgosalvez/github-actions-report-lcov@v3
+      #   with:
+      #     coverage-files: coverage/lcov.info
+      #     artifact-name: code-coverage-report
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     update-comment: true

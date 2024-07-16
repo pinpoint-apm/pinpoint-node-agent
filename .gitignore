@@ -31,9 +31,6 @@ yarn-error.log*
 packages/**/.npmrc
 
 .vscode
-
-package-lock.json
-
 yarn.lock
 
 .node-version
@@ -43,3 +40,6 @@ checkstyle-results.xml
 
 # coverage
 .nyc_output
+
+# gRPC
+grpc

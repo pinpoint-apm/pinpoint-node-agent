@@ -7,10 +7,7 @@
 const test = require('tape')
 const axios = require('axios')
 const express = require('express')
-
-const {
-  fixture
-} = require('../test-helper')
+const http = require('http')
 const agent = require('../support/agent-singleton-mock')
 
 const TEST_ENV = {
@@ -48,7 +45,7 @@ function outgoingRequest(t, sampling) {
 
     actualTrace = agent.currentTraceObject()
 
-    const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
+    const result1 = await axios.get(getServerUrl(OUTGOING_PATH), { httpAgent: new http.Agent({ keepAlive: false }) })
     t.equal(result1.data, 'ok get', 'result equals')
     res.send('ok get')
   })
@@ -70,7 +67,7 @@ function outgoingRequest(t, sampling) {
   })
 
   const server = app.listen(TEST_ENV.port, async () => {
-    const result1 = await axios.get(getServerUrl(PATH))
+    const result1 = await axios.get(getServerUrl(PATH), { httpAgent: new http.Agent({ keepAlive: false }) })
     t.ok(result1.status, 200)
 
     server.close()
@@ -108,6 +105,8 @@ function incomingRequest(t, sampled) {
       "pinpoint-host": "localhost:3000"
     },
     params: {},
+    timeout: 1000,
+    httpAgent: new http.Agent({ keepAlive: false }),
   }
 
   const PATH = '/incommingrequest'
@@ -128,7 +127,7 @@ function incomingRequest(t, sampled) {
       t.equal(trace.sampling, sampled)
     }
 
-    const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
+    const result1 = await axios.get(getServerUrl(OUTGOING_PATH), { httpAgent: new http.Agent({ keepAlive: false }) })
     t.equal(result1.data, 'ok get', 'result equals')
     res.send('ok get')
   })
@@ -204,7 +203,7 @@ test('incomming request by User', (t) => {
     t.equal(typeof trace.traceId.transactionId.agentStartTime, "string")
     t.equal(typeof trace.traceId.transactionId.sequence, "string")
     
-    const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
+    const result1 = await axios.get(getServerUrl(OUTGOING_PATH), { httpAgent: new http.Agent({ keepAlive: false }) })
     t.equal(result1.data, 'ok get', 'result equals')
     res.send('ok get')
   })
@@ -235,7 +234,7 @@ test('incomming request by User', (t) => {
   })
 
   const server = app.listen(TEST_ENV.port, async () => {
-    const result1 = await axios.get(getServerUrl(PATH))
+    const result1 = await axios.get(getServerUrl(PATH), { httpAgent: new http.Agent({ keepAlive: false }) })
     t.ok(result1.status, 200)
     t.equal(typeof agent.dataSender.mockSpan.spanId, "string")  
     t.equal(typeof agent.dataSender.mockSpan.parentSpanId, "string")

@@ -56,7 +56,7 @@ test('Should write pinpoint header', async function (t) {
     t.equal(writtenReq.headers[PinpointHeader.HTTP_TRACE_ID], trace.traceId.transactionId.toString(), "trace ID new ID was added in Header")
   })
   .listen(5005, async function() {
-    await axios.get(`http://${endPoint}${rpcName}?q=1`)
+    await axios.get(`http://${endPoint}${rpcName}?q=1`, { httpAgent: new http.Agent({ keepAlive: false }) })
     server.close()
   })
 })

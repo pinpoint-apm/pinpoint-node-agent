@@ -33,6 +33,7 @@ jobs:
       #   uses: jwgmeligmeyling/checkstyle-github-action@master
       #   with:
       #     path: '**/checkstyle-result.xml'
+      #     token: ${{ secrets.GITHUB_TOKEN }}
       - name: Coverage
         run: npm run coverage
       # ... Generate LCOV files or download it from a different job
@@ -42,5 +43,6 @@ jobs:
         uses: zgosalvez/github-actions-report-lcov@v3
         with:
           coverage-files: coverage/lcov.info
-          github-token: ${{ secrets.ACTIONS_TOKEN }}
+          artifact-name: code-coverage-report
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           update-comment: true

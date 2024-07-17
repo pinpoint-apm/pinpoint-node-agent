@@ -11,6 +11,10 @@ coverage
 checkstyle-results.xml
 .github
 .vscode
+.idea
+.gitmodules
+checkstyle-result.xml
+grpc/grpc-idl/README.md
 
 # gRPC
 *.proto

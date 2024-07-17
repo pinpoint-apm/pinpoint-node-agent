@@ -1,6 +1,16 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [0.8.6] - 2024-07-17
+### Changed
+- [[#193](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/193)] Update gRPC version v1.11.0 from v1.2.3 
+### Fixed
+- [[#200](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/200)] Fix package.json error
+### Removed
+- [[#200](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/200)] Remove no needs resolutions for semver
+- [[#200](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/200)] Remove no needed files in npm published package
+- [[#195](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/195)] Remove no used modules mysql, mysql2 syntax errors below v0.9
+
 ## [0.8.5] - 2024-05-13
 ### Fixed
 - #190 Remove JSON.stringify on Info Logger

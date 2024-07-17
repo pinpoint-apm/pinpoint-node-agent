@@ -1,6 +1,6 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "0.8.6-next.1",
+  "version": "0.8.6",
   "main": "index.js",
   "scripts": {
     "test": "tape ./test/**/*.test.js",
@@ -10,7 +10,7 @@
   "description": "Pinpoint node agent provided by NAVER",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pinpoint-apm/pinpoint-node-agent"
+    "url": "git+https://github.com/pinpoint-apm/pinpoint-node-agent.git"
   },
   "contributors": [
     "Yongseok Kang <feelform@gmail.com> (https://github.com/feelform)"
@@ -86,8 +86,5 @@
     "rimraf": "^2.6.2",
     "tape": "^4.9.1",
     "testcontainers": "^2.8.0"
-  },
-  "resolutions": {
-    "semver": "^7.5.3"
   }
 }

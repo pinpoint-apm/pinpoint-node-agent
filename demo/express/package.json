@@ -13,7 +13,7 @@
     "http-errors": "~1.6.3",
     "ioredis": "^4.17.3",
     "morgan": "~1.9.1",
-    "pinpoint-node-agent": "^0.8.5-next.2",
+    "pinpoint-node-agent": "^0.8.6-next.3",
     "pug": "^3.0.2"
   }
 }

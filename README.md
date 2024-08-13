@@ -80,9 +80,9 @@ PINPOINT_AGENT_ID=${HOSTNAME} pm2 start ~/service/bin/pm2_start.json​
 * mysql and mysql2
 
 ## Agent - Collector compatibility table
-Agent Version | Collector 1.x | Collector 2.x
-------------- | --------------- | ---------------
-0.6.x | no      | yes
+Agent Version | Collector 1.x | Collector 2.x | Collector 3.x
+------------- | --------------- | --------------- | ---------------
+above v0.8 | no      | yes | yes
 
 ## Sampling rate
 If you use [Performance tester for sampling rate](/demo/performance-tester), you can review while changing the sampling rate of the node agent of the Node application.

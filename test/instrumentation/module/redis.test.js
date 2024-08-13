@@ -13,7 +13,8 @@ const Router = require('koa-router')
 const koaBodyParser = require('koa-bodyparser')
 const ioRedis = require('ioredis')
 const { createClient } = require('redis')
-const { GenericContainer } = require('testcontainers')
+const { RedisContainer } = require('@testcontainers/redis')
+const { Wait } = require("testcontainers")
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
@@ -21,6 +22,7 @@ const ServiceType = require('../../../lib/context/service-type')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
 const { getAsyncTraceByAsyncId, assertSpanChunk, assertTrace } = require('../../fixture')
+const https = require('https')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -37,13 +39,16 @@ const redisData = {
 const testName1 = 'express-redis'
 test(`${testName1} should Record the connections between express and redis.`, async function (t) {
   agent.bindHttp()
-  const container = await new GenericContainer('redis')
-    .withExposedPorts(6379)
+  const container = await new RedisContainer()
+    .withWaitStrategy(Wait.forAll([
+      Wait.forListeningPorts(),
+      Wait.forLogMessage("Ready to accept connections")
+    ]))
     .start()
 
   const testName = testName1
   const app = new express()
-  const client = createClient(container.getMappedPort(6379), container.getHost())
+  const client = createClient({ url: container.getConnectionUrl() })
   const PATH = `/${testName}`
 
   app.use(express.json())
@@ -66,7 +71,7 @@ test(`${testName1} should Record the connections between express and redis.`, as
         return
       }
       const trace = localStorage.getStore()
-      axios.get(`https://www.naver.com`)
+      axios.get(`https://www.naver.com`, { httpsAgent: new https.Agent({ keepAlive: false }) })
         .then(function (response) {
           const actualHttpCallbackNextAsyncId = actualNextAsyncId
           const actualHttpCallbackSpanChunk = trace.storage.dataSender.findSpanChunk(actualHttpCallbackNextAsyncId)
@@ -227,13 +232,16 @@ test(`${testName1} should Record the connections between express and redis.`, as
 
 test(`${testName1} redis callback nested asyncTrace with await HTTP get`, async function (t) {
   agent.bindHttp()
-  const container = await new GenericContainer('redis')
-    .withExposedPorts(6379)
+  const container = await new RedisContainer()
+    .withWaitStrategy(Wait.forAll([
+      Wait.forListeningPorts(),
+      Wait.forLogMessage("Ready to accept connections")
+    ]))  
     .start()
 
   const testName = testName1
   const app = new express()
-  const client = createClient(container.getMappedPort(6379), container.getHost())
+  const client = createClient({ url: container.getConnectionUrl() })
   const PATH = `/${testName}`
 
   app.post(PATH, function (req, res, next) {
@@ -244,7 +252,7 @@ test(`${testName1} redis callback nested asyncTrace with await HTTP get`, async 
         return
       }
       try {
-        const { data } = await axios.get(`https://www.naver.com`)
+        const { data } = await axios.get(`https://www.naver.com`, { httpsAgent: new https.Agent({ keepAlive: false }) })
       } catch (error) {
         console.error(error)
       }
@@ -317,8 +325,11 @@ test(`${testName1} redis callback nested asyncTrace with await HTTP get`, async 
 const testName2 = 'express-ioredis'
 test(`${testName2} should Record the connections between express and ioredis.`, async function (t) {
   agent.bindHttp()
-  const container = await new GenericContainer("redis")
-    .withExposedPorts(6379)
+  const container = await new RedisContainer()
+    .withWaitStrategy(Wait.forAll([
+      Wait.forListeningPorts(),
+      Wait.forLogMessage("Ready to accept connections")
+    ]))     
     .start()
 
   const testName = testName2
@@ -377,14 +388,17 @@ test(`${testName2} should Record the connections between express and ioredis.`, 
 const testName3 = 'koa-redis'
 test(`${testName3} should Record the connections between koa and redis.`, async function (t) {
   agent.bindHttp()
-  const container = await new GenericContainer('redis')
-    .withExposedPorts(6379)
+  const container = await new RedisContainer()
+    .withWaitStrategy(Wait.forAll([
+      Wait.forListeningPorts(),
+      Wait.forLogMessage("Ready to accept connections")
+    ]))  
     .start()
 
   const testName = testName3
   const app = new Koa()
   const router = new Router()
-  const client = createClient(container.getMappedPort(6379), container.getHost())
+  const client = createClient({ url: container.getConnectionUrl() })
 
   const PATH = `/${testName}`
   app.use(koaBodyParser())
@@ -432,8 +446,11 @@ test(`${testName3} should Record the connections between koa and redis.`, async 
 const testName4 = 'koa-ioredis'
 test(`${testName4} should Record the connections between koa and ioredis.`, async function (t) {
   agent.bindHttp()
-  const container = await new GenericContainer('redis')
-    .withExposedPorts(6379)
+  const container = await new RedisContainer()
+    .withWaitStrategy(Wait.forAll([
+      Wait.forListeningPorts(),
+      Wait.forLogMessage("Ready to accept connections")
+    ]))  
     .start()
 
   const testName = testName4
@@ -506,13 +523,16 @@ test(`${testName4} should Record the connections between koa and ioredis.`, asyn
 
 test(`${testName1} await connections between express and redis.`, async function (t) {
   agent.bindHttp()
-  const container = await new GenericContainer('redis')
-    .withExposedPorts(6379)
+  const container = await new RedisContainer()
+    .withWaitStrategy(Wait.forAll([
+      Wait.forListeningPorts(),
+      Wait.forLogMessage("Ready to accept connections")
+    ]))  
     .start()
 
   const testName = testName1
   const app = new express()
-  const client = createClient(container.getMappedPort(6379), container.getHost())
+  const client = createClient({ url: container.getConnectionUrl() })
   const PATH = `/${testName}`
 
   app.post(PATH, function (req, res, next) {
@@ -528,7 +548,7 @@ test(`${testName1} await connections between express and redis.`, async function
         t.equal(actualSpanChunk.transactionIdObject, trace.traceId.transactionId, 'transactionId')
         t.equal(actualSpanChunk.localAsyncId.asyncId, actualNextAsyncId, 'localAsyncId.asyncId')
         t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence')
-  
+
         let actualSpanEvent = actualSpanChunk.spanEventList.find(spanEvent => spanEvent.sequence === 0)
         t.equal(actualSpanEvent.apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'apiId')
         t.equal(actualSpanEvent.depth, 1, 'depth')
@@ -549,16 +569,16 @@ test(`${testName1} await connections between express and redis.`, async function
         t.equal(actualSpanEvent.destinationId, 'Redis', 'RedisClient.expire actualSpanEvent.destinationId')
         t.equal(actualSpanEvent.endPoint, `localhost:${container.getMappedPort(6379)}`, 'RedisClient.expire actualSpanEvent.endPoint')
         actualNextAsyncId = actualSpanEvent.nextAsyncId
-  
+
         actualSpanEvent = actualSpanChunk.spanEventList.find(spanEvent => spanEvent.sequence === 2)
         t.equal(actualSpanEvent.apiId, 0, 'HTTP request apiId')
         t.equal(actualSpanEvent.depth, 2, 'HTTP request depth')
         t.equal(actualSpanEvent.sequence, 2, 'HTTP request sequence')
         t.equal(actualSpanEvent.serviceType, ServiceType.asyncHttpClientInternal.getCode(), 'HTTP request serviceType')
-  
+
         let actualAnnotation = actualSpanEvent.annotations.find(annotation => annotation.key === annotationKey.API.getCode())
         t.equal(actualAnnotation.value, 'http.request', 'HTTP request annotation value')
-  
+
         const actualHttpCallbackNextAsyncId = actualSpanEvent.nextAsyncId
         let asyncTrace = getAsyncTraceByAsyncId(actualHttpCallbackNextAsyncId)
         assertSpanChunk(asyncTrace, actualHttpCallbackSpanChunk => {
@@ -566,19 +586,19 @@ test(`${testName1} await connections between express and redis.`, async function
           t.equal(actualHttpCallbackSpanChunk.transactionIdObject, asyncTrace.traceId.transactionId, 'HTTP request callback transactionId')
           t.equal(actualHttpCallbackSpanChunk.localAsyncId.asyncId, actualHttpCallbackNextAsyncId, 'HTTP request callback localAsyncId.asyncId')
           t.equal(actualHttpCallbackSpanChunk.localAsyncId.sequence, 1, 'HTTP request callback localAsyncId.sequence')
-    
+
           actualSpanEvent = actualHttpCallbackSpanChunk.spanEventList.find(spanEvent => spanEvent.sequence === 0)
           t.equal(actualSpanEvent.apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'HTTP request callback asyncInvocationDescriptor.spanEvent.apiId')
           t.equal(actualSpanEvent.depth, 1, 'HTTP request callback asyncInvocationDescriptor.spanEvent.depth')
           t.equal(actualSpanEvent.sequence, 0, 'HTTP request callback asyncInvocationDescriptor.spanEvent.sequence')
           t.equal(actualSpanEvent.serviceType, ServiceType.async.getCode(), 'HTTP request callback asyncInvocationDescriptor.spanEvent.serviceType')
-    
+
           actualSpanEvent = actualHttpCallbackSpanChunk.spanEventList.find(spanEvent => spanEvent.sequence === 1)
           t.equal(actualSpanEvent.apiId, 0, 'HTTP request callback spanEvent.apiId')
           t.equal(actualSpanEvent.depth, 2, 'HTTP request callback spanEvent.depth')
           t.equal(actualSpanEvent.sequence, 1, 'HTTP request callback spanEvent.sequence')
           t.equal(actualSpanEvent.serviceType, ServiceType.asyncHttpClient.getCode(), 'HTTP request callback spanEvent.serviceType')
-    
+
           actualAnnotation = actualSpanEvent.annotations[0]
           t.equal(actualAnnotation.key, annotationKey.API.getCode(), 'HTTP request callback spanEvent.annotation[0].key')
           t.equal(actualAnnotation.value, 'GET', 'HTTP request callback spanEvent.annotation[0].value')
@@ -587,15 +607,15 @@ test(`${testName1} await connections between express and redis.`, async function
           t.equal(actualAnnotation.value, 'www.naver.com/', 'HTTP request callback spanEvent.annotation[1].value annotationKey.HTTP_URL')
           actualAnnotation = actualSpanEvent.annotations[2]
           t.equal(actualAnnotation.key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP request callback spanEvent.annotation[2].key annotationKey.HTTP_STATUS_CODE')
-          t.equal(actualAnnotation.value, 200, 'HTTP request callback spanEvent.annotation[2].value annotationKey.HTTP_STATUS_CODE')  
+          t.equal(actualAnnotation.value, 200, 'HTTP request callback spanEvent.annotation[2].value annotationKey.HTTP_STATUS_CODE')
         })
-  
+
         t.equal(actualSpanChunk.spanEventList.length, 3, 'spanEventList.length')
       })
       client.expire('key', 10)
-      await axios.get(`https://www.naver.com`)
+      await axios.get(`https://www.naver.com`, { httpsAgent: new https.Agent({ keepAlive: false }) })
       client.quit()
-      await container.stop()  
+      await container.stop()
     })
 
     let actualNextAsyncId
@@ -612,7 +632,7 @@ test(`${testName1} await connections between express and redis.`, async function
       t.equal(actualSpanEvent.sequence, 0, 'sequence')
       t.equal(actualSpanEvent.depth, 1, 'depth')
       t.equal(actualSpanEvent.serviceType, 6600, 'serviceType')
-  
+
       actualBuilder = new MethodDescriptorBuilder('set')
         .setClassName('RedisClient')
       actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)

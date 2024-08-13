@@ -6,7 +6,7 @@
 
 const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
-const { MySqlContainer } = require('testcontainers')
+const { MySqlContainer } = require('@testcontainers/mysql')
 const path = require('path')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
 const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')

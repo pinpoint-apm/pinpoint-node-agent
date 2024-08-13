@@ -7,10 +7,8 @@
 const test = require('tape')
 const axios = require('axios')
 const express = require('express')
-
-const {
-  fixture
-} = require('../test-helper')
+const http = require('http')
+const https = require('https')
 const agent = require('../support/agent-singleton-mock')
 
 const TEST_ENV = {
@@ -48,7 +46,11 @@ function outgoingRequest(t, sampling) {
 
     actualTrace = agent.currentTraceObject()
 
-    const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
+    const result1 = await axios.get(getServerUrl(OUTGOING_PATH), {
+      timeout: 1000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
     t.equal(result1.data, 'ok get', 'result equals')
     res.send('ok get')
   })
@@ -70,7 +72,11 @@ function outgoingRequest(t, sampling) {
   })
 
   const server = app.listen(TEST_ENV.port, async () => {
-    const result1 = await axios.get(getServerUrl(PATH))
+    const result1 = await axios.get(getServerUrl(PATH), {
+      timeout: 1000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
     t.ok(result1.status, 200)
 
     server.close()
@@ -108,6 +114,9 @@ function incomingRequest(t, sampled) {
       "pinpoint-host": "localhost:3000"
     },
     params: {},
+    timeout: 1000,
+    httpAgent: new http.Agent({ keepAlive: false }),
+    httpsAgent: new https.Agent({ keepAlive: false }),
   }
 
   const PATH = '/incommingrequest'
@@ -117,7 +126,7 @@ function incomingRequest(t, sampled) {
     const trace = agent.currentTraceObject()
     const headers = config.headers
 
-    if (trace.traceId) {      
+    if (trace.traceId) {
       expectedTransactionId = trace.traceId.transactionId.toString()
       expectedSpanId = trace.traceId.spanId
       t.equal(expectedTransactionId, headers['pinpoint-traceid'])
@@ -130,7 +139,11 @@ function incomingRequest(t, sampled) {
       t.equal(trace.canSampled(), sampled)
     }
 
-    const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
+    const result1 = await axios.get(getServerUrl(OUTGOING_PATH), {
+      timeout: 1000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
     t.equal(result1.data, 'ok get', 'result equals')
     res.send('ok get')
   })
@@ -169,7 +182,7 @@ function incomingRequest(t, sampled) {
     const result1 = await axios.get(getServerUrl(PATH), config)
     t.ok(result1.status, 200)
     if (sampled) {
-      t.equal(typeof agent.dataSender.mockSpan.spanId, "string")  
+      t.equal(typeof agent.dataSender.mockSpan.spanId, "string")
       t.equal(typeof agent.dataSender.mockSpan.parentSpanId, "string")
       t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.agentStartTime, "string")
       t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.sequence, "string")
@@ -205,7 +218,7 @@ test('incomming request by User', (t) => {
     t.equal(trace.canSampled(), true)
     t.equal(typeof trace.traceId.transactionId.agentStartTime, "string")
     t.equal(typeof trace.traceId.transactionId.sequence, "string")
-    
+
     const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
     t.equal(result1.data, 'ok get', 'result equals')
     res.send('ok get')
@@ -239,7 +252,7 @@ test('incomming request by User', (t) => {
   const server = app.listen(TEST_ENV.port, async () => {
     const result1 = await axios.get(getServerUrl(PATH))
     t.ok(result1.status, 200)
-    t.equal(typeof agent.dataSender.mockSpan.spanId, "string")  
+    t.equal(typeof agent.dataSender.mockSpan.spanId, "string")
     t.equal(typeof agent.dataSender.mockSpan.parentSpanId, "string")
     t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.agentStartTime, "string")
     t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.sequence, "string")

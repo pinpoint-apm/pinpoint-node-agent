@@ -8,6 +8,7 @@ const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
 const axios = require('axios')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
+const https = require('https')
 
 test(`outgoing request URL escape a bug`, async (t) => {
     agent.bindHttp()
@@ -18,7 +19,7 @@ test(`outgoing request URL escape a bug`, async (t) => {
     localStorage.run(trace, () => {
         t.true(trace)
     
-        axios.get(`https://www.naver.com`)
+        axios.get(`https://www.naver.com`, { httpsAgent: new https.Agent({ keepAlive: false }) })
             .then(function (response) {
                 t.true(response.status == 200)
     

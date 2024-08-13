@@ -6,12 +6,16 @@
 
 const test = require('tape')
 const agent = require('../support/agent-singleton-mock')
-const { GenericContainer } = require('testcontainers')
+const { RedisContainer } = require('@testcontainers/redis')
+const { Wait } = require("testcontainers")
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 
 test(`fix redis call stack depth`, async (t) => {
-    const container = await new GenericContainer('redis')
-        .withExposedPorts(6379)
+    const container = await new RedisContainer()
+        .withWaitStrategy(Wait.forAll([
+            Wait.forListeningPorts(),
+            Wait.forLogMessage("Ready to accept connections")
+        ]))    
         .start()
 
     agent.bindHttp()
@@ -21,10 +25,7 @@ test(`fix redis call stack depth`, async (t) => {
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
         const redis = require('redis')
-        const client = redis.createClient(
-            container.getMappedPort(6379),
-            container.getHost(),
-        )
+        const client = redis.createClient({ url: container.getConnectionUrl() })
     
         client.set('key', 'value', async function (error) {
             t.true(error == null, 'error is null')

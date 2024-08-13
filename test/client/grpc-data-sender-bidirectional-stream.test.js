@@ -6,41 +6,37 @@
 
 
 const test = require('tape')
+const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
-const GrpcServer = require('./grpc-server')
-var _ = require('lodash')
-
-let actualsPingSession = {
+let actualPingSession = {
     serverDataCount: 0,
     serverEndCount: 0
 }
 
-let endAction
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 // https://github.com/grpc/grpc-node/pull/1616/files
 function pingSession(call) {
     call.on('data', (ping) => {
-        actualsPingSession.serverDataCount++
+        actualPingSession.serverDataCount++
         log.debug(`pingSession in data: ${JSON.stringify(ping.toObject())}`)
-        if (actualsPingSession.serverDataCount == 1) {
+        if (actualPingSession.serverDataCount == 1) {
             call.write(ping)
-        } else if (actualsPingSession.serverDataCount == 2) {
-            call.cancel()
-        } else if (actualsPingSession.serverDataCount >= 3) {
+        } else if (actualPingSession.serverDataCount == 2) {
+            call.emit('error', new Error('2st ping request is error'))
+        } else if (actualPingSession.serverDataCount >= 3) {
             call.write(ping)
         }
 
-        if (actualsPingSession.serverDataCount == actualsPingSession.dataCount) {
-            actualsPingSession.t.true(actualsPingSession.serverDataCount == actualsPingSession.dataCount, 'dataCount is matching')
+        if (actualPingSession.serverDataCount == actualPingSession.dataCount) {
+            actualPingSession.t.true(actualPingSession.serverDataCount == actualPingSession.dataCount, 'dataCount is matching')
         }
     })
     call.on('end', () => {
-        actualsPingSession.serverEndCount++
-        call.end()
-        if (actualsPingSession.serverEndCount == 3) {
-            actualsPingSession.t.equal(actualsPingSession.serverEndCount, actualsPingSession.endCount, 'bidirectional stream end count match')
+        actualPingSession.serverEndCount++
+        if (actualPingSession.serverEndCount == 3) {
+            actualPingSession.t.equal(actualPingSession.serverEndCount, actualPingSession.endCount, 'bidirectional stream end count match')
         }
     })
 }
@@ -48,45 +44,39 @@ function pingSession(call) {
 test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping end ex) Deadline exceeded error case', function (t) {
     let planCount = 51
 
-    actualsPingSession = {
+    actualPingSession = {
         serverDataCount: 0,
         serverEndCount: 0
     }
-    const server = new GrpcServer()
+    const server = new grpc.Server()
 
     server.addService(services.AgentService, {
         pingSession: pingSession
     })
-    server.addService(services.StatService, {
-        sendAgentStat: pingSessionServer
-    })
-    server.addService(services.SpanService, {
-        sendSpan: pingSessionServer
-    })
-    server.startup((port) => {
-        actualsPingSession.endCount = 3
-        actualsPingSession.dataCount = 5
-        actualsPingSession.t = t
-
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+        actualPingSession.endCount = 3
+        actualPingSession.dataCount = 5
+        actualPingSession.t = t
+    
         this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',
             'applicationname': 'applicationName',
             'starttime': Date.now()
         })
-
+    
         t.equal(this.grpcDataSender.pingStream.constructor.name, 'GrpcBidirectionalStream', `pingStream is the GrpcBidirectionalStream`)
         t.equal(this.grpcDataSender.pingStream.grpcStream.stream.constructor.name, 'ClientDuplexStreamImpl', 'when previous throw Deadline exceeded')
-
+    
         // when server send stream end event
         let callOrder = 0
-
+    
         const originGrpcStream = this.grpcDataSender.pingStream.grpcStream.endWithStream
         this.grpcDataSender.pingStream.grpcStream.endWithStream = (stream) => {
             this.grpcDataSender.pingStream.grpcStream.endedStream = stream
             originGrpcStream(stream)
         }
-
-        const registeEventListeners = () => {
+    
+        const registerEventListeners = () => {
             const originEnd = this.grpcDataSender.pingStream.grpcStream.stream.listeners('end')[0]
             this.grpcDataSender.pingStream.grpcStream.stream.removeListener('end', originEnd)
             this.grpcDataSender.pingStream.grpcStream.stream.on('end', () => {
@@ -104,7 +94,7 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                     originEnd()
                 }
             })
-
+    
             const originData = this.grpcDataSender.pingStream.grpcStream.stream.listeners('data')[0]
             this.grpcDataSender.pingStream.grpcStream.stream.removeListener('data', originData)
             this.grpcDataSender.pingStream.grpcStream.stream.on('data', (data) => {
@@ -114,7 +104,7 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                 }
                 if (callOrder == 6/* 3st Ping, Data */) {
                     t.equal(callOrder, 6, '3st Ping is data and call order is 5 ')
-
+    
                     setTimeout(() => {
                         // 4st when PingStream client stream cancel
                         this.grpcDataSender.pingStream.grpcStream.stream.cancel()
@@ -132,18 +122,18 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                 }
                 originData(data)
             })
-
+    
             const originError = this.grpcDataSender.pingStream.grpcStream.stream.listeners('error')[0]
             this.grpcDataSender.pingStream.grpcStream.stream.removeListener('error', originError)
             this.grpcDataSender.pingStream.grpcStream.stream.on('error', (error) => {
                 callOrder++
                 if (callOrder == 2/* 2st Ping, Server Error case */) {
                     t.true(callOrder == 2, '2st event is error')
-                    t.equal(error.code, 13, '"call.cancel is not a function" error code is 13')
-                    t.equal(error.message, '13 INTERNAL: call.cancel is not a function', '13 INTERNAL: call.cancel is not a function')
+                    t.equal(error.code, 2, '2st error code is 2')
+                    t.equal(error.details, '2st ping request is error', '2st error details is "2st ping request is error"')
                 }
                 if (callOrder == 5/* 3st Ping, Data */) {
-                    registeEventListeners()
+                    registerEventListeners()
                 }
                 if (callOrder == 7/* 4st Cancelled on client */) {
                     t.equal(callOrder, 7, '4st Cancelled on client')
@@ -157,8 +147,8 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                     setTimeout(() => {
                         // 6st sendPing
                         this.grpcDataSender.sendPing()
-                        registeEventListeners()
-
+                        registerEventListeners()
+    
                         // 7st end
                         if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writable !== 'undefined') {
                             t.true(this.grpcDataSender.pingStream.grpcStream.stream.writable, 'writable is true before stream.end() on 7st end')
@@ -166,40 +156,40 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                         if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writableEnded !== 'undefined') {
                             t.false(this.grpcDataSender.pingStream.grpcStream.stream.writableEnded, 'writableEnded is false before stream.end() on 7st end')
                         }
-
+    
                         t.false(this.grpcDataSender.pingStream.grpcStream.streamEnded, 'stream ended symbol not sync by writable.end()')
                         t.true(typeof this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol === 'undefined', 'stream ended symbol not boolean by writable.end()')
                         this.grpcDataSender.pingStream.grpcStream.stream.end()
                         t.false(this.grpcDataSender.pingStream.grpcStream.streamEnded, 'stream ended symbol not sync by writable.end()')
                         t.true(typeof this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol === 'undefined', 'stream ended symbol not boolean by writable.end()')
-
+    
                         if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writable !== 'undefined') {
                             t.false(this.grpcDataSender.pingStream.grpcStream.stream.writable, 'writable is false after stream.end() on 7st end')
                         }
                         if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writableEnded !== 'undefined') {
                             t.true(this.grpcDataSender.pingStream.grpcStream.stream.writableEnded, 'writableEnded is true after stream.end() on 7st end')
                         }
-
+    
                         t.false(this.grpcDataSender.pingStream.grpcStream.streamEnded, 'stream ended symbol is sync by stream.end()')
                         t.true(typeof this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol === 'undefined', 'stream ended symbol is boolean by stream.end()')
                         this.grpcDataSender.pingStream.grpcStream.endWithStream(this.grpcDataSender.pingStream.grpcStream.stream)
                         t.true(this.grpcDataSender.pingStream.grpcStream.streamEnded, 'stream ended symbol is sync by stream.end()')
                         t.true(typeof this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol === 'boolean', 'stream ended symbol is boolean by stream.end()')
                         t.true(this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol, 'stream ended symbol is true by stream.end()')
-
+    
                         t.true(this.grpcDataSender.pingStream.grpcStream.stream, 'stream is not null')
                         this.grpcDataSender.pingStream.grpcStream.end()
                         t.true(this.grpcDataSender.pingStream.grpcStream.stream === null, 'stream is null after grpcStream.end()')
-
+    
                         // 8st sendPing()
                         this.grpcDataSender.sendPing()
                         const currentStream = this.grpcDataSender.pingStream.grpcStream.stream
-
+    
                         process.nextTick(() => {
                             // 9st sendPing()
                             this.grpcDataSender.sendPing()
                             t.true(currentStream === this.grpcDataSender.pingStream.grpcStream.stream, 'steam reused')
-
+    
                             const originWrite = this.grpcDataSender.pingStream.grpcStream.write
                             let writeCount = 0
                             this.grpcDataSender.pingStream.grpcStream.write = (data, rewriteAfterStreamEnd = true) => {
@@ -208,7 +198,7 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                                 if (writeCount == 2) {
                                     process.nextTick(() => {
                                         this.grpcDataSender.pingStream.grpcStream.end()
-                                        endAction()
+                                        t.end()
                                     })
                                 }
                             }
@@ -232,15 +222,15 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                 }
                 originError(error)
             })
-
+    
             const originStatus = this.grpcDataSender.pingStream.grpcStream.stream.listeners('status')[0]
             this.grpcDataSender.pingStream.grpcStream.stream.removeListener('status', originStatus)
             this.grpcDataSender.pingStream.grpcStream.stream.on('status', (status) => {
                 callOrder++
                 if (callOrder == 3/* 2st Ping, Server Error case */) {
                     t.true(callOrder == 3, '3st is status')
-                    t.equal(status.code, 13, '"call.cancel is not a function" error code is 13 in 2st ping is status')
-                    t.equal(status.details, 'call.cancel is not a function', 'call.cancel is not a function in 2st ping is status')
+                    t.equal(status.code, 2, '2st status code is 2')
+                    t.equal(status.details, '2st ping request is error', '2st status details is "2st ping request is error"')
                 }
                 if (callOrder == 8/* 4st Cancelled on client */) {
                     t.equal(callOrder, 8, '4st Cancelled on client')
@@ -255,7 +245,7 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                 originStatus(status)
             })
         }
-
+    
         if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writable === 'undefined') {
             planCount = planCount - 2
         }
@@ -263,37 +253,24 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
             planCount = planCount - 2
         }
         // t.plan(planCount)
-
-        registeEventListeners()
+    
+        registerEventListeners()
         t.true(this.grpcDataSender.pingStream.grpcStream.stream, 'Ping stream is Good')
         this.grpcDataSender.sendPing()
-
+    
         // Server Error case
         t.true(this.grpcDataSender.pingStream.grpcStream.stream, 'Ping stream is Good in server error')
         this.grpcDataSender.sendPing()
-
+    
         const nextSendPingTest = () => {
             /* 3st Ping, Data after Server Error case, reconnect case */
             this.grpcDataSender.sendPing()
             t.true(this.grpcDataSender.pingStream.grpcStream.stream, 'when reconnect to gRPC server, after call.cancel not found error')
         }
-
-        endAction = () => {
-            server.tryShutdown(() => {
-                t.end()
-            })
-        }
+    
+        t.teardown(() => {
+            this.grpcDataSender.close()
+            server.forceShutdown()
+        })
     })
 })
-
-function pingSessionServer(call) {
-    actualsPingSessionServer.serverDataCount = 0
-    call.on('data', () => {
-
-    })
-
-    call.on('end', () => {
-    })
-}
-
-let actualsPingSessionServer

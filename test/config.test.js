@@ -6,9 +6,7 @@
 
 const test = require('tape')
 const { log } = require('./test-helper')
-
 const config = require('../lib/config')
-const path = require('path')
 
 test('Agent ID required field', function (t) {
   t.plan(1)

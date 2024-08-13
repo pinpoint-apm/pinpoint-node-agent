@@ -7,200 +7,276 @@
 const test = require('tape')
 
 const services = require('../../lib/data/v1/Service_grpc_pb')
-
-var _ = require('lodash')
-const GrpcServer = require('./grpc-server')
-
+const MethodType = require('../../lib/constant/method-type')
+const grpc = require('@grpc/grpc-js')
 const spanMessages = require('../../lib/data/v1/Span_pb')
-const dataSenderFactory = require('../../lib/client/data-sender-factory')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
-const DataSender = require('../../lib/client/data-sender')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
-const MethodType = require('../../lib/constant/method-type')
+const CallArgumentsBuilder = require('../../lib/client/call-arguments-builder')
+const config = require('../../lib/config')
+const SqlMetaData = require('../../lib/client/sql-meta-data')
+const sqlMetadataService = require('../../lib/instrumentation/sql/sql-metadata-service')
+const SqlUidMetaData = require('../../lib/client/sql-uid-meta-data')
 
-class MockGrpcDataSender extends GrpcDataSender {
-    initializeSpanStream() {
-
-    }
-
-    initializeStatStream() {
-
-    }
-
-    initializePingStream() {
-
-    }
-}
-
-// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
-function requestAgentInfo(call, callback) {
-    const result = new spanMessages.PResult()
-    _.delay(() => {
-        callback(null, result)
-    }, 100)
-}
-
+let callCount = 0
+let afterCount = 0
+let callRequests = []
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-let tryShutdown
-test('sendAgentInfo refresh', (t) => {
-    const server = new GrpcServer()
-    server.addService(services.AgentService, {
-        requestAgentInfo: requestAgentInfo
+const service = (call, callback) => {
+    const succeedOnRetryAttempt = call.metadata.get('succeed-on-retry-attempt')
+    const previousAttempts = call.metadata.get('grpc-previous-rpc-attempts')
+
+    // console.debug(`succeed-on-retry-attempt: ${succeedOnRetryAttempt[0]}, grpc-previous-rpc-attempts: ${previousAttempts[0]}`)
+    if (succeedOnRetryAttempt.length === 0 || (previousAttempts.length > 0 && previousAttempts[0] === succeedOnRetryAttempt[0])) {
+        const result = new spanMessages.PResult()
+        result.setSuccess(true)
+        result.setMessage(`succeed-on-retry-attempt: ${succeedOnRetryAttempt[0]}, grpc-previous-rpc-attempts: ${previousAttempts[0]}`)
+        callRequests.push(call.request)
+        callback(null, result)
+    } else {
+        const statusCode = call.metadata.get('respond-with-status')
+        const code = statusCode[0] ? Number.parseInt(statusCode[0]) : grpc.status.UNKNOWN
+        callback({ code: code, details: `Failed on retry ${previousAttempts[0] ?? 0}` })
+    }
+}
+
+function agentInfo() {
+    return Object.assign(new AgentInfo({
+        agentId: '12121212',
+        applicationName: 'applicationName',
+        agentStartTime: Date.now()
+    }), {
+        ip: '1'
     })
-    server.startup((port) => {
-        const agentInfo1 = Object.assign(new AgentInfo({
-            agentId: '12121212',
-            applicationName: 'applicationName',
-            agentStartTime: Date.now()
-        }), {
-            ip: '1'
-        })
+}
 
-        const create = (config, agentInfo) => {
-            return new DataSender(config, new MockGrpcDataSender(
-                config.collectorIp,
-                config.collectorTcpPort,
-                config.collectorStatPort,
-                config.collectorSpanPort,
-                agentInfo
-            ))
-        }
+function beforeSpecificOne(port, one, serviceConfig) {
+    callCount = 0
+    afterCount = 0
+    config.clear()
+    callRequests = []
+    const actualConfig = config.getConfig({ 'grpc.service_config': serviceConfig })
+    actualConfig.collectorIp = 'localhost'
+    actualConfig.collectorTcpPort = port
+    actualConfig.collectorStatPort = port
+    actualConfig.collectorSpanPort = port
+    actualConfig.enabledDataSending = true
+    return new one(
+        actualConfig.collectorIp,
+        actualConfig.collectorTcpPort,
+        actualConfig.collectorStatPort,
+        actualConfig.collectorSpanPort,
+        agentInfo(),
+        actualConfig
+    )
+}
 
-        this.dataSender = create({
-            collectorIp: 'localhost',
-            collectorTcpPort: port,
-            collectorStatPort: port,
-            collectorSpanPort: port,
-            enabledDataSending: true
-        }, agentInfo1)
+function afterOne(t) {
+    afterCount++
+    if (callCount === afterCount) {
+        t.end()
+    }
+}
 
-        this.dataSender.dataSender.requestAgentInfo.getDeadline = () => {
-            const deadline = new Date()
-            deadline.setMilliseconds(deadline.getMilliseconds() + 100)
-            return deadline
-        }
-        this.dataSender.dataSender.requestAgentInfo.retryInterval = 0
+class DataSourceCallCountable extends GrpcDataSender {
+    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+    }
 
-        let callbackTimes = 0
-        const callback = (err, response) => {
-            callbackTimes++
-            t.true(err, 'retry 3 times and err deadline')
-            t.equal(callbackTimes, 1, 'callback only once called')
-            t.false(response, 'retry response is undefined')
-            t.equal(requestTimes, 3, 'retry requestes 3 times')
+    sendAgentInfo(agentInfo, callArguments) {
+        callCount++
+        super.sendAgentInfo(agentInfo, callArguments)
+    }
 
-            tryShutdown()
-            this.dataSender.dataSender.agentInfoDailyScheduler.stop()
-        }
-        const origin = this.dataSender.dataSender.requestAgentInfo.request
-        let requestTimes = 0
-        this.dataSender.dataSender.requestAgentInfo.request = (data, _, timesOfRetry = 1) => {
-            requestTimes++
-            origin.call(this.dataSender.dataSender.requestAgentInfo, data, callback, timesOfRetry)
-        }
-        this.dataSender.send(agentInfo1)
+    sendApiMetaInfo(apiMetaInfo, callArguments) {
+        callCount++
+        super.sendApiMetaInfo(apiMetaInfo, callArguments)
+    }
 
-        tryShutdown = () => {
-            setTimeout(() => {
-                server.tryShutdown(() => {
-                    t.end()
-                })
-            }, 0)
-        }
+    sendStringMetaInfo(stringMetaInfo, callArguments) {
+        callCount++
+        super.sendStringMetaInfo(stringMetaInfo, callArguments)
+    }
+
+    sendSqlMetaInfo(sqlMetaData, callback) {
+        callCount++
+        super.sendSqlMetaInfo(sqlMetaData, callback)
+    }
+
+    sendSqlUidMetaData(sqlMetaData, callback) {
+        callCount++
+        super.sendSqlUidMetaData(sqlMetaData, callback)
+    }
+}
+
+let agentInfoRefreshInterval
+class AgentInfoOnlyDataSource extends DataSourceCallCountable {
+    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+    }
+    initializeMetadataClients() { }
+    initializeSpanStream() { }
+    initializeStatStream() { }
+    initializePingStream() { }
+
+    agentInfoRefreshInterval() {
+        return agentInfoRefreshInterval ? agentInfoRefreshInterval : super.agentInfoRefreshInterval()
+    }
+}
+
+class MetaInfoOnlyDataSource extends DataSourceCallCountable {
+    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+    }
+    initializeClients() { }
+    initializeSpanStream() { }
+    initializeStatStream() { }
+    initializePingStream() { }
+    initializeAgentInfoScheduler() { }
+}
+
+test('AgentInfo with retries enabled but not configured', (t) => {
+    const server = new grpc.Server()
+    // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
+    server.addService(services.AgentService, {
+        requestAgentInfo: service
+    })
+    let dataSender
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        dataSender = beforeSpecificOne(port, AgentInfoOnlyDataSource)
+
+        let callArguments = new CallArgumentsBuilder(function (error, response) {
+            if (error) {
+                t.fail(error)
+            }
+            t.true(response.getSuccess(), '1st PResult.success is true')
+        }).build()
+        dataSender.sendAgentInfo(agentInfo(), callArguments)
+
+        callArguments = new CallArgumentsBuilder(function (error) {
+            t.equal(error.details, 'Failed on retry 0', '2nd error.details is "Failed on retry 0"')
+        }).setMetadata('succeed-on-retry-attempt', '1')
+            .build()
+        dataSender.sendAgentInfo(agentInfo(), callArguments)
+
+        callArguments = new CallArgumentsBuilder(function (error, response) {
+            if (error) {
+                t.fail(error)
+            }
+            t.true(response.getSuccess(), '3st PResult.success is true')
+            t.end()
+        }).build()
+        dataSender.sendAgentInfo(agentInfo(), callArguments)
+    })
+
+    t.teardown(() => {
+        dataSender.close()
+        server.forceShutdown()
     })
 })
 
-// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
-function requestApiMetaData(call, callback) {
-    const result = new spanMessages.PResult()
+test('AgentInfo with retries enabled and configured', (t) => {
+    const server = new grpc.Server()
+    // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
+    server.addService(services.AgentService, {
+        requestAgentInfo: service
+    })
 
-    _.delay(() => {
-        callback(null, result)
-    }, 100)
-}
+    let dataSender
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        dataSender = beforeSpecificOne(port, AgentInfoOnlyDataSource)
+
+        let callArguments = new CallArgumentsBuilder(function (error, response) {
+            if (error) {
+                t.fail(error)
+            }
+            t.true(response.getSuccess(), '1st PResult.success is true')
+            t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined', '1st PResult.message is "succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined"')
+            afterOne(t)
+        }).build()
+        dataSender.sendAgentInfo(agentInfo(), callArguments)
+
+        callArguments = new CallArgumentsBuilder(function (error, response) {
+            t.true(response.getSuccess(), '2nd PResult.success is true')
+            t.equal(response.getMessage(), 'succeed-on-retry-attempt: 2, grpc-previous-rpc-attempts: 2', '2nd PResult.message is "succeed-on-retry-attempt: 2, grpc-previous-rpc-attempts: 2"')
+            afterOne(t)
+        }).setMetadata('succeed-on-retry-attempt', '2')
+            .setMetadata('respond-with-status', '14')
+            .build()
+        dataSender.sendAgentInfo(agentInfo(), callArguments)
+
+        callArguments = new CallArgumentsBuilder(function (error, response) {
+            if (error) {
+                t.fail(error)
+            }
+            t.true(response.getSuccess(), '3st PResult.success is true')
+            t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined', '3st PResult.message is "succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined"')
+            afterOne(t)
+        }).build()
+        dataSender.sendAgentInfo(agentInfo(), callArguments)
+    })
+
+    t.teardown(() => {
+        dataSender.close()
+        server.forceShutdown()
+    })
+})
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 test('sendApiMetaInfo retry', (t) => {
-    const server = new GrpcServer()
+    const server = new grpc.Server()
     server.addService(services.MetadataService, {
-        requestApiMetaData: requestApiMetaData
+        requestApiMetaData: service
     })
-    server.startup((port) => {
-        const agentInfo = Object.assign(new AgentInfo({
-            agentId: '12121212',
-            applicationName: 'applicationName',
-            agentStartTime: Date.now()
-        }), {
-            ip: '1'
+    let dataSender
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+
+        let actual = new ApiMetaInfo(1, 'ApiDescriptor', MethodType.DEFAULT)
+        let callArguments = new CallArgumentsBuilder(function (error, response) {
+            if (error) {
+                t.fail(error)
+            }
+            t.true(response.getSuccess(), '1st PResult.success is true')
+            afterOne(t)
+        }).build()
+        dataSender.sendApiMetaInfo(actual, callArguments)
+
+        actual = new ApiMetaInfo(2, 'ApiDescriptor2', MethodType.DEFAULT)
+        callArguments = new CallArgumentsBuilder(function (error, response) {
+            t.true(response.getSuccess(), '2nd PResult.success is true')
+            t.equal(response.getMessage(), 'succeed-on-retry-attempt: 2, grpc-previous-rpc-attempts: 2', '2nd PResult.message is "succeed-on-retry-attempt: 2, grpc-previous-rpc-attempts: 2"')
+
+            t.equal(callRequests.length, 2, '2nd callRequests.length is 2')
+            t.equal(callRequests[1].getApiid(), 2, '2nd callRequests[1].apiId is 2')
+            t.equal(callRequests[1].getApiinfo(), 'ApiDescriptor2', '2nd callRequests[1].apiInfo is "ApiDescriptor2"')
+            t.equal(callRequests[1].getType(), MethodType.DEFAULT, '2nd callRequests[1].type is MethodType.DEFAULT')
+            afterOne(t)
+        }).setMetadata('succeed-on-retry-attempt', '2')
+            .setMetadata('respond-with-status', '14')
+            .build()
+        dataSender.sendApiMetaInfo(actual, callArguments)
+
+        t.teardown(() => {
+            dataSender.close()
+            server.forceShutdown()
         })
-        const apiMetaInfo = new ApiMetaInfo({
-            agentId: '12121212',
-            apiInfo: agentInfo,
-            type: 1400
-        })
-
-        this.dataSender = dataSenderFactory.create({
-            collectorIp: 'localhost',
-            collectorTcpPort: port,
-            collectorStatPort: port,
-            collectorSpanPort: port,
-            enabledDataSending: true
-        }, agentInfo)
-
-        this.dataSender.dataSender.requestApiMetaData.getDeadline = () => {
-            const deadline = new Date()
-            deadline.setMilliseconds(deadline.getMilliseconds() + 100)
-            return deadline
-        }
-        this.dataSender.dataSender.requestApiMetaData.retryInterval = 0
-
-        let callbackTimes = 0
-        const callback = (err, response) => {
-            callbackTimes++
-            t.true(err, 'retry 3 times and err deadline')
-            t.equal(callbackTimes, 1, 'callback only once called')
-            t.false(response, 'retry response is undefined')
-            t.equal(requestTimes, 3, 'retry requestes 3 times')
-
-            tryShutdown()
-        }
-        const origin = this.dataSender.dataSender.requestApiMetaData.request
-        let requestTimes = 0
-        this.dataSender.dataSender.requestApiMetaData.request = (data, _, timesOfRetry = 1) => {
-            requestTimes++
-            origin.call(this.dataSender.dataSender.requestApiMetaData, data, callback, timesOfRetry)
-        }
-        this.dataSender.send(apiMetaInfo)
-
-        tryShutdown = () => {
-            setTimeout(() => {
-                server.tryShutdown(() => {
-                    t.end()
-                })
-            }, 0)
-        }
     })
 })
 
 test('sendApiMetaInfo lineNumber and location', (t) => {
-    const server = new GrpcServer()
+    const server = new grpc.Server()
     server.addService(services.MetadataService, {
-        requestApiMetaData: requestApiMetaData
+        requestApiMetaData: service
     })
-    server.startup((port) => {
-        const agentInfo = Object.assign(new AgentInfo({
-            agentId: '12121212',
-            applicationName: 'applicationName',
-            agentStartTime: Date.now()
-        }), {
-            ip: '1'
-        })
-
-        const apiMetaInfo = ApiMetaInfo.create(new MethodDescriptorBuilder()
-            .setApiId(12121212)
+    let dataSender
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+        const apiMetaInfoActual = ApiMetaInfo.create(new MethodDescriptorBuilder()
+            .setApiId(1)
             .setClassName('Router')
             .setMethodName('get')
             .setType(1400)
@@ -209,187 +285,164 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
             .build()
         )
 
-        this.dataSender = dataSenderFactory.create({
-            collectorIp: 'localhost',
-            collectorTcpPort: port,
-            collectorStatPort: port,
-            collectorSpanPort: port,
-            enabledDataSending: true
-        }, agentInfo)
+        let callArguments = new CallArgumentsBuilder(function (error, response) {
+            t.true(response.getSuccess(), '1st PResult.success is true')
 
-        let callbackTimes = 0
-        const callback = (error, response) => {
-            callbackTimes++
-            t.false(error, 'error is undefined')
-            t.true(response, 'response')
-            t.equal(callbackTimes, 1, 'callback only once called')
-            t.equal(requestTimes, 1, 'requestes one time')
-
-            tryShutdown()
-        }
-        const origin = this.dataSender.dataSender.requestApiMetaData.request
-        let requestTimes = 0
-        this.dataSender.dataSender.requestApiMetaData.request = (data, _, timesOfRetry = 1) => {
-            requestTimes++
-            t.equal(data.getApiid(), 12121212, 'apiId')
+            const data = callRequests[0]
+            t.equal(data.getApiid(), 1, 'apiId')
             t.equal(data.getApiinfo(), 'Router.get', 'Apiinfo')
             t.equal(data.getType(), 1400, 'type')
             t.equal(data.getLine(), 481, 'line')
             t.equal(data.getLocation(), 'node_modules/express/lib/application.js', 'location')
-            origin.call(this.dataSender.dataSender.requestApiMetaData, data, callback, timesOfRetry)
-        }
-        this.dataSender.send(apiMetaInfo)
+            afterOne(t)
+        }).build()
+        dataSender.sendApiMetaInfo(apiMetaInfoActual, callArguments)
 
-        tryShutdown = () => {
-            setTimeout(() => {
-                server.tryShutdown(() => {
-                    t.end()
-                })
-            }, 0)
-        }
+        t.teardown(() => {
+            dataSender.close()
+            server.forceShutdown()
+        })
     })
 })
 
-// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
-function requestStringMetaData(call, callback) {
-    const result = new spanMessages.PResult()
-    _.delay(() => {
-        callback(null, result)
-    }, 100)
-}
-
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 test('sendStringMetaInfo retry', (t) => {
-    const server = new GrpcServer()
+    const server = new grpc.Server()
     server.addService(services.MetadataService, {
-        requestStringMetaData: requestStringMetaData
+        requestStringMetaData: service
     })
-    server.startup((port) => {
-        const agentInfo = Object.assign(new AgentInfo({
-            agentId: '12121212',
-            applicationName: 'applicationName',
-            agentStartTime: Date.now()
-        }), {
-            ip: '1'
-        })
-
-        this.dataSender = dataSenderFactory.create({
-            collectorIp: 'localhost',
-            collectorTcpPort: port,
-            collectorStatPort: port,
-            collectorSpanPort: port,
-            enabledDataSending: true
-        }, agentInfo)
+    let dataSender
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
 
         const stringMetaInfo = new StringMetaInfo({
             stringId: '12121212',
             stringValue: 'agentInfo'
         })
+        let callArguments = new CallArgumentsBuilder(function (error, response) {
+            t.true(response.getSuccess(), '1st PResult.success is true')
+            afterOne(t)
+        }).build()
+        dataSender.sendStringMetaInfo(stringMetaInfo, callArguments)
 
-        this.dataSender.dataSender.requestStringMetaData.getDeadline = () => {
-            const deadline = new Date()
-            deadline.setMilliseconds(deadline.getMilliseconds() + 100)
-            return deadline
-        }
-        this.dataSender.dataSender.requestStringMetaData.retryInterval = 0
-
-        let callbackTimes = 0
-        const callback = (err, response) => {
-            callbackTimes++
-            t.true(err, 'retry 3 times and err deadline')
-            t.equal(callbackTimes, 1, 'callback only once called')
-            t.false(response, 'retry response is undefined')
-            t.equal(requestTimes, 3, 'retry requestes 3 times')
-
-            tryShutdown()
-        }
-        const origin = this.dataSender.dataSender.requestStringMetaData.request
-        let requestTimes = 0
-        this.dataSender.dataSender.requestStringMetaData.request = (data, _, timesOfRetry = 1) => {
-            requestTimes++
-            origin.call(this.dataSender.dataSender.requestStringMetaData, data, callback, timesOfRetry)
-        }
-        this.dataSender.send(stringMetaInfo)
-
-        tryShutdown = () => {
-            setTimeout(() => {
-                server.tryShutdown(() => {
-                    t.end()
-                })
-            }, 0)
-        }
+        t.teardown(() => {
+            dataSender.close()
+            server.forceShutdown()
+        })
     })
 })
 
+test('sendSqlMetaData retry', (t) => {
+    sqlMetadataService.cache.cache.clear()
+    const server = new grpc.Server()
+    server.addService(services.MetadataService, {
+        requestSqlMetaData: service
+    })
+    let dataSender
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
 
-// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
-function requestAgentInfo2(call, callback) {
-    const result = new spanMessages.PResult()
-    _.delay(() => {
-        callback(null, result)
-    }, 100)
-}
+        const parsingResult = sqlMetadataService.cacheSql('SELECT DATABASE() as res')
+        const actual = new SqlMetaData(parsingResult)
+        let callArguments = new CallArgumentsBuilder(function (error, response) {
+            t.true(response.getSuccess(), '1st PResult.success is true')
+            t.equal(callRequests[0].getSqlid(), parsingResult.getId(), '1st callRequests[0].getSqlid() is parsingResult.getId()')
+            t.equal(callRequests[0].getSql(), parsingResult.getSql(), '1st callRequests[0].getSql() is parsingResult.getSql()')
+            afterOne(t)
+        }).build()
+        dataSender.sendSqlMetaInfo(actual, callArguments)
+
+        const parsingResult2 = sqlMetadataService.cacheSql('SELECT DATABASE() as res2')
+        const actual2 = new SqlMetaData(parsingResult2)
+        callArguments = new CallArgumentsBuilder(function (error, response) {
+            t.true(response.getSuccess(), '2nd PResult.success is true')
+            t.equal(callRequests[1].getSqlid(), parsingResult2.getId(), '2nd callRequests[1].getSqlid() is parsingResult.getId()')
+            t.equal(callRequests[1].getSql(), parsingResult2.getSql(), '2nd callRequests[1].getSql() is parsingResult.getSql()')
+            afterOne(t)
+        }).setMetadata('succeed-on-retry-attempt', '2')
+            .setMetadata('respond-with-status', '14')
+            .build()
+        dataSender.sendSqlMetaInfo(actual2, callArguments)
+
+        t.teardown(() => {
+            dataSender.close()
+            server.forceShutdown()
+        })
+    })
+})
+
+test('sendSqlUidMetaData retry', (t) => {
+    config.clear()
+    process.env['PINPOINT_PROFILER_SQL_STAT'] = 'true'
+    sqlMetadataService.cache.cache.clear()
+    const conf = config.getConfig()
+    t.true(conf.profilerSqlStat, 'profiler SQL Stat is false')
+
+    const server = new grpc.Server()
+    server.addService(services.MetadataService, {
+        requestSqlUidMetaData: service
+    })
+    let dataSender
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+
+        const parsingResult = sqlMetadataService.cacheSql('SELECT DATABASE() as res')
+        const actual = new SqlUidMetaData(parsingResult)
+        let callArguments = new CallArgumentsBuilder(function (error, response) {
+            t.true(response.getSuccess(), '1st PResult.success is true')
+            t.deepEqual(callRequests[0].getSqluid(), parsingResult.getId(), '1st callRequests[0].getSqlid() is parsingResult.getId()')
+            t.equal(callRequests[0].getSql(), parsingResult.getSql(), '1st callRequests[0].getSql() is parsingResult.getSql()')
+            afterOne(t)
+        }).build()
+        dataSender.sendSqlUidMetaData(actual, callArguments)
+
+        const parsingResult2 = sqlMetadataService.cacheSql('SELECT DATABASE() as res2')
+        const actual2 = new SqlUidMetaData(parsingResult2)
+        callArguments = new CallArgumentsBuilder(function (error, response) {
+            t.true(response.getSuccess(), '2nd PResult.success is true')
+            t.deepEqual(callRequests[1].getSqluid(), parsingResult2.getId(), '2nd callRequests[1].getSqlid() is parsingResult.getId()')
+            t.equal(callRequests[1].getSql(), parsingResult2.getSql(), '2nd callRequests[1].getSql() is parsingResult.getSql()')
+            afterOne(t)
+        }).setMetadata('succeed-on-retry-attempt', '2')
+            .setMetadata('respond-with-status', '14')
+            .build()
+        dataSender.sendSqlUidMetaData(actual2, callArguments)
+
+        t.teardown(() => {
+            dataSender.close()
+            server.forceShutdown()
+            delete process.env.PINPOINT_PROFILER_SQL_STAT
+            config.clear()
+        })
+    })
+})
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 test('sendAgentInfo schedule', (t) => {
-    const server = new GrpcServer()
+    const server = new grpc.Server()
     server.addService(services.AgentService, {
-        requestAgentInfo: requestAgentInfo2
+        requestAgentInfo: service
     })
-    server.startup((port) => {
-        const agentInfo1 = Object.assign(new AgentInfo({
-            agentId: '12121212',
-            applicationName: 'applicationName',
-            agentStartTime: Date.now()
-        }), {
-            ip: '1'
-        })
-
-        this.dataSender = dataSenderFactory.create({
-            collectorIp: 'localhost',
-            collectorTcpPort: port,
-            collectorStatPort: port,
-            collectorSpanPort: port,
-            enabledDataSending: true
-        }, agentInfo1)
-
-        this.dataSender.dataSender.requestAgentInfo.retryInterval = 0
-        const originAgentInfoRefreshInterval = this.dataSender.dataSender.agentInfoRefreshInterval
-        this.dataSender.dataSender.agentInfoRefreshInterval = () => {
-            return 100
-        }
-        this.dataSender.dataSender.initializeAgentInfoScheduler()
-
-        let callbackTimes = 0
-        const callback = (err, response) => {
-            callbackTimes++
-
-            t.true(callbackTimes <= 2, 'retry call is less than 2')
-            t.true(response, 'retry by schedule')
-
-            if (callbackTimes == 2) {
-                tryShutdown()
+    let dataSender
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        agentInfoRefreshInterval = 100
+        dataSender = beforeSpecificOne(port, AgentInfoOnlyDataSource)
+        let count = 0
+        let callArguments = new CallArgumentsBuilder(function (error, response) {
+            count++
+            t.true(response.getSuccess(), `${count}st PResult.success is true`)
+            t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined', `${count}st PResult.message is "succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined"`)
+            if (count === 3) {
+                t.equal(dataSender.agentInfoDailyScheduler.jobList.length, 1, 'agentInfoDailyScheduler.jobList.length is 1 for memory leak prevention test')
+                t.end()
             }
-        }
-        const origin = this.dataSender.dataSender.requestAgentInfo.request
-        let requestTimes = 0
-        this.dataSender.dataSender.requestAgentInfo.request = (data, _, timesOfRetry = 1) => {
-            requestTimes++
-            if (requestTimes == 2) {
-                this.dataSender.dataSender.agentInfoRefreshInterval = originAgentInfoRefreshInterval
-                this.dataSender.dataSender.agentInfoDailyScheduler.stop()
-            }
+        }).build()
+        dataSender.sendAgentInfo(agentInfo(), callArguments)
+    })
 
-            origin.call(this.dataSender.dataSender.requestAgentInfo, data, callback, timesOfRetry)
-        }
-        this.dataSender.send(agentInfo1)
-
-        tryShutdown = () => {
-            setTimeout(() => {
-                server.tryShutdown(() => {
-                    t.end()
-                })
-            }, 0)
-        }
+    t.teardown(() => {
+        dataSender.close()
+        server.forceShutdown()
+        agentInfoRefreshInterval = null
     })
 })

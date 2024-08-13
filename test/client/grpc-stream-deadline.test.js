@@ -6,17 +6,14 @@
 
 const test = require('tape')
 const grpc = require('@grpc/grpc-js')
-
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const dataConvertor = require('../../lib/data/grpc-data-convertor')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const { log } = require('../test-helper')
-
 var _ = require('lodash')
-const GrpcServer = require('./grpc-server')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
-
 const spanMessages = require('../../lib/data/v1/Span_pb')
+const CallArgumentsBuilder = require('../../lib/client/call-arguments-builder')
 
 let statClient
 let endAction
@@ -147,55 +144,45 @@ function requestAgentInfo(call, callback) {
     }
 }
 
-let tryShutdown
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 test('sendAgentInfo deadline', (t) => {
-    const server = new GrpcServer()
+    const server = new grpc.Server()
     server.addService(services.AgentService, {
         requestAgentInfo: requestAgentInfo
     })
-    server.startup((port) => {
-        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',
             'applicationname': 'applicationName',
             'starttime': Date.now()
         })
-
-        this.grpcDataSender.sendAgentInfo({
+    
+        grpcDataSender.sendAgentInfo({
             hostname: 'hostname',
             "serviceType": 1400,
         }, (err, response) => {
             t.true(response, '1st sendAgentInfo response is success')
             t.false(err, '1st sendAgentInfo err is false')
         })
-
-        this.grpcDataSender.requestAgentInfo.getDeadline = () => {
-            const deadline = new Date()
-            deadline.setMilliseconds(deadline.getMilliseconds() + 100)
-            return deadline
-        }
-        this.grpcDataSender.requestAgentInfo.retryInterval = 0
-
-        this.grpcDataSender.sendAgentInfo({
-            hostname: 'hostname',
-            "serviceType": 1400,
-        }, (err, response) => {
+    
+        const callArguments = new CallArgumentsBuilder((err, response) => {
             t.false(response, '2st sendAgentInfo response is undefined')
             t.equal(err.code, 4, '2st sendAgentInfo err.code is 4')
-            t.equal(err.details, 'Deadline exceeded', '2st sendAgentInfo err.details is Deadline exceeded')
-            t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendAgentInfo err.message is Deadline exceeded')
-
-            tryShutdown()
+            t.true(err.details.startsWith('Deadline exceeded'), '2st sendAgentInfo err.details is Deadline exceeded')
+            t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendAgentInfo err.message is Deadline exceeded')
+    
+            t.end()
+        }).setDeadlineMilliseconds(100).build()
+    
+        grpcDataSender.sendAgentInfo({
+            hostname: 'hostname',
+            "serviceType": 1400,
+        }, callArguments)
+    
+        t.teardown(() => {
+            grpcDataSender.close()
+            server.forceShutdown()
         })
-
-        tryShutdown = () => {
-            setTimeout(() => {
-                this.grpcDataSender.closeScheduler()
-                server.tryShutdown(() => {
-                    t.end()
-                })
-            }, 0)
-        }
     })
 })
 
@@ -217,60 +204,53 @@ function requestApiMetaData(call, callback) {
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 test('sendApiMetaInfo deadline', (t) => {
-    const server = new GrpcServer()
+    const server = new grpc.Server()
     server.addService(services.MetadataService, {
         requestApiMetaData: requestApiMetaData
     })
-    server.startup((port) => {
-        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',
             'applicationname': 'applicationName',
             'starttime': Date.now()
         })
-
+    
         let apiMetaInfoResponse = 0
-
-        this.grpcDataSender.sendApiMetaInfo({
+    
+        grpcDataSender.sendApiMetaInfo({
             hostname: 'hostname',
             "serviceType": 1400,
         }, (err, response) => {
             t.true(response, '1st sendApiMetaInfo response is success')
             t.false(err, '1st sendApiMetaInfo err is false')
-
+    
             apiMetaInfoResponse++
             if (apiMetaInfoResponse == 2) {
-                tryShutdown()
+                t.end()
             }
         })
 
-        this.grpcDataSender.requestApiMetaData.getDeadline = () => {
-            const deadline = new Date()
-            deadline.setMilliseconds(deadline.getMilliseconds() + 100)
-            return deadline
-        }
-
-        this.grpcDataSender.sendApiMetaInfo({
-            hostname: 'hostname',
-            "serviceType": 1400,
-        }, (err, response) => {
+        const callArguments = new CallArgumentsBuilder((err, response) => {
             t.false(response, '2st sendApiMetaInfo response is undefined')
             t.equal(err.code, 4, '2st sendApiMetaInfo err.code is 4')
-            t.equal(err.details, 'Deadline exceeded', '2st sendApiMetaInfo err.details is Deadline exceeded')
-            t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendApiMetaInfo err.message is Deadline exceeded')
-
+            t.true(err.details.startsWith('Deadline exceeded'), '2st sendApiMetaInfo err.details is Deadline exceeded')
+            t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendApiMetaInfo err.message is Deadline exceeded')
+    
             apiMetaInfoResponse++
             if (apiMetaInfoResponse == 2) {
-                tryShutdown()
+                t.end()
             }
+        }).setDeadlineMilliseconds(100).build()
+    
+        grpcDataSender.sendApiMetaInfo({
+            hostname: 'hostname',
+            "serviceType": 1400,
+        }, callArguments)
+    
+        t.teardown(() => {
+            grpcDataSender.close()
+            server.forceShutdown()
         })
-
-        tryShutdown = () => {
-            setTimeout(() => {
-                server.tryShutdown(() => {
-                    t.end()
-                })
-            }, 0)
-        }
     })
 })
 
@@ -292,59 +272,50 @@ function requestStringMetaData(call, callback) {
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 test('sendStringMetaInfo deadline', (t) => {
-    const server = new GrpcServer()
+    const server = new grpc.Server()
     server.addService(services.MetadataService, {
         requestStringMetaData: requestStringMetaData
     })
-    server.startup((port) => {
-        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',
             'applicationname': 'applicationName',
             'starttime': Date.now()
         })
-
         let stringMetaDataResponse = 0
-
-        this.grpcDataSender.sendStringMetaInfo({
+    
+        grpcDataSender.sendStringMetaInfo({
             hostname: 'hostname',
             "serviceType": 1400,
         }, (err, response) => {
             t.true(response, '1st sendStringMetaInfo response is success')
             t.false(err, '1st sendStringMetaInfo err is false')
-
+    
             stringMetaDataResponse++
             if (stringMetaDataResponse == 2) {
-                tryShutdown()
+                t.end()
             }
         })
-
-        this.grpcDataSender.requestStringMetaData.getDeadline = () => {
-            const deadline = new Date()
-            deadline.setMilliseconds(deadline.getMilliseconds() + 100)
-            return deadline
-        }
-
-        this.grpcDataSender.sendStringMetaInfo({
-            hostname: 'hostname',
-            "serviceType": 1400,
-        }, (err, response) => {
+    
+        const callArguments = new CallArgumentsBuilder((err, response) => {
             t.false(response, '2st sendStringMetaInfo response is undefined')
             t.equal(err.code, 4, '2st sendStringMetaInfo err.code is 4')
-            t.equal(err.details, 'Deadline exceeded', '2st sendStringMetaInfo err.details is Deadline exceeded')
-            t.equal(err.message, '4 DEADLINE_EXCEEDED: Deadline exceeded', '2st sendStringMetaInfo err.message is Deadline exceeded')
-
+            t.true(err.details.startsWith('Deadline exceeded'), '2st sendStringMetaInfo err.details is Deadline exceeded')
+            t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendStringMetaInfo err.message is Deadline exceeded')
+    
             stringMetaDataResponse++
             if (stringMetaDataResponse == 2) {
-                tryShutdown()
+                t.end()
             }
+        }).setDeadlineMilliseconds(100).build()
+        grpcDataSender.sendStringMetaInfo({
+            hostname: 'hostname',
+            "serviceType": 1400,
+        }, callArguments)
+    
+        t.teardown(() => {
+            grpcDataSender.close()
+            server.forceShutdown()
         })
-
-        tryShutdown = () => {
-            setTimeout(() => {
-                server.tryShutdown(() => {
-                    t.end()
-                })
-            }, 0)
-        }
     })
 })

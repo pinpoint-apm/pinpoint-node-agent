@@ -5,7 +5,7 @@
  */
 
 const test = require('tape')
-const { MySqlContainer } = require('testcontainers')
+const { MySqlContainer } = require('@testcontainers/mysql')
 const path = require('path')
 const agent = require('../../support/agent-singleton-mock')
 const mysql = require('mysql')

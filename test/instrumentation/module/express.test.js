@@ -16,6 +16,8 @@ const semver = require('semver')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const DisableTrace = require('../../../lib/context/disable-trace')
 const transactionIdGenerator = require('../../../lib/context/sequence-generators').transactionIdGenerator
+const http = require('http')
+const https = require('https')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -43,14 +45,14 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
       let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
         .setClassName(expected('app', 'Function'))
-        .setLineNumber(35)
+        .setLineNumber(37)
         .setFileName('express.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.span.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 35, 'lineNumber')
+      t.equal(actualMethodDescriptor.lineNumber, 37, 'lineNumber')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
       t.true(actualMethodDescriptor.location.length > 0, 'location')
     })
@@ -66,14 +68,14 @@ test(`${testName1} Should record request in basic route`, function (t) {
 
       let actualBuilder = new MethodDescriptorBuilder(expected('post', 'app.post'))
         .setClassName(expected('app', 'Function'))
-        .setLineNumber(60)
+        .setLineNumber(62)
         .setFileName('express.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.span.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.post', 'Function.app.post')), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 60, 'lineNumber')
+      t.equal(actualMethodDescriptor.lineNumber, 62, 'lineNumber')
       t.equal(actualMethodDescriptor.methodName, 'post', 'methodName')
       t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
     })
@@ -85,14 +87,14 @@ test(`${testName1} Should record request in basic route`, function (t) {
     agent.callbackTraceClose((trace) => {
       let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
         .setClassName(expected('app', 'Function'))
-        .setLineNumber(82)
+        .setLineNumber(84)
         .setFileName('express.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.span.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 82, 'lineNumber')
+      t.equal(actualMethodDescriptor.lineNumber, 84, 'lineNumber')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
       t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
     })
@@ -167,14 +169,14 @@ function throwHandleTest(trace, t) {
 
   let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
     .setClassName(expected('app', 'Function'))
-    .setLineNumber(105)
+    .setLineNumber(107)
     .setFileName('express.test.js')
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
   let spanEvent = trace.span.spanEventList[1]
   t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
   t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-  t.equal(actualMethodDescriptor.lineNumber, 105, 'lineNumber')
+  t.equal(actualMethodDescriptor.lineNumber, 107, 'lineNumber')
   t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
   t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
   t.equal(spanEvent.sequence, 0, 'sequence')
@@ -182,33 +184,33 @@ function throwHandleTest(trace, t) {
 
   actualBuilder = new MethodDescriptorBuilder('use')
     .setClassName('Router')
-    .setLineNumber(118)
+    .setLineNumber(120)
     .setFileName('express.test.js')
   const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
   spanEvent = trace.span.spanEventList[0]
   t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.true(actualErrorMethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
-  t.equal(actualErrorMethodDescriptor.lineNumber, 118, 'lineNumber')
+  t.equal(actualErrorMethodDescriptor.lineNumber, 120, 'lineNumber')
   t.equal(actualErrorMethodDescriptor.methodName, 'use', 'methodName')
   t.true(actualErrorMethodDescriptor.location.endsWith('express.test.js'), 'location')
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:108:11'), 'error case')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:110:11'), 'error case')
 }
 
 function nextErrorHandleTest(trace, t) {
   let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
     .setClassName(expected('app', 'Function'))
-    .setLineNumber(112)
+    .setLineNumber(114)
     .setFileName('express.test.js')
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
   let spanEvent = trace.span.spanEventList[1]
   t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
   t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-  t.equal(actualMethodDescriptor.lineNumber, 112, 'lineNumber')
+  t.equal(actualMethodDescriptor.lineNumber, 114, 'lineNumber')
   t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
   t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
   t.equal(spanEvent.sequence, 0, 'sequence')
@@ -216,20 +218,20 @@ function nextErrorHandleTest(trace, t) {
 
   actualBuilder = new MethodDescriptorBuilder('use')
     .setClassName('Router')
-    .setLineNumber(118)
+    .setLineNumber(120)
     .setFileName('express.test.js')
   const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
   spanEvent = trace.span.spanEventList[0]
   t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.true(actualErrorMethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
-  t.equal(actualErrorMethodDescriptor.lineNumber, 118, 'lineNumber')
+  t.equal(actualErrorMethodDescriptor.lineNumber, 120, 'lineNumber')
   t.equal(actualErrorMethodDescriptor.methodName, 'use', 'methodName')
   t.true(actualErrorMethodDescriptor.location.endsWith('express.test.js'), 'location')
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:115:10'), 'error case')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:117:10'), 'error case')
 }
 
 const testName2 = 'express2'
@@ -258,10 +260,18 @@ test(`[${testName2}] Should record request in express.Router`, function (t) {
   app.use('/express.router2', router2)
 
   const server = app.listen(TEST_ENV.port, async function () {
-    const result1 = await axios.get(getServerUrl(`/express.router1${PATH}`))
+    const result1 = await axios.get(getServerUrl(`/express.router1${PATH}`), {
+      timeout: 1000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
     t.ok(result1.status, 200)
 
-    const result2 = await axios.get(getServerUrl(`/express.router2${PATH}`))
+    const result2 = await axios.get(getServerUrl(`/express.router2${PATH}`), {
+      timeout: 3000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
     t.ok(result2.status, 200)
 
     server.close()
@@ -282,7 +292,7 @@ test(`${testName3} Should record request taking more than 2 sec`, function (t) {
   app.get(PATH, async (req, res) => {
     // slow outgoing call
     try {
-      await axios.get('https://www.naver.com')
+      await axios.get('https://www.naver.com', { httpsAgent: new https.Agent({ keepAlive: false }) })
     } catch (error) {
       log.error(error)
     }
@@ -357,14 +367,14 @@ test(`${testName5} Should record middleware`, function (t) {
     agent.callbackTraceClose((trace) => {
       let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
         .setClassName(expected('app', 'Function'))
-        .setLineNumber(356)
+        .setLineNumber(366)
         .setFileName('express.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.span.spanEventList[2]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 356, 'lineNumber')
+      t.equal(actualMethodDescriptor.lineNumber, 366, 'lineNumber')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
       t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
       t.equal(spanEvent.sequence, 2, 'sequence')
@@ -372,14 +382,14 @@ test(`${testName5} Should record middleware`, function (t) {
 
       actualBuilder = new MethodDescriptorBuilder('use')
         .setClassName('Router')
-        .setLineNumber(346)
+        .setLineNumber(356)
         .setFileName('express.test.js')
       const actualMiddleware1MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       spanEvent = trace.span.spanEventList[1]
       t.equal(actualMiddleware1MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMiddleware1MethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
       t.equal(actualMiddleware1MethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMiddleware1MethodDescriptor.lineNumber, 346, 'lineNumber')
+      t.equal(actualMiddleware1MethodDescriptor.lineNumber, 356, 'lineNumber')
       t.equal(actualMiddleware1MethodDescriptor.functionName, 'use', 'functionName')
       t.true(actualMiddleware1MethodDescriptor.location.endsWith('express.test.js'), 'location')
       t.equal(spanEvent.sequence, 1, 'sequence')
@@ -387,14 +397,14 @@ test(`${testName5} Should record middleware`, function (t) {
 
       actualBuilder = new MethodDescriptorBuilder('use')
         .setClassName('Router')
-        .setLineNumber(341)
+        .setLineNumber(351)
         .setFileName('express.test.js')
       const actualMiddleware2MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       spanEvent = trace.span.spanEventList[0]
       t.equal(actualMiddleware2MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMiddleware2MethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
       t.equal(actualMiddleware2MethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMiddleware2MethodDescriptor.lineNumber, 341, 'lineNumber')
+      t.equal(actualMiddleware2MethodDescriptor.lineNumber, 351, 'lineNumber')
       t.equal(actualMiddleware2MethodDescriptor.methodName, 'use', 'methodName')
       t.true(actualMiddleware2MethodDescriptor.location.endsWith('express.test.js'), 'location')
       t.equal(spanEvent.sequence, 0, 'sequence')
@@ -405,7 +415,11 @@ test(`${testName5} Should record middleware`, function (t) {
   })
 
   const server = app.listen(TEST_ENV.port, async function () {
-    const result1 = await axios.get(getServerUrl(PATH))
+    const result1 = await axios.get(getServerUrl(PATH), {
+      timeout: 3000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
     t.ok(result1.status, 200)
 
     t.end()
@@ -625,7 +639,7 @@ function throwHandleTestWithoutCallSite(trace, t) {
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:546:11'), 'error case')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:560:11'), 'error case')
 }
 
 function nextErrorHandleTestWithoutCallSite(trace, t) {
@@ -651,7 +665,7 @@ function nextErrorHandleTestWithoutCallSite(trace, t) {
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:553:10'), 'error case')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:567:10'), 'error case')
 }
 
 test('incoming request by Disable Trace requests', (t) => {
@@ -664,7 +678,11 @@ test('incoming request by Disable Trace requests', (t) => {
   app.get('/', async (req, res) => {
     actualRequestCount++
 
-    const result = await axios.get(getServerUrl('/api'))
+    const result = await axios.get(getServerUrl('/api'), {
+      timeout: 3000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
     t.equal(result.status, 200, 'api request status code is 200')
     t.equal(result.data, 'ok /api get', 'api request data is ok /api get')
     res.send('ok get')
@@ -690,7 +708,11 @@ test('incoming request by Disable Trace requests', (t) => {
   app.get('/api', async (req, res) => {
     apiRequests.push(req)
 
-    const result = await axios.get(getServerUrl('/api2'))
+    const result = await axios.get(getServerUrl('/api2'), {
+      timeout: 3000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
     t.equal(result.status, 200, 'api2 request status code is 200')
     t.equal(result.data, 'ok /api2 get', 'api request data is ok /api2 get')
     res.send('ok /api get')
@@ -724,7 +746,11 @@ test('incoming request by Disable Trace requests', (t) => {
   })
 
   const server = app.listen(TEST_ENV.port, async function () {
-    const result1 = await axios.get(getServerUrl('/'))
+    const result1 = await axios.get(getServerUrl('/'), {
+      timeout: 3000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
     t.equal(result1.status, 200, 'first / request status code is 200')
 
     let actualTrace = rootPathTraces[0]
@@ -750,7 +776,11 @@ test('incoming request by Disable Trace requests', (t) => {
     t.equal(actualApiRequest.headers['pinpoint-traceid'], actualTrace.traceId.transactionId.toString(), 'pinpoint-traceid header is root transaction id')
     t.equal(actualTrace.traceId.transactionId.toString(), actualApiTrace.traceId.transactionId.toString(), 'transaction id equals to root transaction id')
 
-    const result2 = await axios.get(getServerUrl('/'))
+    const result2 = await axios.get(getServerUrl('/'), {
+      timeout: 3000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
     t.equal(result2.status, 200, 'second / request status code is 200')
 
     actualTrace = rootPathTraces[1]
@@ -760,7 +790,11 @@ test('incoming request by Disable Trace requests', (t) => {
     t.equal(actualApiRequest.url, '/api', 'DisableTrace api request url is /api')
     t.equal(actualApiRequest.headers['pinpoint-sampled'], 's0', 'DisableTrace api request pinpoint-sampled header is s0')
 
-    const result3 = await axios.get(getServerUrl('/'))
+    const result3 = await axios.get(getServerUrl('/'), {
+      timeout: 3000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
     t.equal(result3.status, 200, 'third / request status code is 200')
 
     actualTrace = rootPathTraces[2]
@@ -770,7 +804,11 @@ test('incoming request by Disable Trace requests', (t) => {
     t.equal(actualApiRequest.url, '/api', 'Third request is DisableTrace api request url is /api')
     t.equal(actualApiRequest.headers['pinpoint-sampled'], 's0', 'Third request is DisableTrace api request pinpoint-sampled header is s0')
 
-    const result4 = await axios.get(getServerUrl('/'))
+    const result4 = await axios.get(getServerUrl('/'), {
+      timeout: 3000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
     t.equal(result4.status, 200, 'third / request status code is 200')
 
     t.end()

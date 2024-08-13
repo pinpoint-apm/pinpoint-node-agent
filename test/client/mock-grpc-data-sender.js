@@ -43,6 +43,9 @@ class MockgRPCDataSender extends GrpcDataSender {
     return this.actualSpans[this.actualSpans.length - 1]
   }
 
+  initializeMetadataClients(collectorIp, collectorTcpPort) {
+  }
+
   initializeSpanStream() {
     let self = this
     this.spanStream = {

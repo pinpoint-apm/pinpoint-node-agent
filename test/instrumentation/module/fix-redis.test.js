@@ -6,13 +6,17 @@
 
 const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
-const { GenericContainer } = require('testcontainers')
+const { RedisContainer } = require('@testcontainers/redis')
+const { Wait } = require("testcontainers")
 const { addressStringOf } = require('../../../lib/utils/convert-utils')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
 
 test(`redis destination id`, async (t) => {
-    const container = await new GenericContainer('redis')
-        .withExposedPorts(6379)
+    const container = await new RedisContainer()
+        .withWaitStrategy(Wait.forAll([
+            Wait.forListeningPorts(),
+            Wait.forLogMessage("Ready to accept connections")
+        ]))
         .start()
 
     agent.bindHttp()
@@ -23,10 +27,7 @@ test(`redis destination id`, async (t) => {
     localStorage.run(trace, () => {
         const redis = require('redis')
     
-        const client = redis.createClient(
-            container.getMappedPort(6379),
-            container.getHost(),
-        )
+        const client = redis.createClient({ url: container.getConnectionUrl() })
     
         client.on("error", function (error) {
             console.error(error)
@@ -55,8 +56,11 @@ test(`redis destination id`, async (t) => {
 })
 
 test("ioredis destination id", async function (t) {
-    const container = await new GenericContainer("redis")
-        .withExposedPorts(6379)
+    const container = await new RedisContainer()
+        .withWaitStrategy(Wait.forAll([
+            Wait.forListeningPorts(),
+            Wait.forLogMessage("Ready to accept connections")
+        ]))    
         .start()
 
     agent.bindHttp()
@@ -114,8 +118,11 @@ test(`addressStringOf`, (t) => {
 
 // https://github.com/NodeRedis/node-redis#rediscreateclient
 test(`Fix app crash without callback function https://github.com/pinpoint-apm/pinpoint-node-agent/pull/12`, async (t) => {
-    const container = await new GenericContainer("redis")
-        .withExposedPorts(6379)
+    const container = await new RedisContainer()
+        .withWaitStrategy(Wait.forAll([
+            Wait.forListeningPorts(),
+            Wait.forLogMessage("Ready to accept connections")
+        ]))
         .start()
 
     agent.bindHttp()
@@ -126,11 +133,7 @@ test(`Fix app crash without callback function https://github.com/pinpoint-apm/pi
     localStorage.run(trace, () => {
         const redis = require('redis')
     
-        const client = redis.createClient({
-            host: container.getHost(),
-            port: container.getMappedPort(6379),
-            db: 3,
-        })
+        const client = redis.createClient({ url: container.getConnectionUrl(), db: 3 })
     
         client.select(2)
     

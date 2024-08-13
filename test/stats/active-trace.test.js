@@ -10,7 +10,7 @@ const { fixture, util } = require('../test-helper')
 const activeTrace = require('../../lib/metric/active-trace')
 const agent = require('../support/agent-singleton-mock')
 const express = require('express')
-const { log } = require('../test-helper')
+const http = require('http')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -36,19 +36,19 @@ test(`Should record active trace in multiple call`, function (t) {
   })
 
   const server = app.listen(TEST_ENV.port, async function () {
-
     Promise.all([
-      axios.get(getServerUrl(PATH)),
-      axios.get(getServerUrl(PATH)),
-      axios.get(getServerUrl(LASTONE_PATH)),
+      axios.get(getServerUrl(PATH), { httpAgent: new http.Agent({ keepAlive: false })}),
+      axios.get(getServerUrl(PATH), { httpAgent: new http.Agent({ keepAlive: false })}),
+      axios.get(getServerUrl(LASTONE_PATH), { httpAgent: new http.Agent({ keepAlive: false })}),
     ]).then((result) => {
       t.equal(activeTrace.getAllTraces().length, 0)
       t.equal(agent.mockAgentStartTime, agent.agentInfo.startTimestamp, "startTimestamp equals")
-      t.end()
+      
       server.close()
-    }).catch((error) => {
       t.end()
+    }).catch(() => {
       server.close()
+      t.end()
     })
   })
 

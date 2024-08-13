@@ -5,8 +5,6 @@
  */
 
 const test = require('tape')
-
-const Annotation = require('../../lib/context/annotation')
 const annotationKey = require('../../lib/constant/annotation-key')
 const AsyncId = require('../../lib/context/async-id')
 const SpanChunk = require('../../lib/context/span-chunk')

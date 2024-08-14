@@ -12,7 +12,7 @@ const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const Span = require('../../lib/context/span')
 const SpanChunk = require('../../lib/context/span-chunk')
 const DataSender = require('../../lib/client/data-sender')
-const MockgRPCDataSender = require('../client/mock-grpc-data-sender')
+const MockGrpcDataSender = require('../client/mock-grpc-data-sender')
 const SqlMetaData = require('../../lib/client/sql-meta-data')
 
 class MockDataSender extends DataSender {
@@ -52,7 +52,7 @@ class MockDataSender extends DataSender {
 const dataSender = () => {
   return new MockDataSender({
     enabledDataSending: true,
-  }, new MockgRPCDataSender('', 0, 0, 0, {
+  }, new MockGrpcDataSender('', 0, 0, 0, {
     agentId: 'agent',
     applicationName: 'applicationName',
     agentStartTime: 1234344

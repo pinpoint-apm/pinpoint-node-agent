@@ -10,7 +10,7 @@ const AsyncId = require('../../lib/context/async-id')
 const SpanChunk = require('../../lib/context/span-chunk')
 const Span = require('../../lib/context/span')
 const SpanEvent = require('../../lib/context/span-event')
-const MockgRPCDataSender = require('./mock-grpc-data-sender')
+const MockGrpcDataSender = require('./mock-grpc-data-sender')
 
 test('Should send span ', function (t) {
   const expectedSpan = {
@@ -64,7 +64,7 @@ test('Should send span ', function (t) {
     agentStartTime: 1592574173350
   }), expectedSpan)
 
-  const grpcDataSender = new MockgRPCDataSender('', 0, 0, 0, {agentId: 'agent', applicationName: 'applicationName', agentStartTime: 1234344})
+  const grpcDataSender = new MockGrpcDataSender('', 0, 0, 0, {agentId: 'agent', applicationName: 'applicationName', agentStartTime: 1234344})
   grpcDataSender.sendSpan(span)
 
   t.plan(20)
@@ -120,7 +120,7 @@ test('Should send span ', function (t) {
   t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
 })
 
-const grpcDataSender = new MockgRPCDataSender('', 0, 0, 0, {agentId: 'agent', applicationName: 'applicationName', agentStartTime: 1234344})
+const grpcDataSender = new MockGrpcDataSender('', 0, 0, 0, {agentId: 'agent', applicationName: 'applicationName', agentStartTime: 1234344})
 
 test('sendSpanChunk redis.SET.end', function (t) {
   let expectedSpanChunk = {

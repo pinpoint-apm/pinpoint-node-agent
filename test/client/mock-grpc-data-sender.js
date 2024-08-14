@@ -6,9 +6,8 @@
 
 'use strict'
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
-const GrpcUnaryRPC = require('../../lib/client/grpc-unary-rpc')
 
-class MockgRPCDataSender extends GrpcDataSender {
+class MockGrpcDataSender extends GrpcDataSender {
   initializeClients() {
     let self = this
     this.agentClient = {
@@ -16,7 +15,6 @@ class MockgRPCDataSender extends GrpcDataSender {
         self.actualAgentInfo = pAgentInfo
       }
     }
-    this.requestAgentInfo = new GrpcUnaryRPC('requestAgentInfo', this.agentClient, this.agentClient.requestAgentInfo, 0, 0)
 
     this.metadataClient = {
       requestApiMetaData: function (pApiMetaData) {
@@ -32,10 +30,6 @@ class MockgRPCDataSender extends GrpcDataSender {
         self.actualSqlUidMetaData = pSqlUidMetaData
       }
     }
-    this.requestApiMetaData = new GrpcUnaryRPC('requestApiMetaData', this.metadataClient, this.metadataClient.requestApiMetaData, 0, 0)
-    this.requestStringMetaData = new GrpcUnaryRPC('requestStringMetaData', this.metadataClient, this.metadataClient.requestStringMetaData, 0, 0)
-    this.requestSqlMetaData = new GrpcUnaryRPC('requestSqlMetaData', this.metadataClient, this.metadataClient.requestSqlMetaData, 0, 0)
-    this.requestSqlUidMetaData = new GrpcUnaryRPC('requestSqlUidMetaData', this.metadataClient, this.metadataClient.requestSqlUidMetaData, 0, 0)
     this.actualSpans = []
   }
 
@@ -99,4 +93,4 @@ class MockgRPCDataSender extends GrpcDataSender {
   }
 }
 
-module.exports = MockgRPCDataSender
+module.exports = MockGrpcDataSender

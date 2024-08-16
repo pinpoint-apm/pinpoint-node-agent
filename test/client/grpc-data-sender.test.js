@@ -742,3 +742,7 @@ test('sendStat', (t) => {
   t.equal(pCpuLoad.getJvmcpuload(), 0.0003919068831319893, 'cpu.user')
   t.equal(pCpuLoad.getSystemcpuload(), 0, 'cpu.system')
 })
+
+test('commandEcho', (t) => {
+  t.end()
+})

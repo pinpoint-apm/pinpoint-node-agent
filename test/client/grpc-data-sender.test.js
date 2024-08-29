@@ -11,6 +11,35 @@ const SpanChunk = require('../../lib/context/span-chunk')
 const Span = require('../../lib/context/span')
 const SpanEvent = require('../../lib/context/span-event')
 const MockGrpcDataSender = require('./mock-grpc-data-sender')
+const grpc = require('@grpc/grpc-js')
+const services = require('../../lib/data/v1/Service_grpc_pb')
+const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, DataSourceCallCountable } = require('./grpc-fixture')
+
+function sendSpan(call, callback) {
+  call.on('error', function (error) {
+  })
+  call.on('data', function (spanMessage) {
+    const span = spanMessage.getSpan()
+    const callRequests = getCallRequests()
+    callRequests.push(span)
+  })
+  call.on('end', function () {
+  })
+  const callMetadata = getMetadata()
+  callMetadata.push(call.metadata)
+}
+
+class DataSource extends DataSourceCallCountable {
+  constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+    super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+  }
+
+  initializeClients() { }
+  initializeMetadataClients() { }
+  initializeStatStream() { }
+  initializePingStream() { }
+  initializeAgentInfoScheduler() { }
+}
 
 test('Should send span ', function (t) {
   const expectedSpan = {
@@ -64,7 +93,22 @@ test('Should send span ', function (t) {
     agentStartTime: 1592574173350
   }), expectedSpan)
 
-  const grpcDataSender = new MockGrpcDataSender('', 0, 0, 0, {agentId: 'agent', applicationName: 'applicationName', agentStartTime: 1234344})
+  const server = new grpc.Server()
+  server.addService(services.SpanService, {
+    sendSpan: sendSpan
+  })
+  let dataSender
+  server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+    dataSender = beforeSpecificOne(port, DataSource)
+    dataSender.sendSpan(span)
+    afterOne(t)
+  })
+  t.teardown(() => {
+    dataSender.close()
+    server.forceShutdown()
+  })
+
+  const grpcDataSender = new MockGrpcDataSender('', 0, 0, 0, { agentId: 'agent', applicationName: 'applicationName', agentStartTime: 1234344 })
   grpcDataSender.sendSpan(span)
 
   t.plan(20)
@@ -120,7 +164,7 @@ test('Should send span ', function (t) {
   t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
 })
 
-const grpcDataSender = new MockGrpcDataSender('', 0, 0, 0, {agentId: 'agent', applicationName: 'applicationName', agentStartTime: 1234344})
+const grpcDataSender = new MockGrpcDataSender('', 0, 0, 0, { agentId: 'agent', applicationName: 'applicationName', agentStartTime: 1234344 })
 
 test('sendSpanChunk redis.SET.end', function (t) {
   let expectedSpanChunk = {
@@ -140,51 +184,51 @@ test('sendSpanChunk redis.SET.end', function (t) {
       'sequence': 0
     },
     'spanEventList': [Object.assign(new SpanEvent({
-        spanId: 7056897257955935,
-        endPoint: 'localhost:6379'
-      }, 0), {
-        'spanId': 7056897257955935,
-        'sequence': 0,
-        'startTime': 1592872091543,
-        'elapsedTime': 0,
-        'startElapsed': 14,
-        'serviceType': 100,
-        'endPoint': null,
-        'annotations': [],
-        'depth': 1,
-        'nextSpanId': -1,
-        'destinationId': null,
-        'apiId': 1,
-        'exceptionInfo': null,
-        'asyncId': null,
-        'nextAsyncId': null,
-        'asyncSequence': null,
-        'dummyId': null,
-        'nextDummyId': null
-      }),
-      Object.assign(new SpanEvent({
-        spanId: 7056897257955935,
-        endPoint: 'localhost:6379'
-      }, 1), {
-        'spanId': 7056897257955935,
-        'sequence': 1,
-        'startTime': 1592872091543,
-        'elapsedTime': 2,
-        'startElapsed': 7,
-        'serviceType': 8200,
-        'endPoint': 'localhost:6379',
-        'annotations': [Annotations.of(annotationKey.API.getCode(), 'redis.SET.end')],
-        'depth': 2,
-        'nextSpanId': 1508182809976945,
-        'destinationId': 'Redis',
-        'apiId': 0,
-        'exceptionInfo': null,
-        'asyncId': null,
-        'nextAsyncId': null,
-        'asyncSequence': null,
-        'dummyId': null,
-        'nextDummyId': null
-      })
+      spanId: 7056897257955935,
+      endPoint: 'localhost:6379'
+    }, 0), {
+      'spanId': 7056897257955935,
+      'sequence': 0,
+      'startTime': 1592872091543,
+      'elapsedTime': 0,
+      'startElapsed': 14,
+      'serviceType': 100,
+      'endPoint': null,
+      'annotations': [],
+      'depth': 1,
+      'nextSpanId': -1,
+      'destinationId': null,
+      'apiId': 1,
+      'exceptionInfo': null,
+      'asyncId': null,
+      'nextAsyncId': null,
+      'asyncSequence': null,
+      'dummyId': null,
+      'nextDummyId': null
+    }),
+    Object.assign(new SpanEvent({
+      spanId: 7056897257955935,
+      endPoint: 'localhost:6379'
+    }, 1), {
+      'spanId': 7056897257955935,
+      'sequence': 1,
+      'startTime': 1592872091543,
+      'elapsedTime': 2,
+      'startElapsed': 7,
+      'serviceType': 8200,
+      'endPoint': 'localhost:6379',
+      'annotations': [Annotations.of(annotationKey.API.getCode(), 'redis.SET.end')],
+      'depth': 2,
+      'nextSpanId': 1508182809976945,
+      'destinationId': 'Redis',
+      'apiId': 0,
+      'exceptionInfo': null,
+      'asyncId': null,
+      'nextAsyncId': null,
+      'asyncSequence': null,
+      'dummyId': null,
+      'nextDummyId': null
+    })
     ],
     'endPoint': null,
     'applicationServiceType': 1400,
@@ -269,48 +313,48 @@ test('sendSpanChunk redis.GET.end', (t) => {
       'sequence': 0
     },
     'spanEventList': [Object.assign(new SpanEvent({
-        spanId: 7056897257955935,
-        endPoint: 'localhost:6379'
-      }, 0), {
-        'spanId': 7056897257955935,
-        'sequence': 0,
-        'startTime': 1592872091543,
-        'elapsedTime': 0,
-        'startElapsed': 14,
-        'serviceType': 100,
-        'endPoint': null,
-        'annotations': [],
-        'depth': 1,
-        'nextSpanId': -1,
-        'destinationId': null,
-        'apiId': 1,
-        'exceptionInfo': null,
-        'asyncId': null,
-        'nextAsyncId': null,
-        'asyncSequence': null,
-        'dummyId': null,
-        'nextDummyId': null
-      }),
-      {
-        'spanId': 7056897257955935,
-        'sequence': 1,
-        'startTime': 1592872091543,
-        'elapsedTime': 0,
-        'startElapsed': 7,
-        'serviceType': 8200,
-        'endPoint': 'localhost:6379',
-        'annotations': [Annotations.of(annotationKey.API.getCode(), 'redis.GET.end')],
-        'depth': 2,
-        'nextSpanId': 6277978728741477,
-        'destinationId': 'Redis',
-        'apiId': 0,
-        'exceptionInfo': null,
-        'asyncId': null,
-        'nextAsyncId': null,
-        'asyncSequence': null,
-        'dummyId': null,
-        'nextDummyId': null
-      }
+      spanId: 7056897257955935,
+      endPoint: 'localhost:6379'
+    }, 0), {
+      'spanId': 7056897257955935,
+      'sequence': 0,
+      'startTime': 1592872091543,
+      'elapsedTime': 0,
+      'startElapsed': 14,
+      'serviceType': 100,
+      'endPoint': null,
+      'annotations': [],
+      'depth': 1,
+      'nextSpanId': -1,
+      'destinationId': null,
+      'apiId': 1,
+      'exceptionInfo': null,
+      'asyncId': null,
+      'nextAsyncId': null,
+      'asyncSequence': null,
+      'dummyId': null,
+      'nextDummyId': null
+    }),
+    {
+      'spanId': 7056897257955935,
+      'sequence': 1,
+      'startTime': 1592872091543,
+      'elapsedTime': 0,
+      'startElapsed': 7,
+      'serviceType': 8200,
+      'endPoint': 'localhost:6379',
+      'annotations': [Annotations.of(annotationKey.API.getCode(), 'redis.GET.end')],
+      'depth': 2,
+      'nextSpanId': 6277978728741477,
+      'destinationId': 'Redis',
+      'apiId': 0,
+      'exceptionInfo': null,
+      'asyncId': null,
+      'nextAsyncId': null,
+      'asyncSequence': null,
+      'dummyId': null,
+      'nextDummyId': null
+    }
     ],
     'endPoint': null,
     'applicationServiceType': 1400,

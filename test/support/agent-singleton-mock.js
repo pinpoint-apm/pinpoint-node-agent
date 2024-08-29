@@ -113,5 +113,5 @@ class MockAgent extends Agent {
     }
 }
 
-const agent = new MockAgent(fixture.config)
+const agent = new MockAgent(require('../pinpoint-config-test'))
 module.exports = agent

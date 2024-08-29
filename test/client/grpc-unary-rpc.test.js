@@ -13,23 +13,20 @@ const spanMessages = require('../../lib/data/v1/Span_pb')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
-const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
 const CallArgumentsBuilder = require('../../lib/client/call-arguments-builder')
 const config = require('../../lib/config')
 const SqlMetaData = require('../../lib/client/sql-meta-data')
 const sqlMetadataService = require('../../lib/instrumentation/sql/sql-metadata-service')
 const SqlUidMetaData = require('../../lib/client/sql-uid-meta-data')
+const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, DataSourceCallCountable } = require('./grpc-fixture')
 
-let callCount = 0
-let afterCount = 0
-let callRequests = []
-let callMetadata = []
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 const service = (call, callback) => {
     const succeedOnRetryAttempt = call.metadata.get('succeed-on-retry-attempt')
     const previousAttempts = call.metadata.get('grpc-previous-rpc-attempts')
-
+    const callRequests = getCallRequests()
+    const callMetadata = getMetadata()
     // console.debug(`succeed-on-retry-attempt: ${succeedOnRetryAttempt[0]}, grpc-previous-rpc-attempts: ${previousAttempts[0]}`)
     if (succeedOnRetryAttempt.length === 0 || (previousAttempts.length > 0 && previousAttempts[0] === succeedOnRetryAttempt[0])) {
         const result = new spanMessages.PResult()
@@ -53,66 +50,6 @@ function agentInfo() {
     }), {
         ip: '1'
     })
-}
-
-function beforeSpecificOne(port, one, serviceConfig) {
-    callCount = 0
-    afterCount = 0
-    config.clear()
-    callRequests = []
-    callMetadata = []
-    const actualConfig = config.getConfig({ 'grpc.service_config': serviceConfig })
-    actualConfig.collectorIp = 'localhost'
-    actualConfig.collectorTcpPort = port
-    actualConfig.collectorStatPort = port
-    actualConfig.collectorSpanPort = port
-    actualConfig.enabledDataSending = true
-    return new one(
-        actualConfig.collectorIp,
-        actualConfig.collectorTcpPort,
-        actualConfig.collectorStatPort,
-        actualConfig.collectorSpanPort,
-        agentInfo(),
-        actualConfig
-    )
-}
-
-function afterOne(t) {
-    afterCount++
-    if (callCount === afterCount) {
-        t.end()
-    }
-}
-
-class DataSourceCallCountable extends GrpcDataSender {
-    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
-        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
-    }
-
-    sendAgentInfo(agentInfo, callArguments) {
-        callCount++
-        super.sendAgentInfo(agentInfo, callArguments)
-    }
-
-    sendApiMetaInfo(apiMetaInfo, callArguments) {
-        callCount++
-        super.sendApiMetaInfo(apiMetaInfo, callArguments)
-    }
-
-    sendStringMetaInfo(stringMetaInfo, callArguments) {
-        callCount++
-        super.sendStringMetaInfo(stringMetaInfo, callArguments)
-    }
-
-    sendSqlMetaInfo(sqlMetaData, callback) {
-        callCount++
-        super.sendSqlMetaInfo(sqlMetaData, callback)
-    }
-
-    sendSqlUidMetaData(sqlMetaData, callback) {
-        callCount++
-        super.sendSqlUidMetaData(sqlMetaData, callback)
-    }
 }
 
 let agentInfoRefreshInterval
@@ -225,6 +162,8 @@ test('sendApiMetaInfo retry', (t) => {
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+        const callRequests = getCallRequests()
+        const callMetadata = getMetadata()
 
         let actual = new ApiMetaInfo(1, 'ApiDescriptor', MethodType.DEFAULT)
         let callArguments = new CallArgumentsBuilder(function (error, response) {
@@ -269,6 +208,8 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+        const callRequests = getCallRequests()
+        const callMetadata = getMetadata()
 
         let apiMetaInfoActual = ApiMetaInfo.create(new MethodDescriptorBuilder()
             .setApiId(1)
@@ -384,6 +325,7 @@ test('sendSqlMetaData retry', (t) => {
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+        const callRequests = getCallRequests()
 
         const parsingResult = sqlMetadataService.cacheSql('SELECT DATABASE() as res')
         const actual = new SqlMetaData(parsingResult)
@@ -428,6 +370,8 @@ test('sendSqlUidMetaData retry', (t) => {
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+        const callRequests = getCallRequests()
+        const callMetadata = getMetadata()
 
         const parsingResult = sqlMetadataService.cacheSql('SELECT DATABASE() as res')
         const actual = new SqlUidMetaData(parsingResult)

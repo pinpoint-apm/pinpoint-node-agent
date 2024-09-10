@@ -52,9 +52,7 @@ class MockGrpcDataSender extends GrpcDataSender {
     }
   }
 
-  
-
-  initializeProfilerStream() {
+  initializeProfilerClients() {
     let self = this
     this.profilerStream = {
       write: function (pmessage) {
@@ -90,6 +88,9 @@ class MockGrpcDataSender extends GrpcDataSender {
 
   initializeAgentInfoScheduler() {
     
+  }
+
+  sendSupportedServicesCommand() {
   }
 }
 

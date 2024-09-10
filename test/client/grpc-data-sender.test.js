@@ -14,6 +14,11 @@ const MockGrpcDataSender = require('./mock-grpc-data-sender')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, DataSourceCallCountable } = require('./grpc-fixture')
+const cmdMessage = require('../../lib/data/v1/Cmd_pb')
+const CommandType = require('../../lib/client/command/command-type')
+const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
+const Annotations = require('../../lib/instrumentation/context/annotation/annotations')
+const CallArgumentsBuilder = require('../../lib/client/call-arguments-builder')
 
 function sendSpan(call, callback) {
   call.on('error', function (error) {
@@ -27,18 +32,6 @@ function sendSpan(call, callback) {
   })
   const callMetadata = getMetadata()
   callMetadata.push(call.metadata)
-}
-
-class DataSource extends DataSourceCallCountable {
-  constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
-    super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
-  }
-
-  initializeClients() { }
-  initializeMetadataClients() { }
-  initializeStatStream() { }
-  initializePingStream() { }
-  initializeAgentInfoScheduler() { }
 }
 
 test('Should send span ', function (t) {
@@ -719,32 +712,6 @@ test('sendSpan', (t) => {
   })
 })
 
-const CommandType = require('../../lib/constant/commaned-type')
-const Annotations = require('../../lib/instrumentation/context/annotation/annotations')
-test.skip('sendHandshake', (t) => {
-  let expectedParams = {
-    supportCommandList: [CommandType.ECHO, CommandType.ACTIVE_THREAD_COUNT, CommandType.ACTIVE_THREAD_COUNT_RESPONSE],
-  }
-  grpcDataSender.sendControlHandshake(expectedParams)
-  const pCmdServiceHandshake = grpcDataSender.actualPCmdMessage.getHandshakemessage()
-
-  t.plan(4)
-  t.true(pCmdServiceHandshake != null, 'pCmdServiceHandshake')
-
-  const actualKeys = pCmdServiceHandshake.getSupportcommandservicekeyList()
-  actualKeys.forEach((key, index) => {
-    if (index == 0) {
-      t.equal(key, CommandType.ECHO, 'CommandType.ECHO')
-    }
-    if (index == 1) {
-      t.equal(key, CommandType.ACTIVE_THREAD_COUNT, 'CommandType.ACTIVE_THREAD_COUNT')
-    }
-    if (index == 2) {
-      t.equal(key, CommandType.ACTIVE_THREAD_COUNT_RESPONSE, 'CommandType.ACTIVE_THREAD_COUNT_RESPONSE')
-    }
-  })
-})
-
 test('sendStat', (t) => {
   let expectedStat = {
     'agentId': 'express-node-sample-id',
@@ -787,6 +754,77 @@ test('sendStat', (t) => {
   t.equal(pCpuLoad.getSystemcpuload(), 0, 'cpu.system')
 })
 
-test('commandEcho', (t) => {
-  t.end()
+let requestId = 1
+const handleCommandV2Service = (call) => {
+  const callRequests = getCallRequests()
+  const callMetadata = getMetadata()
+  callRequests.push(call.request)
+  callMetadata.push(call.metadata)
+
+  const result = new cmdMessage.PCmdRequest()
+  result.setRequestid(requestId++)
+  const message = new cmdMessage.PCmdEcho()
+  message.setMessage('echo')
+  result.setCommandecho(message)
+  call.write(result)
+}
+
+const commandEchoService = (call, callback) => {
+  const succeedOnRetryAttempt = call.metadata.get('succeed-on-retry-attempt')
+  const previousAttempts = call.metadata.get('grpc-previous-rpc-attempts')
+  const callRequests = getCallRequests()
+  const callMetadata = getMetadata()
+  // console.debug(`succeed-on-retry-attempt: ${succeedOnRetryAttempt[0]}, grpc-previous-rpc-attempts: ${previousAttempts[0]}`)
+  if (succeedOnRetryAttempt.length === 0 || (previousAttempts.length > 0 && previousAttempts[0] === succeedOnRetryAttempt[0])) {
+      callRequests.push(call.request)
+      callMetadata.push(call.metadata)
+      callback(null, new Empty())
+  } else {
+      const statusCode = call.metadata.get('respond-with-status')
+      const code = statusCode[0] ? Number.parseInt(statusCode[0]) : grpc.status.UNKNOWN
+      callback({ code: code, details: `Failed on retry ${previousAttempts[0] ?? 0}` })
+  }
+}
+
+class DataSource extends DataSourceCallCountable {
+  constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+    super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+  }
+
+  initializeClients() { }
+  initializeMetadataClients() { }
+  initializeStatStream() { }
+  initializePingStream() { }
+  initializeAgentInfoScheduler() { }
+}
+
+test('sendSupportedServicesCommand', (t) => {
+  const server = new grpc.Server()
+  server.addService(services.ProfilerCommandServiceService, {
+    handleCommandV2: handleCommandV2Service,
+    commandEcho: commandEchoService
+  })
+
+  let dataSender
+  server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+    dataSender = beforeSpecificOne(port, DataSource)
+    dataSender.sendSupportedServicesCommand()
+    const callArguments = new CallArgumentsBuilder(function (error, response) {
+      const callRequests = getCallRequests()
+      const commonResponse = callRequests[1].getCommonresponse()
+      t.equal(commonResponse.getResponseid(), 1, 'response id matches request id')
+      t.equal(commonResponse.getStatus(), 0, 'status is success')
+      t.equal(commonResponse.getMessage().getValue(), '', 'message is empty')
+
+      const cmdEchoResponse = callRequests[1]
+      t.equal(cmdEchoResponse.getMessage(), 'echo', 'echo message')
+      afterOne(t)
+    }).build()
+    dataSender.setCommandEchoCallArguments(callArguments)
+  })
+  
+  t.teardown(() => {
+    dataSender.close()
+    server.forceShutdown()
+  })
 })

@@ -6,6 +6,7 @@
 
 const test = require('tape')
 const grpc = require('@grpc/grpc-js')
+const cmdMessage = require('../../lib/data/v1/Cmd_pb')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const { log } = require('../test-helper')
@@ -113,6 +114,12 @@ function pingSession(call) {
     })
 }
 
+const handleCommandV2Service = (call, callback) => {
+    const result = new cmdMessage.PResult()
+    callback(null, result)
+}
+
+
 // https://github.com/grpc/grpc-node/issues/1542
 // https://github.com/grpc/grpc-node/pull/1616/files
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
@@ -132,6 +139,9 @@ test('client side streaming with deadline and cancellation', function (t) {
     })
     server.addService(services.SpanService, {
         sendSpan: sendSpan
+    })
+    server.addService(services.ProfilerCommandServiceService, {
+        handleCommandV2: handleCommandV2Service
     })
 
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {

@@ -61,6 +61,7 @@ class AgentInfoOnlyDataSource extends DataSourceCallCountable {
     initializeSpanStream() { }
     initializeStatStream() { }
     initializePingStream() { }
+    initializeProfilerClients() { }
 
     agentInfoRefreshInterval() {
         return agentInfoRefreshInterval ? agentInfoRefreshInterval : super.agentInfoRefreshInterval()
@@ -75,6 +76,7 @@ class MetaInfoOnlyDataSource extends DataSourceCallCountable {
     initializeSpanStream() { }
     initializeStatStream() { }
     initializePingStream() { }
+    initializeProfilerClients() { }
     initializeAgentInfoScheduler() { }
 }
 

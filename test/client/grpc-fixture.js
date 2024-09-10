@@ -9,6 +9,7 @@
 const config = require('../../lib/config')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
+const SpanBuilder = require('../../lib/instrumentation/context/span-builder')
 
 let callCount = 0
 let afterCount = 0
@@ -100,6 +101,19 @@ class DataSourceCallCountable extends GrpcDataSender {
         increaseCallCount()
         super.sendSpan(span)
     }
+
+    sendSupportedServicesCommand() {
+        increaseCallCount()
+        super.sendSupportedServicesCommand()
+    }
+}
+
+function spanWithId(spanId) {
+    return SpanBuilder.makeWithSpanId(spanId, agentInfo()).build()
+}
+
+function spanMessageWithId(spanId) {
+    return spanWithId(spanId).spanMessage
 }
 
 module.exports = {
@@ -108,4 +122,6 @@ module.exports = {
     getCallRequests,
     getMetadata,
     DataSourceCallCountable,
+    spanWithId,
+    spanMessageWithId,
 }

@@ -54,7 +54,7 @@ class MockGrpcDataSender extends GrpcDataSender {
 
   initializeProfilerClients() {
     let self = this
-    this.profilerStream = {
+    this.commandStream = {
       write: function (pmessage) {
         self.actualPCmdMessage = pmessage
       },

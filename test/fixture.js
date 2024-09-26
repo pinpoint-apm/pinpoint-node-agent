@@ -6,7 +6,7 @@
 
 const TransactionId = require('../lib/context/transaction-id')
 const TraceId = require('../lib/context/trace-id')
-const IdGenerator = require('../lib/context/id-generator')
+const SpanId = require('../lib/context/span-id')
 const shimmer = require('@pinpoint-apm/shimmer')
 const testConfig= require('./pinpoint-config-test')
 require('../lib/config').clear()
@@ -22,7 +22,7 @@ const getTransactionId = () => {
 }
 
 const getTraceId = (transactionId) => {
-  const spanId = IdGenerator.stringValueOfNext()
+  const spanId = SpanId.newSpanId()
   return new TraceId(transactionId || getTransactionId(), spanId)
 }
 

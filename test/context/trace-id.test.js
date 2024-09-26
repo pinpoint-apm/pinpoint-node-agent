@@ -7,7 +7,7 @@
 const test = require('tape')
 const TransactionId = require('../../lib/context/transaction-id')
 const TraceId = require('../../lib/context/trace-id')
-const IdGenerator = require('../../lib/context/id-generator')
+const SpanId = require('../../lib/context/span-id')
 
 test('Should create', function (t) {
   t.plan(2)
@@ -15,7 +15,7 @@ test('Should create', function (t) {
   const agentId = 'agent-for-dev'
   const agentStartTime = Date.now()
   const transactionId = new TransactionId(agentId, agentStartTime.toString())
-  const spanId = IdGenerator.stringValueOfNext()
+  const spanId = SpanId.newSpanId()
   const traceId = new TraceId(transactionId, spanId)
 
   t.ok(traceId)

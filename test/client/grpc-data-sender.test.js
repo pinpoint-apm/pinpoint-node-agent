@@ -47,7 +47,7 @@ class DataSource extends DataSourceCallCountable {
   initializeProfilerClients() { }
 }
 
-test.skip('Should send span ', function (t) {
+test('Should send span ', function (t) {
   const expectedSpan = {
     'traceId': {
       'transactionId': {
@@ -301,7 +301,7 @@ test.skip('sendSpanChunk redis.SET.end', function (t) {
   })
 })
 
-test.skip('sendSpanChunk redis.GET.end', (t) => {
+test('sendSpanChunk redis.GET.end', (t) => {
   let expectedSpanChunk = {
     'agentId': 'express-node-sample-id',
     'applicationName': 'express-node-sample-name',
@@ -420,7 +420,7 @@ test.skip('sendSpanChunk redis.GET.end', (t) => {
   })
 })
 
-test.skip('sendSpan', (t) => {
+test('sendSpan', (t) => {
   let expectedSpanChunk = {
     'traceId': {
       'transactionId': {
@@ -805,7 +805,6 @@ const emptyResponseService = (call, callback) => {
     }
   })
 
-
   const succeedOnRetryAttempt = call.metadata.get('succeed-on-retry-attempt')
   const previousAttempts = call.metadata.get('grpc-previous-rpc-attempts')
   const callRequests = getCallRequests()
@@ -859,8 +858,7 @@ test('sendSupportedServicesCommand and commandEcho', (t) => {
       t.equal(cmdEchoResponse.getMessage(), 'echo', 'echo message')
       afterOne(t)
     }).build()
-    dataSender.setCommandEchoCallArguments(callArguments)
-    dataSender.sendSupportedServicesCommand()
+    dataSender.sendSupportedServicesCommand(callArguments)
   })
 
   t.teardown(() => {
@@ -880,22 +878,27 @@ test('CommandStreamActiveThreadCount', (t) => {
   server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
     dataSender = beforeSpecificOne(port, ProfilerDataSource)
 
+    let callCount = 0
     dataCallbackOnServerCall = (data) => {
+      ++callCount
       const commonStreamResponse = data.getCommonstreamresponse()
       t.equal(commonStreamResponse.getResponseid(), requestId, 'response id matches request id')
-      t.equal(commonStreamResponse.getSequenceid(), 1, 'sequenceid is 1')
+      t.equal(commonStreamResponse.getSequenceid(), callCount, `sequenceid is ${callCount}`)
       t.equal(commonStreamResponse.getMessage().getValue(), '', 'message is empty')
 
       t.equal(data.getHistogramschematype(), 2, 'histogram schema type')
       t.equal(data.getActivethreadcountList()[0], 1, 'active thread count')
-      afterOne(t)
+
+      if (callCount == 2) {
+        afterOne(t)
+      }
     }
 
     const callArguments = new CallArgumentsBuilder(function (error, response) {
       serverCallWriter(CommandType.activeThreadCount)
+      serverCallWriter(CommandType.activeThreadCount)
     }).build()
-    dataSender.setCommandEchoCallArguments(callArguments)
-    dataSender.sendSupportedServicesCommand()
+    dataSender.sendSupportedServicesCommand(callArguments)
   })
   t.teardown(() => {
     dataSender.close()

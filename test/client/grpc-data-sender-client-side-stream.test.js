@@ -13,7 +13,6 @@ const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const Span = require('../../lib/context/span')
 const GrpcClientSideStream = require('../../lib/client/grpc-client-side-stream')
-var _ = require('lodash')
 
 let actuals
 
@@ -289,6 +288,9 @@ test('gRPC client side stream reconnect test', (t) => {
 function sendSpan1(call, callback) {
     call.on('data', function () {
         actualsSpanSession.serverDataCount++
+        if (typeof actualsSpanSession.callback === 'function') {
+            actualsSpanSession.callback(actualsSpanSession.serverDataCount)
+        }
     })
     call.on('error', function (error) {
         log.debug(`error: ${error}`)
@@ -324,26 +326,17 @@ test('spanStream ERR_STREAM_WRITE_AFTER_END', (t) => {
             'starttime': Date.now()
         })
 
-        let callOrder = 0
-        this.grpcDataSender.spanStream.callback = () => {
-            callOrder++
-            process.nextTick(() => {
-                if (callOrder == 1) {
-                    t.true(true, `actualsSpanSession.serverDataCount: ${actualsSpanSession.serverDataCount}, on('data') count : ${callOrder}, actualsSpanSession.serverEndCount: ${actualsSpanSession.serverEndCount}`)
-                    server.forceShutdown()
-                    t.end()
-                }
-            })
+        actualsSpanSession.callback = (count) => {
+            if (count == callCount) {
+                t.end()
+            }
         }
 
-        for (let index = 0; index < callCount + 1; index++) {
-            _.delay(() => {
-                if (index == callCount - 8) {
-                    this.grpcDataSender.spanStream.grpcStream.end()
-                } else {
-                    this.grpcDataSender.sendSpan(span)
-                }
-            }, _.random(10, 150))
+        for (let index = 0; index < callCount; index++) {
+            if (0 == index % 2) {
+                this.grpcDataSender.spanStream.grpcStream.end()
+            }
+            this.grpcDataSender.sendSpan(span)
         }
 
         this.grpcDataSender.pingStream.grpcStream.end()
@@ -372,6 +365,10 @@ test('gRPC stream write retry test', (t) => {
                 } else {
                     callback(new Error('Unknow exception'))
                 }
+            },
+            once: function () {
+            },
+            end: function () {
             }
         }
     })

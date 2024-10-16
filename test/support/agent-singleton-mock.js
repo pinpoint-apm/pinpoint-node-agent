@@ -6,14 +6,14 @@
 
 'use strict'
 
-const { fixture, log } = require('../test-helper')
+const { log } = require('../test-helper')
 const enableDataSending = require('../test-helper').enableDataSending
 enableDataSending()
 const Agent = require('../../lib/agent')
 const dataSenderMock = require('./data-sender-mock')
 const shimmer = require('@pinpoint-apm/shimmer')
 const httpShared = require('../../lib/instrumentation/http-shared')
-const traceContext = require('../../lib/context/trace-context')
+const TraceContext = require('../../lib/context/trace-context')
 const activeTrace = require('../../lib/metric/active-trace')
 const apiMetaService = require('../../lib/context/api-meta-service')
 const { setDataSender } = require('../../lib/client/data-sender-factory')
@@ -73,7 +73,7 @@ class MockAgent extends Agent {
 
         this.dataSender = dataSenderMock()
         setDataSender(this.dataSender)
-        this.traceContext = traceContext.init(this.agentInfo, this.dataSender, this.config)
+        this.traceContext = new TraceContext(this.agentInfo, this.dataSender, this.config)
 
         this.closedTraces = []
     }

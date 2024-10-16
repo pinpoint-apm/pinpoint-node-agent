@@ -23,7 +23,7 @@ function beforeSpecificOne(port, one, serviceConfig) {
     callRequests = []
     callMetadata = []
     const actualConfig = config.getConfig({ 'grpc.service_config': serviceConfig })
-    actualConfig.collectorIp = 'localhost'
+    actualConfig.collectorIp = '127.0.0.1'
     actualConfig.collectorTcpPort = port
     actualConfig.collectorStatPort = port
     actualConfig.collectorSpanPort = port

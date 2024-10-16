@@ -192,7 +192,7 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 async function outgoingRequest(t, path, expectedSampling, expectUnits) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         const PATH = path
         const app = new express()
 

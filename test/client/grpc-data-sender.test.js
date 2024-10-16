@@ -20,13 +20,17 @@ const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const Annotations = require('../../lib/instrumentation/context/annotation/annotations')
 const CallArgumentsBuilder = require('../../lib/client/call-arguments-builder')
 
-function sendSpan(call, callback) {
+let sendSpanMethodOnDataCallback
+function sendSpan(call) {
   call.on('error', function (error) {
   })
   call.on('data', function (spanMessage) {
     const span = spanMessage.getSpan()
     const callRequests = getCallRequests()
     callRequests.push(span)
+    if (typeof sendSpanMethodOnDataCallback === 'function') {
+      sendSpanMethodOnDataCallback(span)
+    }
   })
   call.on('end', function () {
   })
@@ -47,24 +51,25 @@ class DataSource extends DataSourceCallCountable {
   initializeProfilerClients() { }
 }
 
-test('Should send span ', function (t) {
+test('Should send span', function (t) {
+  sendSpanMethodOnDataCallback = null
   const expectedSpan = {
     'traceId': {
       'transactionId': {
         'agentId': 'express-node-sample-id',
-        'agentStartTime': 1592572771026,
-        'sequence': 5
+        'agentStartTime': '1592572771026',
+        'sequence': '5'
       },
-      'spanId': 2894367178713953,
-      'parentSpanId': -1,
+      'spanId': '2894367178713953',
+      'parentSpanId': '-1',
       'flag': 0
     },
     'agentId': 'express-node-sample-id',
     'applicationName': 'express-node-sample-name',
     'agentStartTime': 1592572771026,
     'serviceType': 1400,
-    'spanId': 2894367178713953,
-    'parentSpanId': -1,
+    'spanId': '2894367178713953',
+    'parentSpanId': '-1',
     'transactionId': {
       'type': 'Buffer',
       'data': [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 210, 245, 239, 229, 172, 46, 5]
@@ -106,73 +111,68 @@ test('Should send span ', function (t) {
   let dataSender
   server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
     dataSender = beforeSpecificOne(port, DataSource)
+    sendSpanMethodOnDataCallback = (actual) => {
+      t.true(actual != null, 'spanChunk send')
+      t.equal(actual.getVersion(), 1, `spanChunk version is ${actual.getVersion()}`)
+
+      const actualTransactionId = actual.getTransactionid()
+      t.equal(actualTransactionId.getAgentid(), span.agentId, `agentId ${span.agentId}`)
+      t.equal(actualTransactionId.getAgentstarttime(), span.traceId.transactionId.agentStartTime, 'agent start time')
+      t.equal(actualTransactionId.getSequence(), span.traceId.transactionId.sequence, `sequence ${span.traceId.transactionId.sequence}`)
+      t.equal(actual.getSpanid(), span.spanId, 'span ID')
+      t.equal(actual.getParentspanid(), span.parentSpanId, 'parent span ID')
+
+      t.equal(actual.getStarttime(), span.startTime, 'startTimeStamp')
+      t.equal(actual.getElapsed(), 28644, 'elapsed time')
+      t.equal(actual.getApiid(), 1, 'api ID')
+
+      t.equal(actual.getServicetype(), 1400, 'service type')
+
+      const actualAcceptEvent = actual.getAcceptevent()
+      t.equal(actualAcceptEvent.getRpc(), '/', 'rpc')
+      t.equal(actualAcceptEvent.getEndpoint(), 'localhost:3000', 'endPoint')
+      t.equal(actualAcceptEvent.getRemoteaddr(), '::1', 'remoteAddr')
+
+      t.equal(actual.getFlag(), 0, 'flag')
+      t.equal(actual.getErr(), 1, 'Error')
+
+      const actualSpanEvents = actual.getSpaneventList()
+      actualSpanEvents.forEach(pSpanEvent => {
+        t.equal(pSpanEvent.getSequence(), 10, 'sequence')
+        t.equal(pSpanEvent.getDepth(), 1, 'depth')
+
+        t.equal(pSpanEvent.getStartelapsed(), 72, 'startElapsed')
+        t.equal(pSpanEvent.getEndelapsed(), 0, 'endElapsed')
+
+        t.equal(pSpanEvent.getServicetype(), 9057, 'serviceType')
+
+        const pAnnotations = pSpanEvent.getAnnotationList()
+        pAnnotations.forEach(annotation => {
+          t.equal(annotation.getKey(), 12, 'annotation key')
+          const pAnnotationValue = annotation.getValue()
+          t.equal(pAnnotationValue.getStringvalue(), 'http.request', 'annotation string value')
+        })
+      })
+
+      t.equal(actual.getApiid(), 1, 'API ID')
+      t.equal(actual.getExceptioninfo(), undefined, 'span exceptionInfo')
+
+      t.equal(actual.getApplicationservicetype(), 1400, 'applicaiton service type')
+      t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
+
+      afterOne(t)
+    }
     dataSender.sendSpan(span)
-    afterOne(t)
   })
   t.teardown(() => {
     dataSender.close()
     server.forceShutdown()
   })
-
-  const grpcDataSender = new MockGrpcDataSender('', 0, 0, 0, { agentId: 'agent', applicationName: 'applicationName', agentStartTime: 1234344 })
-  grpcDataSender.sendSpan(span)
-
-  t.plan(20)
-
-  const actual = grpcDataSender.actualSpan.getSpan()
-  t.true(actual != null, 'spanChunk send')
-  t.equal(actual.getVersion(), 1, 'spanChunk version is 1')
-
-  const actualTransactionId = actual.getTransactionid()
-  t.equal(actualTransactionId.getAgentid(), 'express-node-sample-id', 'gRPC agentId')
-  t.equal(actualTransactionId.getAgentstarttime(), 1592572771026, 'agent start time')
-  t.equal(actualTransactionId.getSequence(), 5)
-
-  t.equal(actual.getSpanid(), 2894367178713953, 'span ID')
-  t.equal(actual.getParentspanid(), -1, 'parent span ID')
-
-  t.equal(actual.getStarttime(), 1592574173350, 'startTimeStamp')
-  t.equal(actual.getElapsed(), 28644, 'elapsed time')
-  t.equal(actual.getApiid(), 1, 'api ID')
-
-  t.equal(actual.getServicetype(), 1400, 'service type')
-
-  const actualAcceptEvent = actual.getAcceptevent()
-  t.equal(actualAcceptEvent.getRpc(), '/', 'rpc')
-  t.equal(actualAcceptEvent.getEndpoint(), 'localhost:3000', 'endPoint')
-  t.equal(actualAcceptEvent.getRemoteaddr(), '::1', 'remoteAddr')
-
-  t.equal(actual.getFlag(), 0, 'flag')
-  t.equal(actual.getErr(), 1, 'Error')
-
-  const actualSpanEvents = actual.getSpaneventList()
-  actualSpanEvents.forEach(pSpanEvent => {
-    t.equal(pSpanEvent.getSequence(), 10, 'sequence')
-    t.equal(pSpanEvent.getDepth(), 1, 'depth')
-
-    t.equal(pSpanEvent.getStartelapsed(), 72, 'startElapsed')
-    t.equal(pSpanEvent.getEndelapsed(), 0, 'endElapsed')
-
-    t.equal(pSpanEvent.getServicetype(), 9057, 'serviceType')
-
-    const pAnnotations = pSpanEvent.getAnnotationList()
-    pAnnotations.forEach(annotation => {
-      t.equal(annotation.getKey(), 12, 'annotation key')
-      const pAnnotationValue = annotation.getValue()
-      t.equal(pAnnotationValue.getStringvalue(), 'http.request', 'annotation string value')
-    })
-  })
-
-  t.equal(actual.getApiid(), 1, 'API ID')
-  t.equal(actual.getExceptioninfo(), null, 'span exceptionInfo')
-
-  t.equal(actual.getApplicationservicetype(), 1400, 'applicaiton service type')
-  t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
 })
 
 const grpcDataSender = new MockGrpcDataSender('', 0, 0, 0, { agentId: 'agent', applicationName: 'applicationName', agentStartTime: 1234344 })
 
-test.skip('sendSpanChunk redis.SET.end', function (t) {
+test('sendSpanChunk redis.SET.end', function (t) {
   let expectedSpanChunk = {
     'agentId': 'express-node-sample-id',
     'applicationName': 'express-node-sample-name',
@@ -784,8 +784,8 @@ let handleCommandCall
 const serverCallWriter = (commandType) => {
   const result = new cmdMessage.PCmdRequest()
   result.setRequestid(requestId)
-  
-  if (commandType === CommandType.activeThreadCount) {    
+
+  if (commandType === CommandType.activeThreadCount) {
     const commandActiveThreadCount = new cmdMessage.PCmdActiveThreadCount()
     result.setCommandactivethreadcount(commandActiveThreadCount)
   } else {
@@ -793,7 +793,7 @@ const serverCallWriter = (commandType) => {
     message.setMessage('echo')
     result.setCommandecho(message)
   }
-  
+
   handleCommandCall.write(result)
 }
 
@@ -835,7 +835,6 @@ class ProfilerDataSource extends DataSourceCallCountable {
 }
 
 test('sendSupportedServicesCommand and commandEcho', (t) => {
-  t.plan(4)
   dataCallbackOnServerCall = null
   const server = new grpc.Server()
   server.addService(services.ProfilerCommandServiceService, {
@@ -844,7 +843,7 @@ test('sendSupportedServicesCommand and commandEcho', (t) => {
   })
 
   let dataSender
-  server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+  server.bindAsync('127.0.0.1:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
     dataSender = beforeSpecificOne(port, ProfilerDataSource)
 
     const callArguments = new CallArgumentsBuilder(function (error, response) {
@@ -856,14 +855,13 @@ test('sendSupportedServicesCommand and commandEcho', (t) => {
 
       const cmdEchoResponse = callRequests[1]
       t.equal(cmdEchoResponse.getMessage(), 'echo', 'echo message')
-      afterOne(t)
+      dataSender.commandStream.writableStream.on('close', () => {
+        t.end()
+      })
+      dataSender.close()
+      server.forceShutdown()
     }).build()
     dataSender.sendSupportedServicesCommand(callArguments)
-  })
-
-  t.teardown(() => {
-    dataSender.close()
-    server.forceShutdown()
   })
 })
 
@@ -875,7 +873,7 @@ test('CommandStreamActiveThreadCount', (t) => {
     commandStreamActiveThreadCount: emptyResponseService
   })
   let dataSender
-  server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+  server.bindAsync('127.0.0.1:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
     dataSender = beforeSpecificOne(port, ProfilerDataSource)
 
     let callCount = 0
@@ -889,19 +887,26 @@ test('CommandStreamActiveThreadCount', (t) => {
       t.equal(data.getHistogramschematype(), 2, 'histogram schema type')
       t.equal(data.getActivethreadcountList()[0], 1, 'active thread count')
 
-      if (callCount == 2) {
-        afterOne(t)
+      console.log(`dataCallbackOnServerCall callCount: ${callCount}`)
+      if (callCount == 1) {
+        dataSender.commandStream.writableStream.on('close', () => {
+          t.end()
+        })
+        dataSender.close()
+        server.forceShutdown()
       }
     }
 
-    const callArguments = new CallArgumentsBuilder(function (error, response) {
-      serverCallWriter(CommandType.activeThreadCount)
-      serverCallWriter(CommandType.activeThreadCount)
+    const callArguments = new CallArgumentsBuilder(function () {
+      if (callArguments.once) {
+        return
+      }
+      callArguments.once = true
+
+      process.nextTick(() => {
+        serverCallWriter(CommandType.activeThreadCount)
+      })
     }).build()
     dataSender.sendSupportedServicesCommand(callArguments)
-  })
-  t.teardown(() => {
-    dataSender.close()
-    server.forceShutdown()
   })
 })

@@ -7,7 +7,7 @@
 const test = require('tape')
 const agent = require('../support/agent-singleton-mock')
 const { RedisContainer } = require('@testcontainers/redis')
-const { Wait } = require("testcontainers")
+const { Wait } = require('testcontainers')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 
 test(`fix redis call stack depth`, async (t) => {

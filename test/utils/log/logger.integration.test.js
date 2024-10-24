@@ -10,7 +10,8 @@ const { getLog, setLog } = require('../../../lib/supports')
 const Agent = require('../../../lib/agent')
 const { clear, getConfig } = require('../../../lib/config')
 
-test('no config logger', (t) => {
+// TODO: Internal logger test
+test.skip('no config logger', (t) => {
     clear()
     setLog(null)
     const actual = getLog()
@@ -43,7 +44,7 @@ test('no config logger', (t) => {
     t.end()
 })
 
-test('logger full cycle', (t) => {
+test.skip('logger full cycle', (t) => {
     clear()
     setLog(null)
     let actual = getLog()

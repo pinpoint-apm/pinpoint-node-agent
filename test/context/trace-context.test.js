@@ -13,6 +13,7 @@ const dataSenderMock = require('../support/data-sender-mock')
 const RequestHeaderUtils = require('../../lib/instrumentation/request-header-utils')
 const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
+const agent = require('../support/agent-singleton-mock')
 
 test('Should create continued trace and add span info', function (t) {
   t.plan(2)
@@ -20,7 +21,7 @@ test('Should create continued trace and add span info', function (t) {
   const transactionId = fixture.getTransactionId()
   const traceId = fixture.getTraceId(transactionId)
   traceId.sampled = true
-  const traceContext = new TraceContext(fixture.getAgentInfo(), dataSenderMock())
+  const traceContext = new TraceContext(agent.agentInfo, dataSenderMock(), agent.config)
 
   const trace = traceContext.continueTraceObject(traceId)
   localStorage.run(trace, () => {
@@ -38,7 +39,7 @@ test('Should begin/end trace block asynchronously', async function (t) {
   t.plan(4)
 
   // start trace and write span info
-  const traceContext = new TraceContext(fixture.getAgentInfo(), dataSenderMock())
+  const traceContext = new TraceContext(agent.agentInfo, dataSenderMock(), agent.config)
   const startedTrace = traceContext.newTraceObject(true)
 
   localStorage.run(startedTrace, () => {
@@ -70,7 +71,7 @@ test('Should complete trace ', async function (t) {
 
   const transactionId = fixture.getTransactionId()
   const traceId = fixture.getTraceId(transactionId)
-  const traceContext = new TraceContext(fixture.getAgentInfo(), dataSenderMock())
+  const traceContext = new TraceContext(agent.agentInfo, dataSenderMock(), agent.config)
 
   const trace = traceContext.newTraceObject(traceId)
 
@@ -83,7 +84,7 @@ test('Should complete trace ', async function (t) {
 test('new Trace', (t) => {
   t.plan(4)
 
-  const dut = new TraceContext(fixture.getAgentInfo(), dataSenderMock(), fixture.config)
+  const dut = new TraceContext(agent.agentInfo, dataSenderMock(), agent.config)
   t.true(dut.isSampling != null, 'dut is not null')
 
   const req = {
@@ -104,7 +105,7 @@ test('new Trace', (t) => {
 test('continue trace', (t) => {
   t.plan(3)
 
-  const dut = new TraceContext(fixture.getAgentInfo(), dataSenderMock(), fixture.config)
+  const dut = new TraceContext(agent.agentInfo, dataSenderMock(), fixture.config)
   const req = {
     url: "http://test.com",
     headers: {

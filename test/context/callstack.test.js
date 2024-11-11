@@ -23,7 +23,7 @@ test(`span and spanEvent call stack`, async (t) => {
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
-        t.equal(trace.callStack.length, 0, 'callstack is 0')
+        t.equal(trace.callStack.length ?? trace.callStack.stack.length, 0, 'callstack is 0')
         t.equal(agent.traceContext.currentTraceObject(), trace, 'current trace is current asyncId trace object')
 
         axios.get(`https://github.com`, { httpAgent: new http.Agent({ keepAlive: false }) })

@@ -38,6 +38,11 @@ class MockDataSender extends DataSender {
       this.mockSpanChunks.push(data)
     } else if (data instanceof SqlMetaData) {
       this.mockSqlMetaData = data
+    } else if (data?.isAsyncSpanChunk?.()) {
+      this.mockSpanChunks.push(data)
+    } else if (data?.isSpan?.()) {
+      this.mockSpan = data
+      this.mockSpans.push(data)
     }
   }
 

@@ -13,17 +13,24 @@ const Agent = require('../../lib/agent')
 const dataSenderMock = require('./data-sender-mock')
 const shimmer = require('@pinpoint-apm/shimmer')
 const httpShared = require('../../lib/instrumentation/http-shared')
-const TraceContext = require('../../lib/context/trace-context')
 const activeTrace = require('../../lib/metric/active-trace')
-const apiMetaService = require('../../lib/context/api-meta-service')
-const { setDataSender } = require('../../lib/client/data-sender-factory')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
-const { cleanup } = require('../fixture')
 const sqlMetaDataService = require('../../lib/instrumentation/sql/sql-metadata-service')
 const SimpleCache = require('../../lib/utils/simple-cache')
 const sampler = require('../../lib/sampler/sampler')
+const TraceSampler = require('../../lib/context/trace/trace-sampler')
 const transactionIdGenerator = require('../../lib/context/sequence-generators').transactionIdGenerator
 const closedTraceWrapped = Symbol('closedTraceWrapped')
+
+let traces = []
+
+const resetTraces = () => {
+    traces = []
+}
+
+const getTraces = () => {
+    return traces
+}
 
 class MockAgent extends Agent {
     startSchedule(agentId, agentStartTime) {
@@ -38,7 +45,7 @@ class MockAgent extends Agent {
 
     bindHttp(json) {
         this.cleanHttp()
-        apiMetaService.init(dataSenderMock())
+        this.dataSender.clear()
 
         if (!json) {
             json = require('../pinpoint-config-test')
@@ -59,10 +66,10 @@ class MockAgent extends Agent {
         httpShared.clearPathMatcher()
         const http = require('http')
         log.debug('shimming http.Server.prototype.emit function')
-        shimmer.wrap(http && http.Server && http.Server.prototype, 'emit', httpShared.instrumentRequest(agent, 'http'))
+        shimmer.wrap(http && http.Server && http.Server.prototype, 'emit', httpShared.instrumentRequest2(agent, 'http'))
 
         log.debug('shimming http.request function')
-        shimmer.wrap(http, 'request', httpShared.traceOutgoingRequest(agent, 'http'))
+        shimmer.wrap(http, 'request', httpShared.traceOutgoingRequest2(agent, 'http'))
 
         localStorage.disable()
 
@@ -71,15 +78,32 @@ class MockAgent extends Agent {
             activeTrace.remove(value)
         })
 
-        this.dataSender = dataSenderMock()
-        setDataSender(this.dataSender)
-        this.traceContext = new TraceContext(this.agentInfo, this.dataSender, this.config)
+        this.traceContext.traceSampler = new TraceSampler(this.agentInfo, config)
+        this.traceContext.config = config
 
-        this.closedTraces = []
+        const dataSender = dataSenderMock()
+        this.traceContext.dataSender = dataSender
+        this.dataSender = dataSender
+
+        resetTraces()
+        shimmer.wrap(this.traceContext, 'newTrace', function (origin) {
+            return function () {
+                const returned = origin.apply(this, arguments)
+                getTraces().push(returned)
+                return returned
+            }
+        })
+
+        shimmer.wrap(this.traceContext, 'continueAsyncContextTraceObject', function (origin) {
+            return function () {
+                const returned = origin.apply(this, arguments)
+                getTraces().push(returned)
+                return returned
+            }
+        })
     }
 
     cleanHttp() {
-        cleanup()
         const http = require('http')
         shimmer.unwrap(http && http.Server && http.Server.prototype, 'emit')
         shimmer.unwrap(http, 'request')
@@ -87,12 +111,6 @@ class MockAgent extends Agent {
 
     callbackTraceClose(callback) {
         const trace = this.traceContext.currentTraceObject()
-        const closedTrace = this.closedTraces.find((closedTrace) => trace === closedTrace)
-        if (closedTrace) {
-            callback(closedTrace)
-            return
-        }
-
         const origin = trace.close
         trace.close = function () {
             origin.apply(trace, arguments)
@@ -107,9 +125,13 @@ class MockAgent extends Agent {
 
     completeTraceObject(trace) {
         super.completeTraceObject(trace)
-        if (!trace[closedTraceWrapped]) {
-            this.closedTraces.push(trace)
-        }
+        // if (!trace[closedTraceWrapped]) {
+        //     this.traces.push(trace)
+        // }
+    }
+
+    getTraces(index) {
+        return getTraces()[index]
     }
 }
 

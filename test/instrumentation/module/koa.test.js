@@ -35,15 +35,15 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
     ctx.body = 'ok. get'
 
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code')
-      t.equal(trace.span.annotations[0].value, 200, 'response status is 200')
+      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code')
+      t.equal(trace.spanBuilder.annotations[0].value, 200, 'response status is 200')
 
       let actualBuilder = new MethodDescriptorBuilder('get')
         .setClassName('Router')
         .setLineNumber(34)
         .setFileName('koa.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.span.spanEventList[0]
+      let spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.equal(spanEvent.annotations[0].key, -1, 'parameter')
       t.equal(spanEvent.annotations[0].value, '/koa-router1', 'parameter value matching')
@@ -83,13 +83,13 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
     ctx.body = 'ok. get'
 
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code')
-      t.equal(trace.span.annotations[0].value, 200, 'response status is 200')
+      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code')
+      t.equal(trace.spanBuilder.annotations[0].value, 200, 'response status is 200')
 
       let actualBuilder = new MethodDescriptorBuilder('get')
         .setClassName('Router')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.span.spanEventList[0]
+      let spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.equal(spanEvent.annotations[0].key, -1, 'parameter')
       t.equal(spanEvent.annotations[0].value, '/koa-router1', 'parameter value matching')

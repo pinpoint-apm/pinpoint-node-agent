@@ -24,25 +24,32 @@ class MockDataSender extends DataSender {
   }
 
   send(data) {
-    super.send(data)
     if (data instanceof AgentInfo) {
       this.mockAgentInfo = data
+      super.send(data)
     } else if (data instanceof ApiMetaInfo) {
       this.mockAPIMetaInfos.push(data)
+      super.send(data)
     } else if (data instanceof StringMetaInfo) {
       this.mockMetaInfo = data
+      super.send(data)
     } else if (data instanceof Span) {
       this.mockSpan = data
       this.mockSpans.push(data)
+      super.send(data)
     } else if (data instanceof SpanChunk) {
       this.mockSpanChunks.push(data)
+      super.send(data)
     } else if (data instanceof SqlMetaData) {
       this.mockSqlMetaData = data
+      super.send(data)
     } else if (data?.isAsyncSpanChunk?.()) {
       this.mockSpanChunks.push(data)
+      super.send(data)
     } else if (data?.isSpan?.()) {
       this.mockSpan = data
       this.mockSpans.push(data)
+      super.send(data)
     }
   }
 
@@ -51,6 +58,12 @@ class MockDataSender extends DataSender {
   }
   findSpanEvent(apiId) {
     return this.mockSpan.spanEventList.find(event => event.apiId === apiId)
+  }
+
+  clear() {
+    this.mockAPIMetaInfos = []
+    this.mockSpanChunks = []
+    this.mockSpans = []
   }
 }
 

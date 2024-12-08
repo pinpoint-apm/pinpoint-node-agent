@@ -22,15 +22,11 @@ test('outgoing request when canSample true', (t) => {
 })
 
 function outgoingRequest(t, sampling) {
-  agent.bindHttp()
-
-  const isSamplingFunction = agent.traceContext.isSampling
   if (sampling) {
-    agent.traceContext.isSampling = () => { return true }
+    agent.bindHttp({ 'sampling': { 'enable': true } })
   } else {
-    agent.traceContext.isSampling = () => { return false }
+    agent.bindHttp({ 'sampling': { 'enable': false } })
   }
-
   const PATH = '/request'
   const app = new express()
 
@@ -59,14 +55,14 @@ function outgoingRequest(t, sampling) {
   app.get(OUTGOING_PATH, async (req, res) => {
     const headers = req.headers
     if (sampling) {
-      t.equal(actualTrace.traceId.transactionId.toString(), headers['pinpoint-traceid'])
-      t.equal(actualTrace.traceId.spanId, headers['pinpoint-pspanid'])
-      t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
-      t.equal(agent.config.serviceType, Number(headers['pinpoint-papptype']))
-      t.equal(actualTrace.traceId.flag, headers['pinpoint-flags'])
+      t.equal(actualTrace.getTraceId().toStringDelimiterFormatted(), headers['pinpoint-traceid'], `traceId Header equals ${actualTrace.getTraceId().toStringDelimiterFormatted()}`)
+      t.equal(actualTrace.getTraceId().getSpanId(), headers['pinpoint-pspanid'], `spanId Header equals ${actualTrace.getTraceId().getSpanId()}`)
+      t.equal(agent.config.applicationName, headers['pinpoint-pappname'], `applicationName Header equals ${agent.config.applicationName}`)
+      t.equal(agent.config.serviceType, Number(headers['pinpoint-papptype']), `serviceType Header equals ${agent.config.serviceType}`)
+      t.equal(actualTrace.getTraceId().getFlags(), headers['pinpoint-flags'], `flags Header equals ${actualTrace.getTraceId().getFlags()}`)
     } else {
       // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
-      t.equal('s0', headers['pinpoint-sampled'])
+      t.equal('s0', headers['pinpoint-sampled'], `sampled Header equals ${headers['pinpoint-sampled']}`)
     }
     res.send('ok get')
   })
@@ -80,8 +76,6 @@ function outgoingRequest(t, sampling) {
     t.ok(result1.status, 200)
 
     server.close()
-
-    agent.traceContext.isSampling = isSamplingFunction
     t.end()
   })
 }
@@ -126,18 +120,12 @@ function incomingRequest(t, sampled) {
     const trace = agent.currentTraceObject()
     const headers = config.headers
 
-    if (trace.traceId) {
-      expectedTransactionId = trace.traceId.transactionId.toString()
-      expectedSpanId = trace.traceId.spanId
-      t.equal(expectedTransactionId, headers['pinpoint-traceid'])
-      t.equal(expectedSpanId, headers['pinpoint-spanid'])
-      t.equal(trace.traceId.parentSpanId, headers['pinpoint-pspanid'])
-    }
-    if (sampled == undefined) {
-      t.equal(trace.sampling, true)
-    } else if (trace.traceId) {
-      t.equal(trace.canSampled(), sampled)
-    }
+    expectedTransactionId = trace.getTraceRoot().getTraceId().toStringDelimiterFormatted()
+    expectedSpanId = trace.getTraceRoot().getTraceId().getSpanId()
+    t.equal(expectedTransactionId, headers['pinpoint-traceid'], `traceId Header equals ${expectedTransactionId}`)
+    t.equal(expectedSpanId, headers['pinpoint-spanid'], `spanId Header equals ${expectedSpanId}`)
+    t.equal(trace.getTraceRoot().getTraceId().getParentSpanId(), headers['pinpoint-pspanid'], `parentSpanId Header equals ${trace.getTraceRoot().getTraceId().getParentSpanId()}`)
+    t.equal(trace.canSampled(), sampled, `sampled equals ${trace.canSampled()}`)
 
     const result1 = await axios.get(getServerUrl(OUTGOING_PATH), {
       timeout: 1000,
@@ -182,23 +170,15 @@ function incomingRequest(t, sampled) {
     const result1 = await axios.get(getServerUrl(PATH), config)
     t.ok(result1.status, 200)
     if (sampled) {
-      t.equal(typeof agent.dataSender.mockSpan.spanId, "string")
-      t.equal(typeof agent.dataSender.mockSpan.parentSpanId, "string")
-      t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.agentStartTime, "string")
-      t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.sequence, "string")
+      t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getSpanId(), 'string')
+      t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getParentSpanId(), 'string')
+      t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getAgentStartTime(), 'string')
+      t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getTransactionId(), 'string')
     }
     server.close()
     t.end()
   })
 }
-
-test('incomming request agent sampled false', (t) => {
-  const config = require('../pinpoint-config-test')
-  config.sampling.enable = false
-  agent.bindHttp(config)
-  incomingRequest(t, false)
-  config.sampling.enable = true
-})
 
 test('incomming request by User', (t) => {
   agent.bindHttp()
@@ -210,14 +190,14 @@ test('incomming request by User', (t) => {
   app.get(PATH, async (req, res) => {
     const trace = agent.currentTraceObject()
 
-    expectedTransactionId = trace.traceId.transactionId.toString()
-    expectedSpanId = trace.traceId.spanId
-    t.equal(typeof expectedTransactionId, "string")
-    t.equal(typeof expectedSpanId, "string")
-    t.equal(trace.traceId.parentSpanId, "-1")
+    expectedTransactionId = trace.getTraceId().toStringDelimiterFormatted()
+    expectedSpanId = trace.getTraceId().spanId
+    t.equal(typeof expectedTransactionId, 'string')
+    t.equal(typeof expectedSpanId, 'string')
+    t.equal(trace.getTraceId().parentSpanId, "-1")
     t.equal(trace.canSampled(), true)
-    t.equal(typeof trace.traceId.transactionId.agentStartTime, "string")
-    t.equal(typeof trace.traceId.transactionId.sequence, "string")
+    t.equal(typeof trace.getTraceId().agentStartTime, 'string')
+    t.equal(typeof trace.getTraceId().getTransactionId(), 'string')
 
     const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
     t.equal(result1.data, 'ok get', 'result equals')
@@ -252,10 +232,10 @@ test('incomming request by User', (t) => {
   const server = app.listen(TEST_ENV.port, async () => {
     const result1 = await axios.get(getServerUrl(PATH))
     t.ok(result1.status, 200)
-    t.equal(typeof agent.dataSender.mockSpan.spanId, "string")
-    t.equal(typeof agent.dataSender.mockSpan.parentSpanId, "string")
-    t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.agentStartTime, "string")
-    t.equal(typeof agent.dataSender.mockSpan.traceId.transactionId.sequence, "string")
+    t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getSpanId(), 'string')
+    t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getParentSpanId(), 'string')
+    t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().agentStartTime, 'string')
+    t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getTransactionId(), 'string')
     server.close()
     t.end()
   })

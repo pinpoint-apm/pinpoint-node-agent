@@ -54,10 +54,10 @@ test.skip(`${testName1} should Record the connections between koa and mongodb an
     const key = ctx.params.author
 
     await mongoose.prepareStorage().then(async () => {
-      const Book = mongoose.model('book', bookSchema)      
+      const Book = mongoose.model('book', bookSchema)
       await mongoose.connect('mongodb://127.0.0.1/mongodb_pinpoint', async function(err) {
         await Book.findOne({author: key}).exec()
-        await redis.get(key)    
+        await redis.get(key)
         console.log('Test!?')
       })
     })
@@ -93,12 +93,12 @@ test.skip(`${testName2} should Record the connections between express and redis.
     var key = req.params.name
 
     await mongoose.prepareStorage().then(async () => {
-      const Book = mongoose.model('book', bookSchema)      
+      const Book = mongoose.model('book', bookSchema)
       await mongoose.connect('mongodb://127.0.0.1/mongodb_pinpoint', function(err) {
         Book.findOne({ author: key }, function(err, book) {
           if (err) return res.status(500).json({ error: err })
           if (!book) return res.status(404).json({ error: 'book not found' })
-    
+
           console.log('test2?')
           res.send(book)
         })
@@ -142,7 +142,7 @@ test.skip(`${testName2} should Record the connections between express and redis.
     // const rstInsert = await axios.post(getServerUrl(PATH), mongoData)
     // t.ok(rstInsert.status, 200)
 
-    const traceMap = agent.traceContext.getAllTraceObject()
+    const traceMap = agent.getTraceContext().getAllTraceObject()
 
     server.close()
     t.end()
@@ -153,5 +153,5 @@ test.onFinish(() => {
   // mongoose.helper.reset().then(function() {
   //   mongoose.killMongo().then(function () {
   //   })
-  // })   
+  // })
 })

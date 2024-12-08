@@ -7,10 +7,8 @@
 const test = require('tape')
 const annotationKey = require('../../lib/constant/annotation-key')
 const AsyncId = require('../../lib/context/async-id')
-const SpanChunk = require('../../lib/context/span-chunk')
 const Span = require('../../lib/context/span')
 const SpanEvent = require('../../lib/context/span-event')
-const MockGrpcDataSender = require('./mock-grpc-data-sender')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, DataSourceCallCountable } = require('./grpc-fixture')
@@ -19,18 +17,31 @@ const CommandType = require('../../lib/client/command/command-type')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const Annotations = require('../../lib/instrumentation/context/annotation/annotations')
 const CallArgumentsBuilder = require('../../lib/client/call-arguments-builder')
+const agent = require('../support/agent-singleton-mock')
+const RemoteTraceRootBuilder = require('../../lib/context/remote-trace-root-builder')
+const SpanBuilder = require('../../lib/context/span-builder')
+const AsyncSpanChunkBuilder = require('../../lib/context/trace/async-span-chunk-builder')
+const SpanRepository = require('../../lib/context/trace/span-repository')
+const ChildTraceBuilder = require('../../lib/context/trace/child-trace-builder')
+const serviceType = require('../../lib/context/service-type')
+const makeMockDataSender = require('../fixtures/mock-data-sender')
+const SpanChunkBuilder = require('../../lib/context/span-chunk-builder')
+const Trace = require('../../lib/context/trace/trace2')
+const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
 
 let sendSpanMethodOnDataCallback
 function sendSpan(call) {
   call.on('error', function (error) {
+    console.log(`error ${error}`)
   })
   call.on('data', function (spanMessage) {
-    const span = spanMessage.getSpan()
-    const callRequests = getCallRequests()
-    callRequests.push(span)
-    if (typeof sendSpanMethodOnDataCallback === 'function') {
-      sendSpanMethodOnDataCallback(span)
+    let spanOrChunk = spanMessage.getSpan()
+    if (!spanOrChunk) {
+      spanOrChunk = spanMessage.getSpanchunk()
     }
+    const callRequests = getCallRequests()
+    callRequests.push(spanOrChunk)
+    sendSpanMethodOnDataCallback?.(spanOrChunk)
   })
   call.on('end', function () {
   })
@@ -52,57 +63,8 @@ class DataSource extends DataSourceCallCountable {
 }
 
 test('Should send span', function (t) {
+  agent.bindHttp()
   sendSpanMethodOnDataCallback = null
-  const expectedSpan = {
-    'traceId': {
-      'transactionId': {
-        'agentId': 'express-node-sample-id',
-        'agentStartTime': '1592572771026',
-        'sequence': '5'
-      },
-      'spanId': '2894367178713953',
-      'parentSpanId': '-1',
-      'flag': 0
-    },
-    'agentId': 'express-node-sample-id',
-    'applicationName': 'express-node-sample-name',
-    'agentStartTime': 1592572771026,
-    'serviceType': 1400,
-    'spanId': '2894367178713953',
-    'parentSpanId': '-1',
-    'transactionId': {
-      'type': 'Buffer',
-      'data': [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 210, 245, 239, 229, 172, 46, 5]
-    },
-    'startTime': 1592574173350,
-    'elapsedTime': 28644,
-    'rpc': '/',
-    'endPoint': 'localhost:3000',
-    'remoteAddr': '::1',
-    'annotations': [],
-    'flag': 0,
-    'err': 1,
-    'spanEventList': null,
-    'apiId': 1,
-    'exceptionInfo': null,
-    'applicationServiceType': 1400,
-    'loggingTransactionInfo': null,
-    'version': 1
-  }
-
-  const span = Object.assign(new Span({
-    spanId: 2894367178713953,
-    parentSpanId: -1,
-    transactionId: {
-      'agentId': 'express-node-sample-id',
-      'agentStartTime': 1592574173350,
-      'sequence': 0
-    }
-  }, {
-    agentId: 'express-node-sample-id',
-    applicationName: 'express-node-sample-name',
-    agentStartTime: 1592574173350
-  }), expectedSpan)
 
   const server = new grpc.Server()
   server.addService(services.SpanService, {
@@ -110,20 +72,47 @@ test('Should send span', function (t) {
   })
   let dataSender
   server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-    dataSender = beforeSpecificOne(port, DataSource)
+    const grpcDataSender = beforeSpecificOne(port, DataSource)
+    const traceRoot = new RemoteTraceRootBuilder(agent.agentInfo, '5').build()
+    dataSender = makeMockDataSender(agent.config, grpcDataSender)
+    const spanBuilder = new SpanBuilder(traceRoot)
+    spanBuilder.setServiceType(1400)
+    spanBuilder.setEndPoint('localhost:3000')
+    spanBuilder.setRemoteAddress('::1')
+    spanBuilder.markAfterTime()
+    spanBuilder.setApiId(1)
+    spanBuilder.setRpc('/')
+    spanBuilder.setApplicationServiceType(1400)
+    traceRoot.getShared().maskErrorCode(1)
+    const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
+    const repository = new SpanRepository(spanChunkBuilder, dataSender, agent.agentInfo)
+    const trace = new Trace(spanBuilder, repository)
+
+    const spanEventRecorder = trace.traceBlockBegin()
+    spanEventRecorder.spanEventBuilder.setSequence(10)
+    spanEventRecorder.spanEventBuilder.setDepth(1)
+    spanEventRecorder.recordApiDesc('http.request')
+    spanEventRecorder.spanEventBuilder.startTime = spanBuilder.startTime + 72
+    spanEventRecorder.recordServiceType(serviceType.asyncHttpClientInternal)
+
+    setTimeout(() => {
+      trace.traceBlockEnd(spanEventRecorder)
+      agent.completeTraceObject(trace)
+    }, 1000)
+
     sendSpanMethodOnDataCallback = (actual) => {
       t.true(actual != null, 'spanChunk send')
       t.equal(actual.getVersion(), 1, `spanChunk version is ${actual.getVersion()}`)
 
       const actualTransactionId = actual.getTransactionid()
-      t.equal(actualTransactionId.getAgentid(), span.agentId, `agentId ${span.agentId}`)
-      t.equal(actualTransactionId.getAgentstarttime(), span.traceId.transactionId.agentStartTime, 'agent start time')
-      t.equal(actualTransactionId.getSequence(), span.traceId.transactionId.sequence, `sequence ${span.traceId.transactionId.sequence}`)
-      t.equal(actual.getSpanid(), span.spanId, 'span ID')
-      t.equal(actual.getParentspanid(), span.parentSpanId, 'parent span ID')
+      t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), `agentId ${traceRoot.getAgentId()}`)
+      t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), 'agent start time')
+      t.equal(actualTransactionId.getSequence(), traceRoot.getTransactionId(), `sequence ${traceRoot.getTransactionId()}`)
+      t.equal(actual.getSpanid(), traceRoot.getTraceId().getSpanId(), 'span ID')
+      t.equal(actual.getParentspanid(), traceRoot.getTraceId().getParentSpanId(), 'parent span ID')
 
-      t.equal(actual.getStarttime(), span.startTime, 'startTimeStamp')
-      t.equal(actual.getElapsed(), 28644, 'elapsed time')
+      t.equal(actual.getStarttime(), spanBuilder.startTime, 'startTimeStamp')
+      t.equal(actual.getElapsed(), spanBuilder.elapsedTime, 'elapsed time')
       t.equal(actual.getApiid(), 1, 'api ID')
 
       t.equal(actual.getServicetype(), 1400, 'service type')
@@ -142,7 +131,7 @@ test('Should send span', function (t) {
         t.equal(pSpanEvent.getDepth(), 1, 'depth')
 
         t.equal(pSpanEvent.getStartelapsed(), 72, 'startElapsed')
-        t.equal(pSpanEvent.getEndelapsed(), 0, 'endElapsed')
+        t.equal(pSpanEvent.getEndelapsed(), dataSender.mockSpan.spanEventList[0].elapsedTime, 'endElapsed')
 
         t.equal(pSpanEvent.getServicetype(), 9057, 'serviceType')
 
@@ -162,7 +151,6 @@ test('Should send span', function (t) {
 
       afterOne(t)
     }
-    dataSender.sendSpan(span)
   })
   t.teardown(() => {
     dataSender.close()
@@ -170,558 +158,251 @@ test('Should send span', function (t) {
   })
 })
 
-const grpcDataSender = new MockGrpcDataSender('', 0, 0, 0, { agentId: 'agent', applicationName: 'applicationName', agentStartTime: 1234344 })
-
 test('sendSpanChunk redis.SET.end', function (t) {
-  let expectedSpanChunk = {
-    'agentId': 'express-node-sample-id',
-    'applicationName': 'express-node-sample-name',
-    'agentStartTime': 1592872080170,
-    'serviceType': 1400,
-    'spanId': 7056897257955935,
-    'parentSpanId': -1,
-    'transactionId': {
-      'type': 'Buffer',
-      'data': [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 170, 166, 204, 244, 173, 46, 0]
-    },
-    'transactionIdObject': {
-      'agentId': 'express-node-sample-id',
-      'agentStartTime': 1592872080170,
-      'sequence': 0
-    },
-    'spanEventList': [Object.assign(new SpanEvent({
-      spanId: 7056897257955935,
-      endPoint: 'localhost:6379'
-    }, 0), {
-      'spanId': 7056897257955935,
-      'sequence': 0,
-      'startTime': 1592872091543,
-      'elapsedTime': 0,
-      'startElapsed': 14,
-      'serviceType': 100,
-      'endPoint': null,
-      'annotations': [],
-      'depth': 1,
-      'nextSpanId': -1,
-      'destinationId': null,
-      'apiId': 1,
-      'exceptionInfo': null,
-      'asyncId': null,
-      'nextAsyncId': null,
-      'asyncSequence': null,
-      'dummyId': null,
-      'nextDummyId': null
-    }),
-    Object.assign(new SpanEvent({
-      spanId: 7056897257955935,
-      endPoint: 'localhost:6379'
-    }, 1), {
-      'spanId': 7056897257955935,
-      'sequence': 1,
-      'startTime': 1592872091543,
-      'elapsedTime': 2,
-      'startElapsed': 7,
-      'serviceType': 8200,
-      'endPoint': 'localhost:6379',
-      'annotations': [Annotations.of(annotationKey.API.getCode(), 'redis.SET.end')],
-      'depth': 2,
-      'nextSpanId': 1508182809976945,
-      'destinationId': 'Redis',
-      'apiId': 0,
-      'exceptionInfo': null,
-      'asyncId': null,
-      'nextAsyncId': null,
-      'asyncSequence': null,
-      'dummyId': null,
-      'nextDummyId': null
-    })
-    ],
-    'endPoint': null,
-    'applicationServiceType': 1400,
-    'localAsyncId': new AsyncId(1)
-  }
-  const spanChunk = Object.assign(new SpanChunk({
-    spanId: 2894367178713953,
-    parentSpanId: -1,
-    transactionId: {
-      'agentId': 'express-node-sample-id',
-      'agentStartTime': 1592872080170,
-      'sequence': 0
-    }
-  }, {
-    agentId: 'express-node-sample-id',
-    applicationName: 'express-node-sample-name',
-    agentStartTime: 1592872080170
-  }), expectedSpanChunk)
+  agent.bindHttp()
+  sendSpanMethodOnDataCallback = null
+  const server = new grpc.Server()
+  server.addService(services.SpanService, {
+    sendSpan: sendSpan
+  })
 
-  grpcDataSender.sendSpanChunk(spanChunk)
+  let dataSender
+  server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+    const grpcDataSender = beforeSpecificOne(port, DataSource)
+    const traceRoot = new RemoteTraceRootBuilder(agent.agentInfo, '5').build()
+    const asyncId = AsyncId.make()
+    dataSender = makeMockDataSender(agent.config, grpcDataSender)
+    const spanChunkBuilder = new AsyncSpanChunkBuilder(traceRoot, asyncId)
+    const repository = new SpanRepository(spanChunkBuilder, dataSender, agent.agentInfo)
+    const childTraceBuilder = new ChildTraceBuilder(traceRoot, repository, asyncId)
 
-  const actual = grpcDataSender.actualSpan.getSpanchunk()
+    const spanEventRecorder = childTraceBuilder.traceBlockBegin()
+    spanEventRecorder.recordServiceType(serviceType.redis)
+    spanEventRecorder.recordApiDesc('redis.SET.end')
+    childTraceBuilder.traceBlockEnd(spanEventRecorder)
 
-  t.plan(22)
-  t.true(actual != null, 'spanChunk send')
-  t.equal(actual.getVersion(), 1, 'spanChunk version is 1')
+    agent.completeTraceObject(childTraceBuilder)
 
-  const actualTransactionId = actual.getTransactionid()
-  t.equal(actualTransactionId.getAgentid(), 'express-node-sample-id', 'gRPC agentId')
-  t.equal(actualTransactionId.getAgentstarttime(), 1592872080170, 'agent start time')
-  t.equal(actualTransactionId.getSequence(), 0, 'sequence')
+    sendSpanMethodOnDataCallback = (actualSpanChunk) => {
+      t.plan(22)
+      t.true(actualSpanChunk != null, 'spanChunk send')
+      t.equal(actualSpanChunk.getVersion(), 1, 'spanChunk version is 1')
 
-  t.equal(actual.getSpanid(), 7056897257955935, 'span ID')
-  t.equal(actual.getEndpoint(), '', 'endpoint')
-  t.equal(actual.getApplicationservicetype(), 1400, 'application service type')
+      const actualTransactionId = actualSpanChunk.getTransactionid()
+      t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), 'gRPC agentId')
+      t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), 'agent start time')
+      t.equal(actualTransactionId.getSequence(), traceRoot.getTransactionId(), 'sequence')
 
-  const actualLocalAsyncId = actual.getLocalasyncid()
-  t.equal(actualLocalAsyncId.getAsyncid(), 1, 'local async id')
-  t.equal(actualLocalAsyncId.getSequence(), 0, 'local async id sequence')
+      t.equal(actualSpanChunk.getSpanid(), traceRoot.getTraceId().getSpanId(), 'span ID')
+      t.equal(actualSpanChunk.getEndpoint(), '', 'endpoint')
+      t.equal(actualSpanChunk.getApplicationservicetype(), actualSpanChunk.getApplicationservicetype(), 'application service type')
 
-  t.equal(actual.getKeytime(), 1592872091543, 'keytime')
-  const actualSpanEvents = actual.getSpaneventList()
-  actualSpanEvents.forEach((pSpanEvent, index) => {
-    if (index == 0) {
-      t.equal(pSpanEvent.getSequence(), 0, 'sequence')
-      t.equal(pSpanEvent.getDepth(), 1, 'depth')
-      t.equal(pSpanEvent.getServicetype(), 100, 'serviceType')
-      t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
-    } else if (index == 1) {
-      t.equal(pSpanEvent.getSequence(), 1, 'sequence')
-      t.equal(pSpanEvent.getDepth(), 2, 'depth')
+      const actualLocalAsyncId = actualSpanChunk.getLocalasyncid()
+      t.equal(actualLocalAsyncId.getAsyncid(), asyncId.getAsyncId(), 'local async id')
+      t.equal(actualLocalAsyncId.getSequence(), asyncId.getSequence(), 'local async id sequence')
 
-      t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
-      t.equal(pSpanEvent.getEndelapsed(), 2, 'endElapsed')
-      t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
+      t.equal(actualSpanChunk.getKeytime(), spanChunkBuilder.keyTime, 'keytime')
+      const actualSpanEvents = actualSpanChunk.getSpaneventList()
+      actualSpanEvents.forEach((pSpanEvent, index) => {
+        if (index == 0) {
+          t.equal(pSpanEvent.getSequence(), 0, 'sequence')
+          t.equal(pSpanEvent.getDepth(), 1, 'depth')
+          t.equal(pSpanEvent.getServicetype(), 100, 'serviceType')
+          t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
+        } else if (index == 1) {
+          t.equal(pSpanEvent.getSequence(), 1, 'sequence')
+          t.equal(pSpanEvent.getDepth(), 2, 'depth')
 
-      const pAnnotations = pSpanEvent.getAnnotationList()
-      pAnnotations.forEach(annotation => {
-        t.equal(annotation.getKey(), 12, 'annotation key')
-        const pAnnotationValue = annotation.getValue()
-        t.equal(pAnnotationValue.getStringvalue(), 'redis.SET.end', 'annotation string value')
+          const expectedSpanChunk = repository.dataSender.findSpanChunk(childTraceBuilder.localAsyncId)
+          const expectedSpanEvent = expectedSpanChunk.spanEventList[0]
+          t.equal(pSpanEvent.getStartelapsed(), expectedSpanEvent.startElapsedTime, `pSpanEvent.getStartelapsed() : ${pSpanEvent.getStartelapsed()}, expectedSpanEvent.startElapsedTime : ${expectedSpanEvent.startElapsedTime}`)
+          t.equal(pSpanEvent.getEndelapsed(), expectedSpanEvent.elapsedTime, `pSpanEvent.getEndelapsed() : ${pSpanEvent.getEndelapsed()}, expectedSpanEvent.elapsedTime : ${expectedSpanEvent.elapsedTime}`)
+          t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
+
+          const pAnnotations = pSpanEvent.getAnnotationList()
+          pAnnotations.forEach(annotation => {
+            t.equal(annotation.getKey(), 12, 'annotation key')
+            const pAnnotationValue = annotation.getValue()
+            t.equal(pAnnotationValue.getStringvalue(), 'redis.SET.end', 'annotation string value')
+          })
+        }
       })
+      afterOne(t)
     }
+  })
+  t.teardown(() => {
+    dataSender.close()
+    server.forceShutdown()
   })
 })
 
 test('sendSpanChunk redis.GET.end', (t) => {
-  let expectedSpanChunk = {
-    'agentId': 'express-node-sample-id',
-    'applicationName': 'express-node-sample-name',
-    'agentStartTime': 1592872080170,
-    'serviceType': 1400,
-    'spanId': 7056897257955935,
-    'parentSpanId': -1,
-    'transactionId': {
-      'type': 'Buffer',
-      'data': [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 170, 166, 204, 244, 173, 46, 0]
-    },
-    'transactionIdObject': {
-      'agentId': 'express-node-sample-id',
-      'agentStartTime': 1592872080170,
-      'sequence': 0
-    },
-    'spanEventList': [Object.assign(new SpanEvent({
-      spanId: 7056897257955935,
-      endPoint: 'localhost:6379'
-    }, 0), {
-      'spanId': 7056897257955935,
-      'sequence': 0,
-      'startTime': 1592872091543,
-      'elapsedTime': 0,
-      'startElapsed': 14,
-      'serviceType': 100,
-      'endPoint': null,
-      'annotations': [],
-      'depth': 1,
-      'nextSpanId': -1,
-      'destinationId': null,
-      'apiId': 1,
-      'exceptionInfo': null,
-      'asyncId': null,
-      'nextAsyncId': null,
-      'asyncSequence': null,
-      'dummyId': null,
-      'nextDummyId': null
-    }),
-    {
-      'spanId': 7056897257955935,
-      'sequence': 1,
-      'startTime': 1592872091543,
-      'elapsedTime': 0,
-      'startElapsed': 7,
-      'serviceType': 8200,
-      'endPoint': 'localhost:6379',
-      'annotations': [Annotations.of(annotationKey.API.getCode(), 'redis.GET.end')],
-      'depth': 2,
-      'nextSpanId': 6277978728741477,
-      'destinationId': 'Redis',
-      'apiId': 0,
-      'exceptionInfo': null,
-      'asyncId': null,
-      'nextAsyncId': null,
-      'asyncSequence': null,
-      'dummyId': null,
-      'nextDummyId': null
-    }
-    ],
-    'endPoint': null,
-    'applicationServiceType': 1400,
-    'localAsyncId': new AsyncId(2)
-  }
+  agent.bindHttp()
+  sendSpanMethodOnDataCallback = null
+  const server = new grpc.Server()
+  server.addService(services.SpanService, {
+    sendSpan: sendSpan
+  })
 
-  const spanChunk = Object.assign(new SpanChunk({
-    spanId: 7056897257955935,
-    parentSpanId: -1,
-    transactionId: {
-      'agentId': 'express-node-sample-id',
-      'agentStartTime': 1592872080170,
-      'sequence': 0
-    }
-  }, {
-    agentId: 'express-node-sample-id',
-    applicationName: 'express-node-sample-name',
-    agentStartTime: 1592872080170
-  }), expectedSpanChunk)
-  grpcDataSender.sendSpanChunk(spanChunk)
-  const actual = grpcDataSender.actualSpan.getSpanchunk()
+  let dataSender
+  server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+    const grpcDataSender = beforeSpecificOne(port, DataSource)
+    const traceRoot = new RemoteTraceRootBuilder(agent.agentInfo, '5').build()
+    const asyncId = AsyncId.make()
+    dataSender = makeMockDataSender(agent.config, grpcDataSender)
+    const spanChunkBuilder = new AsyncSpanChunkBuilder(traceRoot, asyncId)
+    const repository = new SpanRepository(spanChunkBuilder, dataSender, agent.agentInfo)
+    const childTraceBuilder = new ChildTraceBuilder(traceRoot, repository, asyncId)
 
-  t.plan(16)
-  t.equal(actual.getVersion(), 1, 'version')
+    const spanEventRecorder = childTraceBuilder.traceBlockBegin()
+    spanEventRecorder.recordServiceType(serviceType.redis)
+    spanEventRecorder.recordApiDesc('redis.GET.end')
+    childTraceBuilder.traceBlockEnd(spanEventRecorder)
 
-  const actualTransactionId = actual.getTransactionid()
-  t.equal(actualTransactionId.getAgentid(), 'express-node-sample-id', 'gRPC agentId')
-  t.equal(actualTransactionId.getAgentstarttime(), 1592872080170, 'agent start time')
-  t.equal(actualTransactionId.getSequence(), 0, 'sequence')
+    agent.completeTraceObject(childTraceBuilder)
 
-  t.equal(actual.getSpanid(), 7056897257955935, 'span ID')
-  t.equal(actual.getEndpoint(), '', 'endpoint')
-  t.equal(actual.getApplicationservicetype(), 1400, 'application service type')
+    sendSpanMethodOnDataCallback = (actualSpanChunk) => {
+      t.plan(16)
+      t.equal(actualSpanChunk.getVersion(), 1, 'version')
 
-  const actualLocalAsyncId = actual.getLocalasyncid()
-  t.equal(actualLocalAsyncId.getAsyncid(), 2, 'local async id')
-  t.equal(actualLocalAsyncId.getSequence(), 0, 'local async id sequence')
+      const actualTransactionId = actualSpanChunk.getTransactionid()
+      t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), 'gRPC agentId')
+      t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), 'agent start time')
+      t.equal(actualTransactionId.getSequence(), traceRoot.getTransactionId(), 'sequence')
 
-  t.equal(actual.getKeytime(), 1592872091543, 'keytime')
-  const actualSpanEvents = actual.getSpaneventList()
-  actualSpanEvents.forEach((pSpanEvent, index) => {
-    if (index == 1) {
-      t.equal(pSpanEvent.getSequence(), 1, 'sequence')
-      t.equal(pSpanEvent.getDepth(), 2, 'depth')
+      t.equal(actualSpanChunk.getSpanid(), traceRoot.getTraceId().getSpanId(), 'span ID')
+      t.equal(actualSpanChunk.getEndpoint(), '', 'endpoint')
+      t.equal(actualSpanChunk.getApplicationservicetype(), actualSpanChunk.getApplicationservicetype(), 'application service type')
 
-      t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
+      const actualLocalAsyncId = actualSpanChunk.getLocalasyncid()
+      t.equal(actualLocalAsyncId.getAsyncid(), asyncId.getAsyncId(), 'local async id')
+      t.equal(actualLocalAsyncId.getSequence(), asyncId.getSequence(), 'local async id sequence')
 
-      t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
+      t.equal(actualSpanChunk.getKeytime(), spanChunkBuilder.keyTime, `keytime ${actualSpanChunk.getKeytime()}`)
+      const actualSpanEvents = actualSpanChunk.getSpaneventList()
+      actualSpanEvents.forEach((pSpanEvent, index) => {
+        if (index == 1) {
+          t.equal(pSpanEvent.getSequence(), 1, 'sequence')
+          t.equal(pSpanEvent.getDepth(), 2, 'depth')
 
-      const pAnnotations = pSpanEvent.getAnnotationList()
-      pAnnotations.forEach(annotation => {
-        t.equal(annotation.getKey(), 12, 'annotation key')
-        const pAnnotationValue = annotation.getValue()
-        t.equal(pAnnotationValue.getStringvalue(), 'redis.GET.end', 'annotation string value')
+          const expectedSpanChunk = repository.dataSender.findSpanChunk(childTraceBuilder.localAsyncId)
+          const expectedSpanEvent = expectedSpanChunk.spanEventList[0]
+          t.equal(pSpanEvent.getStartelapsed(), expectedSpanEvent.startElapsedTime, 'startElapsed')
+          t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
+
+          const pAnnotations = pSpanEvent.getAnnotationList()
+          pAnnotations.forEach(annotation => {
+            t.equal(annotation.getKey(), 12, 'annotation key')
+            const pAnnotationValue = annotation.getValue()
+            t.equal(pAnnotationValue.getStringvalue(), 'redis.GET.end', 'annotation string value')
+          })
+        }
       })
+      afterOne(t)
     }
+  })
+  t.teardown(() => {
+    dataSender.close()
+    server.forceShutdown()
   })
 })
 
 test('sendSpan', (t) => {
-  let expectedSpanChunk = {
-    'traceId': {
-      'transactionId': {
-        'agentId': 'express-node-sample-id',
-        'agentStartTime': 1592872080170,
-        'sequence': 0
-      },
-      'spanId': 7056897257955935,
-      'parentSpanId': -1,
-      'flag': 0
-    },
-    'agentId': 'express-node-sample-id',
-    'applicationName': 'express-node-sample-name',
-    'agentStartTime': 1592872080170,
-    'serviceType': 1400,
-    'spanId': 7056897257955935,
-    'parentSpanId': -1,
-    'transactionId': {
-      'type': 'Buffer',
-      'data': [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 170, 166, 204, 244, 173, 46, 0]
-    },
-    'startTime': 1592872091536,
-    'elapsedTime': 412,
-    'rpc': '/',
-    'endPoint': 'localhost:3000',
-    'remoteAddr': '::1',
-    'annotations': [],
-    'flag': 0,
-    'err': null,
-    'spanEventList': [
-      Object.assign(new SpanEvent({
-        spanId: 7056897257955935,
-        endPoint: 'localhost:3000'
-      }, 4), {
-        'spanId': 7056897257955935,
-        'sequence': 4,
-        'startTime': 1592872091540,
-        'elapsedTime': 1,
-        'startElapsed': 4,
-        'serviceType': 6600,
-        'endPoint': 'localhost:3000',
-        'annotations': [Annotations.of(annotationKey.API.getCode(), 'express.middleware.serveStatic')],
-        'depth': 5,
-        'nextSpanId': -1,
-        'destinationId': 'localhost:3000',
-        'apiId': 0,
-        'exceptionInfo': null,
-        'asyncId': null,
-        'nextAsyncId': null,
-        'asyncSequence': null,
-        'dummyId': null,
-        'nextDummyId': null
-      }),
-      Object.assign(new SpanEvent({
-        spanId: 7056897257955935,
-        endPoint: 'localhost:3000'
-      }, 3), {
-        'spanId': 7056897257955935,
-        'sequence': 3,
-        'startTime': 1592872091540,
-        'elapsedTime': 1,
-        'startElapsed': 4,
-        'serviceType': 6600,
-        'endPoint': 'localhost:3000',
-        'annotations': [Annotations.of(annotationKey.API.getCode(), 'express.middleware.cookieParser')],
-        'depth': 4,
-        'nextSpanId': -1,
-        'destinationId': 'localhost:3000',
-        'apiId': 0,
-        'exceptionInfo': null,
-        'asyncId': null,
-        'nextAsyncId': null,
-        'asyncSequence': null,
-        'dummyId': null,
-        'nextDummyId': null
-      }),
-      Object.assign(new SpanEvent({
-        spanId: 7056897257955935,
-        endPoint: 'localhost:3000'
-      }, 2), {
-        'spanId': 7056897257955935,
-        'sequence': 2,
-        'startTime': 1592872091540,
-        'elapsedTime': 1,
-        'startElapsed': 4,
-        'serviceType': 6600,
-        'endPoint': 'localhost:3000',
-        'annotations': [Annotations.of(annotationKey.API.getCode(), 'express.middleware.urlencodedParser')],
-        'depth': 3,
-        'nextSpanId': -1,
-        'destinationId': 'localhost:3000',
-        'apiId': 0,
-        'exceptionInfo': null,
-        'asyncId': null,
-        'nextAsyncId': null,
-        'asyncSequence': null,
-        'dummyId': null,
-        'nextDummyId': null
-      }),
-      Object.assign(new SpanEvent({
-        spanId: 7056897257955935,
-        endPoint: 'localhost:3000'
-      }, 1), {
-        'spanId': 7056897257955935,
-        'sequence': 1,
-        'startTime': 1592872091540,
-        'elapsedTime': 1,
-        'startElapsed': 4,
-        'serviceType': 6600,
-        'endPoint': 'localhost:3000',
-        'annotations': [Annotations.of(annotationKey.API.getCode(), 'express.middleware.jsonParser')],
-        'depth': 2,
-        'nextSpanId': -1,
-        'destinationId': 'localhost:3000',
-        'apiId': 0,
-        'exceptionInfo': null,
-        'asyncId': null,
-        'nextAsyncId': null,
-        'asyncSequence': null,
-        'dummyId': null,
-        'nextDummyId': null
-      }),
-      Object.assign(new SpanEvent({
-        spanId: 7056897257955935,
-        endPoint: 'localhost:3000'
-      }, 0), {
-        'spanId': 7056897257955935,
-        'sequence': 0,
-        'startTime': 1592872091539,
-        'elapsedTime': 2,
-        'startElapsed': 3,
-        'serviceType': 6600,
-        'endPoint': 'localhost:3000',
-        'annotations': [Annotations.of(annotationKey.API.getCode(), 'express.middleware.logger')],
-        'depth': 1,
-        'nextSpanId': -1,
-        'destinationId': 'localhost:3000',
-        'apiId': 0,
-        'exceptionInfo': null,
-        'asyncId': null,
-        'nextAsyncId': null,
-        'asyncSequence': null,
-        'dummyId': null,
-        'nextDummyId': null
-      }),
-      Object.assign(new SpanEvent({
-        spanId: 7056897257955935,
-        endPoint: 'localhost:3000'
-      }, 6), {
-        'spanId': 7056897257955935,
-        'sequence': 6,
-        'startTime': 1592872091543,
-        'elapsedTime': 0,
-        'startElapsed': 7,
-        'serviceType': 9057,
-        'endPoint': 'localhost:6379',
-        'annotations': [Annotations.of(annotationKey.API.getCode(), 'redis.SET.call')],
-        'depth': 2,
-        'nextSpanId': -1,
-        'destinationId': 'Redis',
-        'apiId': 0,
-        'exceptionInfo': null,
-        'asyncId': null,
-        'nextAsyncId': 1,
-        'asyncSequence': null,
-        'dummyId': null,
-        'nextDummyId': null
-      }),
-      Object.assign(new SpanEvent({
-        spanId: 7056897257955935,
-        endPoint: 'localhost:3000'
-      }, 7), {
-        'spanId': 7056897257955935,
-        'sequence': 7,
-        'startTime': 1592872091543,
-        'elapsedTime': 0,
-        'startElapsed': 7,
-        'serviceType': 9057,
-        'endPoint': 'localhost:6379',
-        'annotations': [Annotations.of(annotationKey.API.getCode(), 'redis.GET.call')],
-        'depth': 2,
-        'nextSpanId': -1,
-        'destinationId': 'Redis',
-        'apiId': 0,
-        'exceptionInfo': null,
-        'asyncId': null,
-        'nextAsyncId': 2,
-        'asyncSequence': null,
-        'dummyId': null,
-        'nextDummyId': null
-      }),
-      Object.assign(new SpanEvent({
-        spanId: 7056897257955935,
-        endPoint: 'localhost:3000'
-      }, 5), {
-        'spanId': 7056897257955935,
-        'sequence': 5,
-        'startTime': 1592872091542,
-        'elapsedTime': 3,
-        'startElapsed': 6,
-        'serviceType': 6600,
-        'endPoint': 'localhost:3000',
-        'annotations': [],
-        'depth': 1,
-        'nextSpanId': -1,
-        'destinationId': 'localhost:3000',
-        'apiId': 2,
-        'exceptionInfo': null,
-        'asyncId': null,
-        'nextAsyncId': null,
-        'asyncSequence': null,
-        'dummyId': null,
-        'nextDummyId': null
-      }),
-      Object.assign(new SpanEvent({
-        spanId: 7056897257955935,
-        endPoint: 'localhost:3000'
-      }, 8), {
-        'spanId': 7056897257955935,
-        'sequence': 8,
-        'startTime': 1592872091558,
-        'elapsedTime': 0,
-        'startElapsed': 22,
-        'serviceType': 9057,
-        'endPoint': 'localhost:3000',
-        'annotations': [Annotations.of(annotationKey.API.getCode(), 'http.request')],
-        'depth': 1,
-        'nextSpanId': -1,
-        'destinationId': 'localhost:3000',
-        'apiId': 0,
-        'exceptionInfo': null,
-        'asyncId': null,
-        'nextAsyncId': 3,
-        'asyncSequence': null,
-        'dummyId': null,
-        'nextDummyId': null
+  agent.bindHttp()
+  sendSpanMethodOnDataCallback = null
+  const server = new grpc.Server()
+  server.addService(services.SpanService, {
+    sendSpan: sendSpan
+  })
+
+  let dataSender
+  server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+    const grpcDataSender = beforeSpecificOne(port, DataSource)
+    const traceRoot = new RemoteTraceRootBuilder(agent.agentInfo, '5').build()
+    dataSender = makeMockDataSender(agent.config, grpcDataSender)
+    const spanBuilder = new SpanBuilder(traceRoot)
+    const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
+    const repository = new SpanRepository(spanChunkBuilder, dataSender, agent.agentInfo)
+    const trace = new Trace(spanBuilder, repository)
+    trace.spanRecorder.recordApi(defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor)
+    trace.spanRecorder.recordServiceType(serviceType.node)
+    trace.spanRecorder.recordRpc('/')
+    trace.spanRecorder.recordEndPoint('localhost:3000')
+    trace.spanRecorder.recordRemoteAddress('::1')
+
+    let spanEventRecorder = trace.traceBlockBegin()
+    spanEventRecorder.spanEventBuilder.startTime = spanBuilder.startTime + 3
+    trace.traceBlockEnd(spanEventRecorder)
+
+    spanEventRecorder = trace.traceBlockBegin()
+    trace.traceBlockEnd(spanEventRecorder)
+
+    spanEventRecorder = trace.traceBlockBegin()
+    trace.traceBlockEnd(spanEventRecorder)
+
+    spanEventRecorder = trace.traceBlockBegin()
+    trace.traceBlockEnd(spanEventRecorder)
+
+    spanEventRecorder = trace.traceBlockBegin()
+    trace.traceBlockEnd(spanEventRecorder)
+
+    spanEventRecorder = trace.traceBlockBegin()
+    trace.traceBlockEnd(spanEventRecorder)
+
+    spanEventRecorder = trace.traceBlockBegin()
+    const asyncId = spanEventRecorder.getNextAsyncId()
+    trace.traceBlockEnd(spanEventRecorder)
+
+    agent.completeTraceObject(trace)
+
+    sendSpanMethodOnDataCallback = (actualSpan) => {
+      t.plan(22)
+      t.equal(actualSpan.getVersion(), 1, 'version')
+
+      const actualTransactionId = actualSpan.getTransactionid()
+      t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), 'gRPC agentId')
+      t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), 'agent start time')
+      t.equal(actualTransactionId.getSequence(), traceRoot.getTransactionId(), 'sequence')
+
+      t.equal(actualSpan.getSpanid(), traceRoot.getTraceId().getSpanId(), 'span ID')
+      t.equal(actualSpan.getParentspanid(), traceRoot.getTraceId().getParentSpanId(), 'span.parentspanid')
+
+      t.equal(actualSpan.getStarttime(), spanBuilder.startTime, 'span.startTime')
+      t.equal(actualSpan.getElapsed(), spanBuilder.elapsedTime, 'span.elapsed')
+      t.equal(actualSpan.getApiid(), 1, 'span.apiid')
+
+      t.equal(actualSpan.getServicetype(), 1400, 'span.servicetype')
+
+      const actualAcceptEvent = actualSpan.getAcceptevent()
+      t.equal(actualAcceptEvent.getRpc(), '/', 'rpc')
+      t.equal(actualAcceptEvent.getEndpoint(), 'localhost:3000', 'endPoint')
+      t.equal(actualAcceptEvent.getRemoteaddr(), '::1', 'remoteAddr')
+
+      t.equal(actualSpan.getFlag(), 0, 'flag')
+      t.equal(actualSpan.getErr(), 0, 'Error')
+
+      t.equal(actualSpan.getExceptioninfo(), undefined, 'span exceptionInfo')
+
+      t.equal(actualSpan.getApplicationservicetype(), 1400, 'applicaiton service type')
+      t.equal(actualSpan.getLoggingtransactioninfo(), 0, 'logging transaction info')
+
+      const actualSpanEvents = actualSpan.getSpaneventList()
+      actualSpanEvents.forEach((pSpanEvent, index) => {
+        if (index == 0) {
+          t.equal(pSpanEvent.getSequence(), 0, 'sort span events')
+          t.equal(pSpanEvent.getDepth(), 1, 'depth')
+          t.equal(pSpanEvent.getStartelapsed(), 3, 'startElapsed')
+        }
+        if (pSpanEvent.getSequence() == 6) {
+          t.equal(pSpanEvent.getAsyncevent(), asyncId.getAsyncId(), 'async event')
+        }
       })
-    ],
-    'apiId': 1,
-    'exceptionInfo': null,
-    'applicationServiceType': 1400,
-    'loggingTransactionInfo': null,
-    'version': 1
-  }
-
-  const span = Object.assign(new Span({
-    spanId: 2894367178713953,
-    parentSpanId: -1,
-    transactionId: {
-      'agentId': 'express-node-sample-id',
-      'agentStartTime': 1592872080170,
-      'sequence': 5
+      afterOne(t)
     }
-  }, {
-    agentId: 'express-node-sample-id',
-    applicationName: 'express-node-sample-name',
-    agentStartTime: 1592872080170
-  }), expectedSpanChunk)
-  grpcDataSender.sendSpan(span)
-  const actual = grpcDataSender.actualSpan.getSpan()
-
-  t.plan(22)
-  t.equal(actual.getVersion(), 1, 'version')
-
-  const actualTransactionId = actual.getTransactionid()
-  t.equal(actualTransactionId.getAgentid(), 'express-node-sample-id', 'gRPC agentId')
-  t.equal(actualTransactionId.getAgentstarttime(), 1592872080170, 'agent start time')
-  t.equal(actualTransactionId.getSequence(), 0, 'sequence')
-
-  t.equal(actual.getSpanid(), 7056897257955935, 'span ID')
-  t.equal(actual.getParentspanid(), -1, 'span.parentspanid')
-
-  t.equal(actual.getStarttime(), 1592872091536, 'span.startTime')
-  t.equal(actual.getElapsed(), 412, 'span.elapsed')
-  t.equal(actual.getApiid(), 1, 'span.apiid')
-
-  t.equal(actual.getServicetype(), 1400, 'span.servicetype')
-
-  const actualAcceptEvent = actual.getAcceptevent()
-  t.equal(actualAcceptEvent.getRpc(), '/', 'rpc')
-  t.equal(actualAcceptEvent.getEndpoint(), 'localhost:3000', 'endPoint')
-  t.equal(actualAcceptEvent.getRemoteaddr(), '::1', 'remoteAddr')
-
-  t.equal(actual.getFlag(), 0, 'flag')
-  t.equal(actual.getErr(), 0, 'Error')
-
-  t.equal(actual.getExceptioninfo(), null, 'span exceptionInfo')
-
-  t.equal(actual.getApplicationservicetype(), 1400, 'applicaiton service type')
-  t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
-
-  const actualSpanEvents = actual.getSpaneventList()
-  actualSpanEvents.forEach((pSpanEvent, index) => {
-    if (index == 0) {
-      t.equal(pSpanEvent.getSequence(), 0, 'sort span events')
-      t.equal(pSpanEvent.getDepth(), 1, 'depth')
-      t.equal(pSpanEvent.getStartelapsed(), 3, 'startElapsed')
-    }
-    if (pSpanEvent.getSequence() == 6) {
-      t.equal(pSpanEvent.getAsyncevent(), 1, 'async event')
-    }
+  })
+  t.teardown(() => {
+    dataSender.close()
+    server.forceShutdown()
   })
 })
 

@@ -11,61 +11,27 @@ const services = require('../../lib/data/v1/Service_grpc_pb')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
-const Span = require('../../lib/context/span')
 const GrpcClientSideStream = require('../../lib/client/grpc-client-side-stream')
+const SpanBuilder = require('../../lib/context/span-builder')
+const RemoteTraceRootBuilder = require('../../lib/context/remote-trace-root-builder')
+const AgentInfo = require('../../lib/data/dto/agent-info')
+const agent = require('../support/agent-singleton-mock')
+const SpanRepository = require('../../lib/context/trace/span-repository')
+const DataSender = require('../../lib/client/data-sender')
+const SpanChunkBuilder = require('../../lib/context/span-chunk-builder')
 
 let actuals
 
-const expectedSpan = {
-    "traceId": {
-        "transactionId": {
-            "agentId": "express-node-sample-id",
-            "agentStartTime": 1592572771026,
-            "sequence": 5
-        },
-        "spanId": 2894367178713953,
-        "parentSpanId": -1,
-        "flag": 0
-    },
-    "agentId": "express-node-sample-id",
-    "applicationName": "express-node-sample-name",
-    "agentStartTime": 1592572771026,
-    "serviceType": 1400,
-    "spanId": '2894367178713953',
-    "parentSpanId": -1,
-    "transactionId": {
-        "type": "Buffer",
-        "data": [0, 44, 101, 120, 112, 114, 101, 115, 115, 45, 110, 111, 100, 101, 45, 115, 97, 109, 112, 108, 101, 45, 105, 100, 210, 245, 239, 229, 172, 46, 5]
-    },
-    "startTime": 1592574173350,
-    "elapsedTime": 28644,
-    "rpc": "/",
-    "endPoint": "localhost:3000",
-    "remoteAddr": "::1",
-    "annotations": [],
-    "flag": 0,
-    "err": 1,
-    "spanEventList": null,
-    "apiId": 1,
-    "exceptionInfo": null,
-    "applicationServiceType": 1400,
-    "loggingTransactionInfo": null,
-    "version": 1
-}
-
-const span = Object.assign(new Span({
-    spanId: 2894367178713953,
-    parentSpanId: -1,
-    transactionId: {
-        "agentId": "express-node-sample-id",
-        "agentStartTime": 1592574173350,
-        "sequence": 0
-    }
-}, {
-    agentId: "express-node-sample-id",
-    applicationName: "express-node-sample-name",
-    agentStartTime: 1592574173350
-}), expectedSpan)
+const agentInfo = AgentInfo.create({
+                    agentId: 'express-node-sample-id',
+                    applicationName: 'express-node-sample-name',
+                    serviceType: 1400
+                }, 1592572771026)
+const traceRoot = new RemoteTraceRootBuilder(agentInfo, 5).build()
+const expectedSpanBuilder = new SpanBuilder(traceRoot)
+expectedSpanBuilder.setServiceType(1400)
+expectedSpanBuilder.setEndPoint('localhost:3000')
+expectedSpanBuilder.setRemoteAddress('::1')
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
 function sendAgentStat(call, callback) {
@@ -90,7 +56,7 @@ function sendSpan(call, callback) {
         const span = spanMessage.getSpan()
         if (actuals.serverSpanDataCount == 1) {
             actuals.t.equal(actuals.serverSpanDataCount, 1, '1st sendSpan serverSpanDataCount is 1')
-            actuals.t.equal(span.getSpanid(), '2894367178713953', 'span ID match in 1st sendSpan')
+            actuals.t.equal(span.getSpanid(), expectedSpanBuilder.getTraceRoot().getTraceId().getSpanId(), 'span ID match in 1st sendSpan')
         } else if (actuals.serverSpanDataCount == 2) {
             actuals.t.equal(actuals.serverSpanDataCount, 2, '2st sendSpan serverSpanDataCount is 2')
             actuals.t.equal(span.getServicetype(), 1400, 'service type match in 2st sendSpan')
@@ -151,11 +117,10 @@ test('client side streaming with deadline and cancellation', function (t) {
         actuals.serverSpanDataCount = 0
         actuals.serverPingCount = 0
 
-        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
-            'agentid': '12121212',
-            'applicationname': 'applicationName',
-            'starttime': Date.now()
-        })
+        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, agentInfo, agent.config)
+        this.dataSender = new DataSender(agent.config, this.grpcDataSender)
+        const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
+        const repository = new SpanRepository(spanChunkBuilder, this.dataSender, agentInfo)
 
         this.grpcDataSender.spanStream.callback = (err) => {
             callOrder++
@@ -192,7 +157,7 @@ test('client side streaming with deadline and cancellation', function (t) {
                     setTimeout(() => {
                         // 6st sendSpan
                         actuals.sendSpanCount++
-                        this.grpcDataSender.sendSpan(span)
+                        repository.storeSpan(expectedSpanBuilder)
                         registerEventListeners()
                     })
                 } else if (callOrder == 6/* 6st sendSpan */) {
@@ -201,7 +166,7 @@ test('client side streaming with deadline and cancellation', function (t) {
                     setTimeout(() => {
                         // 8st when spanStream end, recovery spanstream
                         actuals.sendSpanCount++
-                        this.grpcDataSender.sendSpan(span)
+                        repository.storeSpan(expectedSpanBuilder)
                         registerEventListeners()
                         this.grpcDataSender.spanStream.grpcStream.end()
                     })
@@ -225,22 +190,21 @@ test('client side streaming with deadline and cancellation', function (t) {
 
         t.teardown(() => {
             server.forceShutdown()
-
             this.grpcDataSender.close()
         })
 
         // 1st sendSpan
         actuals.sendSpanCount++
-        this.grpcDataSender.sendSpan(span)
+        repository.storeSpan(expectedSpanBuilder)
         // 2st sendSpan
         actuals.sendSpanCount++
-        this.grpcDataSender.sendSpan(span)
+        repository.storeSpan(expectedSpanBuilder)
         // 3st spanStream end
         this.grpcDataSender.spanStream.grpcStream.end()
 
         // 4st sendSpan
         actuals.sendSpanCount++
-        this.grpcDataSender.sendSpan(span)
+        repository.storeSpan(expectedSpanBuilder)
         registerEventListeners()
         // 5st spanStream end
         this.grpcDataSender.spanStream.grpcStream.end()
@@ -336,7 +300,7 @@ test('spanStream ERR_STREAM_WRITE_AFTER_END', (t) => {
             if (0 == index % 2) {
                 this.grpcDataSender.spanStream.grpcStream.end()
             }
-            this.grpcDataSender.sendSpan(span)
+            this.grpcDataSender.sendSpan(expectedSpanBuilder.build())
         }
 
         this.grpcDataSender.pingStream.grpcStream.end()

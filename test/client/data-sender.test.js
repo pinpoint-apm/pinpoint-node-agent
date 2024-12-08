@@ -6,8 +6,8 @@
 
 const test = require('tape')
 
+require('../support/agent-singleton-mock')
 const { fixture } = require('../test-helper')
-const Trace = require('../../lib/context/trace')
 const dataSenderMock = require('../support/data-sender-mock')
 const dataSender = dataSenderMock()
 const AgentInfo = require('../../lib/data/dto/agent-info')
@@ -41,21 +41,4 @@ test('Should send string meta info', function (t) {
   dataSender.send(stringMetaInfo)
 
   t.deepEqual(dataSender.mockMetaInfo, stringMetaInfo, "agentInfo is equal in datasender")
-})
-
-test('Should send string meta info', function (t) {
-  t.plan(1)
-  dataSender.mockSpan = null
-
-  const traceId = fixture.getTraceId()
-  const agentInfo = fixture.getAgentInfo()
-  const trace = new Trace(traceId, agentInfo, dataSender)
-  const spanEventRecorder = trace.traceBlockBegin()
-
-  trace.traceBlockEnd(spanEventRecorder)
-  const span = trace.span
-
-  dataSender.send(span)
-
-  t.equal(dataSender.mockSpan, span, "metaInfo is equal in datasender")
 })

@@ -24,34 +24,35 @@ test(`redis destination id`, async (t) => {
     t.plan(6)
 
     const trace = agent.createTraceObject()
+    const traceContext = agent.getTraceContext()
     localStorage.run(trace, () => {
         const redis = require('redis')
-    
+
         const client = redis.createClient({ url: container.getConnectionUrl() })
-    
+
         client.on("error", function (error) {
             console.error(error)
         })
-    
+
         client.set("key", "value", async function (error) {
             t.true(error == null, "error is null")
-    
-            const trace = agent.traceContext.currentTraceObject()
-            t.equal(trace.callStack.length, 1, "callStack is 1")
+
+            const trace = traceContext.currentTraceObject()
+            t.equal(trace.callStack.stack.length, 1, "callStack is 1")
         })
-        t.equal(agent.traceContext.currentTraceObject().callStack.length, 0, "set spanevent callstack")
-    
+        t.equal(traceContext.currentTraceObject().callStack.stack.length, 0, "set spanevent callstack")
+
         client.get("key", async function (error, data) {
             t.equal(data, "value", "redis value validation")
-    
-            const trace = agent.traceContext.currentTraceObject()
-            t.equal(trace.callStack.length, 1, "callStack is 1")
-    
+
+            const trace = traceContext.currentTraceObject()
+            t.equal(trace.callStack.stack.length, 1, "callStack is 1")
+
             client.quit()
             agent.completeTraceObject(trace)
             await container.stop()
         })
-        t.equal(agent.traceContext.currentTraceObject().callStack.length, 0, "get spanevent callstack")
+        t.equal(traceContext.currentTraceObject().callStack.stack.length, 0, "get spanevent callstack")
     })
 })
 
@@ -60,7 +61,7 @@ test("ioredis destination id", async function (t) {
         .withWaitStrategy(Wait.forAll([
             Wait.forListeningPorts(),
             Wait.forLogMessage("Ready to accept connections")
-        ]))    
+        ]))
         .start()
 
     agent.bindHttp()
@@ -78,20 +79,20 @@ test("ioredis destination id", async function (t) {
         redis.on("error", function (error) {
             console.error(error)
         })
-    
+
         const result = await redis.set("key", "value")
         t.equal(result, "OK", "Success set data")
-    
+
         redis.get("key", async function (error, data) {
             t.equal(data, "value", "redis value validation")
 
             setImmediate(async () => {
                 t.true(agent.dataSender.mockSpanChunks[0].spanEventList.length > 0, "a spanEventList should has one chunk")
-        
-                const spanevent = trace.storage.storage[0]
+
+                const spanevent = trace.repository.buffer[0]
                 t.equal(spanevent.destinationId, "Redis", "Redis destionation ID check")
                 t.true(spanevent.endPoint.endsWith(`:${port}`), `localhost:${port}`)
-        
+
                 redis.quit()
                 agent.completeTraceObject(trace)
                 await container.stop()
@@ -132,33 +133,34 @@ test(`Fix app crash without callback function https://github.com/pinpoint-apm/pi
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
         const redis = require('redis')
-    
+
         const client = redis.createClient({ url: container.getConnectionUrl(), db: 3 })
-    
+        const traceContext = agent.getTraceContext()
+
         client.select(2)
-    
+
         client.on("error", function (error) {
             console.error(error)
         })
-    
+
         client.set("key", "value", async function (error) {
             t.true(error == null, "error is null")
-    
-            const trace = agent.traceContext.currentTraceObject()
-            t.equal(trace.callStack.length, 1, "callStack is 1")
+
+            const trace = traceContext.currentTraceObject()
+            t.equal(trace.callStack.stack.length, 1, "callStack is 1")
         })
-        t.equal(agent.traceContext.currentTraceObject().callStack.length, 0, "set spanevent callstack")
-    
+        t.equal(traceContext.currentTraceObject().callStack.stack.length, 0, "set spanevent callstack")
+
         client.get("key", async function (error, data) {
             t.equal(data, "value", "redis value validation")
-    
-            const trace = agent.traceContext.currentTraceObject()
-            t.equal(trace.callStack.length, 1, "callStack is 1")
-    
+
+            const trace = traceContext.currentTraceObject()
+            t.equal(trace.callStack.stack.length, 1, "callStack is 1")
+
             client.quit()
             agent.completeTraceObject(trace)
             await container.stop()
         })
-        t.equal(agent.traceContext.currentTraceObject().callStack.length, 0, "get spanevent callstack")
+        t.equal(traceContext.currentTraceObject().callStack.stack.length, 0, "get spanevent callstack")
     })
 })

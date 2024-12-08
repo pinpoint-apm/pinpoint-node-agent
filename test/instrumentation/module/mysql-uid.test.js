@@ -62,7 +62,7 @@ test('mysql uid query', async (t) => {
 
             let actualBuilder = new MethodDescriptorBuilder('createConnection')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            const createConnectionSpanEvent = trace.span.spanEventList[0]
+            const createConnectionSpanEvent = trace.spanBuilder.spanEventList[0]
             t.equal(createConnectionSpanEvent.endPoint, 'localhost', 'createConnection endPoint is localhost in mysql uid functional test')
             t.equal(createConnectionSpanEvent.destinationId, 'test', 'createConnection destinationId is test in mysql uid functional test')
             t.equal(createConnectionSpanEvent.apiId, actualMethodDescriptor.apiId, 'createConnection apiId is same in mysql uid functional test')
@@ -70,14 +70,14 @@ test('mysql uid query', async (t) => {
             actualBuilder = new MethodDescriptorBuilder('connect')
                 .setClassName('Connection')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            const connectionSpanEvent = trace.span.spanEventList[1]
+            const connectionSpanEvent = trace.spanBuilder.spanEventList[1]
             t.equal(connectionSpanEvent.depth, 1, 'connection depth is 1 in mysql uid functional test')
             t.equal(connectionSpanEvent.sequence, 1, 'connection sequence is 1 in mysql uid functional test')
 
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            const querySpanEvent = trace.span.spanEventList[2]
+            const querySpanEvent = trace.spanBuilder.spanEventList[2]
             t.equal(querySpanEvent.depth, 1, 'query depth is 1 in mysql uid functional test')
             t.equal(querySpanEvent.sequence, 2, 'query sequence is 2 in mysql uid functional test')
             t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, 'query apiId is same in mysql uid functional test')
@@ -87,7 +87,7 @@ test('mysql uid query', async (t) => {
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_UID.getCode(), 'query annotation key is sql in mysql uid functional test')
             t.equal(actualParsingResult.result.sql.normalizedSql, 'SELECT * FROM member', 'query normalizedSql is SELECT * FROM member in mysql uid functional test')
 
-            let actualGrpcSpanEvent = trace.storage.dataSender.mockSpan.spanEventList[2]
+            let actualGrpcSpanEvent = trace.repository.dataSender.mockSpan.spanEventList[2]
             t.equal(actualQueryAnnotation.key, actualGrpcSpanEvent.annotations[0].key, 'query annotation key is same that grpc in mysql uid functional test')
             t.equal(actualQueryAnnotation.value, actualGrpcSpanEvent.annotations[0].value, 'query annotation value is same that grpc in mysql uid functional test')
 

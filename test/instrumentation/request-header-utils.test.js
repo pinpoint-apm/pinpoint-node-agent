@@ -9,12 +9,14 @@ const axios = require('axios')
 const http = require('http')
 const https = require('https')
 const { fixture } = require('../test-helper')
-const RequestHeaderUtils = require('../../lib/instrumentation/request-header-utils')
 const agent = require('../support/agent-singleton-mock')
 agent.bindHttp()
-const PinpointHeader = require('../../lib/constant/http-header').PinpointHeader
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const express = require('express')
+const HttpOutgoingRequestHeader = require('../../lib/instrumentation/http/http-outgoing-request-header')
+const HttpRequestTraceBuilder = require('../../lib/instrumentation/http/http-request-trace-builder')
+const TraceHeaderBuilder = require('../../lib/instrumentation/http/trace-header-builder')
+const Header = require('../../lib/instrumentation/http/pinpoint-header')
 
 const headers = {
   'Pinpoint-TraceID': fixture.getTraceId().transactionId.toString(),
@@ -30,10 +32,12 @@ test('Should read pinpoint header', async function (t) {
     res.end('hello')
   })
     .on('request', (req, res) => {
-      const requestData = RequestHeaderUtils.read(req)
-      t.equal(requestData.endPoint, endPoint)
-      t.equal(requestData.rpcName, rpcName)
-      t.ok(requestData.transactionId)
+      const requestTraceBuilder = new HttpRequestTraceBuilder(agent.getTraceContext(), req)
+      const requestTrace = requestTraceBuilder.build()
+      const traceHeader = new TraceHeaderBuilder(requestTraceBuilder.request).build()
+      t.equal(requestTraceBuilder.request.request.headers['host'], endPoint)
+      t.equal(requestTrace.rpcName, rpcName)
+      t.ok(traceHeader.getTraceId())
     })
     .listen(5005, async function () {
       await axios.get(`http://${endPoint}${rpcName}?q=1`, { headers })
@@ -50,8 +54,17 @@ test('Should write pinpoint header', async function (t) {
     .on('request', (req, res) => {
       const trace = agent.createTraceObject()
       localStorage.run(trace, () => {
-        const writtenReq = RequestHeaderUtils.write(req, agent)
-        t.equal(writtenReq.headers[PinpointHeader.HTTP_TRACE_ID], trace.traceId.transactionId.toString(), "trace ID new ID was added in Header")
+        const requestHeader = new HttpOutgoingRequestHeader(agent.getAgentInfo(), req)
+        const request = requestHeader.request.request
+        requestHeader.request.getHeader = (name) => {
+          return request.headers[name]
+        }
+        requestHeader.request.setHeader = (name, value) => {
+          request.headers[name] = value
+        }
+        const nextTraceId = trace.getTraceId().getNextTraceId()
+        requestHeader.write(nextTraceId)
+        t.equal(request.headers[Header.traceId], trace.spanBuilder.traceRoot.getTraceId().toStringDelimiterFormatted(), "trace ID new ID was added in Header")
       })
     })
     .listen(5005, async function () {
@@ -74,25 +87,13 @@ test('nested request HTTP', async function (t) {
     await axios.get(`http://localhost:5006/test`)
     res.send('ok')
     agent.callbackTraceClose((trace) => {
-      const actualRequestData = RequestHeaderUtils.read(req)
-      t.equal(actualRequestData.endPoint, 'localhost:5005', 'http://localhost:5005/test endPoint')
-      t.equal(actualRequestData.flags, undefined, 'http://localhost:5005/test flags')
-      t.equal(actualRequestData.host, null, 'http://localhost:5005/test host')
-      t.equal(actualRequestData.isRoot, true, 'http://localhost:5005/test isRoot')
-      t.equal(actualRequestData.parentApplicationName, null, 'http://localhost:5005/test parentApplicationName')
-      t.equal(actualRequestData.parentApplicationType, null, 'http://localhost:5005/test parentApplicationType')
-      t.equal(actualRequestData.parentSpanId, null, 'http://localhost:5005/test parentSpanId')
-      // t.equal(actualRequestData.remoteAddress, '127.0.0.1', 'http://localhost:5005/test remoteAddress')
-      t.equal(actualRequestData.rpcName, '/test', 'http://localhost:5005/test rpcName')
-      t.equal(actualRequestData.sampled, null, 'http://localhost:5005/test sampled')
-      t.equal(actualRequestData.spanId, null, 'http://localhost:5005/test spanId')
-      t.equal(actualRequestData.transactionId, null, 'http://localhost:5005/test transactionId')
+      t.equal(req.headers['host'], 'localhost:5005', 'http://localhost:5005/test endPoint')
 
       const actualTraceOn5005 = localStorage.getStore()
       if (actualTransactionIdSequence === undefined) {
-        actualTransactionIdSequence = trace.traceId.transactionId.sequence
+        actualTransactionIdSequence = trace.spanBuilder.traceRoot.getTraceId().transactionId
       }
-      t.equal(actualTransactionIdSequence, trace.traceId.transactionId.sequence, `http://localhost:5005/test transactionId sequence is ${actualTransactionIdSequence}`)
+      t.equal(actualTransactionIdSequence, trace.spanBuilder.traceRoot.getTraceId().transactionId, `http://localhost:5005/test transactionId sequence is ${actualTransactionIdSequence}`)
 
       actualAssertsOn5006(actualTraceOn5005)
 
@@ -106,30 +107,32 @@ test('nested request HTTP', async function (t) {
 
     const actualTraceOn5006 = localStorage.getStore()
     actualAssertsOn5006 = (actualTraceOn5005) => {
-      const actualRequestData = RequestHeaderUtils.read(req)
-      t.equal(actualRequestData.endPoint, 'localhost:5006', 'http://localhost:5006/test endPoint')
-      t.equal(actualRequestData.flags, undefined, 'http://localhost:5006/test flags')
-      t.equal(actualRequestData.host, 'localhost:5006', 'http://localhost:5006/test host')
-      t.equal(actualRequestData.isRoot, false, 'http://localhost:5006/test isRoot')
-      t.equal(actualRequestData.parentApplicationName, 'node.test.app', 'http://localhost:5006/test parentApplicationName')
-      t.equal(actualRequestData.parentApplicationType, 1400, 'http://localhost:5006/test parentApplicationType')
-      t.equal(actualRequestData.parentSpanId, actualTraceOn5005.traceId.spanId, 'http://localhost:5006/test parentSpanId')
+      const requestTraceBuilder = new HttpRequestTraceBuilder(agent.getTraceContext(), req)
+      const requestTrace = requestTraceBuilder.build()
+      const traceHeader = new TraceHeaderBuilder(requestTraceBuilder.request).build()
+      const traceId = traceHeader.getTraceId()
+      t.equal(req.headers['host'], 'localhost:5006', 'http://localhost:5006/test endPoint')
+      t.equal(traceId.flags, 0, 'http://localhost:5006/test flags')
+      t.equal(traceHeader.host, 'localhost:5006', 'http://localhost:5006/test host')
+      t.equal(traceHeader.parentApplicationName, 'node.test.app', 'http://localhost:5006/test parentApplicationName')
+      t.equal(traceHeader.parentApplicationType, 1400, 'http://localhost:5006/test parentApplicationType')
+      t.equal(traceId.parentSpanId, actualTraceOn5005.spanBuilder.traceRoot.getTraceId().spanId, 'http://localhost:5006/test parentSpanId')
       // t.equal(actualRequestData.remoteAddress, '127.0.0.1', 'http://localhost:5006/test remoteAddress')
-      t.equal(actualRequestData.rpcName, '/test', 'http://localhost:5006/test rpcName')
-      t.equal(actualRequestData.sampled, null, 'http://localhost:5006/test header sampled')
-      t.equal(actualRequestData.spanId, actualTraceOn5006.traceId.spanId, 'http://localhost:5006/test spanId')
-      t.equal(actualRequestData.transactionId.toString(), actualTraceOn5006.traceId.transactionId.toString(), 'http://localhost:5006/test transactionId')
-      t.equal(actualTraceOn5006.traceId.transactionId.sequence, actualTransactionIdSequence, `http://localhost:5006/test transactionId sequence is ${actualTransactionIdSequence}`)
+      t.equal(requestTrace.rpcName, '/test', 'http://localhost:5006/test rpcName')
+      t.equal(traceHeader.sampled, undefined, 'http://localhost:5006/test header sampled')
+      t.equal(traceId.spanId, actualTraceOn5006.getTraceId().spanId, 'http://localhost:5006/test spanId')
+      t.deepEqual(traceId, actualTraceOn5006.getTraceId(), 'http://localhost:5006/test transactionId')
+      t.equal(actualTraceOn5006.getTraceId().getTransactionId(), actualTransactionIdSequence, `http://localhost:5006/test transactionId sequence is ${actualTransactionIdSequence}`)
     }
   })
 
   const serverGraphQL = appGraphQL.listen(5006, () => {
     const server = app.listen(5005, async function () {
-      await axios.get(`http://localhost:5005/test`, { httpAgent: new http.Agent({ keepAlive: false })})
-      await axios.get(`http://localhost:5005/test`, { httpAgent: new http.Agent({ keepAlive: false })})
-      await axios.get(`http://localhost:5005/test`, { httpAgent: new http.Agent({ keepAlive: false })})
-      await axios.get(`http://localhost:5005/test`, { httpAgent: new http.Agent({ keepAlive: false })})
-      await axios.get(`http://localhost:5005/test`, { httpAgent: new http.Agent({ keepAlive: false })})
+      await axios.get(`http://localhost:5005/test`, { httpAgent: new http.Agent({ keepAlive: false }) })
+      await axios.get(`http://localhost:5005/test`, { httpAgent: new http.Agent({ keepAlive: false }) })
+      await axios.get(`http://localhost:5005/test`, { httpAgent: new http.Agent({ keepAlive: false }) })
+      await axios.get(`http://localhost:5005/test`, { httpAgent: new http.Agent({ keepAlive: false }) })
+      await axios.get(`http://localhost:5005/test`, { httpAgent: new http.Agent({ keepAlive: false }) })
       t.end()
       serverGraphQL.close()
       server.close()

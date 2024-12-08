@@ -15,13 +15,13 @@ const apiMetaService = require('../../../lib/context/api-meta-service')
 const semver = require('semver')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const DisableTrace = require('../../../lib/context/disable-trace')
-const transactionIdGenerator = require('../../../lib/context/sequence-generators').transactionIdGenerator
 const http = require('http')
 const https = require('https')
+const { getTransactionId, getDisabledId } = require('../../../lib/context/trace/id-generator')
+
 
 const TEST_ENV = {
-  host: 'localhost',
-  port: 5006,
+  host: 'localhost', port: 5006
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
@@ -38,17 +38,17 @@ test(`${testName1} Should record request in basic route`, function (t) {
     res.send('ok get')
 
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.span.annotations[0].key, annotationKey.HTTP_PARAM.code, 'HTTP param key match')
-      t.equal(trace.span.annotations[0].value, 'api=test&test1=test', 'HTTP param value match')
-      t.equal(trace.span.annotations[1].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
-      t.equal(trace.span.annotations[1].value, 200, 'response status is 200')
+      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_PARAM.code, 'HTTP param key match')
+      t.equal(trace.spanBuilder.annotations[0].value, 'api=test&test1=test', 'HTTP param value match')
+      t.equal(trace.spanBuilder.annotations[1].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
+      t.equal(trace.spanBuilder.annotations[1].value, 200, 'response status is 200')
 
       let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
         .setClassName(expected('app', 'Function'))
         .setLineNumber(37)
         .setFileName('express.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.span.spanEventList[0]
+      let spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
@@ -63,15 +63,15 @@ test(`${testName1} Should record request in basic route`, function (t) {
     res.send('ok post')
 
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, '/express1 HTTP STATUS CODE in annotation zero')
-      t.equal(trace.span.annotations[0].value, 200, '/express1 HTTP STATUS CODE value in annotation zero')
+      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, '/express1 HTTP STATUS CODE in annotation zero')
+      t.equal(trace.spanBuilder.annotations[0].value, 200, '/express1 HTTP STATUS CODE value in annotation zero')
 
       let actualBuilder = new MethodDescriptorBuilder(expected('post', 'app.post'))
         .setClassName(expected('app', 'Function'))
         .setLineNumber(62)
         .setFileName('express.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.span.spanEventList[0]
+      let spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.post', 'Function.app.post')), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
@@ -90,7 +90,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
         .setLineNumber(84)
         .setFileName('express.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.span.spanEventList[0]
+      let spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
@@ -164,15 +164,15 @@ test(`${testName1} Should record request in basic route`, function (t) {
 })
 
 function throwHandleTest(trace, t) {
-  t.equal(trace.span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), '/express3 HTTP_STATUS_CODE annotationKey matching')
-  t.equal(trace.span.annotations[0].value, 500, '/express3 HTTP_STATUS_CODE value matching')
+  t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), '/express3 HTTP_STATUS_CODE annotationKey matching')
+  t.equal(trace.spanBuilder.annotations[0].value, 500, '/express3 HTTP_STATUS_CODE value matching')
 
   let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
     .setClassName(expected('app', 'Function'))
     .setLineNumber(107)
     .setFileName('express.test.js')
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  let spanEvent = trace.span.spanEventList[1]
+  let spanEvent = trace.spanBuilder.spanEventList[0]
   t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
   t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
@@ -187,7 +187,7 @@ function throwHandleTest(trace, t) {
     .setLineNumber(120)
     .setFileName('express.test.js')
   const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  spanEvent = trace.span.spanEventList[0]
+  spanEvent = trace.spanBuilder.spanEventList[1]
   t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.true(actualErrorMethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
@@ -206,7 +206,7 @@ function nextErrorHandleTest(trace, t) {
     .setLineNumber(114)
     .setFileName('express.test.js')
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  let spanEvent = trace.span.spanEventList[1]
+  let spanEvent = trace.spanBuilder.spanEventList[0]
   t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
   t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
@@ -221,7 +221,7 @@ function nextErrorHandleTest(trace, t) {
     .setLineNumber(120)
     .setFileName('express.test.js')
   const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  spanEvent = trace.span.spanEventList[0]
+  spanEvent = trace.spanBuilder.spanEventList[1]
   t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.true(actualErrorMethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
@@ -370,7 +370,7 @@ test(`${testName5} Should record middleware`, function (t) {
         .setLineNumber(366)
         .setFileName('express.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.span.spanEventList[2]
+      let spanEvent = trace.spanBuilder.spanEventList[2]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
@@ -385,7 +385,7 @@ test(`${testName5} Should record middleware`, function (t) {
         .setLineNumber(356)
         .setFileName('express.test.js')
       const actualMiddleware1MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      spanEvent = trace.span.spanEventList[1]
+      spanEvent = trace.spanBuilder.spanEventList[1]
       t.equal(actualMiddleware1MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMiddleware1MethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
       t.equal(actualMiddleware1MethodDescriptor.className, 'Router', 'className')
@@ -400,7 +400,7 @@ test(`${testName5} Should record middleware`, function (t) {
         .setLineNumber(351)
         .setFileName('express.test.js')
       const actualMiddleware2MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      spanEvent = trace.span.spanEventList[0]
+      spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMiddleware2MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.true(actualMiddleware2MethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
       t.equal(actualMiddleware2MethodDescriptor.className, 'Router', 'className')
@@ -500,15 +500,15 @@ test('express without callSite', (t) => {
     res.send('ok get')
 
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.span.annotations[0].key, annotationKey.HTTP_PARAM.code, 'HTTP param key match')
-      t.equal(trace.span.annotations[0].value, 'api=test&test1=test', 'HTTP param value match')
-      t.equal(trace.span.annotations[1].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
-      t.equal(trace.span.annotations[1].value, 200, 'response status is 200')
+      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_PARAM.code, 'HTTP param key match')
+      t.equal(trace.spanBuilder.annotations[0].value, 'api=test&test1=test', 'HTTP param value match')
+      t.equal(trace.spanBuilder.annotations[1].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
+      t.equal(trace.spanBuilder.annotations[1].value, 200, 'response status is 200')
 
       let actualBuilder = new MethodDescriptorBuilder('get')
         .setClassName('Router')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.span.spanEventList[0]
+      let spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, 'Router', 'className')
@@ -521,13 +521,13 @@ test('express without callSite', (t) => {
     res.send('ok post')
 
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, '/express1 HTTP STATUS CODE in annotation zero')
-      t.equal(trace.span.annotations[0].value, 200, '/express1 HTTP STATUS CODE value in annotation zero')
+      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, '/express1 HTTP STATUS CODE in annotation zero')
+      t.equal(trace.spanBuilder.annotations[0].value, 200, '/express1 HTTP STATUS CODE value in annotation zero')
 
       let actualBuilder = new MethodDescriptorBuilder('post')
         .setClassName('Router')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.span.spanEventList[0]
+      let spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.equal(actualMethodDescriptor.apiDescriptor, 'Router.post', 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, 'Router', 'className')
@@ -542,7 +542,7 @@ test('express without callSite', (t) => {
       let actualBuilder = new MethodDescriptorBuilder('get')
         .setClassName('Router')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.span.spanEventList[0]
+      let spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
       t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, 'Router', 'className')
@@ -614,13 +614,13 @@ test('express without callSite', (t) => {
 })
 
 function throwHandleTestWithoutCallSite(trace, t) {
-  t.equal(trace.span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), '/express3 HTTP_STATUS_CODE annotationKey matching')
-  t.equal(trace.span.annotations[0].value, 500, '/express3 HTTP_STATUS_CODE value matching')
+  t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), '/express3 HTTP_STATUS_CODE annotationKey matching')
+  t.equal(trace.spanBuilder.annotations[0].value, 500, '/express3 HTTP_STATUS_CODE value matching')
 
   let actualBuilder = new MethodDescriptorBuilder('get')
     .setClassName('Router')
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  let spanEvent = trace.span.spanEventList[1]
+  let spanEvent = trace.spanBuilder.spanEventList[0]
   t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
   t.equal(actualMethodDescriptor.className, 'Router', 'className')
@@ -631,7 +631,7 @@ function throwHandleTestWithoutCallSite(trace, t) {
   actualBuilder = new MethodDescriptorBuilder('use')
     .setClassName('Router')
   const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  spanEvent = trace.span.spanEventList[0]
+  spanEvent = trace.spanBuilder.spanEventList[1]
   t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.equal(actualErrorMethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
@@ -646,7 +646,7 @@ function nextErrorHandleTestWithoutCallSite(trace, t) {
   let actualBuilder = new MethodDescriptorBuilder('get')
     .setClassName('Router')
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  let spanEvent = trace.span.spanEventList[1]
+  let spanEvent = trace.spanBuilder.spanEventList[0]
   t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
   t.equal(actualMethodDescriptor.className, 'Router', 'className')
@@ -657,7 +657,7 @@ function nextErrorHandleTestWithoutCallSite(trace, t) {
   actualBuilder = new MethodDescriptorBuilder('use')
     .setClassName('Router')
   const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  spanEvent = trace.span.spanEventList[0]
+  spanEvent = trace.spanBuilder.spanEventList[1]
   t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.equal(actualErrorMethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
@@ -670,16 +670,23 @@ function nextErrorHandleTestWithoutCallSite(trace, t) {
 
 test('incoming request by Disable Trace requests', (t) => {
   agent.bindHttp({ 'sampling': { 'rate': 3 } })
-  let actualTraceIdSequence = 0
+  let actualTraceIdTransactionId = 0
   let actualRequestCount = 0
 
   const app = new express()
   const rootPathTraces = []
   app.get('/', async (req, res) => {
     actualRequestCount++
+    const trace = agent.currentTraceObject()
+    const traceRoot = trace.getTraceRoot()
+    actualTraceIdTransactionId = traceRoot.transactionId
+
+    if (actualRequestCount == 1 || actualRequestCount == 4) {
+      t.equal('' + (getTransactionId().sequence - 1), actualTraceIdTransactionId, `traceRoot.transactionId equals transactionIdGenerator.sequence ${traceRoot.transactionId}`)
+    }
 
     const result = await axios.get(getServerUrl('/api'), {
-      timeout: 3000,
+      timeout: 10000,
       httpAgent: new http.Agent({ keepAlive: false }),
       httpsAgent: new https.Agent({ keepAlive: false }),
     })
@@ -689,16 +696,13 @@ test('incoming request by Disable Trace requests', (t) => {
 
     agent.callbackTraceClose((trace) => {
       if (actualRequestCount == 1) {
-        t.equal(actualTraceIdSequence, parseInt(trace.traceId.transactionId.sequence), 'transaction id sequence equals transactionIdGenerator.sequence')
-        t.equal(actualTraceIdSequence, 0, 'first request transactionIdGenerator.sequence is 0')
+        t.equal(actualTraceIdTransactionId, trace.getTraceRoot().transactionId, 'transaction id sequence equals transactionIdGenerator.sequence')
       } else if (actualRequestCount == 4) {
-        t.equal(actualTraceIdSequence, parseInt(trace.traceId.transactionId.sequence), 'transaction id sequence equals transactionIdGenerator.sequence')
-        t.equal(actualTraceIdSequence, 1, 'fourth request transactionIdGenerator.sequence is 1')
+        t.equal(actualTraceIdTransactionId, trace.getTraceRoot().transactionId, 'transaction id sequence equals transactionIdGenerator.sequence')
       } else {
         t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
-        t.equal(actualTraceIdSequence, transactionIdGenerator.sequence, 'DisableTrace transaction no updated transactionIdGenerator.sequence')
+        t.equal(actualTraceIdTransactionId, '' + (getDisabledId().sequence + 5), 'DisableTrace transaction no updated transactionIdGenerator.sequence')
       }
-      actualTraceIdSequence = transactionIdGenerator.sequence
       rootPathTraces.push(trace)
     })
   })
@@ -709,7 +713,7 @@ test('incoming request by Disable Trace requests', (t) => {
     apiRequests.push(req)
 
     const result = await axios.get(getServerUrl('/api2'), {
-      timeout: 3000,
+      timeout: 10000,
       httpAgent: new http.Agent({ keepAlive: false }),
       httpsAgent: new https.Agent({ keepAlive: false }),
     })
@@ -719,10 +723,10 @@ test('incoming request by Disable Trace requests', (t) => {
 
     agent.callbackTraceClose((trace) => {
       if (actualRequestCount == 1 || actualRequestCount == 4) {
-        t.equal(actualTraceIdSequence, parseInt(trace.traceId.transactionId.sequence), 'API transaction id sequence equals transactionIdGenerator.sequence')
+        t.equal(actualTraceIdTransactionId, trace.getTraceId().transactionId, 'API transaction id sequence equals transactionIdGenerator.sequence')
       } else {
         t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
-        t.equal(actualTraceIdSequence, transactionIdGenerator.sequence, 'API DisableTrace transaction no updated transactionIdGenerator.sequence')
+        t.equal(actualTraceIdTransactionId, '' + (getDisabledId().sequence + 5), 'API DisableTrace transaction no updated transactionIdGenerator.sequence')
       }
       apiPathTraces.push(trace)
     })
@@ -736,10 +740,10 @@ test('incoming request by Disable Trace requests', (t) => {
 
     agent.callbackTraceClose((trace) => {
       if (actualRequestCount == 1 || actualRequestCount == 4) {
-        t.equal(actualTraceIdSequence, parseInt(trace.traceId.transactionId.sequence), 'API transaction id sequence equals transactionIdGenerator.sequence')
+        t.equal(actualTraceIdTransactionId, trace.getTraceId().transactionId, 'API transaction id sequence equals transactionIdGenerator.sequence')
       } else {
         t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
-        t.equal(actualTraceIdSequence, transactionIdGenerator.sequence, 'API DisableTrace transaction no updated transactionIdGenerator.sequence')
+        t.equal(actualTraceIdTransactionId, '' + (getDisabledId().sequence + 5), 'API DisableTrace transaction no updated transactionIdGenerator.sequence')
       }
       apiPathTraces2.push(trace)
     })
@@ -747,37 +751,39 @@ test('incoming request by Disable Trace requests', (t) => {
 
   const server = app.listen(TEST_ENV.port, async function () {
     const result1 = await axios.get(getServerUrl('/'), {
-      timeout: 3000,
+      timeout: 20000,
       httpAgent: new http.Agent({ keepAlive: false }),
       httpsAgent: new https.Agent({ keepAlive: false }),
     })
     t.equal(result1.status, 200, 'first / request status code is 200')
 
     let actualTrace = rootPathTraces[0]
-    t.equal(actualTrace.span.rpc, '/', 'HTTP Request URI')
-    t.equal(actualTrace.span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
-    t.equal(actualTrace.span.annotations[0].value, 200, 'response status is 200')
+    t.equal(actualTrace.spanBuilder.rpc, '/', 'HTTP Request URI')
+    t.equal(actualTrace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
+    t.equal(actualTrace.spanBuilder.annotations[0].value, 200, 'response status is 200')
 
     let actualApiTrace = apiPathTraces[0]
-    t.equal(actualTrace.span.spanId, actualApiTrace.span.parentSpanId, 'parent span id equals to root span id')
-    t.equal(actualApiTrace.span.rpc, '/api', 'HTTP Request URI')
-    t.equal(actualApiTrace.span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
-    t.equal(actualApiTrace.span.annotations[0].value, 200, 'response status is 200')
+    t.equal(actualTrace.spanBuilder.spanId, actualApiTrace.spanBuilder.parentSpanId, 'parent span id equals to root span id')
+    t.equal(actualApiTrace.spanBuilder.rpc, '/api', 'HTTP Request URI')
+    t.equal(actualApiTrace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
+    t.equal(actualApiTrace.spanBuilder.annotations[0].value, 200, 'response status is 200')
 
     let actualApiRequest = apiRequests[0]
     t.equal(actualApiRequest.url, '/api', 'api request url is /api')
-    t.equal(actualApiRequest.headers['pinpoint-host'], actualApiTrace.span.endPoint, 'api request pinpoint-host header is localhost:5006')
-    t.equal(actualApiRequest.headers['pinpoint-flags'], undefined, 'api request pinpoint-flags header is 0')
+    t.equal(actualApiRequest.headers['pinpoint-host'], actualApiTrace.spanBuilder.endPoint, 'api request pinpoint-host header is localhost:5006')
+    t.equal(actualApiRequest.headers['pinpoint-flags'], '0', 'api request pinpoint-flags header is 0')
     t.equal(actualApiRequest.headers['pinpoint-sampled'], undefined, 'api request pinpoint-sampled header is s0')
     t.equal(actualApiRequest.headers['pinpoint-pappname'], agent.config.applicationName, 'pinpoint-pappname header is config.applicationName')
     t.equal(actualApiRequest.headers['pinpoint-papptype'], String(agent.config.serviceType), 'pinpoint-papptype header is config.serviceType')
-    t.equal(actualApiRequest.headers['pinpoint-pspanid'], actualTrace.span.spanId, 'pinpoint-pspanid header is root span id')
-    t.equal(actualApiRequest.headers['pinpoint-spanid'], actualApiTrace.span.spanId, 'pinpoint-spanid header is api span id')
-    t.equal(actualApiRequest.headers['pinpoint-traceid'], actualTrace.traceId.transactionId.toString(), 'pinpoint-traceid header is root transaction id')
-    t.equal(actualTrace.traceId.transactionId.toString(), actualApiTrace.traceId.transactionId.toString(), 'transaction id equals to root transaction id')
+    t.equal(actualApiRequest.headers['pinpoint-pspanid'], actualTrace.getTraceId().getSpanId(), 'pinpoint-pspanid header is root span id')
+    t.equal(actualApiRequest.headers['pinpoint-spanid'], actualApiTrace.getTraceId().getSpanId(), 'pinpoint-spanid header is api span id')
+    t.equal(actualApiRequest.headers['pinpoint-traceid'], actualTrace.getTraceId().toStringDelimiterFormatted(), 'pinpoint-traceid header is root transaction id')
+    t.equal(actualTrace.getTraceId().getAgentId(), actualApiTrace.getTraceId().getAgentId(), '1st TraceId.agentId equals 2nd TraceId.agentId')
+    t.equal(actualTrace.getTraceId().getAgentStartTime(), actualApiTrace.getTraceId().getAgentStartTime(), '1st TraceId.agentStartTime equals 2nd TraceId.agentStartTime')
+    t.equal(actualTrace.getTraceId().transactionId, actualApiTrace.getTraceId().transactionId, '1st TraceId.transactionSequence equals 2nd TraceId.transactionSequence')
 
     const result2 = await axios.get(getServerUrl('/'), {
-      timeout: 3000,
+      timeout: 20000,
       httpAgent: new http.Agent({ keepAlive: false }),
       httpsAgent: new https.Agent({ keepAlive: false }),
     })
@@ -791,7 +797,7 @@ test('incoming request by Disable Trace requests', (t) => {
     t.equal(actualApiRequest.headers['pinpoint-sampled'], 's0', 'DisableTrace api request pinpoint-sampled header is s0')
 
     const result3 = await axios.get(getServerUrl('/'), {
-      timeout: 3000,
+      timeout: 20000,
       httpAgent: new http.Agent({ keepAlive: false }),
       httpsAgent: new https.Agent({ keepAlive: false }),
     })

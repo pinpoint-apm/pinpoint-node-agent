@@ -18,14 +18,13 @@ test(`outgoing request URL escape a bug`, async (t) => {
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
         t.true(trace)
-    
+
         axios.get(`https://www.naver.com`, { httpsAgent: new https.Agent({ keepAlive: false }) })
             .then(function (response) {
                 t.true(response.status == 200)
-    
-                t.true(agent.dataSender.mockSpanChunks[0].spanEventList.length == 2, `spanEventList`)
-    
-                const spanEvent = agent.dataSender.mockSpanChunks[0].spanEventList[0]
+                const spanChunk = trace.repository.dataSender.findSpanChunk(trace.repository.buffer[0].asyncId)
+                t.true(spanChunk.spanEventList.length == 2, `spanEventList`)
+                const spanEvent = spanChunk.spanEventList[1]
                 t.equal(spanEvent.annotations[0].value, "GET", "URL")
                 t.equal(spanEvent.annotations[1].value, "www.naver.com/", "URL")
                 agent.completeTraceObject(trace)

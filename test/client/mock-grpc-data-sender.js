@@ -83,11 +83,22 @@ class MockGrpcDataSender extends GrpcDataSender {
   }
 
   initializePingStream() {
+    let self = this
+    this.pingStream = {
+      write: function (pmessage) {
+        self.actualPingMessage = pmessage
+      },
+      end: function () {
 
+      },
+      on: function () {
+
+      }
+    }
   }
 
   initializeAgentInfoScheduler() {
-    
+
   }
 
   sendSupportedServicesCommand() {

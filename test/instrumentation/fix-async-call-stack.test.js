@@ -15,27 +15,26 @@ test(`fix redis call stack depth`, async (t) => {
         .withWaitStrategy(Wait.forAll([
             Wait.forListeningPorts(),
             Wait.forLogMessage("Ready to accept connections")
-        ]))    
+        ]))
         .start()
 
     agent.bindHttp()
-
-    t.plan(2)
-
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
         const redis = require('redis')
         const client = redis.createClient({ url: container.getConnectionUrl() })
-    
+
+        const traceContext = agent.getTraceContext()
         client.set('key', 'value', async function (error) {
             t.true(error == null, 'error is null')
-    
-            const trace = agent.traceContext.currentTraceObject()
-            t.equal(trace.callStack.length, 1, 'callStack is 1')
-    
+
+            const trace = traceContext.currentTraceObject()
+            t.equal(trace.callStack.stack.length, 1, 'callStack is 1')
+
             client.quit()
             agent.completeTraceObject(trace)
             await container.stop()
+            t.end()
         })
     })
 })

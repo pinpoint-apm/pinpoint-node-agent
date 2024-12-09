@@ -57,25 +57,25 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
         actualPingSession.endCount = 3
         actualPingSession.dataCount = 5
         actualPingSession.t = t
-    
+
         this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
             'agentid': '12121212',
             'applicationname': 'applicationName',
             'starttime': Date.now()
         })
-    
+
         t.equal(this.grpcDataSender.pingStream.constructor.name, 'GrpcBidirectionalStream', `pingStream is the GrpcBidirectionalStream`)
         t.equal(this.grpcDataSender.pingStream.grpcStream.stream.constructor.name, 'ClientDuplexStreamImpl', 'when previous throw Deadline exceeded')
-    
+
         // when server send stream end event
         let callOrder = 0
-    
+
         const originGrpcStream = this.grpcDataSender.pingStream.grpcStream.endWithStream
         this.grpcDataSender.pingStream.grpcStream.endWithStream = (stream) => {
             this.grpcDataSender.pingStream.grpcStream.endedStream = stream
             originGrpcStream(stream)
         }
-    
+
         const registerEventListeners = () => {
             const originEnd = this.grpcDataSender.pingStream.grpcStream.stream.listeners('end')[0]
             this.grpcDataSender.pingStream.grpcStream.stream.removeListener('end', originEnd)
@@ -94,7 +94,7 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                     originEnd()
                 }
             })
-    
+
             const originData = this.grpcDataSender.pingStream.grpcStream.stream.listeners('data')[0]
             this.grpcDataSender.pingStream.grpcStream.stream.removeListener('data', originData)
             this.grpcDataSender.pingStream.grpcStream.stream.on('data', (data) => {
@@ -104,7 +104,7 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                 }
                 if (callOrder == 6/* 3st Ping, Data */) {
                     t.equal(callOrder, 6, '3st Ping is data and call order is 5 ')
-    
+
                     setTimeout(() => {
                         // 4st when PingStream client stream cancel
                         this.grpcDataSender.pingStream.grpcStream.stream.cancel()
@@ -122,7 +122,7 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                 }
                 originData(data)
             })
-    
+
             const originError = this.grpcDataSender.pingStream.grpcStream.stream.listeners('error')[0]
             this.grpcDataSender.pingStream.grpcStream.stream.removeListener('error', originError)
             this.grpcDataSender.pingStream.grpcStream.stream.on('error', (error) => {
@@ -148,7 +148,7 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                         // 6st sendPing
                         this.grpcDataSender.sendPing()
                         registerEventListeners()
-    
+
                         // 7st end
                         if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writable !== 'undefined') {
                             t.true(this.grpcDataSender.pingStream.grpcStream.stream.writable, 'writable is true before stream.end() on 7st end')
@@ -156,40 +156,40 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                         if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writableEnded !== 'undefined') {
                             t.false(this.grpcDataSender.pingStream.grpcStream.stream.writableEnded, 'writableEnded is false before stream.end() on 7st end')
                         }
-    
+
                         t.false(this.grpcDataSender.pingStream.grpcStream.streamEnded, 'stream ended symbol not sync by writable.end()')
                         t.true(typeof this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol === 'undefined', 'stream ended symbol not boolean by writable.end()')
                         this.grpcDataSender.pingStream.grpcStream.stream.end()
                         t.false(this.grpcDataSender.pingStream.grpcStream.streamEnded, 'stream ended symbol not sync by writable.end()')
                         t.true(typeof this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol === 'undefined', 'stream ended symbol not boolean by writable.end()')
-    
+
                         if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writable !== 'undefined') {
                             t.false(this.grpcDataSender.pingStream.grpcStream.stream.writable, 'writable is false after stream.end() on 7st end')
                         }
                         if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writableEnded !== 'undefined') {
                             t.true(this.grpcDataSender.pingStream.grpcStream.stream.writableEnded, 'writableEnded is true after stream.end() on 7st end')
                         }
-    
+
                         t.false(this.grpcDataSender.pingStream.grpcStream.streamEnded, 'stream ended symbol is sync by stream.end()')
                         t.true(typeof this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol === 'undefined', 'stream ended symbol is boolean by stream.end()')
                         this.grpcDataSender.pingStream.grpcStream.endWithStream(this.grpcDataSender.pingStream.grpcStream.stream)
                         t.true(this.grpcDataSender.pingStream.grpcStream.streamEnded, 'stream ended symbol is sync by stream.end()')
                         t.true(typeof this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol === 'boolean', 'stream ended symbol is boolean by stream.end()')
                         t.true(this.grpcDataSender.pingStream.grpcStream.streamEndedSymbol, 'stream ended symbol is true by stream.end()')
-    
+
                         t.true(this.grpcDataSender.pingStream.grpcStream.stream, 'stream is not null')
                         this.grpcDataSender.pingStream.grpcStream.end()
                         t.true(this.grpcDataSender.pingStream.grpcStream.stream === null, 'stream is null after grpcStream.end()')
-    
+
                         // 8st sendPing()
                         this.grpcDataSender.sendPing()
                         const currentStream = this.grpcDataSender.pingStream.grpcStream.stream
-    
+
                         process.nextTick(() => {
                             // 9st sendPing()
                             this.grpcDataSender.sendPing()
                             t.true(currentStream === this.grpcDataSender.pingStream.grpcStream.stream, 'steam reused')
-    
+
                             const originWrite = this.grpcDataSender.pingStream.grpcStream.write
                             let writeCount = 0
                             this.grpcDataSender.pingStream.grpcStream.write = (data, rewriteAfterStreamEnd = true) => {
@@ -222,7 +222,7 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                 }
                 originError(error)
             })
-    
+
             const originStatus = this.grpcDataSender.pingStream.grpcStream.stream.listeners('status')[0]
             this.grpcDataSender.pingStream.grpcStream.stream.removeListener('status', originStatus)
             this.grpcDataSender.pingStream.grpcStream.stream.on('status', (status) => {
@@ -245,7 +245,7 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
                 originStatus(status)
             })
         }
-    
+
         if (typeof this.grpcDataSender.pingStream.grpcStream.stream.writable === 'undefined') {
             planCount = planCount - 2
         }
@@ -253,21 +253,21 @@ test.skip('when ping stream write throw a error, gRPC bidirectional stream Ping 
             planCount = planCount - 2
         }
         // t.plan(planCount)
-    
+
         registerEventListeners()
         t.true(this.grpcDataSender.pingStream.grpcStream.stream, 'Ping stream is Good')
         this.grpcDataSender.sendPing()
-    
+
         // Server Error case
         t.true(this.grpcDataSender.pingStream.grpcStream.stream, 'Ping stream is Good in server error')
         this.grpcDataSender.sendPing()
-    
+
         const nextSendPingTest = () => {
             /* 3st Ping, Data after Server Error case, reconnect case */
             this.grpcDataSender.sendPing()
             t.true(this.grpcDataSender.pingStream.grpcStream.stream, 'when reconnect to gRPC server, after call.cancel not found error')
         }
-    
+
         t.teardown(() => {
             this.grpcDataSender.close()
             server.forceShutdown()

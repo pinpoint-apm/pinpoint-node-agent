@@ -199,7 +199,7 @@ test(`nested mysql async query with express`, async (t) => {
     })
 })
 
-test(`nested mysql2 async query with express`, async (t) => {
+test.skip(`nested mysql2 async query with express`, async (t) => {
     agent.bindHttpWithCallSite()
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()

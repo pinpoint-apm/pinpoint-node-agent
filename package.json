@@ -79,7 +79,7 @@
     "koa-bodyparser": "^4.2.1",
     "koa-router": "^7.4.0",
     "lodash": "^4.17.20",
-    "mongoose": "^5.4.3",
+    "mongoose": "^8.8.4",
     "mysql": "^2.18.1",
     "mysql2": "^3.6.0",
     "nyc": "^17.1.0",

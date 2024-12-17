@@ -5,17 +5,13 @@
  */
 
 const test = require('tape')
-const annotationKey = require('../../lib/constant/annotation-key')
 const AsyncId = require('../../lib/context/async-id')
-const Span = require('../../lib/context/span')
-const SpanEvent = require('../../lib/context/span-event')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, DataSourceCallCountable } = require('./grpc-fixture')
 const cmdMessage = require('../../lib/data/v1/Cmd_pb')
 const CommandType = require('../../lib/client/command/command-type')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
-const Annotations = require('../../lib/instrumentation/context/annotation/annotations')
 const CallArgumentsBuilder = require('../../lib/client/call-arguments-builder')
 const agent = require('../support/agent-singleton-mock')
 const RemoteTraceRootBuilder = require('../../lib/context/remote-trace-root-builder')

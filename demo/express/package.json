@@ -16,6 +16,6 @@
     "morgan": "~1.9.1",
     "mysql": "^2.18.1",
     "mysql2": "^3.9.1",
-    "pinpoint-node-agent": "^0.8.4"
+    "pinpoint-node-agent": "^0.8.6"
   }
 }

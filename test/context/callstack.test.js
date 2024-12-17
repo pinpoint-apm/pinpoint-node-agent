@@ -72,15 +72,15 @@ test(`fix express call stack depth`, async (t) => {
         t.ok(result1.status, 200)
         t.ok(result1.data, 'ok router1')
 
-        t.equal(agent.getTraces(0).repository.dataSender.mockSpan.spanEventList.length, 4, `span has 6 span events`)
-        t.equal(agent.getTraces(0).repository.dataSender.mockSpan.apiId, defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.getApiId(), 'nodeServerMethodDescriptor apiId')
+        t.equal(agent.getTrace(0).repository.dataSender.mockSpan.spanEventList.length, 4, `span has 6 span events`)
+        t.equal(agent.getTrace(0).repository.dataSender.mockSpan.apiId, defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.getApiId(), 'nodeServerMethodDescriptor apiId')
 
         let actualBuilder = new MethodDescriptorBuilder('use')
             .setClassName('Router')
             .setLineNumber(57)
             .setFileName('callstack.test.js')
         let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-        let actualSpanEvent = agent.getTraces(0).repository.dataSender.mockSpan.spanEventList[0]
+        let actualSpanEvent = agent.getTrace(0).repository.dataSender.mockSpan.spanEventList[0]
         t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'use(jsonParser) apiId')
         t.equal(actualSpanEvent.sequence, 0, 'use(jsonParser) sequence')
         t.equal(actualSpanEvent.depth, 1, 'use(jsonParser) depth')
@@ -91,7 +91,7 @@ test(`fix express call stack depth`, async (t) => {
             .setLineNumber(58)
             .setFileName('callstack.test.js')
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-        actualSpanEvent = agent.getTraces(0).repository.dataSender.mockSpan.spanEventList[1]
+        actualSpanEvent = agent.getTrace(0).repository.dataSender.mockSpan.spanEventList[1]
         t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'use(urlencodedParser) apiId')
         t.equal(actualSpanEvent.sequence, 1, 'use(urlencodedParser) sequence')
         t.equal(actualSpanEvent.depth, 1, 'use(urlencodedParser) depth')
@@ -109,13 +109,13 @@ test(`fix express call stack depth`, async (t) => {
                 .setFileName('callstack.test.js')
         }
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-        actualSpanEvent = agent.getTraces(0).repository.dataSender.mockSpan.spanEventList[2]
+        actualSpanEvent = agent.getTrace(0).repository.dataSender.mockSpan.spanEventList[2]
         t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'get(/) apiId')
         t.equal(actualSpanEvent.sequence, 2, 'get(/) sequence')
         t.equal(actualSpanEvent.depth, 1, 'get(/) depth')
         t.equal(actualSpanEvent.serviceType, ServiceTypeCode.express, 'get(/) serviceType')
 
-        actualSpanEvent = agent.getTraces(0).repository.dataSender.mockSpan.spanEventList[3]
+        actualSpanEvent = agent.getTrace(0).repository.dataSender.mockSpan.spanEventList[3]
         t.equal(actualSpanEvent.apiId, 0, 'await axios.get(`https://naver.com`) apiId')
         t.equal(actualSpanEvent.sequence, 3, 'await axios.get(`https://naver.com`) sequence')
         t.equal(actualSpanEvent.depth, 2, 'await axios.get(`https://naver.com`) depth')
@@ -125,9 +125,9 @@ test(`fix express call stack depth`, async (t) => {
         t.equal(actualAnnotation.key, 12, 'await axios.get(`https://naver.com`) spanevent annotation key')
         t.equal(actualAnnotation.value, 'http.request', 'await axios.get(`https://naver.com`) spanevent annotation value')
 
-        t.equal(agent.getTraces(0).repository.dataSender.mockSpanChunks.length, 1, 'await axios.get(`https://naver.com`) spanchunk is 1')
-        let actualSpanChunk = agent.getTraces(0).repository.dataSender.mockSpanChunks[0]
-        t.equal(actualSpanChunk.agentId, agent.getTraces(0).repository.dataSender.mockSpan.agentId, 'await axios.get(`https://naver.com`) spanchunk agentId')
+        t.equal(agent.getTrace(0).repository.dataSender.mockSpanChunks.length, 1, 'await axios.get(`https://naver.com`) spanchunk is 1')
+        let actualSpanChunk = agent.getTrace(0).repository.dataSender.mockSpanChunks[0]
+        t.equal(actualSpanChunk.agentId, agent.getTrace(0).repository.dataSender.mockSpan.agentId, 'await axios.get(`https://naver.com`) spanchunk agentId')
         t.equal(actualSpanEvent.asyncId.asyncId, actualSpanChunk.localAsyncId.asyncId, 'await axios.get(`https://naver.com`) nextAsyncId')
         t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'await axios.get(`https://naver.com`) spanchunk localAsyncId.sequence')
 
@@ -164,13 +164,13 @@ test('fix express call stack depth without callSite', async (t) => {
         t.ok(result1.status, 200)
         t.ok(result1.data, 'ok router1')
 
-        t.equal(agent.getTraces(0).repository.dataSender.mockSpan.spanEventList.length, 4, `span has 6 span events`)
-        t.equal(agent.getTraces(0).repository.dataSender.mockSpan.apiId, defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.getApiId(), 'nodeServerMethodDescriptor apiId')
+        t.equal(agent.getTrace(0).repository.dataSender.mockSpan.spanEventList.length, 4, `span has 6 span events`)
+        t.equal(agent.getTrace(0).repository.dataSender.mockSpan.apiId, defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.getApiId(), 'nodeServerMethodDescriptor apiId')
 
         let actualBuilder = new MethodDescriptorBuilder('use')
             .setClassName('Router')
         let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-        let actualSpanEvent = agent.getTraces(0).repository.dataSender.mockSpan.spanEventList[0]
+        let actualSpanEvent = agent.getTrace(0).repository.dataSender.mockSpan.spanEventList[0]
         t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'use(jsonParser) apiId')
         t.equal(actualSpanEvent.sequence, 0, 'use(jsonParser) sequence')
         t.equal(actualSpanEvent.depth, 1, 'use(jsonParser) depth')
@@ -179,13 +179,13 @@ test('fix express call stack depth without callSite', async (t) => {
         actualBuilder = new MethodDescriptorBuilder('use')
             .setClassName('Router')
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-        actualSpanEvent = agent.getTraces(0).repository.dataSender.mockSpan.spanEventList[1]
+        actualSpanEvent = agent.getTrace(0).repository.dataSender.mockSpan.spanEventList[1]
         t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'use(urlencodedParser) apiId')
         t.equal(actualSpanEvent.sequence, 1, 'use(urlencodedParser) sequence')
         t.equal(actualSpanEvent.depth, 1, 'use(urlencodedParser) depth')
         t.equal(actualSpanEvent.serviceType, ServiceTypeCode.express, 'use(urlencodedParser) serviceType')
 
-        actualSpanEvent = agent.getTraces(0).repository.dataSender.mockSpan.spanEventList[3]
+        actualSpanEvent = agent.getTrace(0).repository.dataSender.mockSpan.spanEventList[3]
         t.equal(actualSpanEvent.apiId, 0, 'await axios.get(`https://naver.com`) apiId')
         t.equal(actualSpanEvent.sequence, 3, 'await axios.get(`https://naver.com`) sequence')
         t.equal(actualSpanEvent.depth, 2, 'await axios.get(`https://naver.com`) depth')
@@ -194,9 +194,9 @@ test('fix express call stack depth without callSite', async (t) => {
         t.equal(actualAnnotation.key, 12, 'await axios.get(`https://naver.com`) spanevent annotation key')
         t.equal(actualAnnotation.value, 'http.request', 'await axios.get(`https://naver.com`) spanevent annotation value')
 
-        t.equal(agent.getTraces(0).repository.dataSender.mockSpanChunks.length, 1, 'await axios.get(`https://naver.com`) spanchunk is 1')
-        let actualSpanChunk = agent.getTraces(0).repository.dataSender.mockSpanChunks[0]
-        t.equal(actualSpanChunk.agentId, agent.getTraces(0).repository.dataSender.mockSpan.agentId, 'await axios.get(`https://naver.com`) spanchunk agentId')
+        t.equal(agent.getTrace(0).repository.dataSender.mockSpanChunks.length, 1, 'await axios.get(`https://naver.com`) spanchunk is 1')
+        let actualSpanChunk = agent.getTrace(0).repository.dataSender.mockSpanChunks[0]
+        t.equal(actualSpanChunk.agentId, agent.getTrace(0).repository.dataSender.mockSpan.agentId, 'await axios.get(`https://naver.com`) spanchunk agentId')
         t.equal(actualSpanEvent.asyncId.asyncId, actualSpanChunk.localAsyncId.asyncId, 'await axios.get(`https://naver.com`) nextAsyncId')
         t.equal(actualSpanChunk.localAsyncId.asyncId, actualSpanEvent.asyncId.asyncId, 'await axios.get(`https://naver.com`) spanchunk localAsyncId.asyncId')
         t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'await axios.get(`https://naver.com`) spanchunk localAsyncId.sequence')

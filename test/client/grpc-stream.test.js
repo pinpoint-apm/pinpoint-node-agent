@@ -86,8 +86,6 @@ test('client side streaming', function (t) {
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         actualPort = port
-
-        server.start()
         statClient = new services.StatClient('localhost' + ":" + port, grpc.credentials.createInsecure(), { interceptors: [headerInterceptor] })
 
         callStat(t)

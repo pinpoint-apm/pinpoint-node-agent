@@ -21,17 +21,32 @@ const sampler = require('../../lib/sampler/sampler')
 const TraceSampler = require('../../lib/context/trace/trace-sampler')
 const transactionIdGenerator = require('../../lib/context/sequence-generators').transactionIdGenerator
 const closedTraceWrapped = Symbol('closedTraceWrapped')
+const stringMetaService = require('../../lib/context/string-meta-service')
+const apiMetaService = require('../../lib/context/api-meta-service')
 
 let traces = []
-
 const resetTraces = () => {
     traces = []
 }
-
 const getTraces = () => {
     return traces
 }
 
+let spanOrSpanChunks = []
+const resetSpanOrSpanChunks = () => {
+    spanOrSpanChunks = []
+}
+const getSpanOrSpanChunks = () => {
+    return spanOrSpanChunks
+}
+
+let sendedApiMetaInfos = []
+const resetSendedApiMetaInfos = () => {
+    sendedApiMetaInfos = []
+}
+const getSendedApiMetaInfos = () => {
+    return sendedApiMetaInfos
+}
 class MockAgent extends Agent {
     startSchedule(agentId, agentStartTime) {
         this.mockAgentId = agentId
@@ -46,6 +61,8 @@ class MockAgent extends Agent {
     bindHttp(json) {
         this.cleanHttp()
         this.dataSender.clear()
+
+        json = this.portProperties(json)
 
         if (!json) {
             json = require('../pinpoint-config-test')
@@ -81,11 +98,16 @@ class MockAgent extends Agent {
         this.traceContext.traceSampler = new TraceSampler(this.agentInfo, config)
         this.traceContext.config = config
 
-        const dataSender = dataSenderMock()
+        const dataSender = dataSenderMock(this.config, this.agentInfo)
         this.traceContext.dataSender = dataSender
         this.dataSender = dataSender
 
+        stringMetaService.init(dataSender)
+        apiMetaService.init(dataSender)
+
         resetTraces()
+        resetSpanOrSpanChunks()
+        resetSendedApiMetaInfos()
         shimmer.wrap(this.traceContext, 'newTrace', function (origin) {
             return function () {
                 const returned = origin.apply(this, arguments)
@@ -98,6 +120,14 @@ class MockAgent extends Agent {
             return function () {
                 const returned = origin.apply(this, arguments)
                 getTraces().push(returned)
+                return returned
+            }
+        })
+
+        shimmer.wrap(apiMetaService, 'sendApiMetaInfo', function (origin) {
+            return function () {
+                const returned = origin.apply(this, arguments)
+                getSendedApiMetaInfos().push(arguments[0])
                 return returned
             }
         })
@@ -119,8 +149,19 @@ class MockAgent extends Agent {
         trace[closedTraceWrapped] = true
     }
 
-    bindHttpWithCallSite() {
-        this.bindHttp({ 'trace-location-and-filename-of-call-site': true })
+    bindHttpWithCallSite(conf) {
+        conf = this.portProperties(conf)
+        conf = Object.assign({}, { 'trace-location-and-filename-of-call-site': true }, conf)
+        this.bindHttp(conf)
+    }
+
+    portProperties(conf) {
+        if (typeof conf !== 'number') {
+            return conf
+        }
+        const testConf = require('../pinpoint-config-test')
+        const collectorConf = Object.assign(testConf.collector, { 'span-port': conf, 'stat-port': conf, 'tcp-port': conf })
+        return Object.assign({}, { collector: collectorConf })
     }
 
     completeTraceObject(trace) {
@@ -130,8 +171,24 @@ class MockAgent extends Agent {
         // }
     }
 
-    getTraces(index) {
+    getTraces() {
+        return getTraces()
+    }
+
+    getTrace(index) {
         return getTraces()[index]
+    }
+
+    getSpanChunk(asyncId) {
+        return getSpanOrSpanChunks().find(spanOrSpanChunk => spanOrSpanChunk.getLocalasyncid().getAsyncid() === asyncId.getAsyncId() && spanOrSpanChunk.getLocalasyncid().getSequence() === asyncId.getSequence())
+    }
+
+    getSpanOrSpanChunks() {
+        return getSpanOrSpanChunks()
+    }
+
+    getSendedApiMetaInfos() {
+        return getSendedApiMetaInfos()
     }
 }
 

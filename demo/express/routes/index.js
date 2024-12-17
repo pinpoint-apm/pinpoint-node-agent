@@ -48,7 +48,9 @@ router.get('/', async function(req, res, next) {
   const json = await response.json()
   console.log(json)
 
-  res.render('index', { title: 'Express' });
+  setTimeout(() => {
+    res.render('index', { title: 'Express' })
+  }, 1000)
 })
 
 router.get('/api', function(req, res, next) {

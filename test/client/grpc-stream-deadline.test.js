@@ -101,8 +101,6 @@ test('client side streaming with deadline', function (t) {
         sendAgentStat: sendAgentStat
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        server.start()
-
         const headerInterceptor = function (options, nextCall) {
             return new grpc.InterceptingCall(nextCall(options), {
                 start: function (metadata, listener, next) {
@@ -156,7 +154,7 @@ test('sendAgentInfo deadline', (t) => {
             'applicationname': 'applicationName',
             'starttime': Date.now()
         })
-    
+
         grpcDataSender.sendAgentInfo({
             hostname: 'hostname',
             "serviceType": 1400,
@@ -164,21 +162,21 @@ test('sendAgentInfo deadline', (t) => {
             t.true(response, '1st sendAgentInfo response is success')
             t.false(err, '1st sendAgentInfo err is false')
         })
-    
+
         const callArguments = new CallArgumentsBuilder((err, response) => {
             t.false(response, '2st sendAgentInfo response is undefined')
             t.equal(err.code, 4, '2st sendAgentInfo err.code is 4')
             t.true(err.details.startsWith('Deadline exceeded'), '2st sendAgentInfo err.details is Deadline exceeded')
             t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendAgentInfo err.message is Deadline exceeded')
-    
+
             t.end()
         }).setDeadlineMilliseconds(100).build()
-    
+
         grpcDataSender.sendAgentInfo({
             hostname: 'hostname',
             "serviceType": 1400,
         }, callArguments)
-    
+
         t.teardown(() => {
             grpcDataSender.close()
             server.forceShutdown()
@@ -214,16 +212,16 @@ test('sendApiMetaInfo deadline', (t) => {
             'applicationname': 'applicationName',
             'starttime': Date.now()
         })
-    
+
         let apiMetaInfoResponse = 0
-    
+
         grpcDataSender.sendApiMetaInfo({
             hostname: 'hostname',
             "serviceType": 1400,
         }, (err, response) => {
             t.true(response, '1st sendApiMetaInfo response is success')
             t.false(err, '1st sendApiMetaInfo err is false')
-    
+
             apiMetaInfoResponse++
             if (apiMetaInfoResponse == 2) {
                 t.end()
@@ -235,18 +233,18 @@ test('sendApiMetaInfo deadline', (t) => {
             t.equal(err.code, 4, '2st sendApiMetaInfo err.code is 4')
             t.true(err.details.startsWith('Deadline exceeded'), '2st sendApiMetaInfo err.details is Deadline exceeded')
             t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendApiMetaInfo err.message is Deadline exceeded')
-    
+
             apiMetaInfoResponse++
             if (apiMetaInfoResponse == 2) {
                 t.end()
             }
         }).setDeadlineMilliseconds(100).build()
-    
+
         grpcDataSender.sendApiMetaInfo({
             hostname: 'hostname',
             "serviceType": 1400,
         }, callArguments)
-    
+
         t.teardown(() => {
             grpcDataSender.close()
             server.forceShutdown()
@@ -283,26 +281,26 @@ test('sendStringMetaInfo deadline', (t) => {
             'starttime': Date.now()
         })
         let stringMetaDataResponse = 0
-    
+
         grpcDataSender.sendStringMetaInfo({
             hostname: 'hostname',
             "serviceType": 1400,
         }, (err, response) => {
             t.true(response, '1st sendStringMetaInfo response is success')
             t.false(err, '1st sendStringMetaInfo err is false')
-    
+
             stringMetaDataResponse++
             if (stringMetaDataResponse == 2) {
                 t.end()
             }
         })
-    
+
         const callArguments = new CallArgumentsBuilder((err, response) => {
             t.false(response, '2st sendStringMetaInfo response is undefined')
             t.equal(err.code, 4, '2st sendStringMetaInfo err.code is 4')
             t.true(err.details.startsWith('Deadline exceeded'), '2st sendStringMetaInfo err.details is Deadline exceeded')
             t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendStringMetaInfo err.message is Deadline exceeded')
-    
+
             stringMetaDataResponse++
             if (stringMetaDataResponse == 2) {
                 t.end()
@@ -312,7 +310,7 @@ test('sendStringMetaInfo deadline', (t) => {
             hostname: 'hostname',
             "serviceType": 1400,
         }, callArguments)
-    
+
         t.teardown(() => {
             grpcDataSender.close()
             server.forceShutdown()

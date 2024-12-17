@@ -591,7 +591,7 @@ test(`${testName1} await connections between express and redis.`, async function
       client.expire('key', 10)
       await axios.get(`https://www.naver.com`, { httpsAgent: new https.Agent({ keepAlive: false }) })
 
-      const actualOutgoingChildTrace = agent.getTraces(2)
+      const actualOutgoingChildTrace = agent.getTrace(2)
       const asyncSpanChunk = actualOutgoingChildTrace.repository.dataSender.findSpanChunk(actualOutgoingChildTrace.localAsyncId)
       t.equal(asyncSpanChunk.getTraceRoot().getTraceId().getSpanId(), traceRoot.getTraceId().getSpanId(), 'HTTP request callback spanId')
       t.equal(asyncSpanChunk.getTraceRoot(), traceRoot, 'HTTP request callback transactionId')

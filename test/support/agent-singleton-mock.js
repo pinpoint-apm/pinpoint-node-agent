@@ -47,6 +47,15 @@ const resetSendedApiMetaInfos = () => {
 const getSendedApiMetaInfos = () => {
     return sendedApiMetaInfos
 }
+const getTraceByAsyncId = (asyncId) => {
+    return getTraces().find(trace => {
+        const spanChunkSpanEvents = agent.dataSender.mockSpanChunks.flatMap(spanChunk => spanChunk.spanEventList)
+        const spanEvents = trace.callStack.stack.concat(trace.repository.buffer).concat(spanChunkSpanEvents)
+        const asyncSpanEvent = spanEvents.find(spanEvent => spanEvent.asyncId?.getAsyncId() === asyncId.getAsyncId())
+        return asyncSpanEvent
+    })
+}
+
 class MockAgent extends Agent {
     startSchedule(agentId, agentStartTime) {
         this.mockAgentId = agentId
@@ -105,25 +114,36 @@ class MockAgent extends Agent {
         stringMetaService.init(dataSender)
         apiMetaService.init(dataSender)
 
-        resetTraces()
         resetSpanOrSpanChunks()
-        resetSendedApiMetaInfos()
+
+        resetTraces()
+        this.newTraceCallback = null
+        const getNewTraceCallback = () => {
+            return this.newTraceCallback
+        }
         shimmer.wrap(this.traceContext, 'newTrace', function (origin) {
             return function () {
                 const returned = origin.apply(this, arguments)
+                getNewTraceCallback()?.(returned)
                 getTraces().push(returned)
                 return returned
             }
         })
 
+        this.continueAsyncContextTraceObjectCallback = null
+        const getContinueAsyncContextTraceObjectCallback = () => {
+            return this.continueAsyncContextTraceObjectCallback
+        }
         shimmer.wrap(this.traceContext, 'continueAsyncContextTraceObject', function (origin) {
             return function () {
                 const returned = origin.apply(this, arguments)
+                getContinueAsyncContextTraceObjectCallback()?.(returned)
                 getTraces().push(returned)
                 return returned
             }
         })
 
+        resetSendedApiMetaInfos()
         shimmer.wrap(apiMetaService, 'sendApiMetaInfo', function (origin) {
             return function () {
                 const returned = origin.apply(this, arguments)
@@ -166,9 +186,6 @@ class MockAgent extends Agent {
 
     completeTraceObject(trace) {
         super.completeTraceObject(trace)
-        // if (!trace[closedTraceWrapped]) {
-        //     this.traces.push(trace)
-        // }
     }
 
     getTraces() {
@@ -189,6 +206,18 @@ class MockAgent extends Agent {
 
     getSendedApiMetaInfos() {
         return getSendedApiMetaInfos()
+    }
+
+    setNewTraceCallback(callback) {
+        this.newTraceCallback = callback
+    }
+
+    setContinueAsyncContextTraceObjectCallback(callback) {
+        this.continueAsyncContextTraceObjectCallback = callback
+    }
+
+    getTraceByAsyncId(asyncId) {
+        return getTraceByAsyncId(asyncId)
     }
 }
 

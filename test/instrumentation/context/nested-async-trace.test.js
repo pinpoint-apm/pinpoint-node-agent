@@ -360,6 +360,7 @@ test(`nested mysql2 async query with express`, async (t) => {
 
             agent.callbackTraceClose(async (trace) => {
                 t.equal(trace.spanBuilder.serviceType, ServiceType.node.getCode(), 'Span serviceType is node')
+                t.true(trace.spanBuilder.remoteAddress === '127.0.0.1' || trace.spanBuilder.remoteAddress === '::1', `remoteAddress is ${trace.spanBuilder.remoteAddress}`)
                 let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
                     .setClassName(expected('app', 'Function'))
                     .setLineNumber(319)
@@ -453,6 +454,9 @@ test(`nested mysql2 async query with express`, async (t) => {
                 t.equal(actualSpanChunk.spanEventList[0].serviceType, ServiceType.async.getCode(), 'serviceType is mysql')
 
                 spanMessageEndEventCallback = async () => {
+                    const trace = agent.getTraces()[0]
+                    t.true(trace.spanBuilder.remoteAddress === '127.0.0.1' || trace.spanBuilder.remoteAddress === '::1', `remoteAddress is ${trace.spanBuilder.remoteAddress}`)
+
                     connection.end()
                     t.equal(agent.getSendedApiMetaInfos().length, 0, 'agent.getSendedApiMetaInfos() is empty')
                     t.end()

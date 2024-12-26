@@ -15,7 +15,7 @@
   "http-status-code-errors": [
     "5xx"
   ],
-  "log-level": "WARN",
+  "log-level": "INFO",
   "enable": true,
   "enabled-data-sending": true,
   "enabled-stats-monitor-sending": false,

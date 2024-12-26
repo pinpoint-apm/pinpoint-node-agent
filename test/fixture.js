@@ -36,29 +36,10 @@ const captureNamedGroup = (callSite) => {
                           , namedGroupTypeMethod([callSite], 0))
 }
 
-function assertSpanChunk(asyncTrace, callback) {
-  const origin = asyncTrace.close
-  asyncTrace.close = function () {
-      origin.apply(this, arguments)
-      callback(asyncTrace.storage.dataSender.findSpanChunk(asyncTrace.asyncId))
-  }
-}
-
-function assertTrace(callback) {
-  const trace = localStorage.getStore()
-  const origin = trace.close
-  trace.close = function () {
-      origin.apply(this, arguments)
-      callback(trace)
-  }
-}
-
 module.exports = {
   config,
   getTransactionId,
   getTraceId,
   getAgentInfo,
   captureNamedGroup,
-  assertSpanChunk,
-  assertTrace,
 }

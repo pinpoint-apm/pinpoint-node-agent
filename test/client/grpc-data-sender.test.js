@@ -20,10 +20,10 @@ const AsyncSpanChunkBuilder = require('../../lib/context/trace/async-span-chunk-
 const SpanRepository = require('../../lib/context/trace/span-repository')
 const ChildTraceBuilder = require('../../lib/context/trace/child-trace-builder')
 const serviceType = require('../../lib/context/service-type')
-const makeMockDataSender = require('../fixtures/mock-data-sender')
 const SpanChunkBuilder = require('../../lib/context/span-chunk-builder')
 const Trace = require('../../lib/context/trace/trace2')
 const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
+const dataSenderMock = require('../support/data-sender-mock')
 
 let sendSpanMethodOnDataCallback
 function sendSpan(call) {
@@ -70,7 +70,7 @@ test('Should send span', function (t) {
   server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
     const grpcDataSender = beforeSpecificOne(port, DataSource)
     const traceRoot = new RemoteTraceRootBuilder(agent.agentInfo, '5').build()
-    dataSender = makeMockDataSender(agent.config, grpcDataSender)
+    dataSender = dataSenderMock(agent.config, grpcDataSender)
     const spanBuilder = new SpanBuilder(traceRoot)
     spanBuilder.setServiceType(1400)
     spanBuilder.setEndPoint('localhost:3000')
@@ -167,7 +167,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
     const grpcDataSender = beforeSpecificOne(port, DataSource)
     const traceRoot = new RemoteTraceRootBuilder(agent.agentInfo, '5').build()
     const asyncId = AsyncId.make()
-    dataSender = makeMockDataSender(agent.config, grpcDataSender)
+    dataSender = dataSenderMock(agent.config, grpcDataSender)
     const spanChunkBuilder = new AsyncSpanChunkBuilder(traceRoot, asyncId)
     const repository = new SpanRepository(spanChunkBuilder, dataSender, agent.agentInfo)
     const childTraceBuilder = new ChildTraceBuilder(traceRoot, repository, asyncId)
@@ -245,7 +245,7 @@ test('sendSpanChunk redis.GET.end', (t) => {
     const grpcDataSender = beforeSpecificOne(port, DataSource)
     const traceRoot = new RemoteTraceRootBuilder(agent.agentInfo, '5').build()
     const asyncId = AsyncId.make()
-    dataSender = makeMockDataSender(agent.config, grpcDataSender)
+    dataSender = dataSenderMock(agent.config, grpcDataSender)
     const spanChunkBuilder = new AsyncSpanChunkBuilder(traceRoot, asyncId)
     const repository = new SpanRepository(spanChunkBuilder, dataSender, agent.agentInfo)
     const childTraceBuilder = new ChildTraceBuilder(traceRoot, repository, asyncId)
@@ -315,7 +315,7 @@ test('sendSpan', (t) => {
   server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
     const grpcDataSender = beforeSpecificOne(port, DataSource)
     const traceRoot = new RemoteTraceRootBuilder(agent.agentInfo, '5').build()
-    dataSender = makeMockDataSender(agent.config, grpcDataSender)
+    dataSender = dataSenderMock(agent.config, grpcDataSender)
     const spanBuilder = new SpanBuilder(traceRoot)
     const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
     const repository = new SpanRepository(spanChunkBuilder, dataSender, agent.agentInfo)

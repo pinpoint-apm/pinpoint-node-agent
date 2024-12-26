@@ -20,8 +20,6 @@ const apiMetaService = require('../../../lib/context/api-meta-service')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const ServiceType = require('../../../lib/context/service-type')
 const annotationKey = require('../../../lib/constant/annotation-key')
-const localStorage = require('../../../lib/instrumentation/context/local-storage')
-const { assertTrace } = require('../../fixture')
 const https = require('https')
 
 const TEST_ENV = {
@@ -62,54 +60,19 @@ test(`${testName1} should Record the connections between express and redis.`, as
     var key = req.body.name
     var value = JSON.stringify(req.body)
 
-    let actualNextAsyncId
-    let actualSpanId
     req.cache.set(key, value, async function (err, data) {
       if (err) {
         console.log(err)
         res.send("error " + err)
         return
       }
-      const trace = localStorage.getStore()
-      axios.get(`https://www.naver.com`, { httpsAgent: new https.Agent({ keepAlive: false }) })
-        .then(function (response) {
-          const actualHttpCallbackNextAsyncId = actualNextAsyncId
-          const actualHttpCallbackSpanChunk = trace.repository.dataSender.findSpanChunk(actualHttpCallbackNextAsyncId)
-          t.equal(actualHttpCallbackSpanChunk.traceRoot.getTraceId().getSpanId(), trace.traceRoot.getTraceId().getSpanId(), 'HTTP request callback spanId')
-          t.equal(actualHttpCallbackSpanChunk.getTraceRoot(), trace.getTraceRoot(), 'HTTP request callback transactionId')
-          t.equal(actualHttpCallbackSpanChunk.localAsyncId.asyncId, actualHttpCallbackNextAsyncId.asyncId, 'HTTP request callback localAsyncId.asyncId')
-          t.equal(actualHttpCallbackSpanChunk.localAsyncId.sequence, 1, 'HTTP request callback localAsyncId.sequence')
 
-          let actualSpanEvent = actualHttpCallbackSpanChunk.spanEventList.find(spanEvent => spanEvent.sequence === 0)
-          t.equal(actualSpanEvent.apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'HTTP request callback asyncInvocationDescriptor.spanEvent.apiId')
-          t.equal(actualSpanEvent.depth, 1, 'HTTP request callback asyncInvocationDescriptor.spanEvent.depth')
-          t.equal(actualSpanEvent.sequence, 0, 'HTTP request callback asyncInvocationDescriptor.spanEvent.sequence')
-          t.equal(actualSpanEvent.serviceType, ServiceType.async.getCode(), 'HTTP request callback asyncInvocationDescriptor.spanEvent.serviceType')
-
-          actualSpanEvent = actualHttpCallbackSpanChunk.spanEventList.find(spanEvent => spanEvent.sequence === 1)
-          t.equal(actualSpanEvent.apiId, 0, 'HTTP request callback spanEvent.apiId')
-          t.equal(actualSpanEvent.depth, 2, 'HTTP request callback spanEvent.depth')
-          t.equal(actualSpanEvent.sequence, 1, 'HTTP request callback spanEvent.sequence')
-          t.equal(actualSpanEvent.serviceType, ServiceType.asyncHttpClient.getCode(), 'HTTP request callback spanEvent.serviceType')
-
-          let actualAnnotation = actualSpanEvent.annotations[0]
-          t.equal(actualAnnotation.key, annotationKey.API.getCode(), 'HTTP request callback spanEvent.annotation[0].key')
-          t.equal(actualAnnotation.value, 'GET', 'HTTP request callback spanEvent.annotation[0].value')
-          actualAnnotation = actualSpanEvent.annotations[1]
-          t.equal(actualAnnotation.key, annotationKey.HTTP_URL.getCode(), 'HTTP request callback spanEvent.annotation[1].key annotationKey.HTTP_URL')
-          t.equal(actualAnnotation.value, 'www.naver.com/', 'HTTP request callback spanEvent.annotation[1].value annotationKey.HTTP_URL')
-          actualAnnotation = actualSpanEvent.annotations[2]
-          t.equal(actualAnnotation.key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP request callback spanEvent.annotation[2].key annotationKey.HTTP_STATUS_CODE')
-          t.equal(actualAnnotation.value, 200, 'HTTP request callback spanEvent.annotation[2].value annotationKey.HTTP_STATUS_CODE')
-        })
-      req.cache.expire(key, 10)
-
-      assertTrace(trace => {
-        let actualSpanChunk = trace.repository.dataSender.mockSpanChunks[0]
-        t.equal(actualSpanChunk.traceRoot.getTraceId().getSpanId(), trace.traceRoot.getTraceId().getSpanId(), 'spanId')
-        t.equal(actualSpanChunk.getTraceRoot(), trace.getTraceRoot(), 'transactionId')
-        t.equal(actualSpanChunk.localAsyncId.asyncId, actualNextAsyncId.asyncId, 'localAsyncId.asyncId')
-        t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence')
+      agent.callbackTraceClose((childTrace) => {
+        let actualSpanChunk = childTrace.repository.dataSender.mockSpanChunks[0]
+        t.equal(actualSpanChunk.traceRoot.getTraceId().getSpanId(), childTrace.traceRoot.getTraceId().getSpanId(), 'spanId')
+        t.equal(actualSpanChunk.getTraceRoot(), childTrace.getTraceRoot(), 'transactionId')
+        t.equal(actualSpanChunk.localAsyncId.asyncId, childTrace.localAsyncId.asyncId, 'localAsyncId.asyncId')
+        t.equal(actualSpanChunk.localAsyncId.sequence, childTrace.localAsyncId.sequence, 'localAsyncId.sequence')
 
         let actualSpanEvent = actualSpanChunk.spanEventList.find(spanEvent => spanEvent.sequence === 0)
         t.equal(actualSpanEvent.apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'apiId')
@@ -125,25 +88,62 @@ test(`${testName1} should Record the connections between express and redis.`, as
 
         let actualAnnotation = actualSpanEvent.annotations.find(annotation => annotation.key === annotationKey.API.getCode())
         t.equal(actualAnnotation.value, 'http.request', 'HTTP request annotation value')
-        actualNextAsyncId = actualSpanEvent.asyncId
-
-        actualSpanEvent = actualSpanChunk.spanEventList.find(spanEvent => spanEvent.sequence === 2)
-        let actualBuilder = new MethodDescriptorBuilder('expire')
-          .setClassName('RedisClient')
-        let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-        t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'RedisClient.expire apiId')
-        t.equal(actualMethodDescriptor.apiDescriptor, 'RedisClient.expire', 'RedisClient.expire apiDescriptor')
-        t.equal(actualMethodDescriptor.className, 'RedisClient', 'RedisClient.expire className')
-        t.equal(actualMethodDescriptor.methodName, 'expire', 'RedisClient.expire methodName')
-        t.equal(actualSpanEvent.sequence, 2, 'RedisClient.expire actualSpanEvent.sequence')
-        t.equal(actualSpanEvent.depth, 2, 'RedisClient.expire actualSpanEvent.depth')
-        t.equal(actualSpanEvent.serviceType, 8200, 'RedisClient.expire actualSpanEvent.serviceType')
-        t.equal(actualSpanEvent.destinationId, 'Redis', 'RedisClient.expire actualSpanEvent.destinationId')
-        t.equal(actualSpanEvent.endPoint, `localhost:${container.getMappedPort(6379)}`, 'RedisClient.expire actualSpanEvent.endPoint')
       })
+
+      await axios.get(`https://www.naver.com`, { httpsAgent: new https.Agent({ keepAlive: false }) })
+      req.cache.expire(key, 10, function (err, data) {
+        agent.callbackTraceClose((childTrace) => {
+          t.true(err === null, `expire callback err is null`)
+          let actualSpanEvent = agent.getSpanEventByAsyncId(childTrace.localAsyncId)
+          let actualBuilder = new MethodDescriptorBuilder('expire')
+            .setClassName('RedisClient')
+          let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+          t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'RedisClient.expire apiId')
+          t.equal(actualMethodDescriptor.apiDescriptor, 'RedisClient.expire', 'RedisClient.expire apiDescriptor')
+          t.equal(actualMethodDescriptor.className, 'RedisClient', 'RedisClient.expire className')
+          t.equal(actualMethodDescriptor.methodName, 'expire', 'RedisClient.expire methodName')
+          t.equal(actualSpanEvent.sequence, 2, 'RedisClient.expire actualSpanEvent.sequence')
+          t.equal(actualSpanEvent.depth, 2, 'RedisClient.expire actualSpanEvent.depth')
+          t.equal(actualSpanEvent.serviceType, 8200, 'RedisClient.expire actualSpanEvent.serviceType')
+          t.equal(actualSpanEvent.destinationId, 'Redis', 'RedisClient.expire actualSpanEvent.destinationId')
+          t.equal(actualSpanEvent.endPoint, `localhost:${container.getMappedPort(6379)}`, 'RedisClient.expire actualSpanEvent.endPoint')
+        })
+      })
+
+      const childTrace = agent.currentTraceObject()
+      const actualHttpCallbackNextAsyncId = childTrace.repository.dataSender.mockSpanChunks[1].localAsyncId
+      const actualHttpCallbackSpanChunk = childTrace.repository.dataSender.findSpanChunk(actualHttpCallbackNextAsyncId)
+      t.equal(actualHttpCallbackSpanChunk.traceRoot.getTraceId().getSpanId(), childTrace.traceRoot.getTraceId().getSpanId(), 'HTTP request callback spanId')
+      t.equal(actualHttpCallbackSpanChunk.getTraceRoot(), childTrace.getTraceRoot(), 'HTTP request callback transactionId')
+      t.equal(actualHttpCallbackSpanChunk.localAsyncId.asyncId, actualHttpCallbackNextAsyncId.asyncId, 'HTTP request callback localAsyncId.asyncId')
+      t.equal(actualHttpCallbackSpanChunk.localAsyncId.sequence, 1, 'HTTP request callback localAsyncId.sequence')
+
+      let actualSpanEvent = actualHttpCallbackSpanChunk.spanEventList.find(spanEvent => spanEvent.sequence === 0)
+      t.equal(actualSpanEvent.apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'HTTP request callback asyncInvocationDescriptor.spanEvent.apiId')
+      t.equal(actualSpanEvent.depth, 1, 'HTTP request callback asyncInvocationDescriptor.spanEvent.depth')
+      t.equal(actualSpanEvent.sequence, 0, 'HTTP request callback asyncInvocationDescriptor.spanEvent.sequence')
+      t.equal(actualSpanEvent.serviceType, ServiceType.async.getCode(), 'HTTP request callback asyncInvocationDescriptor.spanEvent.serviceType')
+
+      actualSpanEvent = actualHttpCallbackSpanChunk.spanEventList.find(spanEvent => spanEvent.sequence === 1)
+      t.equal(actualSpanEvent.apiId, 0, 'HTTP request callback spanEvent.apiId')
+      t.equal(actualSpanEvent.depth, 2, 'HTTP request callback spanEvent.depth')
+      t.equal(actualSpanEvent.sequence, 1, 'HTTP request callback spanEvent.sequence')
+      t.equal(actualSpanEvent.serviceType, ServiceType.asyncHttpClient.getCode(), 'HTTP request callback spanEvent.serviceType')
+
+      let actualAnnotation = actualSpanEvent.annotations[0]
+      t.equal(actualAnnotation.key, annotationKey.API.getCode(), 'HTTP request callback spanEvent.annotation[0].key')
+      t.equal(actualAnnotation.value, 'GET', 'HTTP request callback spanEvent.annotation[0].value')
+      actualAnnotation = actualSpanEvent.annotations[1]
+      t.equal(actualAnnotation.key, annotationKey.HTTP_URL.getCode(), 'HTTP request callback spanEvent.annotation[1].key annotationKey.HTTP_URL')
+      t.equal(actualAnnotation.value, 'www.naver.com/', 'HTTP request callback spanEvent.annotation[1].value annotationKey.HTTP_URL')
+      actualAnnotation = actualSpanEvent.annotations[2]
+      t.equal(actualAnnotation.key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP request callback spanEvent.annotation[2].key annotationKey.HTTP_STATUS_CODE')
+      t.equal(actualAnnotation.value, 200, 'HTTP request callback spanEvent.annotation[2].value annotationKey.HTTP_STATUS_CODE')
+
+      res.json(value)
     })
 
-    assertTrace(trace => {
+    agent.callbackTraceClose(trace => {
       let actualBuilder = new MethodDescriptorBuilder('use')
         .setClassName('Router')
       let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -193,10 +193,7 @@ test(`${testName1} should Record the connections between express and redis.`, as
       t.equal(actualSpanEvent.serviceType, 8200, 'serviceType')
       t.equal(actualSpanEvent.destinationId, 'Redis', 'destinationId')
       t.equal(actualSpanEvent.endPoint, `localhost:${container.getMappedPort(6379)}`, 'endPoint')
-      actualNextAsyncId = actualSpanEvent.asyncId
-      actualSpanId = trace.spanBuilder.traceRoot.getTraceId().getSpanId()
     })
-    res.json(value)
   })
 
   app.get(`${PATH}/:name`, function (req, res, next) {
@@ -223,10 +220,12 @@ test(`${testName1} should Record the connections between express and redis.`, as
     const rstGet = await axios.get(getServerUrl(`${PATH}/jundol`))
     t.ok(rstGet.status, 200)
 
+    t.end()
+  })
+  t.teardown(async () => {
     client.quit()
     await container.stop()
     server.close()
-    t.end()
   })
 })
 
@@ -403,7 +402,7 @@ test(`${testName3} should Record the connections between koa and redis.`, async 
   const PATH = `/${testName}`
   app.use(koaBodyParser())
   router.post(PATH, async function (ctx, next) {
-    console.log(ctx.request.body)
+    // console.log(ctx.request.body)
     const key = ctx.request.body.name
     const value = JSON.stringify(ctx.request.body)
 
@@ -481,7 +480,7 @@ test(`${testName4} should Record the connections between koa and ioredis.`, asyn
       if (err) {
         console.error(err)
       } else {
-        console.log(result)
+        // console.log(result)
       }
     })
 
@@ -489,14 +488,14 @@ test(`${testName4} should Record the connections between koa and ioredis.`, asyn
       if (err) {
         console.error(err)
       } else {
-        console.log(result)
+        // console.log(result)
       }
     })
     redis.get(key, (err, result) => {
       if (err) {
         console.error(err)
       } else {
-        console.log(result)
+        // console.log(result)
       }
     })
 
@@ -506,11 +505,8 @@ test(`${testName4} should Record the connections between koa and ioredis.`, asyn
   app.use(router.routes()).use(router.allowedMethods())
 
   const server = app.listen(TEST_ENV.port, async () => {
-    console.log('Step1.')
     const rstPush = await axios.post(getServerUrl(PATH), redisData)
     t.ok(rstPush.status, 200)
-
-    console.log('Step2.')
     const rstGet = await axios.get(getServerUrl(`${PATH}/jundol`))
     t.ok(rstGet.status, 200)
 
@@ -545,7 +541,7 @@ test(`${testName1} await connections between express and redis.`, async function
         res.send("error " + err)
         return
       }
-      assertTrace(async childTrace => {
+      agent.callbackTraceClose(async childTrace => {
         let actualSpanChunk = childTrace.repository.dataSender.mockSpanChunks[0]
         let actualNextAsyncId = trace.repository.buffer.find(spanEvent => spanEvent.sequence === 1).asyncId
         t.equal(actualSpanChunk.traceRoot.getTraceId().getSpanId(), traceRoot.getTraceId().getSpanId(), 'spanId')
@@ -625,7 +621,7 @@ test(`${testName1} await connections between express and redis.`, async function
       res.json('ok')
     })
 
-    assertTrace(trace => {
+    agent.callbackTraceClose(trace => {
       let actualBuilder = new MethodDescriptorBuilder('post')
         .setClassName('Router')
       let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)

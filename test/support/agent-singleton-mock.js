@@ -15,7 +15,7 @@ const shimmer = require('@pinpoint-apm/shimmer')
 const httpShared = require('../../lib/instrumentation/http-shared')
 const activeTrace = require('../../lib/metric/active-trace')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
-const sqlMetaDataService = require('../../lib/instrumentation/sql/sql-metadata-service')
+const sqlMetadataService = require('../../lib/instrumentation/sql/sql-metadata-service')
 const SimpleCache = require('../../lib/utils/simple-cache')
 const sampler = require('../../lib/sampler/sampler')
 const TraceSampler = require('../../lib/context/trace/trace-sampler')
@@ -32,14 +32,6 @@ const getTraces = () => {
     return traces
 }
 
-let spanOrSpanChunks = []
-const resetSpanOrSpanChunks = () => {
-    spanOrSpanChunks = []
-}
-const getSpanOrSpanChunks = () => {
-    return spanOrSpanChunks
-}
-
 let sendedApiMetaInfos = []
 const resetSendedApiMetaInfos = () => {
     sendedApiMetaInfos = []
@@ -47,16 +39,49 @@ const resetSendedApiMetaInfos = () => {
 const getSendedApiMetaInfos = () => {
     return sendedApiMetaInfos
 }
-const getTraceByAsyncId = (asyncId) => {
+
+let sqlMetadata = []
+const resetSqlMetaData = () => {
+    sqlMetadata = []
+}
+const getSqlMetadata = () => {
+    return sqlMetadata
+}
+
+const getSpanEvents = () => {
+    return getTraces().flatMap(trace => {
+        let spanEvents = trace.callStack.stack.concat(trace.repository.buffer)
+        if (trace.repository.spanChunkedSpanEvents) {
+            spanEvents = spanEvents.concat(trace.repository.spanChunkedSpanEvents)
+        }
+        return spanEvents
+    })
+}
+
+const getSpanEventByAsyncId = (asyncId) => {
+    return getSpanEvents().find(spanEvent => spanEvent.asyncId?.getAsyncId() === asyncId.getAsyncId())
+}
+
+const getCallerTraceByAsyncId = (asyncId) => {
     return getTraces().find(trace => {
-        const spanChunkSpanEvents = agent.dataSender.mockSpanChunks.flatMap(spanChunk => spanChunk.spanEventList)
-        const spanEvents = trace.callStack.stack.concat(trace.repository.buffer).concat(spanChunkSpanEvents)
+        let spanEvents = trace.callStack.stack.concat(trace.repository.buffer)
+        if (trace.repository.spanChunkedSpanEvents) {
+            spanEvents = spanEvents.concat(trace.repository.spanChunkedSpanEvents)
+        }
         const asyncSpanEvent = spanEvents.find(spanEvent => spanEvent.asyncId?.getAsyncId() === asyncId.getAsyncId())
-        return asyncSpanEvent
+        return asyncSpanEvent ? trace : null
     })
 }
 
 class MockAgent extends Agent {
+    constructor(initOptions) {
+        initOptions.collector['span-port'] = -1
+        initOptions.collector['stat-port'] = -1
+        initOptions.collector['tcp-port'] = -1
+        initOptions = portProperties(initOptions)
+        super(initOptions)
+    }
+
     startSchedule(agentId, agentStartTime) {
         this.mockAgentId = agentId
         this.mockAgentStartTime = agentStartTime
@@ -71,8 +96,7 @@ class MockAgent extends Agent {
         this.cleanHttp()
         this.dataSender.clear()
 
-        json = this.portProperties(json)
-
+        json = portProperties(json)
         if (!json) {
             json = require('../pinpoint-config-test')
         } else {
@@ -82,7 +106,7 @@ class MockAgent extends Agent {
         const config = require('../../lib/config').getConfig(json)
         this.config = config
 
-        sqlMetaDataService.cache = new SimpleCache(1024)
+        sqlMetadataService.cache = new SimpleCache(1024)
         this.traceContext.isSampling = sampler.getIsSampling(config.sampling, config.sampleRate)
         if (sampler.getSamplingCountGenerator()) {
             sampler.getSamplingCountGenerator().reset()
@@ -107,37 +131,76 @@ class MockAgent extends Agent {
         this.traceContext.traceSampler = new TraceSampler(this.agentInfo, config)
         this.traceContext.config = config
 
-        const dataSender = dataSenderMock(this.config, this.agentInfo)
+        const dataSender = this.makeDataSender()
         this.traceContext.dataSender = dataSender
+        this.dataSender.close()
         this.dataSender = dataSender
-
+        // this.initializeDataSender(dataSender)
         stringMetaService.init(dataSender)
         apiMetaService.init(dataSender)
-
-        resetSpanOrSpanChunks()
+        sqlMetadataService.setDataSender(dataSender)
 
         resetTraces()
-        this.newTraceCallback = null
-        const getNewTraceCallback = () => {
-            return this.newTraceCallback
+        const findSpanEvents = function () {
+            let spanEvents = this.callStack.stack.concat(this.repository.buffer)
+            if (this.repository.spanChunkedSpanEvents) {
+                spanEvents = spanEvents.concat(this.repository.spanChunkedSpanEvents)
+            }
+            if (this.spanBuilder?.spanEventList) {
+                spanEvents = spanEvents.concat(this.spanBuilder.spanEventList)
+            }
+            return spanEvents
+        }
+        const findSpanEventByAsyncId = function (asyncId) {
+            return this.findSpanEvents().find(spanEvent => spanEvent.asyncId?.getAsyncId() === asyncId.getAsyncId())
         }
         shimmer.wrap(this.traceContext, 'newTrace', function (origin) {
             return function () {
                 const returned = origin.apply(this, arguments)
-                getNewTraceCallback()?.(returned)
+                returned.findSpanEvents = findSpanEvents
+                returned.findSpanEventByAsyncId = findSpanEventByAsyncId
+                const sendSpanChunkFunction = returned.repository.sendSpanChunk
+                returned.repository.sendSpanChunk = function () {
+                    const result = sendSpanChunkFunction.apply(this, arguments)
+                    if (!returned.repository.spanChunkedSpanEvents) {
+                        returned.repository.spanChunkedSpanEvents = []
+                    }
+                    returned.repository.spanChunkedSpanEvents.push(arguments[0])
+                    return result
+                }
+                const closeOrigin = returned.close
+                returned.close = function () {
+                    const result = closeOrigin.apply(this, arguments)
+                    returned.closeCallback?.(returned)
+                    return result
+                }
                 getTraces().push(returned)
                 return returned
             }
         })
 
-        this.continueAsyncContextTraceObjectCallback = null
-        const getContinueAsyncContextTraceObjectCallback = () => {
-            return this.continueAsyncContextTraceObjectCallback
-        }
         shimmer.wrap(this.traceContext, 'continueAsyncContextTraceObject', function (origin) {
             return function () {
                 const returned = origin.apply(this, arguments)
-                getContinueAsyncContextTraceObjectCallback()?.(returned)
+                returned.findSpanEvents = findSpanEvents
+                returned.findSpanEventByAsyncId = findSpanEventByAsyncId
+                if (returned.repository) {
+                    const sendSpanChunkFunction = returned.repository.sendSpanChunk
+                    returned.repository.sendSpanChunk = function () {
+                        const result = sendSpanChunkFunction.apply(this, arguments)
+                        if (!returned.repository.spanChunkedSpanEvents) {
+                            returned.repository.spanChunkedSpanEvents = []
+                        }
+                        returned.repository.spanChunkedSpanEvents = returned.repository.spanChunkedSpanEvents.concat(arguments[0])
+                        return result
+                    }
+                }
+                const closeOrigin = returned.close
+                returned.close = function () {
+                    const result = closeOrigin.apply(this, arguments)
+                    returned.closeCallback?.(returned)
+                    return result
+                }
                 getTraces().push(returned)
                 return returned
             }
@@ -148,6 +211,15 @@ class MockAgent extends Agent {
             return function () {
                 const returned = origin.apply(this, arguments)
                 getSendedApiMetaInfos().push(arguments[0])
+                return returned
+            }
+        })
+
+        resetSqlMetaData()
+        shimmer.wrap(sqlMetadataService, 'send', function (origin) {
+            return function () {
+                const returned = origin.apply(this, arguments)
+                getSqlMetadata().push(arguments[0])
                 return returned
             }
         })
@@ -170,18 +242,9 @@ class MockAgent extends Agent {
     }
 
     bindHttpWithCallSite(conf) {
-        conf = this.portProperties(conf)
+        conf = portProperties(conf)
         conf = Object.assign({}, { 'trace-location-and-filename-of-call-site': true }, conf)
         this.bindHttp(conf)
-    }
-
-    portProperties(conf) {
-        if (typeof conf !== 'number') {
-            return conf
-        }
-        const testConf = require('../pinpoint-config-test')
-        const collectorConf = Object.assign(testConf.collector, { 'span-port': conf, 'stat-port': conf, 'tcp-port': conf })
-        return Object.assign({}, { collector: collectorConf })
     }
 
     completeTraceObject(trace) {
@@ -196,30 +259,48 @@ class MockAgent extends Agent {
         return getTraces()[index]
     }
 
-    getSpanChunk(asyncId) {
-        return getSpanOrSpanChunks().find(spanOrSpanChunk => spanOrSpanChunk.getLocalasyncid().getAsyncid() === asyncId.getAsyncId() && spanOrSpanChunk.getLocalasyncid().getSequence() === asyncId.getSequence())
+    getTraceByAsyncId(asyncId) {
+        return getTraces().find(trace => trace.findSpanEventByAsyncId(asyncId))
     }
 
-    getSpanOrSpanChunks() {
-        return getSpanOrSpanChunks()
+    getSpanEventByAsyncId(asyncId) {
+        return getSpanEventByAsyncId(asyncId)
     }
 
     getSendedApiMetaInfos() {
         return getSendedApiMetaInfos()
     }
 
-    setNewTraceCallback(callback) {
-        this.newTraceCallback = callback
+    getSqlMetadata() {
+        return getSqlMetadata()
     }
 
-    setContinueAsyncContextTraceObjectCallback(callback) {
-        this.continueAsyncContextTraceObjectCallback = callback
+    getCallerTraceByAsyncId(asyncId) {
+        return getCallerTraceByAsyncId(asyncId)
     }
 
-    getTraceByAsyncId(asyncId) {
-        return getTraceByAsyncId(asyncId)
+    makeDataSender() {
+        return dataSenderMock(this.config, this.agentInfo)
     }
 }
+
+function portProperties(conf) {
+    if (!conf) {
+        return conf
+    }
+
+    if (typeof conf !== 'number') {
+        if (conf.collector) {
+            return conf
+        }
+        const collectorConf = Object.assign({ 'ip': '127.0.0.1', 'span-port': -1, 'stat-port': -1, 'tcp-port': -1 })
+        return Object.assign(conf, { collector: collectorConf })
+    }
+    const portNumber = conf
+    const collectorConf = Object.assign(require('../pinpoint-config-test').collector, { 'span-port': portNumber, 'stat-port': portNumber, 'tcp-port': portNumber })
+    return Object.assign({ collector: collectorConf })
+}
+
 
 const agent = new MockAgent(require('../pinpoint-config-test'))
 module.exports = agent

@@ -26,6 +26,7 @@ const services = require('../../../lib/data/v1/Service_grpc_pb')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
 const log = require('../../../lib/utils/logger')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
+const sqlMetadataService = require('../../../lib/instrumentation/sql/sql-metadata-service')
 
 let callbackPresultReturnUnaryService
 const pResultReturnUnaryService = (call, callback) => {
@@ -45,20 +46,29 @@ const pResultReturnUnaryService = (call, callback) => {
     }
 }
 
+let spanOrSpanChunks = []
+const resetSpanOrSpanChunks = () => {
+    spanOrSpanChunks = []
+}
+const getSpanOrSpanChunks = () => {
+    return spanOrSpanChunks
+}
+const getSpanChunk = (asyncId) =>{
+    return getSpanOrSpanChunks().find(spanOrSpanChunk => spanOrSpanChunk.getLocalasyncid().getAsyncid() === asyncId.getAsyncId() && spanOrSpanChunk.getLocalasyncid().getSequence() === asyncId.getSequence())
+}
+
 let spanMessageEndEventCallback
 let dataStreamCount = 0
 const spanMessageStreamService = (call) => {
     call.on('data', (spanMessage) => {
         const spanOrSpanChunk = spanMessage.getSpan() ?? spanMessage.getSpanchunk()
-        const spanOrSpanChunks = agent.getSpanOrSpanChunks()
+        const spanOrSpanChunks = getSpanOrSpanChunks()
         spanOrSpanChunks.push(spanOrSpanChunk)
         if (agent.getTraces().length === ++dataStreamCount) {
             spanMessageEndEventCallback?.()
         }
     })
-
-    call.on('end', () => {
-    })
+    call.on('end', () => {})
 }
 
 function sendAgentStat(call, callback) {
@@ -95,11 +105,13 @@ test(`nested mysql async query with express`, async (t) => {
     collectorServer.addService(services.MetadataService, {
         requestApiMetaData: pResultReturnUnaryService,
         requestSqlUidMetaData: pResultReturnUnaryService,
+        requestSqlMetaData: pResultReturnUnaryService
     })
     process.env['PINPOINT_PROFILER_SQL_STAT'] = 'true'
 
     collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), async (err, port) => {
         agent.bindHttpWithCallSite(port)
+        resetSpanOrSpanChunks()
         const source = path.resolve(fixtures, 'mysql.sql')
         const container = await new MySqlContainer()
             .withCommand(['--default-authentication-plugin=mysql_native_password'])
@@ -144,7 +156,7 @@ test(`nested mysql async query with express`, async (t) => {
             agent.callbackTraceClose(async (trace) => {
                 let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
                     .setClassName(expected('app', 'Function'))
-                    .setLineNumber(117)
+                    .setLineNumber(129)
                     .setFileName('nested-async-trace.test.js')
                 let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 let actualSpanEvent = trace.repository.dataSender.mockSpan.spanEventList.find(spanEvent => spanEvent.sequence === 0)
@@ -157,7 +169,7 @@ test(`nested mysql async query with express`, async (t) => {
                 t.equal(actualSpanEvent.serviceType, expressServiceType.getCode(), 'serviceType is express')
 
                 actualBuilder = new MethodDescriptorBuilder('createConnection')
-                    .setLineNumber(118)
+                    .setLineNumber(130)
                     .setFileName('nested-async-trace.test.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = trace.repository.dataSender.mockSpan.spanEventList.find(spanEvent => spanEvent.sequence === 1)
@@ -170,7 +182,7 @@ test(`nested mysql async query with express`, async (t) => {
 
                 actualBuilder = new MethodDescriptorBuilder('connect')
                     .setClassName('Connection')
-                    .setLineNumber(127)
+                    .setLineNumber(139)
                     .setFileName('nested-async-trace.test.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = trace.repository.dataSender.mockSpan.spanEventList.find(spanEvent => spanEvent.sequence === 2)
@@ -192,7 +204,7 @@ test(`nested mysql async query with express`, async (t) => {
 
                 actualBuilder = new MethodDescriptorBuilder('query')
                     .setClassName('Connection')
-                    .setLineNumber(133)
+                    .setLineNumber(145)
                     .setFileName('nested-async-trace.test.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 3)
@@ -214,7 +226,7 @@ test(`nested mysql async query with express`, async (t) => {
 
                 actualBuilder = new MethodDescriptorBuilder('query')
                     .setClassName('Connection')
-                    .setLineNumber(139)
+                    .setLineNumber(151)
                     .setFileName('nested-async-trace.test.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = actualSpanChunk.spanEventList[1]
@@ -241,7 +253,7 @@ test(`nested mysql async query with express`, async (t) => {
         spanMessageEndEventCallback = async () => {
             const trace = agent.getTrace(0)
             const childTrace = agent.getTrace(1)
-            const actualSpanChunkGrpc = agent.getSpanChunk(childTrace.localAsyncId)
+            const actualSpanChunkGrpc = getSpanChunk(childTrace.localAsyncId)
             t.equal(actualSpanChunkGrpc.getVersion(), 1, 'PSpanChunk.version is 1')
 
             const actualTractionId = actualSpanChunkGrpc.getTransactionid()
@@ -298,6 +310,7 @@ test(`nested mysql2 async query with express`, async (t) => {
     collectorServer.addService(services.MetadataService, {
         requestApiMetaData: pResultReturnUnaryService,
         requestSqlUidMetaData: pResultReturnUnaryService,
+        requestSqlMetaData: pResultReturnUnaryService
     })
 
     collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), async (err, port) => {
@@ -363,7 +376,7 @@ test(`nested mysql2 async query with express`, async (t) => {
                 t.true(trace.spanBuilder.remoteAddress === '127.0.0.1' || trace.spanBuilder.remoteAddress === '::1', `remoteAddress is ${trace.spanBuilder.remoteAddress}`)
                 let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
                     .setClassName(expected('app', 'Function'))
-                    .setLineNumber(319)
+                    .setLineNumber(332)
                     .setFileName('nested-async-trace.test.js')
                 let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 let actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 0)
@@ -376,7 +389,7 @@ test(`nested mysql2 async query with express`, async (t) => {
                 t.equal(actualSpanEvent.serviceType, expressServiceType.getCode(), 'serviceType is express')
 
                 actualBuilder = new MethodDescriptorBuilder('createConnection')
-                    .setLineNumber(320)
+                    .setLineNumber(333)
                     .setFileName('nested-async-trace.test.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 1)
@@ -389,7 +402,7 @@ test(`nested mysql2 async query with express`, async (t) => {
 
                 actualBuilder = new MethodDescriptorBuilder('query')
                     .setClassName('Connection')
-                    .setLineNumber(330)
+                    .setLineNumber(343)
                     .setFileName('nested-async-trace.test.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 2)
@@ -411,7 +424,7 @@ test(`nested mysql2 async query with express`, async (t) => {
 
                 actualBuilder = new MethodDescriptorBuilder('query')
                     .setClassName('Connection')
-                    .setLineNumber(336)
+                    .setLineNumber(349)
                     .setFileName('nested-async-trace.test.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = actualSpanChunk.spanEventList[1]
@@ -459,6 +472,7 @@ test(`nested mysql2 async query with express`, async (t) => {
 
                     connection.end()
                     t.equal(agent.getSendedApiMetaInfos().length, 0, 'agent.getSendedApiMetaInfos() is empty')
+                    t.equal(agent.getSqlMetadata().length, 0, 'agent.getSqlMetadata() is empty')
                     t.end()
                     trace.repository.dataSender.close()
                 }
@@ -466,25 +480,31 @@ test(`nested mysql2 async query with express`, async (t) => {
         })
 
         callbackPresultReturnUnaryService = async (error, result, call) => {
-            const apiDescriptor = [...apiMetaService.cache.cache.entries()]
-                .map(([, value]) => value)
-                .find(apiDescriptor => apiDescriptor.apiId === call.request.getApiid())
-            t.equal(call.request.getApiid(), apiDescriptor.apiId, `apiId is ${call.request.getApiid()}`)
-            t.equal(call.request.getApiinfo(), apiDescriptor.getApiDescriptor(), `apiInfo is ${call.request.getApiinfo()}`)
-            t.equal(call.request.getLine(), apiDescriptor.lineNumber, `line is ${call.request.getLine()}`)
-            t.equal(call.request.getLocation(), apiDescriptor.getLocation(), `location is ${call.request.getLocation()}`)
-            t.equal(call.request.getType(), apiDescriptor.getType(), `type is ${call.request.getType()}`)
-            const sendedApiMetaInfos = agent.getSendedApiMetaInfos()
-            const index = sendedApiMetaInfos.findIndex(item => item === apiDescriptor)
-            sendedApiMetaInfos.splice(index, 1)
+            if (typeof call.request.getApiid === 'function') {
+                const apiDescriptor = [...apiMetaService.cache.cache.entries()]
+                    .map(([, value]) => value)
+                    .find(apiDescriptor => apiDescriptor.apiId === call.request.getApiid())
+                t.equal(call.request.getApiid(), apiDescriptor.apiId, `apiId is ${call.request.getApiid()}`)
+                t.equal(call.request.getApiinfo(), apiDescriptor.getApiDescriptor(), `apiInfo is ${call.request.getApiinfo()}`)
+                t.equal(call.request.getLine(), apiDescriptor.lineNumber, `line is ${call.request.getLine()}`)
+                t.equal(call.request.getLocation(), apiDescriptor.getLocation(), `location is ${call.request.getLocation()}`)
+                t.equal(call.request.getType(), apiDescriptor.getType(), `type is ${call.request.getType()}`)
+                const sendedApiMetaInfos = agent.getSendedApiMetaInfos()
+                const index = sendedApiMetaInfos.findIndex(item => item === apiDescriptor)
+                sendedApiMetaInfos.splice(index, 1)
+            } else {
+                const parsingResult = [...sqlMetadataService.cache.cache.entries()]
+                    .map(([, value]) => value)
+                    .find(parsingResult => parsingResult.sqlMetaDataValue().sqlId === call.request.getSqlid())
+                t.equal(call.request.getSqlid(), parsingResult.sqlMetaDataValue().sqlId, `sqlId is ${call.request.getSqlid()}`)
+                t.equal(call.request.getSql(), parsingResult.sqlMetaDataValue().sql, `sql is ${call.request.getSql()}`)
+                const sendedSqlMetadata = agent.getSqlMetadata()
+                const index = sendedSqlMetadata.findIndex(item => item === parsingResult)
+                sendedSqlMetadata.splice(index, 1)
+            }
         }
 
         dataStreamCount = 0
-        agent.setContinueAsyncContextTraceObjectCallback(async (trace) => {
-            const parentTrace = agent.getTraceByAsyncId(trace.localAsyncId)
-            t.true(parentTrace !== undefined, 'parent trace is not undefined')
-        })
-
         const server = app.listen(5006, async () => {
             const result = await axios.get('http://localhost:5006/test1')
             t.equal(result.status, 200, 'status is 200')

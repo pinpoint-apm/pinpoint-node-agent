@@ -6,7 +6,7 @@
 
 const test = require('tape')
 
-require('../support/agent-singleton-mock')
+const agent = require('../support/agent-singleton-mock')
 const { fixture } = require('../test-helper')
 const dataSenderMock = require('../support/data-sender-mock')
 const dataSender = dataSenderMock()
@@ -18,6 +18,7 @@ const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/de
 
 test('Should send agent info', function (t) {
   t.plan(1)
+  agent.bindHttp()
 
   dataSender.send(agentInfo)
 
@@ -26,6 +27,7 @@ test('Should send agent info', function (t) {
 
 test('Should send api meta info', function (t) {
   t.plan(1)
+  agent.bindHttp()
 
   const methodDescriptor = defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor
   const apiMetaInfo = ApiMetaInfo.create(methodDescriptor)
@@ -36,6 +38,7 @@ test('Should send api meta info', function (t) {
 
 test('Should send string meta info', function (t) {
   t.plan(1)
+  agent.bindHttp()
 
   const stringMetaInfo = StringMetaInfo.create('1', 'test string')
   dataSender.send(stringMetaInfo)

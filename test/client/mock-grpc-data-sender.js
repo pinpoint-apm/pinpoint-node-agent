@@ -7,12 +7,27 @@
 'use strict'
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
+class MockGrpcStream {
+  constructor(stream) {
+    this.grpcStream = stream
+  }
+
+  write(data) {
+    this.grpcStream.write(data)
+  }
+
+  end() {
+  }
+}
+
 class MockGrpcDataSender extends GrpcDataSender {
   initializeClients() {
     let self = this
     this.agentClient = {
       requestAgentInfo: function (pAgentInfo) {
         self.actualAgentInfo = pAgentInfo
+      },
+      close: function () {
       }
     }
 
@@ -28,12 +43,14 @@ class MockGrpcDataSender extends GrpcDataSender {
       },
       requestSqlUidMetaData: function (pSqlUidMetaData) {
         self.actualSqlUidMetaData = pSqlUidMetaData
+      },
+      close: function () {
       }
     }
     this.actualSpans = []
   }
 
-  get actualSpan () {
+  get actualSpan() {
     return this.actualSpans[this.actualSpans.length - 1]
   }
 
@@ -42,19 +59,19 @@ class MockGrpcDataSender extends GrpcDataSender {
 
   initializeSpanStream() {
     let self = this
-    this.spanStream = {
+    this.spanStream = new MockGrpcStream({
       write: function (span) {
         self.actualSpans.push(span)
       },
       end: function () {
 
       }
-    }
+    })
   }
 
   initializeProfilerClients() {
     let self = this
-    this.commandStream = {
+    this.commandStream = new MockGrpcStream({
       write: function (pmessage) {
         self.actualPCmdMessage = pmessage
       },
@@ -64,12 +81,12 @@ class MockGrpcDataSender extends GrpcDataSender {
       on: function () {
 
       }
-    }
+    })
   }
 
   initializeStatStream() {
     let self = this
-    this.statStream = {
+    this.statStream = new MockGrpcStream({
       write: function (pmessage) {
         self.actualPStatMessage = pmessage
       },
@@ -79,12 +96,12 @@ class MockGrpcDataSender extends GrpcDataSender {
       on: function () {
 
       }
-    }
+    })
   }
 
   initializePingStream() {
     let self = this
-    this.pingStream = {
+    this.pingStream = new MockGrpcStream({
       write: function (pmessage) {
         self.actualPingMessage = pmessage
       },
@@ -94,7 +111,7 @@ class MockGrpcDataSender extends GrpcDataSender {
       on: function () {
 
       }
-    }
+    })
   }
 
   initializeAgentInfoScheduler() {

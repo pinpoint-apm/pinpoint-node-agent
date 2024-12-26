@@ -10,7 +10,6 @@ const http = require('http')
 const https = require('https')
 const { fixture } = require('../test-helper')
 const agent = require('../support/agent-singleton-mock')
-agent.bindHttp()
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const express = require('express')
 const HttpOutgoingRequestHeader = require('../../lib/instrumentation/http/http-outgoing-request-header')
@@ -27,6 +26,7 @@ const endPoint = 'localhost:5005'
 const rpcName = '/tests/123'
 
 test('Should read pinpoint header', async function (t) {
+  agent.bindHttp()
   const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' })
     res.end('hello')
@@ -47,6 +47,7 @@ test('Should read pinpoint header', async function (t) {
 })
 
 test('Should write pinpoint header', async function (t) {
+  agent.bindHttp()
   const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' })
     res.end('hello')
@@ -79,6 +80,7 @@ test('Should write pinpoint header', async function (t) {
 })
 
 test('nested request HTTP', async function (t) {
+  agent.bindHttp()
   const app = new express()
 
   let actualAssertsOn5006

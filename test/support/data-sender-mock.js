@@ -15,6 +15,7 @@ const DataSender = require('../../lib/client/data-sender')
 const MockGrpcDataSender = require('../client/mock-grpc-data-sender')
 const SqlMetaData = require('../../lib/client/sql-meta-data')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
+const SqlUidMetaData = require('../../lib/client/sql-uid-meta-data')
 
 class MockDataSender extends DataSender {
   constructor(config, dataSender) {
@@ -22,6 +23,8 @@ class MockDataSender extends DataSender {
     this.mockAPIMetaInfos = []
     this.mockSpanChunks = []
     this.mockSpans = []
+    this.mockSqlMetadata = []
+    this.mockSqlUidMetadata = []
   }
 
   send(data) {
@@ -31,31 +34,26 @@ class MockDataSender extends DataSender {
 
     if (data instanceof AgentInfo) {
       this.mockAgentInfo = data
-      super.send(data)
     } else if (data instanceof ApiMetaInfo) {
       this.mockAPIMetaInfos.push(data)
-      super.send(data)
     } else if (data instanceof StringMetaInfo) {
       this.mockMetaInfo = data
-      super.send(data)
     } else if (data instanceof Span) {
       this.mockSpan = data
       this.mockSpans.push(data)
-      super.send(data)
     } else if (data instanceof SpanChunk) {
       this.mockSpanChunks.push(data)
-      super.send(data)
     } else if (data instanceof SqlMetaData) {
-      this.mockSqlMetaData = data
-      super.send(data)
+      this.mockSqlMetadata.push(data)
     } else if (data?.isAsyncSpanChunk?.()) {
       this.mockSpanChunks.push(data)
-      super.send(data)
     } else if (data?.isSpan?.()) {
       this.mockSpan = data
       this.mockSpans.push(data)
-      super.send(data)
+    } else if (data instanceof SqlUidMetaData) {
+      this.mockSqlUidMetadata.push(data)
     }
+    super.send(data)
   }
 
   findSpanChunk(asyncId) {
@@ -69,6 +67,8 @@ class MockDataSender extends DataSender {
     this.mockAPIMetaInfos = []
     this.mockSpanChunks = []
     this.mockSpans = []
+    this.mockSqlMetadata = []
+    this.mockSqlUidMetadata = []
   }
 
   close() {
@@ -77,11 +77,16 @@ class MockDataSender extends DataSender {
   }
 }
 
-const dataSender = (conf, agentInfo) => {
-  if (typeof conf?.collectorSpanPort === 'number') {
+const dataSender = (conf, agentInfoOrGrpcDataSender) => {
+  if (typeof agentInfoOrGrpcDataSender?.sendAgentInfo === 'function') {
     return new MockDataSender({
       enabledDataSending: true,
-    }, new GrpcDataSender(conf.collectorIp, conf.collectorSpanPort, conf.collectorStatPort, conf.collectorTcpPort, agentInfo, conf))
+    }, agentInfoOrGrpcDataSender)
+  }
+  if (conf?.collectorSpanPort > 0) {
+    return new MockDataSender({
+      enabledDataSending: true,
+    }, new GrpcDataSender(conf.collectorIp, conf.collectorSpanPort, conf.collectorStatPort, conf.collectorTcpPort, agentInfoOrGrpcDataSender, conf))
   }
   return new MockDataSender({
     enabledDataSending: true,

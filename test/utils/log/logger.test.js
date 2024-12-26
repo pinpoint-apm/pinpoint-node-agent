@@ -60,16 +60,16 @@ test('Logger.Builder', (t) => {
 
 test('Logger by a log level', (t) => {
     let actual = Logger.makeBuilder('debug', {}).build()
-    t.equal(actual.type.name, 'DEBUG')
+    t.equal(actual.type.name, 'DEBUG', `debug name match`)
 
     actual = Logger.makeBuilder('info', {}).build()
-    t.equal(actual.type.name, 'INFO')
+    t.equal(actual.type.name, 'INFO', `info name match`)
 
     actual = Logger.makeBuilder('warn', {}).build()
-    t.equal(actual.type.name, 'WARN')
+    t.equal(actual.type.name, 'WARN', `warn name match`)
 
     actual = Logger.makeBuilder('error', {}).build()
-    t.equal(actual.type.name, 'ERROR')
+    t.equal(actual.type.name, 'ERROR', `error name match`)
 
     t.end()
 })

@@ -210,7 +210,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
           t.equal(pSpanEvent.getDepth(), 2, 'depth')
 
           const expectedSpanChunk = repository.dataSender.findSpanChunk(childTraceBuilder.localAsyncId)
-          const expectedSpanEvent = expectedSpanChunk.spanEventList[0]
+          const expectedSpanEvent = expectedSpanChunk.spanEventList[1]
           t.equal(pSpanEvent.getStartelapsed(), expectedSpanEvent.startElapsedTime, `pSpanEvent.getStartelapsed() : ${pSpanEvent.getStartelapsed()}, expectedSpanEvent.startElapsedTime : ${expectedSpanEvent.startElapsedTime}`)
           t.equal(pSpanEvent.getEndelapsed(), expectedSpanEvent.elapsedTime, `pSpanEvent.getEndelapsed() : ${pSpanEvent.getEndelapsed()}, expectedSpanEvent.elapsedTime : ${expectedSpanEvent.elapsedTime}`)
           t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')

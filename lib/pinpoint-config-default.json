@@ -34,5 +34,8 @@
   "stream-deadline-minutes": {
     "client-side": 10
   },
-  "trace-location-and-filename-of-call-site": false
+  "trace-location-and-filename-of-call-site": false,
+  "log": {
+    "error": false
+  }
 }

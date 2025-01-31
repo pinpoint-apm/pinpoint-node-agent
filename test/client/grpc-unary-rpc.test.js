@@ -20,6 +20,7 @@ const SqlMetaData = require('../../lib/client/sql-meta-data')
 const sqlMetadataService = require('../../lib/instrumentation/sql/sql-metadata-service')
 const SqlUidMetaData = require('../../lib/client/sql-uid-meta-data')
 const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, DataSourceCallCountable } = require('./grpc-fixture')
+const InterceptingCall = grpc.InterceptingCall
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 const service = (call, callback) => {
@@ -53,6 +54,7 @@ function agentInfo() {
 }
 
 let agentInfoRefreshInterval
+let fixtureMetadata = []
 class AgentInfoOnlyDataSource extends DataSourceCallCountable {
     constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
         super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
@@ -66,6 +68,22 @@ class AgentInfoOnlyDataSource extends DataSourceCallCountable {
     agentInfoRefreshInterval() {
         return agentInfoRefreshInterval ? agentInfoRefreshInterval : super.agentInfoRefreshInterval()
     }
+
+    agentClientOptionsBuilder() {
+        return super.agentClientOptionsBuilder()
+            .addInterceptor(function (options, nextCall) {
+                return new InterceptingCall(nextCall(options), {
+                    start: function (metadata, listener, next) {
+                        fixtureMetadata.forEach((each) => {
+                            Object.entries(each).forEach(([key, value]) => {
+                                metadata.add(key, value)
+                            })
+                        })
+                        next(metadata, listener, next)
+                    }
+                })
+            })
+    }
 }
 
 class MetaInfoOnlyDataSource extends DataSourceCallCountable {
@@ -78,6 +96,22 @@ class MetaInfoOnlyDataSource extends DataSourceCallCountable {
     initializePingStream() { }
     initializeProfilerClients() { }
     initializeAgentInfoScheduler() { }
+
+    metadataClientOptionsBuilder() {
+        return super.metadataClientOptionsBuilder()
+            .addInterceptor(function (options, nextCall) {
+                return new InterceptingCall(nextCall(options), {
+                    start: function (metadata, listener, next) {
+                        fixtureMetadata.forEach((each) => {
+                            Object.entries(each).forEach(([key, value]) => {
+                                metadata.add(key, value)
+                            })
+                        })
+                        next(metadata, listener, next)
+                    }
+                })
+            })
+    }
 }
 
 test('AgentInfo with retries enabled but not configured', (t) => {
@@ -90,17 +124,21 @@ test('AgentInfo with retries enabled but not configured', (t) => {
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         dataSender = beforeSpecificOne(port, AgentInfoOnlyDataSource)
 
+        fixtureMetadata = []
         let callArguments = new CallArgumentsBuilder(function (error, response) {
             t.true(response.getSuccess(), '1st PResult.success is true')
         }).build()
         dataSender.sendAgentInfo(agentInfo(), callArguments)
 
+        fixtureMetadata = [{ 'succeed-on-retry-attempt': '1' }]
+        dataSender.initializeClients()
         callArguments = new CallArgumentsBuilder(function (error) {
             t.equal(error.details, 'Failed on retry 0', '2nd error.details is "Failed on retry 0"')
-        }).setMetadata('succeed-on-retry-attempt', '1')
-            .build()
+        }).build()
         dataSender.sendAgentInfo(agentInfo(), callArguments)
 
+        fixtureMetadata = []
+        dataSender.initializeClients()
         callArguments = new CallArgumentsBuilder(function (error, response) {
             t.true(response.getSuccess(), '3st PResult.success is true')
             t.end()
@@ -125,6 +163,7 @@ test('AgentInfo with retries enabled and configured', (t) => {
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         dataSender = beforeSpecificOne(port, AgentInfoOnlyDataSource)
 
+        fixtureMetadata = []
         let callArguments = new CallArgumentsBuilder(function (error, response) {
             t.true(response.getSuccess(), '1st PResult.success is true')
             t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined', '1st PResult.message is "succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined"')
@@ -132,15 +171,17 @@ test('AgentInfo with retries enabled and configured', (t) => {
         }).build()
         dataSender.sendAgentInfo(agentInfo(), callArguments)
 
+        fixtureMetadata = [{ 'succeed-on-retry-attempt': '2', 'respond-with-status': '14' }]
+        dataSender.initializeClients()
         callArguments = new CallArgumentsBuilder(function (error, response) {
             t.true(response.getSuccess(), '2nd PResult.success is true')
             t.equal(response.getMessage(), 'succeed-on-retry-attempt: 2, grpc-previous-rpc-attempts: 2', '2nd PResult.message is "succeed-on-retry-attempt: 2, grpc-previous-rpc-attempts: 2"')
             afterOne(t)
-        }).setMetadata('succeed-on-retry-attempt', '2')
-            .setMetadata('respond-with-status', '14')
-            .build()
+        }).build()
         dataSender.sendAgentInfo(agentInfo(), callArguments)
 
+        fixtureMetadata = []
+        dataSender.initializeClients()
         callArguments = new CallArgumentsBuilder(function (error, response) {
             t.true(response.getSuccess(), '3st PResult.success is true')
             t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined', '3st PResult.message is "succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined"')
@@ -163,6 +204,7 @@ test('sendApiMetaInfo retry', (t) => {
     })
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        fixtureMetadata = []
         dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
         const callRequests = getCallRequests()
         const callMetadata = getMetadata()
@@ -178,6 +220,8 @@ test('sendApiMetaInfo retry', (t) => {
         dataSender.sendApiMetaInfo(actual, callArguments)
 
         actual = new ApiMetaInfo(2, 'ApiDescriptor2', MethodType.DEFAULT)
+        fixtureMetadata = [{ 'succeed-on-retry-attempt': '2', 'respond-with-status': '14' }]
+        dataSender.initializeMetadataClients()
         callArguments = new CallArgumentsBuilder(function (error, response) {
             t.true(response.getSuccess(), '2nd PResult.success is true')
             t.equal(response.getMessage(), 'succeed-on-retry-attempt: 2, grpc-previous-rpc-attempts: 2', '2nd PResult.message is "succeed-on-retry-attempt: 2, grpc-previous-rpc-attempts: 2"')
@@ -190,9 +234,7 @@ test('sendApiMetaInfo retry', (t) => {
             const metadata = callMetadata[1]
             t.deepEqual(metadata.get('grpc.built-in.retry'), ['true'], '2nd metadata.get("grpc.built-in.retry") is "true"')
             afterOne(t)
-        }).setMetadata('succeed-on-retry-attempt', '2')
-            .setMetadata('respond-with-status', '14')
-            .build()
+        }).build()
         dataSender.sendApiMetaInfo(actual, callArguments)
 
         t.teardown(() => {
@@ -222,6 +264,7 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
             .setLocation('node_modules/express/lib/application.js')
             .build()
         )
+        fixtureMetadata = []
         let callArguments = new CallArgumentsBuilder(function (error, response) {
             t.true(response.getSuccess(), '1st PResult.success is true')
 
@@ -247,6 +290,8 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
             .setLocation('node_modules/express/lib/application.js')
             .build()
         )
+        fixtureMetadata = [{ 'succeed-on-retry-attempt': '2', 'respond-with-status': '14' }]
+        dataSender.initializeMetadataClients()
         callArguments = new CallArgumentsBuilder(function (error, response) {
             t.true(response.getSuccess(), '2nd PResult.success is true')
 
@@ -260,9 +305,7 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
             const metadata = callMetadata[1]
             t.deepEqual(metadata.get('grpc.built-in.retry'), ['true'], '2nd metadata.get("grpc.built-in.retry") is "true"')
             afterOne(t)
-        }).setMetadata('succeed-on-retry-attempt', '2')
-            .setMetadata('respond-with-status', '14')
-            .build()
+        }).build()
         dataSender.sendApiMetaInfo(apiMetaInfoActual, callArguments)
 
         apiMetaInfoActual = ApiMetaInfo.create(new MethodDescriptorBuilder()
@@ -274,14 +317,14 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
             .setLocation('node_modules/express/lib/application.js')
             .build()
         )
+        fixtureMetadata = [{'succeed-on-retry-attempt': '3', 'respond-with-status': '14'}]
+        dataSender.initializeMetadataClients()
         callArguments = new CallArgumentsBuilder(function (error, response) {
             t.equal(error.code, 14, `3rd error.code is 14`)
             t.equal(error.details, 'Failed on retry 2', `3rd error.details is "Failed on retry 2"`)
             t.equal(error.message, '14 UNAVAILABLE: Failed on retry 2', `3rd error.message is "14 UNAVAILABLE: Failed on retry 2"`)
             afterOne(t)
-        }).setMetadata('succeed-on-retry-attempt', '3')
-            .setMetadata('respond-with-status', '14')
-            .build()
+        }).build()
         dataSender.sendApiMetaInfo(apiMetaInfoActual, callArguments)
 
         t.teardown(() => {
@@ -299,6 +342,7 @@ test('sendStringMetaInfo retry', (t) => {
     })
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        fixtureMetadata = []
         dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
 
         const stringMetaInfo = new StringMetaInfo({
@@ -326,6 +370,7 @@ test('sendSqlMetaData retry', (t) => {
     })
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        fixtureMetadata = []
         dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
         const callRequests = getCallRequests()
 
@@ -341,14 +386,14 @@ test('sendSqlMetaData retry', (t) => {
 
         const parsingResult2 = sqlMetadataService.cacheSql('SELECT DATABASE() as res2')
         const actual2 = new SqlMetaData(parsingResult2)
+        fixtureMetadata = [{ 'succeed-on-retry-attempt': '2', 'respond-with-status': '14' }]
+        dataSender.initializeMetadataClients()
         callArguments = new CallArgumentsBuilder(function (error, response) {
             t.true(response.getSuccess(), '2nd PResult.success is true')
             t.equal(callRequests[1].getSqlid(), parsingResult2.getId(), '2nd callRequests[1].getSqlid() is parsingResult.getId()')
             t.equal(callRequests[1].getSql(), parsingResult2.getSql(), '2nd callRequests[1].getSql() is parsingResult.getSql()')
             afterOne(t)
-        }).setMetadata('succeed-on-retry-attempt', '2')
-            .setMetadata('respond-with-status', '14')
-            .build()
+        }).build()
         dataSender.sendSqlMetaInfo(actual2, callArguments)
 
         t.teardown(() => {
@@ -371,6 +416,7 @@ test('sendSqlUidMetaData retry', (t) => {
     })
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        fixtureMetadata = []
         dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
         const callRequests = getCallRequests()
         const callMetadata = getMetadata()
@@ -388,15 +434,15 @@ test('sendSqlUidMetaData retry', (t) => {
 
         const parsingResult2 = sqlMetadataService.cacheSql('SELECT DATABASE() as res2')
         const actual2 = new SqlUidMetaData(parsingResult2)
+        fixtureMetadata = [{ 'succeed-on-retry-attempt': '2', 'respond-with-status': '14' }]
+        dataSender.initializeMetadataClients()
         callArguments = new CallArgumentsBuilder(function (error, response) {
             t.true(response.getSuccess(), '2nd PResult.success is true')
             t.deepEqual(callRequests[1].getSqluid(), parsingResult2.getId(), '2nd callRequests[1].getSqlid() is parsingResult.getId()')
             t.equal(callRequests[1].getSql(), parsingResult2.getSql(), '2nd callRequests[1].getSql() is parsingResult.getSql()')
             t.deepEqual(callMetadata[1].get('grpc.built-in.retry'), ['true'], '2nd metadata.get("grpc.built-in.retry") is "true"')
             afterOne(t)
-        }).setMetadata('succeed-on-retry-attempt', '2')
-            .setMetadata('respond-with-status', '14')
-            .build()
+        }).build()
         dataSender.sendSqlUidMetaData(actual2, callArguments)
 
         t.teardown(() => {
@@ -416,6 +462,7 @@ test('sendAgentInfo schedule', (t) => {
     })
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        fixtureMetadata = []
         agentInfoRefreshInterval = 100
         dataSender = beforeSpecificOne(port, AgentInfoOnlyDataSource)
         let count = 0

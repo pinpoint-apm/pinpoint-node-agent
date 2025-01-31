@@ -516,6 +516,7 @@ test('sendSupportedServicesCommand and commandEcho', (t) => {
   const server = new grpc.Server()
   server.addService(services.ProfilerCommandServiceService, {
     handleCommandV2: handleCommandV2Service,
+    handleCommand: handleCommandV2Service,
     commandEcho: emptyResponseService
   })
 
@@ -523,7 +524,7 @@ test('sendSupportedServicesCommand and commandEcho', (t) => {
   server.bindAsync('127.0.0.1:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
     dataSender = beforeSpecificOne(port, ProfilerDataSource)
 
-    const callArguments = new CallArgumentsBuilder(function (error, response) {
+    const callArguments = new CallArgumentsBuilder(function () {
       const callRequests = getCallRequests()
       const commonResponse = callRequests[1].getCommonresponse()
       t.equal(commonResponse.getResponseid(), requestId, 'response id matches request id')
@@ -532,13 +533,18 @@ test('sendSupportedServicesCommand and commandEcho', (t) => {
 
       const cmdEchoResponse = callRequests[1]
       t.equal(cmdEchoResponse.getMessage(), 'echo', 'echo message')
-      dataSender.commandStream.writableStream.on('close', () => {
+      dataSender.commandStream.writableStream.on('finish', () => {
+        server.forceShutdown()
         t.end()
       })
       dataSender.close()
-      server.forceShutdown()
     }).build()
     dataSender.sendSupportedServicesCommand(callArguments)
+    dataSender.commandStream.writableStream.on('data', (cmdRequest) => {
+      const actualRequestId = cmdRequest.getRequestid()
+      t.equal(actualRequestId, requestId, 'request id matches')
+      t.equal(cmdRequest.getCommandecho().getMessage(), 'echo', 'echo message')
+    })
   })
 })
 
@@ -546,6 +552,7 @@ test('CommandStreamActiveThreadCount', (t) => {
   const server = new grpc.Server()
   server.addService(services.ProfilerCommandServiceService, {
     handleCommandV2: handleCommandV2Service,
+    handleCommand: handleCommandV2Service,
     commandEcho: emptyResponseService,
     commandStreamActiveThreadCount: emptyResponseService
   })

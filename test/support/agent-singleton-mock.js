@@ -111,6 +111,7 @@ class MockAgent extends Agent {
         if (sampler.getSamplingCountGenerator()) {
             sampler.getSamplingCountGenerator().reset()
         }
+        this.traceContext.activeRequestRepository.activeTraceCache.cache.clear()
         transactionIdGenerator.reset()
 
         httpShared.clearPathMatcher()

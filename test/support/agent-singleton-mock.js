@@ -23,6 +23,7 @@ const transactionIdGenerator = require('../../lib/context/sequence-generators').
 const closedTraceWrapped = Symbol('closedTraceWrapped')
 const stringMetaService = require('../../lib/context/string-meta-service')
 const apiMetaService = require('../../lib/context/api-meta-service')
+const activeRequestRepository = require('../../lib/metric/active-request-repository')
 
 let traces = []
 const resetTraces = () => {
@@ -111,7 +112,7 @@ class MockAgent extends Agent {
         if (sampler.getSamplingCountGenerator()) {
             sampler.getSamplingCountGenerator().reset()
         }
-        this.traceContext.activeRequestRepository.activeTraceCache.cache.clear()
+        activeRequestRepository.activeTraceCache.cache.clear()
         transactionIdGenerator.reset()
 
         httpShared.clearPathMatcher()

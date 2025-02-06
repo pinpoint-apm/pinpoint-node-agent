@@ -29,7 +29,7 @@ router.get('/', async function(req, res, next) {
 
   connection.query('SELECT id, name FROM users', function (error, results, fields) {
     if (error) throw error
-    console.log('The solution is: ', results[0])
+    // console.log('The solution is: ', results[0])
   })
 
   connection.query('SELECT id, name FROM users WHERE id = ? AND name like ?', [1, 'name*'], async function (error, results, fields) {
@@ -46,11 +46,9 @@ router.get('/', async function(req, res, next) {
 
   const response = await fetch(`http://localhost:3000/api2`)
   const json = await response.json()
-  console.log(json)
+  // console.log(json)
 
-  setTimeout(() => {
-    res.render('index', { title: 'Express' })
-  }, 3000)
+  res.render('index', { title: 'Express' })
 })
 
 router.get('/api', function(req, res, next) {

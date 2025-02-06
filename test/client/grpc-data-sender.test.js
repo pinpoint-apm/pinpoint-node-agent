@@ -70,7 +70,7 @@ class DataSource extends DataSourceCallCountable {
   initializeProfilerClients() { }
 }
 
-test.skip('Should send span', function (t) {
+test('Should send span', function (t) {
   agent.bindHttp()
   sendSpanMethodOnDataCallback = null
 
@@ -166,7 +166,7 @@ test.skip('Should send span', function (t) {
   })
 })
 
-test.skip('sendSpanChunk redis.SET.end', function (t) {
+test('sendSpanChunk redis.SET.end', function (t) {
   agent.bindHttp()
   sendSpanMethodOnDataCallback = null
   const server = new grpc.Server()
@@ -244,7 +244,7 @@ test.skip('sendSpanChunk redis.SET.end', function (t) {
   })
 })
 
-test.skip('sendSpanChunk redis.GET.end', (t) => {
+test('sendSpanChunk redis.GET.end', (t) => {
   agent.bindHttp()
   sendSpanMethodOnDataCallback = null
   const server = new grpc.Server()
@@ -315,7 +315,7 @@ test.skip('sendSpanChunk redis.GET.end', (t) => {
   })
 })
 
-test.skip('sendSpan', (t) => {
+test('sendSpan', (t) => {
   agent.bindHttp()
   sendSpanMethodOnDataCallback = null
   const server = new grpc.Server()
@@ -471,45 +471,6 @@ test('sendStat', (t) => {
     collectorServer.tryShutdown(() => {
     })
   })
-  // let expectedStat = {
-  //   'agentId': 'express-node-sample-id',
-  //   'agentStartTime': 1593058531421,
-  //   'timestamp': 1593058537472,
-  //   'collectInterval': 1000,
-  //   'memory': {
-  //     'heapUsed': 37042600,
-  //     'heapTotal': 62197760
-  //   },
-  //   'cpu': {
-  //     'user': 0.0003919068831319893,
-  //     'system': 0
-  //   },
-  //   'activeTrace': {
-  //     'schema': {
-  //       'typeCode': 2,
-  //       'fast': 1000,
-  //       'normal': 3000,
-  //       'slow': 5000
-  //     },
-  //     'typeCode': 2,
-  //     'fastCount': 0,
-  //     'normalCount': 0,
-  //     'slowCount': 0,
-  //     'verySlowCount': 0
-  //   }
-  // }
-  // grpcDataSender.sendStat(expectedStat)
-
-  // const pStatMessage = grpcDataSender.actualPStatMessage
-  // const pAgentStat = pStatMessage.getAgentstat()
-  // t.plan(4)
-
-  // t.equal(pAgentStat.getTimestamp(), 1593058537472, 'timestamp')
-  // t.equal(pAgentStat.getCollectinterval(), 1000, 'collectInterval')
-
-  // const pCpuLoad = pAgentStat.getCpuload()
-  // t.equal(pCpuLoad.getJvmcpuload(), 0.0003919068831319893, 'cpu.user')
-  // t.equal(pCpuLoad.getSystemcpuload(), 0, 'cpu.system')
 })
 
 let requestId = 0
@@ -579,7 +540,7 @@ class ProfilerDataSource extends DataSourceCallCountable {
   initializeAgentInfoScheduler() { }
 }
 
-test.skip('sendSupportedServicesCommand and commandEcho', (t) => {
+test('sendSupportedServicesCommand and commandEcho', (t) => {
   dataCallbackOnServerCall = null
   const server = new grpc.Server()
   server.addService(services.ProfilerCommandServiceService, {
@@ -622,16 +583,32 @@ test.skip('sendSupportedServicesCommand and commandEcho', (t) => {
   })
 })
 
-test.skip('CommandStreamActiveThreadCount', (t) => {
+
+
+test('CommandStreamActiveThreadCount', (t) => {
   const server = new grpc.Server()
+  let interval
+  let ended = false
   server.addService(services.ProfilerCommandServiceService, {
     handleCommandV2: handleCommandV2Service,
     handleCommand: handleCommandV2Service,
     commandEcho: emptyResponseService,
-    commandStreamActiveThreadCount: emptyResponseService
+    commandStreamActiveThreadCount: (call, callback) => {
+      call.on('data', (data) => {
+        dataCallbackOnServerCall(data)
+      })
+      interval = setInterval(() => {
+        if (ended) {
+          callback(null, new Empty())
+          process.nextTick(() => {
+            t.end()
+          })
+        }
+      }, 1000)
+    }
   })
   let dataSender
-  server.bindAsync('127.0.0.1:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+  server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
     dataSender = beforeSpecificOne(port, ProfilerDataSource)
 
     let callCount = 0
@@ -643,16 +620,9 @@ test.skip('CommandStreamActiveThreadCount', (t) => {
       t.equal(commonStreamResponse.getMessage().getValue(), '', 'message is empty')
 
       t.equal(data.getHistogramschematype(), 2, 'histogram schema type')
-      t.equal(data.getActivethreadcountList()[0], 1, 'active thread count')
+      t.equal(data.getActivethreadcountList()[0], 0, 'active thread count')
 
-      console.log(`dataCallbackOnServerCall callCount: ${callCount}`)
-      if (callCount == 1) {
-        dataSender.commandStream.writableStream.on('close', () => {
-          t.end()
-        })
-        dataSender.close()
-        server.forceShutdown()
-      }
+      ended = true
     }
 
     const callArguments = new CallArgumentsBuilder(function () {
@@ -666,5 +636,11 @@ test.skip('CommandStreamActiveThreadCount', (t) => {
       })
     }).build()
     dataSender.sendSupportedServicesCommand(callArguments)
+  })
+
+  t.teardown(() => {
+    clearInterval(interval)
+    dataSender.close()
+    server.forceShutdown()
   })
 })

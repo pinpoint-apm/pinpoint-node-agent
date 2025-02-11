@@ -6,6 +6,7 @@ const IORedis = require('ioredis')
 const ioRedis = new IORedis(6379)
 
 const mysql = require('mysql')
+const { MongoClient } = require('mongodb')
 
 /* GET home page. */
 router.get('/', async function(req, res, next) {
@@ -47,6 +48,10 @@ router.get('/', async function(req, res, next) {
   const response = await fetch(`http://localhost:3000/api2`)
   const json = await response.json()
   // console.log(json)
+
+  const client = new MongoClient(`mongodb://admin:${process.env.ADMIN_PASSWORD}@localhost:27017`, { directConnection: true })
+  const result = await client.db('test1').collection('test').insertOne({ name: 'test' })
+  client.close()
 
   res.render('index', { title: 'Express' })
 })

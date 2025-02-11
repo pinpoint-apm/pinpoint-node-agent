@@ -62,8 +62,9 @@
     "semver": "^7.5.3"
   },
   "devDependencies": {
-    "@testcontainers/mysql": "^10.10.3",
-    "@testcontainers/redis": "^10.10.3",
+    "@testcontainers/mongodb": "^10.18.0",
+    "@testcontainers/mysql": "^10.18.0",
+    "@testcontainers/redis": "^10.18.0",
     "@types/semver": "^7.3.13",
     "@types/shimmer": "^1.0.2",
     "axios": "^1.6.8",
@@ -79,6 +80,7 @@
     "koa-bodyparser": "^4.2.1",
     "koa-router": "^7.4.0",
     "lodash": "^4.17.20",
+    "mongodb": "^6.13.0",
     "mongoose": "^8.8.4",
     "mysql": "^2.18.1",
     "mysql2": "^3.6.0",

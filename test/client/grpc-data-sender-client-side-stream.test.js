@@ -6,6 +6,7 @@
 
 const test = require('tape')
 const grpc = require('@grpc/grpc-js')
+const agent = require('../support/agent-singleton-mock')
 const cmdMessage = require('../../lib/data/v1/Cmd_pb')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
@@ -15,7 +16,6 @@ const GrpcClientSideStream = require('../../lib/client/grpc-client-side-stream')
 const SpanBuilder = require('../../lib/context/span-builder')
 const RemoteTraceRootBuilder = require('../../lib/context/remote-trace-root-builder')
 const AgentInfo = require('../../lib/data/dto/agent-info')
-const agent = require('../support/agent-singleton-mock')
 const SpanRepository = require('../../lib/context/trace/span-repository')
 const DataSender = require('../../lib/client/data-sender')
 const SpanChunkBuilder = require('../../lib/context/span-chunk-builder')
@@ -284,11 +284,7 @@ test('spanStream ERR_STREAM_WRITE_AFTER_END', (t) => {
     })
 
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
-            'agentid': '12121212',
-            'applicationname': 'applicationName',
-            'starttime': Date.now()
-        })
+        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
 
         actualsSpanSession.callback = (count) => {
             if (count == callCount) {

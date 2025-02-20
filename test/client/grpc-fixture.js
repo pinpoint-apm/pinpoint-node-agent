@@ -6,9 +6,8 @@
 
 'use strict'
 
-require('../support/agent-singleton-mock')
+const agent = require('../support/agent-singleton-mock')
 const config = require('../../lib/config')
-const AgentInfo = require('../../lib/data/dto/agent-info')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const SpanBuilder = require('../../lib/context/span-builder')
 const RemoteTraceRootBuilder = require('../../lib/context/remote-trace-root-builder')
@@ -41,13 +40,7 @@ function beforeSpecificOne(port, one, serviceConfig) {
 }
 
 function agentInfo() {
-    return Object.assign(new AgentInfo({
-        agentId: '12121212',
-        applicationName: 'applicationName',
-        agentStartTime: Date.now()
-    }), {
-        ip: '1'
-    })
+    return agent.getAgentInfo()
 }
 
 function afterOne(t) {

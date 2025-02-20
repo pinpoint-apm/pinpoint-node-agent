@@ -14,6 +14,7 @@ var _ = require('lodash')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const spanMessages = require('../../lib/data/v1/Span_pb')
 const CallArgumentsBuilder = require('../../lib/client/call-arguments-builder')
+const agent = require('../support/agent-singleton-mock')
 
 let statClient
 let endAction
@@ -149,11 +150,7 @@ test('sendAgentInfo deadline', (t) => {
         requestAgentInfo: requestAgentInfo
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
-            'agentid': '12121212',
-            'applicationname': 'applicationName',
-            'starttime': Date.now()
-        })
+        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
 
         grpcDataSender.sendAgentInfo({
             hostname: 'hostname',
@@ -207,11 +204,7 @@ test('sendApiMetaInfo deadline', (t) => {
         requestApiMetaData: requestApiMetaData
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
-            'agentid': '12121212',
-            'applicationname': 'applicationName',
-            'starttime': Date.now()
-        })
+        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
 
         let apiMetaInfoResponse = 0
 
@@ -275,11 +268,7 @@ test('sendStringMetaInfo deadline', (t) => {
         requestStringMetaData: requestStringMetaData
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
-            'agentid': '12121212',
-            'applicationname': 'applicationName',
-            'starttime': Date.now()
-        })
+        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
         let stringMetaDataResponse = 0
 
         grpcDataSender.sendStringMetaInfo({

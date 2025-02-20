@@ -12,6 +12,9 @@ test('Agent ID required field', function (t) {
   t.plan(1)
 
   config.clear()
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+
   const conf = config.getConfig()
 
   t.ok(conf.agentId == undefined)
@@ -97,9 +100,11 @@ test('Agent ID length check', (t) => {
   config.clear()
   process.env['PINPOINT_AGENT_ID'] = "agentId"
   process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
+  process.env['PINPOINT_AGENT_NAME'] = 'agent name'
 
   let given = config.getConfig()
   t.true(given.enable, 'configuration agentId, Name, ApplicationName enable agent id')
+  t.equal(given.agentName, 'agent name', 'agent name is agent name')
 
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME

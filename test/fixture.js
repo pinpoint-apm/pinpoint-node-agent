@@ -11,7 +11,6 @@ const testConfig= require('./pinpoint-config-test')
 require('../lib/config').clear()
 const config = require('../lib/config').getConfig(testConfig)
 const { namedGroupLocationFileName, namedGroupTypeMethod } = require('../lib/instrumentation/call-stack')
-const localStorage = require('../lib/instrumentation/context/local-storage')
 
 const getTransactionId = () => {
   const agentId = config.agentId

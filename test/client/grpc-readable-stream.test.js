@@ -10,7 +10,11 @@ const test = require('tape')
 const GrpcReadableStream = require('../../lib/client/grpc-readable-stream')
 const { Writable } = require('node:stream')
 const semver = require('semver')
-const { spanMessageWithId } = require('./grpc-fixture')
+const { spanMessageWithId, beforeSpecificOne } = require('./grpc-fixture')
+const grpc = require('@grpc/grpc-js')
+const services = require('../../lib/data/v1/Service_grpc_pb')
+const cmdMessage = require('../../lib/data/v1/Cmd_pb')
+const { DataSourceCallCountable } = require('./grpc-fixture')
 
 test('no piped readable stream', (t) => {
     const readable = new GrpcReadableStream()
@@ -51,14 +55,19 @@ test('piped readable stream', (t) => {
 })
 
 test('reconnect writable stream on piped readable stream', (t) => {
-    t.plan(9)
+    if (semver.satisfies(process.versions.node, '<17.0')) {
+        t.plan(17)
+    } else {
+        t.plan(21)
+    }
+    const writableStreams = []
+    let writableStreamCreatedCount = 0
     const readable = new GrpcReadableStream(() => {
         let count = 0
-        const actualSteams = []
         const writableStream = new Writable({
             objectMode: true,
             write(chunk, encoding, callback) {
-                actualSteams.push(chunk)
+                this.actualSteams.push(chunk)
                 callback()
                 count++
 
@@ -71,32 +80,38 @@ test('reconnect writable stream on piped readable stream', (t) => {
                 }
             }
         })
-        writableStream.on('error', (error) => {
-            t.equal(error.message, 'Cannot pipe, not readable', 'piped writable stream error')
-            t.equal(readable.readableStream.readable, true, 'piped readable stream is readable on close event')
-
-            t.equal(actualSteams.length, 2, 'piped readable stream')
-            t.equal(actualSteams[0], expected1, 'piped readable stream test1')
-            t.equal(actualSteams[1], expected2, 'piped readable stream test2')
-
-            t.false(readable.readable, 'piped readable stream is unpiped, so is not readable')
+        writableStream.actualSteams = []
+        writableStreams.push(writableStream)
+        process.nextTick(() => {
+            createdWritableStream(++writableStreamCreatedCount)
         })
-
-        writableStream.on('finish', () => {
-            t.fail('piped writable stream finish event is not called')
-        })
-
-        writableStream.on('close', () => {
-            t.equal(readable.readableStream.readable, true, 'piped readable stream is no readable on close event')
-            t.equal(writableStream.destroyed, true, 'piped writable stream is destroyed on close event')
-        })
-
-        writableStream.on('unpipe', () => {
-            t.true(true, 'piped writable stream unpipe event is called')
-        })
-
         return writableStream
     })
+
+    writableStreams[0].on('error', (error) => {
+        t.equal(error.message, 'Cannot pipe, not readable', 'piped writable stream error')
+        t.equal(readable.readableStream.readable, true, 'piped readable stream is readable on close event')
+
+        t.equal(writableStreams[0].actualSteams.length, 2, 'piped readable stream')
+        t.equal(writableStreams[0].actualSteams[0], expected1, 'piped readable stream test1')
+        t.equal(writableStreams[0].actualSteams[1], expected2, 'piped readable stream test2')
+
+        t.true(readable.readable, 'piped readable stream is readable on error event')
+    })
+
+    writableStreams[0].on('finish', () => {
+        t.fail('piped writable stream finish event is not called')
+    })
+
+    writableStreams[0].on('close', () => {
+        t.equal(readable.readableStream.readable, true, 'piped readable stream is no readable on close event')
+        t.equal(writableStreams[0].destroyed, true, 'piped writable stream is destroyed on close event')
+    })
+
+    writableStreams[0].on('unpipe', () => {
+        t.true(true, 'piped writable stream unpipe event is called')
+    })
+
     const expected1 = spanMessageWithId('1111')
     const expected2 = spanMessageWithId('2222')
     readable.push(expected1)
@@ -117,6 +132,34 @@ test('reconnect writable stream on piped readable stream', (t) => {
     readable.readableStream.on('unpipe', () => {
         t.fail('piped readable stream unpipe event is not called')
     })
+
+    const expected3 = spanMessageWithId('3')
+    readable.push(expected3)
+
+    function createdWritableStream(count) {
+        if (count === 2) {
+            t.true(writableStreams[0].destroyed, 'piped writable stream is destroyed')
+            if (semver.satisfies(process.versions.node, '>17.0')) {
+                t.true(writableStreams[0].closed, 'piped writable stream is closed')
+                t.equal(writableStreams[0].errored.message, 'Cannot pipe, not readable', 'piped writable stream error message')
+            }
+            t.true(writableStreams[0].writableObjectMode, 'piped writable stream is object mode')
+            t.false(writableStreams[0].writableEnded, 'piped writable stream is not ended. It is ended by destroy and close')
+
+            t.false(writableStreams[1].destroyed, 'new piped writable stream is not destroyed')
+            if (semver.satisfies(process.versions.node, '>17.0')) {
+                t.false(writableStreams[1].closed, 'new piped writable stream is not closed')
+                t.false(writableStreams[1].errored, 'new piped writable stream is not errored')
+            }
+            t.false(writableStreams[1].writableEnded, 'new piped writable stream is not ended')
+            t.true(readable.readableStream.readable, 'piped readable stream is readable on new piped writable stream')
+
+            readable.readableStream.on('data', (data) => {
+                t.equal(expected3, writableStreams[1].actualSteams[0], 'new piped writable stream data')
+                t.equal(data, expected3, 'piped readable stream data')
+            })
+        }
+    }
 })
 
 test('If the Readable stream emits an error during processing, the writable destination is not closed automatically. If an error occurs, Close each streams, ', async (t) => {
@@ -231,5 +274,82 @@ test('Max buffer size', (t) => {
     t.equal(dut.readableStream._readableState.buffer.shift(), expected2, 'buffer[1] is test2')
     t.equal(dut.readableStream._readableState.buffer.shift(), expected3, 'buffer[2] is test3')
 
+    // stream.setDefaultHighWaterMark(objectMode, value) above node@19.9
+    t.equal(dut.readableStream.readableHighWaterMark, 16, 'high water mark in Object Mode is 16')
+
     t.end()
+})
+
+class ProfilerDataSource extends DataSourceCallCountable {
+    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+    }
+
+    initializeClients() { }
+    initializeMetadataClients() { }
+    initializeSpanStream() { }
+    initializeStatStream() { }
+    initializePingStream() { }
+    initializeAgentInfoScheduler() { }
+}
+
+test('When gRPC server shutdown and then node agent grpcStream on error fired and then reconnection gRPC call', (t) => {
+    let server = new grpc.Server()
+    let requestId = 0
+    let handleCommandCallback
+    server.addService(services.ProfilerCommandServiceService, {
+        handleCommand: (call, callback) => {
+            serverCall = call
+            endCallback = callback
+            if (typeof handleCommandCallback === 'function') {
+                handleCommandCallback(call, callback)
+            }
+        }
+    })
+
+    let dataSender
+    const loadGrpcServerCallback = (err, port) => {
+        if (loadCount === 1) {
+            dataSender = beforeSpecificOne(port, ProfilerDataSource)
+            handleCommandCallback = (call) => {
+                requestId++
+                const result = new cmdMessage.PCmdRequest()
+                result.setRequestid(requestId)
+                const message = new cmdMessage.PCmdEcho()
+                message.setMessage('echo')
+                result.setCommandecho(message)
+                call.write(result)
+            }
+            dataSender.sendSupportedServicesCommand()
+
+            setTimeout(() => {
+                // endCallback(null, new cmdMessage.PResult())
+                server.forceShutdown()
+
+                server = new grpc.Server()
+                server.addService(services.ProfilerCommandServiceService, {
+                    handleCommand: (call, callback) => {
+                        serverCall = call
+                        endCallback = callback
+                    }
+                })
+                server.bindAsync(`localhost:${port}`, grpc.ServerCredentials.createInsecure(), (err, port) => {
+                    loadCount++
+                    loadGrpcServerCallback(err, port)
+                })
+            }, 1000)
+        }
+
+
+        if (loadCount === 2) {
+            dataSender.close()
+            t.end()
+            server.forceShutdown()
+        }
+    }
+    let loadCount = 0
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+        loadCount++
+        loadGrpcServerCallback(err, port)
+    })
 })

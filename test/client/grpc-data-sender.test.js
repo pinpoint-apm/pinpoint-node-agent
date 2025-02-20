@@ -455,8 +455,11 @@ test('sendStat', (t) => {
       assertAgentStat = (data) => {
         const actualHistogram = data.getAgentstat().getActivetrace().getHistogram().getActivetracecountList()
         t.deepEqual(originalHistogram, actualHistogram, 'active trace histogram')
-        server.close(() => {
-          t.end()
+        agent.dataSender.close()
+        collectorServer.tryShutdown(() => {
+          server.close(() => {
+            t.end()
+          })
         })
       }
     })
@@ -468,8 +471,6 @@ test('sendStat', (t) => {
   })
 
   t.teardown(() => {
-    collectorServer.tryShutdown(() => {
-    })
   })
 })
 

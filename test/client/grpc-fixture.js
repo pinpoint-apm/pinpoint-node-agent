@@ -6,10 +6,12 @@
 
 'use strict'
 
+require('../support/agent-singleton-mock')
 const config = require('../../lib/config')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
-const SpanBuilder = require('../../lib/instrumentation/context/span-builder')
+const SpanBuilder = require('../../lib/context/span-builder')
+const RemoteTraceRootBuilder = require('../../lib/context/remote-trace-root-builder')
 
 let callCount = 0
 let afterCount = 0
@@ -113,12 +115,12 @@ class DataSourceCallCountable extends GrpcDataSender {
     }
 }
 
-function spanWithId(spanId) {
-    return SpanBuilder.makeWithSpanId(spanId, agentInfo()).build()
+function spanWithId(transactionId) {
+    return new SpanBuilder(new RemoteTraceRootBuilder(agentInfo(), transactionId).build()).build()
 }
 
 function spanMessageWithId(spanId) {
-    return spanWithId(spanId).spanMessage
+    return spanWithId(spanId).toProtocolBuffer()
 }
 
 module.exports = {

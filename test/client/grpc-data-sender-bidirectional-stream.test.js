@@ -20,7 +20,7 @@ let actualPingSession = {
 function pingSession(call) {
     call.on('data', (ping) => {
         actualPingSession.serverDataCount++
-        log.debug(`pingSession in data: ${JSON.stringify(ping.toObject())}`)
+        log.debug(`pingSession in data: `, ping.toObject())
         if (actualPingSession.serverDataCount == 1) {
             call.write(ping)
         } else if (actualPingSession.serverDataCount == 2) {

@@ -5,6 +5,7 @@
  */
 
 const test = require('tape')
+const agent = require('../support/agent-singleton-mock')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const dataConvertor = require('../../lib/data/grpc-data-convertor')
@@ -126,34 +127,87 @@ test('client side streaming with deadline', function (t) {
     })
 })
 
-let agentInfo = 0
-// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
-function requestAgentInfo(call, callback) {
-    agentInfo++
-
-    const result = new spanMessages.PResult()
-
-    if (agentInfo == 1) {
-        callback(null, result)
-    } else if (agentInfo == 2) {
-        _.delay(() => {
-            callback(null, result)
-        }, 100)
-    }
-}
-
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('sendAgentInfo deadline', (t) => {
+test('sendAgentInfo deadline and metadata', (t) => {
+    agent.bindHttp({ 'agent-name': 'testAgentName' })
     const server = new grpc.Server()
+    let agentInfo = 0
     server.addService(services.AgentService, {
-        requestAgentInfo: requestAgentInfo
+        // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
+        requestAgentInfo: (call, callback) => {
+            agentInfo++
+
+            t.equal(call.metadata.get('agentid')[0], 'node.test.app', 'call.metadata.get("agentid")[0] is node.test.app')
+            t.equal(call.metadata.get('applicationname')[0], 'test.application.name', 'call.metadata.get("applicationname")[0] is test.application.name')
+            t.equal(call.metadata.get('agentName')[0], 'testAgentName', 'call.metadata.get("agentName")[0] is testAgentName')
+
+            const result = new spanMessages.PResult()
+            if (agentInfo == 1) {
+                callback(null, result)
+            } else if (agentInfo == 2) {
+                _.delay(() => {
+                    callback(null, result)
+                }, 100)
+            }
+        }
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
-            'agentid': '12121212',
-            'applicationname': 'applicationName',
-            'starttime': Date.now()
+        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
+
+        grpcDataSender.sendAgentInfo({
+            hostname: 'hostname',
+            "serviceType": 1400,
+        }, (err, response) => {
+            t.true(response, '1st sendAgentInfo response is success')
+            t.false(err, '1st sendAgentInfo err is false')
         })
+
+        const callArguments = new CallArgumentsBuilder((err, response) => {
+            t.false(response, '2st sendAgentInfo response is undefined')
+            t.equal(err.code, 4, '2st sendAgentInfo err.code is 4')
+            t.true(err.details.startsWith('Deadline exceeded'), '2st sendAgentInfo err.details is Deadline exceeded')
+            t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendAgentInfo err.message is Deadline exceeded')
+
+            t.end()
+        }).setDeadlineMilliseconds(100).build()
+
+        grpcDataSender.sendAgentInfo({
+            hostname: 'hostname',
+            "serviceType": 1400,
+        }, callArguments)
+
+        t.teardown(() => {
+            grpcDataSender.close()
+            server.forceShutdown()
+        })
+    })
+})
+
+test('sendAgentInfo deadline and no agent name metadata', (t) => {
+    agent.bindHttp()
+    const server = new grpc.Server()
+    let agentInfo = 0
+    server.addService(services.AgentService, {
+        // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
+        requestAgentInfo: (call, callback) => {
+            agentInfo++
+
+            t.equal(call.metadata.get('agentid')[0], 'node.test.app', 'call.metadata.get("agentid")[0] is node.test.app')
+            t.equal(call.metadata.get('applicationname')[0], 'test.application.name', 'call.metadata.get("applicationname")[0] is test.application.name')
+            t.equal(call.metadata.get('agentName')[0], undefined, 'call.metadata.get("agentName")[0] is undefined')
+
+            const result = new spanMessages.PResult()
+            if (agentInfo == 1) {
+                callback(null, result)
+            } else if (agentInfo == 2) {
+                _.delay(() => {
+                    callback(null, result)
+                }, 100)
+            }
+        }
+    })
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
 
         grpcDataSender.sendAgentInfo({
             hostname: 'hostname',
@@ -207,11 +261,7 @@ test('sendApiMetaInfo deadline', (t) => {
         requestApiMetaData: requestApiMetaData
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
-            'agentid': '12121212',
-            'applicationname': 'applicationName',
-            'starttime': Date.now()
-        })
+        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
 
         let apiMetaInfoResponse = 0
 
@@ -275,11 +325,7 @@ test('sendStringMetaInfo deadline', (t) => {
         requestStringMetaData: requestStringMetaData
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
-            'agentid': '12121212',
-            'applicationname': 'applicationName',
-            'starttime': Date.now()
-        })
+        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
         let stringMetaDataResponse = 0
 
         grpcDataSender.sendStringMetaInfo({

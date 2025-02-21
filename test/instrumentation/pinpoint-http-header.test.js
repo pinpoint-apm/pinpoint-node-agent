@@ -95,17 +95,17 @@ function incomingRequest(t, sampled) {
 
   let config = {
     headers: {
-      "host": "localhost:3000",
-      "connection": "Keep-Alive",
-      "accept-encoding": "gzip",
-      "user-agent": "okhttp/4.8.1",
-      "pinpoint-traceid": "express-spring-sampleid^1599831487121^4",
-      "pinpoint-spanid": "-387300102333636357",
-      "pinpoint-pspanid": "3116250228920588432",
-      "pinpoint-flags": "0",
-      "pinpoint-pappname": "express-spring-sample",
-      "pinpoint-papptype": "1210",
-      "pinpoint-host": "localhost:3000"
+      'host': 'localhost:3000',
+      'connection': 'Keep-Alive',
+      'accept-encoding': 'gzip',
+      'user-agent': 'okhttp/4.8.1',
+      'pinpoint-traceid': 'express-spring-sampleid^1599831487121^4',
+      'pinpoint-spanid': '-387300102333636357',
+      'pinpoint-pspanid': '3116250228920588432',
+      'pinpoint-flags': '0',
+      'pinpoint-pappname': 'express-spring-sample',
+      'pinpoint-papptype': '1210',
+      'pinpoint-host': 'localhost:3000'
     },
     params: {},
     timeout: 1000,
@@ -138,27 +138,27 @@ function incomingRequest(t, sampled) {
 
   const OUTGOING_PATH = '/outgoingrequest'
   app.get(OUTGOING_PATH, async (req, res) => {
-    const actualHeaders = {
-      "accept": "application/json, text/plain, */*",
-      "user-agent": "axios/0.18.1",
-      "host": "localhost:5006",
-      "pinpoint-traceid": "express-spring-sampleid^1599831487121^4",
-      "pinpoint-spanid": "8478505740685359",
-      "pinpoint-pspanid": "-387300102333636357",
-      "pinpoint-pappname": "node.test.app",
-      "pinpoint-papptype": "1400",
-      "pinpoint-flags": "0",
-      "pinpoint-host": "localhost:5006",
-      "connection": "close"
+    const expectedHeaders = {
+      'accept': 'application/json, text/plain, */*',
+      'user-agent': 'axios/0.18.1',
+      'host': 'localhost:5006',
+      'pinpoint-traceid': 'express-spring-sampleid^1599831487121^4',
+      'pinpoint-spanid': '8478505740685359',
+      'pinpoint-pspanid': '-387300102333636357',
+      'pinpoint-pappname': agent.getAgentInfo().getApplicationName(),
+      'pinpoint-papptype': '1400',
+      'pinpoint-flags': '0',
+      'pinpoint-host': 'localhost:5006',
+      'connection': 'close'
     }
     const headers = req.headers
     if (sampled) {
       t.equal(expectedTransactionId, headers['pinpoint-traceid'])
       t.equal(expectedSpanId, headers['pinpoint-pspanid'])
-      t.equal(actualHeaders['pinpoint-pappname'], headers['pinpoint-pappname'])
-      t.equal(actualHeaders['pinpoint-papptype'], headers['pinpoint-papptype'])
-      t.equal(actualHeaders['pinpoint-host'], headers['pinpoint-host'])
-      t.equal(actualHeaders['pinpoint-sampled'], headers['pinpoint-sampled'])
+      t.equal(expectedHeaders['pinpoint-pappname'], headers['pinpoint-pappname'])
+      t.equal(expectedHeaders['pinpoint-papptype'], headers['pinpoint-papptype'])
+      t.equal(expectedHeaders['pinpoint-host'], headers['pinpoint-host'])
+      t.equal(expectedHeaders['pinpoint-sampled'], headers['pinpoint-sampled'])
     } else {
       // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
       t.equal('s0', headers['pinpoint-sampled'])
@@ -194,7 +194,7 @@ test('incomming request by User', (t) => {
     expectedSpanId = trace.getTraceId().spanId
     t.equal(typeof expectedTransactionId, 'string')
     t.equal(typeof expectedSpanId, 'string')
-    t.equal(trace.getTraceId().parentSpanId, "-1")
+    t.equal(trace.getTraceId().parentSpanId, '-1')
     t.equal(trace.canSampled(), true)
     t.equal(typeof trace.getTraceId().agentStartTime, 'string')
     t.equal(typeof trace.getTraceId().getTransactionId(), 'string')
@@ -207,17 +207,17 @@ test('incomming request by User', (t) => {
   const OUTGOING_PATH = '/outgoingrequest'
   app.get(OUTGOING_PATH, async (req, res) => {
     const actualHeaders = {
-      "accept": "application/json, text/plain, */*",
-      "user-agent": "axios/0.18.1",
-      "host": "localhost:5006",
-      "pinpoint-traceid": "express-spring-sampleid^1599831487121^4",
-      "pinpoint-spanid": "8478505740685359",
-      "pinpoint-pspanid": "-387300102333636357",
-      "pinpoint-pappname": "node.test.app",
-      "pinpoint-papptype": "1400",
-      "pinpoint-flags": "0",
-      "pinpoint-host": "localhost:5006",
-      "connection": "close"
+      'accept': 'application/json, text/plain, */*',
+      'user-agent': 'axios/0.18.1',
+      'host': 'localhost:5006',
+      'pinpoint-traceid': 'express-spring-sampleid^1599831487121^4',
+      'pinpoint-spanid': '8478505740685359',
+      'pinpoint-pspanid': '-387300102333636357',
+      'pinpoint-pappname': agent.getAgentInfo().getApplicationName(),
+      'pinpoint-papptype': '1400',
+      'pinpoint-flags': '0',
+      'pinpoint-host': 'localhost:5006',
+      'connection': 'close'
     }
     const headers = req.headers
     t.equal(expectedTransactionId, headers['pinpoint-traceid'])

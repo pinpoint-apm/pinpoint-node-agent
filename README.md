@@ -9,7 +9,7 @@ please post them on the [Discuss issues](https://github.com/naver/pinpoint-node-
 ### 1. Install
 Install with [npm](https://www.npmjs.com/):
 ```sh
-npm install --save pinpoint-node-agent 
+npm install --save pinpoint-node-agent
 ```
 Install with [yarn](https://yarnpkg.com):
 ```sh
@@ -22,7 +22,7 @@ To run Pinpoint agent for your own applications, make sure you have the prerequi
 
 ES6
 ```ecmascript 6
-  import 'pinpoint-node-agent'  
+  import 'pinpoint-node-agent'
 ```
 
 CommonJS
@@ -30,7 +30,7 @@ CommonJS
   require('pinpoint-node-agent')
 ```
 #### Webpack with `node -r` (required: above v0.8.2)
-In Node with Webpack, if the Pinpoint Node agent cannot hook the HTTP module, it is the case that http.createServer is called first in the JS code compiled by webpack. 
+In Node with Webpack, if the Pinpoint Node agent cannot hook the HTTP module, it is the case that http.createServer is called first in the JS code compiled by webpack.
 
 The'pinpoint-node-agent' require or import in the source code should be deleted.
 ```
@@ -51,10 +51,13 @@ module.exports = {
 ### 3. Configuration with Environment variables
 Based on the [pinpoint-config-default.json](/lib/pinpoint-config-default.json) file, only necessary parts are set as environment variables.
 
+The PINPOINT_AGENT_ID, PINPOINT_AGENT_NAME and PINPOINT_APPLICATION_NAME pattern are `[a-zA-Z0-9\\._\\-]+`.
+
 name | default | description
 -----|---------|------------
-PINPOINT_AGENT_ID |  | The maximum length is 24. a required variable.
-PINPOINT_APPLICATION_NAME | | meaningful name of the app. an application name can have multiple PINPOINT_AGENT_ID. The maximum length is 24. a required variable. 
+PINPOINT_AGENT_ID |  | The maximum length is 24. If you don't set an Agent ID, it will be set to a random hex value.
+PINPOINT_AGENT_NAME |  | The maximum length is 255. Agent Name is optional value. Agent names should be set up so that they make sense to humans. After you set the Agent Name, it appears in the Inspector.
+PINPOINT_APPLICATION_NAME | | meaningful name of the app. an application name can have multiple PINPOINT_AGENT_ID. The maximum length is 24. a required variable.
 PINPOINT_COLLECTOR_IP | localhost | The address that the Pinpoint collector. ex) 192.168.0.1
 PINPOINT_SAMPLING_RATE | 10 | Sample rate of incoming HTTP or HTTPS request. The value is calculated as 1/value.
 PINPOINT_LOG_LEVEL | WARN | Log level

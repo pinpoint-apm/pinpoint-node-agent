@@ -116,7 +116,7 @@ test('nested request HTTP', async function (t) {
       t.equal(req.headers['host'], 'localhost:5006', 'http://localhost:5006/test endPoint')
       t.equal(traceId.flags, 0, 'http://localhost:5006/test flags')
       t.equal(traceHeader.host, 'localhost:5006', 'http://localhost:5006/test host')
-      t.equal(traceHeader.parentApplicationName, 'node.test.app', 'http://localhost:5006/test parentApplicationName')
+      t.equal(traceHeader.parentApplicationName, agent.getAgentInfo().getApplicationName(), 'http://localhost:5006/test parentApplicationName')
       t.equal(traceHeader.parentApplicationType, 1400, 'http://localhost:5006/test parentApplicationType')
       t.equal(traceId.parentSpanId, actualTraceOn5005.spanBuilder.traceRoot.getTraceId().spanId, 'http://localhost:5006/test parentSpanId')
       // t.equal(actualRequestData.remoteAddress, '127.0.0.1', 'http://localhost:5006/test remoteAddress')

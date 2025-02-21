@@ -12,9 +12,12 @@ test('Agent ID required field', function (t) {
   t.plan(1)
 
   config.clear()
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+
   const conf = config.getConfig()
 
-  t.ok(conf.agentId == undefined)
+  t.true(conf.agentId.length == 16)
 })
 
 test('Should be configured with environment variable', function (t) {
@@ -35,7 +38,7 @@ test('Should be configured with argument', function (t) {
   const agentId = 'id-from-argument'
   config.clear()
   const conf = config.getConfig({
-    "agent-id": agentId
+    'agent-id': agentId
   }, false)
 
   t.equal(agentId, conf.agentId)
@@ -86,7 +89,7 @@ test('main moudle path', (t) => {
 })
 
 // https://github.com/pinpoint-apm/pinpoint/blob/master/commons/src/main/java/com/navercorp/pinpoint/common/util/IdValidateUtils.java
-// public static final String ID_PATTERN_VALUE = "[a-zA-Z0-9\\._\\-]+";
+// public static final String ID_PATTERN_VALUE = '[a-zA-Z0-9\\._\\-]+';
 // https://github.com/pinpoint-apm/pinpoint/blob/master/bootstraps/bootstrap/src/main/java/com/navercorp/pinpoint/bootstrap/IdValidator.java
 // https://github.com/pinpoint-apm/pinpoint/blob/master/commons/src/main/java/com/navercorp/pinpoint/common/PinpointConstants.java
 // public final class PinpointConstants {
@@ -95,18 +98,20 @@ test('main moudle path', (t) => {
 // }
 test('Agent ID length check', (t) => {
   config.clear()
-  process.env['PINPOINT_AGENT_ID'] = "agentId"
-  process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
+  process.env['PINPOINT_AGENT_ID'] = 'agentId'
+  process.env['PINPOINT_APPLICATION_NAME'] = 'appication-name'
+  process.env['PINPOINT_AGENT_NAME'] = 'agent-name'
 
   let given = config.getConfig()
   t.true(given.enable, 'configuration agentId, Name, ApplicationName enable agent id')
+  t.equal(given.agentName, 'agent-name', 'agent name is agent name')
 
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME
 
   config.clear()
-  process.env['PINPOINT_AGENT_ID'] = "agentIdagentIdagentIdage"
-  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappication"
+  process.env['PINPOINT_AGENT_ID'] = 'agentIdagentIdagentIdage'
+  process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
 
   given = config.getConfig()
   t.true(given.enable, 'maxlength agentID and application Name')
@@ -115,8 +120,8 @@ test('Agent ID length check', (t) => {
   delete process.env.PINPOINT_APPLICATION_NAME
 
   config.clear()
-  process.env['PINPOINT_AGENT_ID'] = "agentIdagentIdagentIdageE"
-  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappication"
+  process.env['PINPOINT_AGENT_ID'] = 'agentIdagentIdagentIdageE'
+  process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
 
   given = config.getConfig()
   t.false(given.enable, 'maxlength agentID error')
@@ -125,8 +130,8 @@ test('Agent ID length check', (t) => {
   delete process.env.PINPOINT_APPLICATION_NAME
 
   config.clear()
-  process.env['PINPOINT_AGENT_ID'] = "agentIdagentIdagentIdage"
-  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappicationE"
+  process.env['PINPOINT_AGENT_ID'] = 'agentIdagentIdagentIdage'
+  process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappicationE'
 
   given = config.getConfig()
   t.false(given.enable, 'maxlength application Name error')
@@ -135,8 +140,8 @@ test('Agent ID length check', (t) => {
   delete process.env.PINPOINT_APPLICATION_NAME
 
   config.clear()
-  process.env['PINPOINT_AGENT_ID'] = "~"
-  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappication"
+  process.env['PINPOINT_AGENT_ID'] = '~'
+  process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
 
   given = config.getConfig()
   t.false(given.enable, 'invalide agent ID')
@@ -145,22 +150,89 @@ test('Agent ID length check', (t) => {
   delete process.env.PINPOINT_APPLICATION_NAME
 
   config.clear()
-  process.env['PINPOINT_AGENT_ID'] = "agentIdagentIdagentIdage"
-  process.env['PINPOINT_APPLICATION_NAME'] = "~"
+  process.env['PINPOINT_AGENT_ID'] = 'agentIdagentIdagentIdage'
+  process.env['PINPOINT_APPLICATION_NAME'] = '~'
 
   given = config.getConfig()
   t.false(given.enable, 'invalide application name')
 
   delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_AGENT_NAME
   delete process.env.PINPOINT_APPLICATION_NAME
 
   config.clear()
-  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappication"
+  process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
 
   given = config.getConfig()
-  t.false(given.enable, 'agent ID nullable test')
+  t.true(given.enable, 'agent ID nullable test')
+  t.equal(given.applicationName, 'appicationnameappication', 'application name is appicationnameappication')
+  t.equal(given.agentId.length, 16, 'random generated agent ID length is 16')
 
   delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_AGENT_NAME
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  given = config.getConfig()
+  t.false(given.enable, 'Application Name must be set')
+  t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
+  t.false(given.agentName, 'Agent Name is optional value and only set from developer')
+  t.equal(given.applicationName, undefined, 'Application Name is required and only set from developer')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_AGENT_NAME
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
+  process.env['PINPOINT_AGENT_NAME'] = 'agent name'
+  given = config.getConfig()
+  t.false(given.enable, 'Application Name must be set')
+  t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
+  t.equal(given.agentName, 'agent name', 'Agent Name is optional value and only set from developer')
+  t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_AGENT_NAME
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
+  process.env['PINPOINT_AGENT_NAME'] = 'agent?name'
+  given = config.getConfig()
+  t.false(given.enable, 'Application Name must be set')
+  t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
+  t.equal(given.agentName, 'agent?name', 'Agent Name is optional value and only set from developer')
+  t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_AGENT_NAME
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
+  process.env['PINPOINT_AGENT_NAME'] = 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagen'
+  given = config.getConfig()
+  t.false(given.enable, 'Application Name must be set')
+  t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
+  t.equal(given.agentName, 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagen', 'Agent Name is optional value and only set from developer')
+  t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_AGENT_NAME
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
+  process.env['PINPOINT_AGENT_NAME'] = 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameage'
+  given = config.getConfig()
+  t.true(given.enable, 'Application Name must be set')
+  t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
+  t.equal(given.agentName, 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameage', 'Agent Name is optional value and only set from developer')
+  t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_AGENT_NAME
   delete process.env.PINPOINT_APPLICATION_NAME
 
   t.end()

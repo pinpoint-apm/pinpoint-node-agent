@@ -82,7 +82,7 @@ test('should return the true value when the env value is boolean type', function
 
     const given = givenDefaultIdAndName()
     t.equal(given.sampling, true, 'given PINPOINT_SAMPLING env, should equal config')
-    t.equal(given.enable, true, 'given PINPOINT_ENABLE env, should equal config')
+    t.equal(given.enable, false, 'given PINPOINT_ENABLE env, should equal config')
     t.equal(given.container, true, 'given PINPOINT_CONTAINER env, should equal config')
 
     delete process.env.PINPOINT_SAMPLING
@@ -99,7 +99,7 @@ test('should return the false value when the env value is boolean type', functio
     process.env['PINPOINT_SAMPLING'] = "false"
     process.env['PINPOINT_ENABLE'] = "false"
     process.env['PINPOINT_CONTAINER'] = "false"
-    
+
     const given = config.getConfig()
     t.equal(given.sampling, false, 'given PINPOINT_SAMPLING env, should equal config')
     t.equal(given.enable, false, 'given PINPOINT_ENABLE env, should equal config')
@@ -117,7 +117,7 @@ test('should return the false value when the env value is boolean type', functio
 
 test('should not exist in the process.env property when you do not set an environment variable', function(t) {
     config.clear()
-    
+
     delete process.env.PINPOINT_COLLECTOR_IP
     delete process.env.PINPOINT_LOG_LEVEL
 
@@ -138,7 +138,7 @@ test('should not exist in the process.env property when you do not set an enviro
     t.equal(given.logLevel, "WARN", "No set PINPOINT_LOG_LEVEL env, should equal default config")
 
     t.equal(given.sampling, true, 'No set PINPOINT_SAMPLING env, should equal default config')
-    t.equal(given.enable, true, 'No set PINPOINT_ENABLE env, should equal default config')
+    t.equal(given.enable, false, 'No set PINPOINT_ENABLE env, should equal default config')
     if (!isRunGithubAction()) {
         t.equal(given.container, false, 'No set PINPOINT_CONTAINER env, should equal default config')
     }

@@ -107,6 +107,8 @@ class MockAgent extends Agent {
         const config = require('../../lib/config').getConfig(json)
         this.config = config
 
+        this.agentInfo = this.createAgentInfo(this.config, Date.now())
+
         sqlMetadataService.cache = new SimpleCache(1024)
         this.traceContext.isSampling = sampler.getIsSampling(config.sampling, config.sampleRate)
         if (sampler.getSamplingCountGenerator()) {

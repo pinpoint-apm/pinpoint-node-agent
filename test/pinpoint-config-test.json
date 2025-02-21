@@ -1,6 +1,6 @@
 {
   "agent-id": "node.test.app",
-  "application-name": "node.test.app",
+  "application-name": "test.application.name",
   "application-type": 1400,
   "collector": {
     "ip": "127.0.0.1",

@@ -116,12 +116,27 @@ function spanMessageWithId(spanId) {
     return spanWithId(spanId).toProtocolBuffer()
 }
 
+class ProfilerDataSource extends DataSourceCallCountable {
+    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+    }
+
+    initializeClients() { }
+    initializeMetadataClients() { }
+    initializeSpanStream() { }
+    initializeStatStream() { }
+    initializePingStream() { }
+    initializeAgentInfoScheduler() { }
+}
+
+
 module.exports = {
     beforeSpecificOne,
     afterOne,
     getCallRequests,
     getMetadata,
     DataSourceCallCountable,
+    ProfilerDataSource,
     spanWithId,
     spanMessageWithId,
 }

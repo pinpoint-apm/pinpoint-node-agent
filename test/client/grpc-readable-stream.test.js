@@ -14,7 +14,7 @@ const { spanMessageWithId, beforeSpecificOne } = require('./grpc-fixture')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const cmdMessage = require('../../lib/data/v1/Cmd_pb')
-const { DataSourceCallCountable } = require('./grpc-fixture')
+const { ProfilerDataSource } = require('./grpc-fixture')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 
 test('no piped readable stream', (t) => {
@@ -281,19 +281,6 @@ test('Max buffer size', (t) => {
     t.end()
 })
 
-class ProfilerDataSource extends DataSourceCallCountable {
-    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
-        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
-    }
-
-    initializeClients() { }
-    initializeMetadataClients() { }
-    initializeSpanStream() { }
-    initializeStatStream() { }
-    initializePingStream() { }
-    initializeAgentInfoScheduler() { }
-}
-
 test('When gRPC server shutdown and then node agent grpcStream on error fired and then reconnection gRPC call and then check errored stream going end stream', (t) => {
     t.plan(2)
     let server = new grpc.Server()
@@ -331,15 +318,15 @@ test('When gRPC server shutdown and then node agent grpcStream on error fired an
 
             const commandStream = dataSender.commandStream
             let actualErroredStream
-            commandStream.writableStream.on('error', function(error) {
+            commandStream.writableStream.on('error', function (error) {
                 actualErroredStream = this
             })
-            commandStream.writableStream.on('end', function() {
+            commandStream.writableStream.on('end', function () {
                 t.equal(actualErroredStream, this, 'error stream should be close stream')
 
                 server = new grpc.Server()
                 server.addService(services.ProfilerCommandServiceService, {
-                    handleCommand: (call, callback) => {
+                    handleCommand: () => {
                     }
                 })
                 server.bindAsync(`localhost:${port}`, grpc.ServerCredentials.createInsecure(), (err, port) => {
@@ -353,9 +340,10 @@ test('When gRPC server shutdown and then node agent grpcStream on error fired an
 
         if (loadCount === 2) {
             dataSender.close()
+            server.forceShutdown()
             server.tryShutdown(() => {
-                t.end()
             })
+            t.end()
         }
     }
     let loadCount = 0

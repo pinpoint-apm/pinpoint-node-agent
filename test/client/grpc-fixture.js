@@ -102,9 +102,9 @@ class DataSourceCallCountable extends GrpcDataSender {
         super.sendSpanChunk(spanChunk)
     }
 
-    sendSupportedServicesCommand(callArguments) {
+    sendSupportedServicesCommand(callback) {
         increaseCallCount()
-        super.sendSupportedServicesCommand(callArguments)
+        super.sendSupportedServicesCommand(callback)
     }
 }
 

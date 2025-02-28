@@ -559,8 +559,7 @@ test('sendSupportedServicesCommand and commandEcho', (t) => {
   let dataSender
   server.bindAsync('127.0.0.1:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
     dataSender = beforeSpecificOne(port, ProfilerDataSource)
-
-    const callArguments = new CallArgumentsBuilder(function () {
+    dataSender.sendSupportedServicesCommand(function () {
       const callRequests = getCallRequests()
       const commonResponse = callRequests[1].getCommonresponse()
       t.equal(commonResponse.getResponseid(), requestId, 'response id matches request id')
@@ -574,8 +573,7 @@ test('sendSupportedServicesCommand and commandEcho', (t) => {
         t.end()
       })
       dataSender.close()
-    }).build()
-    dataSender.sendSupportedServicesCommand(callArguments)
+    })
     dataSender.commandStream.writableStream.on('data', (cmdRequest) => {
       const actualRequestId = cmdRequest.getRequestid()
       t.equal(actualRequestId, requestId, 'request id matches')
@@ -626,17 +624,17 @@ test('CommandStreamActiveThreadCount', (t) => {
       ended = true
     }
 
-    const callArguments = new CallArgumentsBuilder(function () {
-      if (callArguments.once) {
+    let once
+    dataSender.sendSupportedServicesCommand(function () {
+      if (once) {
         return
       }
-      callArguments.once = true
+      once = true
 
       process.nextTick(() => {
         serverCallWriter(CommandType.activeThreadCount)
       })
-    }).build()
-    dataSender.sendSupportedServicesCommand(callArguments)
+    })
   })
 
   t.teardown(() => {

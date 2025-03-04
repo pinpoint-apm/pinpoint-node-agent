@@ -8,4 +8,3 @@
 
 const test = require('tape')
 const grpc = require('@grpc/grpc-js')
-

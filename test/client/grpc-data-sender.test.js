@@ -12,7 +12,6 @@ const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, DataSourceCal
 const cmdMessage = require('../../lib/data/v1/Cmd_pb')
 const CommandType = require('../../lib/client/command/command-type')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
-const CallArgumentsBuilder = require('../../lib/client/call-arguments-builder')
 const agent = require('../support/agent-singleton-mock')
 const RemoteTraceRootBuilder = require('../../lib/context/remote-trace-root-builder')
 const SpanBuilder = require('../../lib/context/span-builder')

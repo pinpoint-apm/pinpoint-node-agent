@@ -176,7 +176,7 @@ test('sendAgentInfo deadline and metadata', (t) => {
 
                 t.end()
             }
-            grpcDataSender.agentInfoOptionsBuilder.setSeconds(0.1)
+            grpcDataSender.unaryDeadlineOptionsBuilder.setSeconds(0.1)
 
             grpcDataSender.sendAgentInfo({
                 hostname: 'hostname',
@@ -227,7 +227,7 @@ test('sendAgentInfo deadline and no agent name metadata', (t) => {
         })
 
         function deadlineFunctionalTest() {
-            grpcDataSender.agentInfoOptionsBuilder.setSeconds(0.1)
+            grpcDataSender.unaryDeadlineOptionsBuilder.setSeconds(0.1)
 
             const callback = (err, response) => {
                 t.false(response, '2st sendAgentInfo response is undefined')
@@ -287,7 +287,7 @@ test('sendApiMetaInfo deadline', (t) => {
         })
 
         function apiMetaInfoFunctionalTest() {
-            grpcDataSender.metadataOptionsBuilder.setSeconds(0.1)
+            grpcDataSender.unaryDeadlineOptionsBuilder.setSeconds(0.1)
             grpcDataSender.sendApiMetaInfo({
                 hostname: 'hostname',
                 "serviceType": 1400,
@@ -342,7 +342,7 @@ test('sendStringMetaInfo deadline', (t) => {
         })
 
         function stringMetaInfoFunctionalTest() {
-            grpcDataSender.metadataOptionsBuilder.setSeconds(0.1)
+            grpcDataSender.unaryDeadlineOptionsBuilder.setSeconds(0.1)
             grpcDataSender.sendStringMetaInfo({
                 hostname: 'hostname',
                 "serviceType": 1400,

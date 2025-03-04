@@ -14,7 +14,6 @@ const { log } = require('../test-helper')
 var _ = require('lodash')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const spanMessages = require('../../lib/data/v1/Span_pb')
-const CallArgumentsBuilder = require('../../lib/client/call-arguments-builder')
 
 let statClient
 let endAction
@@ -159,26 +158,31 @@ test('sendAgentInfo deadline and metadata', (t) => {
         }, (err, response) => {
             t.true(response, '1st sendAgentInfo response is success')
             t.false(err, '1st sendAgentInfo err is false')
+            deadlineFunctionalTest()
         })
 
-        const callArguments = new CallArgumentsBuilder((err, response) => {
-            t.false(response, '2st sendAgentInfo response is undefined')
-            t.equal(err.code, 4, '2st sendAgentInfo err.code is 4')
-            t.true(err.details.startsWith('Deadline exceeded'), '2st sendAgentInfo err.details is Deadline exceeded')
-            t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendAgentInfo err.message is Deadline exceeded')
-
-            t.end()
-        }).setDeadlineMilliseconds(100).build()
-
-        grpcDataSender.sendAgentInfo({
-            hostname: 'hostname',
-            "serviceType": 1400,
-        }, callArguments)
 
         t.teardown(() => {
             grpcDataSender.close()
             server.forceShutdown()
         })
+
+        function deadlineFunctionalTest() {
+            const callback = (err, response) => {
+                t.false(response, '2st sendAgentInfo response is undefined')
+                t.equal(err.code, 4, '2st sendAgentInfo err.code is 4')
+                t.true(err.details.startsWith('Deadline exceeded'), '2st sendAgentInfo err.details is Deadline exceeded')
+                t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendAgentInfo err.message is Deadline exceeded')
+
+                t.end()
+            }
+            grpcDataSender.agentInfoOptionsBuilder.setSeconds(0.1)
+
+            grpcDataSender.sendAgentInfo({
+                hostname: 'hostname',
+                "serviceType": 1400,
+            }, callback)
+        }
     })
 })
 
@@ -214,26 +218,31 @@ test('sendAgentInfo deadline and no agent name metadata', (t) => {
         }, (err, response) => {
             t.true(response, '1st sendAgentInfo response is success')
             t.false(err, '1st sendAgentInfo err is false')
+            deadlineFunctionalTest()
         })
-
-        const callArguments = new CallArgumentsBuilder((err, response) => {
-            t.false(response, '2st sendAgentInfo response is undefined')
-            t.equal(err.code, 4, '2st sendAgentInfo err.code is 4')
-            t.true(err.details.startsWith('Deadline exceeded'), '2st sendAgentInfo err.details is Deadline exceeded')
-            t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendAgentInfo err.message is Deadline exceeded')
-
-            t.end()
-        }).setDeadlineMilliseconds(100).build()
-
-        grpcDataSender.sendAgentInfo({
-            hostname: 'hostname',
-            "serviceType": 1400,
-        }, callArguments)
 
         t.teardown(() => {
             grpcDataSender.close()
             server.forceShutdown()
         })
+
+        function deadlineFunctionalTest() {
+            grpcDataSender.agentInfoOptionsBuilder.setSeconds(0.1)
+
+            const callback = (err, response) => {
+                t.false(response, '2st sendAgentInfo response is undefined')
+                t.equal(err.code, 4, '2st sendAgentInfo err.code is 4')
+                t.true(err.details.startsWith('Deadline exceeded'), '2st sendAgentInfo err.details is Deadline exceeded')
+                t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendAgentInfo err.message is Deadline exceeded')
+
+                t.end()
+            }
+
+            grpcDataSender.sendAgentInfo({
+                hostname: 'hostname',
+                "serviceType": 1400,
+            }, callback)
+        }
     })
 })
 
@@ -262,8 +271,6 @@ test('sendApiMetaInfo deadline', (t) => {
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
 
-        let apiMetaInfoResponse = 0
-
         grpcDataSender.sendApiMetaInfo({
             hostname: 'hostname',
             "serviceType": 1400,
@@ -271,33 +278,27 @@ test('sendApiMetaInfo deadline', (t) => {
             t.true(response, '1st sendApiMetaInfo response is success')
             t.false(err, '1st sendApiMetaInfo err is false')
 
-            apiMetaInfoResponse++
-            if (apiMetaInfoResponse == 2) {
-                t.end()
-            }
+            apiMetaInfoFunctionalTest()
         })
-
-        const callArguments = new CallArgumentsBuilder((err, response) => {
-            t.false(response, '2st sendApiMetaInfo response is undefined')
-            t.equal(err.code, 4, '2st sendApiMetaInfo err.code is 4')
-            t.true(err.details.startsWith('Deadline exceeded'), '2st sendApiMetaInfo err.details is Deadline exceeded')
-            t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendApiMetaInfo err.message is Deadline exceeded')
-
-            apiMetaInfoResponse++
-            if (apiMetaInfoResponse == 2) {
-                t.end()
-            }
-        }).setDeadlineMilliseconds(100).build()
-
-        grpcDataSender.sendApiMetaInfo({
-            hostname: 'hostname',
-            "serviceType": 1400,
-        }, callArguments)
 
         t.teardown(() => {
             grpcDataSender.close()
             server.forceShutdown()
         })
+
+        function apiMetaInfoFunctionalTest() {
+            grpcDataSender.metadataOptionsBuilder.setSeconds(0.1)
+            grpcDataSender.sendApiMetaInfo({
+                hostname: 'hostname',
+                "serviceType": 1400,
+            }, (err, response) => {
+                t.false(response, '2st sendApiMetaInfo response is undefined')
+                t.equal(err.code, 4, '2st sendApiMetaInfo err.code is 4')
+                t.true(err.details.startsWith('Deadline exceeded'), '2st sendApiMetaInfo err.details is Deadline exceeded')
+                t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendApiMetaInfo err.message is Deadline exceeded')
+                t.end()
+            })
+        }
     })
 })
 
@@ -325,8 +326,6 @@ test('sendStringMetaInfo deadline', (t) => {
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
-        let stringMetaDataResponse = 0
-
         grpcDataSender.sendStringMetaInfo({
             hostname: 'hostname',
             "serviceType": 1400,
@@ -334,31 +333,26 @@ test('sendStringMetaInfo deadline', (t) => {
             t.true(response, '1st sendStringMetaInfo response is success')
             t.false(err, '1st sendStringMetaInfo err is false')
 
-            stringMetaDataResponse++
-            if (stringMetaDataResponse == 2) {
-                t.end()
-            }
+            stringMetaInfoFunctionalTest()
         })
-
-        const callArguments = new CallArgumentsBuilder((err, response) => {
-            t.false(response, '2st sendStringMetaInfo response is undefined')
-            t.equal(err.code, 4, '2st sendStringMetaInfo err.code is 4')
-            t.true(err.details.startsWith('Deadline exceeded'), '2st sendStringMetaInfo err.details is Deadline exceeded')
-            t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendStringMetaInfo err.message is Deadline exceeded')
-
-            stringMetaDataResponse++
-            if (stringMetaDataResponse == 2) {
-                t.end()
-            }
-        }).setDeadlineMilliseconds(100).build()
-        grpcDataSender.sendStringMetaInfo({
-            hostname: 'hostname',
-            "serviceType": 1400,
-        }, callArguments)
 
         t.teardown(() => {
             grpcDataSender.close()
             server.forceShutdown()
         })
+
+        function stringMetaInfoFunctionalTest() {
+            grpcDataSender.metadataOptionsBuilder.setSeconds(0.1)
+            grpcDataSender.sendStringMetaInfo({
+                hostname: 'hostname',
+                "serviceType": 1400,
+            }, (err, response) => {
+                t.false(response, '2st sendStringMetaInfo response is undefined')
+                t.equal(err.code, 4, '2st sendStringMetaInfo err.code is 4')
+                t.true(err.details.startsWith('Deadline exceeded'), '2st sendStringMetaInfo err.details is Deadline exceeded')
+                t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendStringMetaInfo err.message is Deadline exceeded')
+                t.end()
+            })
+        }
     })
 })

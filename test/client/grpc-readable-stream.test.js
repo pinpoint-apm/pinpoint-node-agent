@@ -341,8 +341,6 @@ test('When gRPC server shutdown and then node agent grpcStream on error fired an
         if (loadCount === 2) {
             dataSender.close()
             server.forceShutdown()
-            server.tryShutdown(() => {
-            })
             t.end()
         }
     }

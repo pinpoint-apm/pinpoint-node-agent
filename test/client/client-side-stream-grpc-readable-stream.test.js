@@ -21,7 +21,7 @@ test('span stream retry connection Tests', async function (t) {
 
     const server = new grpc.Server()
     server.addService(services.SpanService, {
-        sendSpan: function (call, callback) {
+        sendSpan: function (call) {
             let spanCallCount = 0
             call.on('data', (data) => {
                 spanCallCount++

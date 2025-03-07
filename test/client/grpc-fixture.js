@@ -29,7 +29,7 @@ function beforeSpecificOne(port, one, serviceConfig) {
     actualConfig.collectorStatPort = port
     actualConfig.collectorSpanPort = port
     actualConfig.enabledDataSending = true
-    return new one(
+    const dataSource = new one(
         actualConfig.collectorIp,
         actualConfig.collectorTcpPort,
         actualConfig.collectorStatPort,
@@ -37,6 +37,7 @@ function beforeSpecificOne(port, one, serviceConfig) {
         agentInfo(),
         actualConfig
     )
+    return dataSource
 }
 
 function agentInfo() {
@@ -129,6 +130,19 @@ class ProfilerDataSource extends DataSourceCallCountable {
     initializeAgentInfoScheduler() { }
 }
 
+class SpanOnlyFunctionalTestableDataSource extends DataSourceCallCountable {
+    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+    }
+
+    initializeClients() { }
+    initializeMetadataClients() { }
+    initializeStatStream() { }
+    initializePingStream() { }
+    initializeAgentInfoScheduler() { }
+    initializeProfilerClients() { }
+}
+
 
 module.exports = {
     beforeSpecificOne,
@@ -137,6 +151,7 @@ module.exports = {
     getMetadata,
     DataSourceCallCountable,
     ProfilerDataSource,
+    SpanOnlyFunctionalTestableDataSource,
     spanWithId,
     spanMessageWithId,
 }

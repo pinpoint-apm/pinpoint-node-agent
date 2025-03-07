@@ -8,7 +8,7 @@ const test = require('tape')
 const AsyncId = require('../../lib/context/async-id')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
-const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, DataSourceCallCountable } = require('./grpc-fixture')
+const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, DataSourceCallCountable, SpanOnlyFunctionalTestableDataSource } = require('./grpc-fixture')
 const cmdMessage = require('../../lib/data/v1/Cmd_pb')
 const CommandType = require('../../lib/client/command/command-type')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
@@ -56,19 +56,6 @@ function sendSpan(call) {
   callMetadata.push(call.metadata)
 }
 
-class DataSource extends DataSourceCallCountable {
-  constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
-    super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
-  }
-
-  initializeClients() { }
-  initializeMetadataClients() { }
-  initializeStatStream() { }
-  initializePingStream() { }
-  initializeAgentInfoScheduler() { }
-  initializeProfilerClients() { }
-}
-
 test('Should send span', function (t) {
   agent.bindHttp()
   sendSpanMethodOnDataCallback = null
@@ -79,7 +66,7 @@ test('Should send span', function (t) {
   })
   let dataSender
   server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-    const grpcDataSender = beforeSpecificOne(port, DataSource)
+    const grpcDataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
     const traceRoot = new RemoteTraceRootBuilder(agent.agentInfo, '5').build()
     dataSender = dataSenderMock(agent.config, grpcDataSender)
     const spanBuilder = new SpanBuilder(traceRoot)
@@ -175,7 +162,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
 
   let dataSender
   server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-    const grpcDataSender = beforeSpecificOne(port, DataSource)
+    const grpcDataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
     const traceRoot = new RemoteTraceRootBuilder(agent.agentInfo, '5').build()
     const asyncId = AsyncId.make()
     dataSender = dataSenderMock(agent.config, grpcDataSender)
@@ -253,7 +240,7 @@ test('sendSpanChunk redis.GET.end', (t) => {
 
   let dataSender
   server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-    const grpcDataSender = beforeSpecificOne(port, DataSource)
+    const grpcDataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
     const traceRoot = new RemoteTraceRootBuilder(agent.agentInfo, '5').build()
     const asyncId = AsyncId.make()
     dataSender = dataSenderMock(agent.config, grpcDataSender)
@@ -324,7 +311,7 @@ test('sendSpan', (t) => {
 
   let dataSender
   server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-    const grpcDataSender = beforeSpecificOne(port, DataSource)
+    const grpcDataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
     const traceRoot = new RemoteTraceRootBuilder(agent.agentInfo, '5').build()
     dataSender = dataSenderMock(agent.config, grpcDataSender)
     const spanBuilder = new SpanBuilder(traceRoot)
@@ -455,10 +442,9 @@ test('sendStat', (t) => {
         const actualHistogram = data.getAgentstat().getActivetrace().getHistogram().getActivetracecountList()
         t.deepEqual(originalHistogram, actualHistogram, 'active trace histogram')
         agent.dataSender.close()
-        collectorServer.tryShutdown(() => {
-          server.close(() => {
-            t.end()
-          })
+        collectorServer.forceShutdown()
+        server.close(() => {
+          t.end()
         })
       }
     })

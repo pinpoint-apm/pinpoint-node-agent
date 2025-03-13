@@ -16,6 +16,7 @@ const { MongoClient } = require('mongodb')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const { expected } = require('../../fixtures/instrument-support')
+const { beforeSpecificOne, MetaInfoOnlyDataSource } = require('../../client/grpc-fixture')
 
 test('mongodb query', async (t) => {
     const collectorServer = new grpc.Server()
@@ -26,7 +27,8 @@ test('mongodb query', async (t) => {
         }
     })
     collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), async (error, port) => {
-        agent.bindHttp(port)
+        const dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+        agent.bindHttp(dataSender)
         const mongodbContainer = await new MongoDBContainer("mongo:6.0.1").start()
         const client = new MongoClient(mongodbContainer.getConnectionString(), { directConnection: true })
 

@@ -24,6 +24,7 @@ const closedTraceWrapped = Symbol('closedTraceWrapped')
 const stringMetaService = require('../../lib/context/string-meta-service')
 const apiMetaService = require('../../lib/context/api-meta-service')
 const activeRequestRepository = require('../../lib/metric/active-request-repository')
+const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 
 let traces = []
 const resetTraces = () => {
@@ -97,6 +98,11 @@ class MockAgent extends Agent {
         this.cleanHttp()
         this.dataSender.clear()
 
+        let grpcDataSender
+        if (json instanceof GrpcDataSender) {
+            grpcDataSender = json
+            json = undefined
+        }
         json = portProperties(json)
         if (!json) {
             json = require('../pinpoint-config-test')
@@ -135,7 +141,7 @@ class MockAgent extends Agent {
         this.traceContext.traceSampler = new TraceSampler(this.agentInfo, config)
         this.traceContext.config = config
 
-        const dataSender = this.makeDataSender()
+        const dataSender = this.makeDataSender(grpcDataSender)
         this.traceContext.dataSender = dataSender
         this.dataSender.close()
         this.dataSender = dataSender
@@ -246,9 +252,14 @@ class MockAgent extends Agent {
     }
 
     bindHttpWithCallSite(conf) {
-        conf = portProperties(conf)
-        conf = Object.assign({}, { 'trace-location-and-filename-of-call-site': true }, conf)
-        this.bindHttp(conf)
+        if (conf instanceof GrpcDataSender) {
+            const grpcDataSender = conf
+            this.bindHttp(grpcDataSender)
+        } else {
+            conf = portProperties(conf)
+            conf = Object.assign({}, { 'trace-location-and-filename-of-call-site': true }, conf)
+            this.bindHttp(conf)
+        }
     }
 
     completeTraceObject(trace) {
@@ -283,8 +294,8 @@ class MockAgent extends Agent {
         return getCallerTraceByAsyncId(asyncId)
     }
 
-    makeDataSender() {
-        return dataSenderMock(this.config, this.agentInfo)
+    makeDataSender(grpcDataSender) {
+        return dataSenderMock(this.config, this.agentInfo, grpcDataSender)
     }
 }
 

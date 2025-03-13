@@ -18,11 +18,7 @@ const GrpcReadableStream = require('../../lib/client/grpc-readable-stream')
 const semver = require('semver')
 
 test('If you run the ActiveRequest function, and then Node agent send the fifth piece of data, and the Pinpoint server fails, the ActiveRequest gRPC Stream closes and the for statement stops', (t) => {
-    if (semver.satisfies(process.versions.node, '<19.0')) {
-        t.plan(56)
-    } else {
-        t.plan(55)
-    }
+    t.plan(56)
     const server = new grpc.Server()
     let requestId = 1
     let activeRequestCount = 0
@@ -180,8 +176,7 @@ test('If you run the ActiveRequest function, and then Node agent send the fifth 
                     dataSender.close()
                     handleCommandCall.end()
                     shimmer.unwrap(GrpcReadableStream.prototype, 'pipeWritableStream')
-                    server2.tryShutdown(() => {
-                    })
+                    server2.forceShutdown()
                 })
             }
         })
@@ -235,11 +230,7 @@ test('If you run the ActiveRequest function, and deadline occurs, the ActiveRequ
                     const commandStream1st = this
                     t.equal(commandStream1st.name, '', '1st created stream is commandStream creating writable stream')
                     commandStream1st.writableStream.on('end', () => {
-                        if (semver.satisfies(process.versions.node, '<19.0')) {
-                            t.true(firedError, 'The first commandStream is ended by Functional Test is Ended')
-                        } else {
-                            t.false(firedError, 'The first commandStream is ended by deadline')
-                        }
+                        t.true(firedError, 'The first commandStream is ended by Functional Test is Ended')
                     })
                     let firedError
                     commandStream1st.writableStream.on('error', (error) => {
@@ -296,8 +287,7 @@ test('If you run the ActiveRequest function, and deadline occurs, the ActiveRequ
     t.teardown(() => {
         dataSender.close()
         handleCommandCall.end()
-        server.tryShutdown(() => {
-            shimmer.unwrap(GrpcReadableStream.prototype, 'pipeWritableStream')
-        })
+        shimmer.unwrap(GrpcReadableStream.prototype, 'pipeWritableStream')
+        server.forceShutdown()
     })
 })

@@ -29,7 +29,7 @@ function beforeSpecificOne(port, one, serviceConfig) {
     actualConfig.collectorStatPort = port
     actualConfig.collectorSpanPort = port
     actualConfig.enabledDataSending = true
-    return new one(
+    const dataSource = new one(
         actualConfig.collectorIp,
         actualConfig.collectorTcpPort,
         actualConfig.collectorStatPort,
@@ -37,6 +37,7 @@ function beforeSpecificOne(port, one, serviceConfig) {
         agentInfo(),
         actualConfig
     )
+    return dataSource
 }
 
 function agentInfo() {
@@ -64,47 +65,132 @@ function increaseCallCount() {
 
 class DataSourceCallCountable extends GrpcDataSender {
     constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+        config = Object.assign({}, {
+            sendAgentInfo: false,
+            sendApiMetaInfo: false,
+            sendStringMetaInfo: false,
+            sendSqlMetaInfo: false,
+            sendSqlUidMetaData: false,
+            sendSpan: false,
+            sendSpanChunk: false,
+            sendStat: false,
+            sendSupportedServicesCommand: false,
+            sendPing: false,
+            agentInfoScheduler: false,
+        }, config)
         super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+    }
+
+    initializeClients() {
+        if (this.config.sendAgentInfo) {
+            super.initializeClients()
+        }
+    }
+
+    initializeMetadataClients() {
+        if (this.config.sendApiMetaInfo || this.config.sendStringMetaInfo || this.config.sendSqlMetaInfo || this.config.sendSqlUidMetaData) {
+            super.initializeMetadataClients()
+        }
+    }
+
+    initializePingStream() {
+        if (this.config.sendPing) {
+            super.initializePingStream()
+        }
+    }
+
+    initializeAgentInfoScheduler() {
+        if (this.config.agentInfoScheduler) {
+            super.initializeAgentInfoScheduler()
+        }
+    }
+
+    initializeProfilerClients(collectorIp, collectorTcpPort, config) {
+        if (this.config.sendSupportedServicesCommand) {
+            super.initializeProfilerClients(collectorIp, collectorTcpPort, config)
+        }
+    }
+
+    initializeSpanStream(collectorIp, collectorSpanPort, config) {
+        if (this.config.sendSpan || this.config.sendSpanChunk) {
+            super.initializeSpanStream(collectorIp, collectorSpanPort, config)
+        }
+    }
+
+    initializeStatStream(collectorIp, collectorStatPort, config) {
+        if (this.config.sendStat) {
+            super.initializeStatStream(collectorIp, collectorStatPort, config)
+        }
     }
 
     sendAgentInfo(agentInfo, callArguments) {
         increaseCallCount()
-        super.sendAgentInfo(agentInfo, callArguments)
+        if (this.config.sendAgentInfo) {
+            super.sendAgentInfo(agentInfo, callArguments)
+        }
     }
 
     sendApiMetaInfo(apiMetaInfo, callArguments) {
         increaseCallCount()
-        super.sendApiMetaInfo(apiMetaInfo, callArguments)
+        if (this.config.sendApiMetaInfo) {
+            super.sendApiMetaInfo(apiMetaInfo, callArguments)
+        }
     }
 
     sendStringMetaInfo(stringMetaInfo, callArguments) {
         increaseCallCount()
-        super.sendStringMetaInfo(stringMetaInfo, callArguments)
+        if (this.config.sendStringMetaInfo) {
+            super.sendStringMetaInfo(stringMetaInfo, callArguments)
+        }
     }
 
     sendSqlMetaInfo(sqlMetaData, callback) {
         increaseCallCount()
-        super.sendSqlMetaInfo(sqlMetaData, callback)
+        if (this.config.sendSqlMetaInfo) {
+            super.sendSqlMetaInfo(sqlMetaData, callback)
+        }
     }
 
     sendSqlUidMetaData(sqlMetaData, callback) {
         increaseCallCount()
-        super.sendSqlUidMetaData(sqlMetaData, callback)
+        if (this.config.sendSqlUidMetaData) {
+            super.sendSqlUidMetaData(sqlMetaData, callback)
+        }
     }
 
     sendSpan(span) {
         increaseCallCount()
-        super.sendSpan(span)
+        if (this.config.sendSpan) {
+            super.sendSpan(span)
+        }
     }
 
     sendSpanChunk(spanChunk) {
         increaseCallCount()
-        super.sendSpanChunk(spanChunk)
+        if (this.config.sendSpanChunk) {
+            super.sendSpanChunk(spanChunk)
+        }
+    }
+
+    sendStat(stat) {
+        increaseCallCount()
+        if (this.config.sendStat) {
+            super.sendStat(stat)
+        }
+    }
+
+    sendPing() {
+        increaseCallCount()
+        if (this.config.sendPing) {
+            super.sendPing()
+        }
     }
 
     sendSupportedServicesCommand(callback) {
         increaseCallCount()
-        super.sendSupportedServicesCommand(callback)
+        if (this.config.sendSupportedServicesCommand) {
+            super.sendSupportedServicesCommand(callback)
+        }
     }
 }
 
@@ -118,17 +204,43 @@ function spanMessageWithId(spanId) {
 
 class ProfilerDataSource extends DataSourceCallCountable {
     constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+        config = Object.assign({}, config, {
+            sendSupportedServicesCommand: true,
+        })
         super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
     }
-
-    initializeClients() { }
-    initializeMetadataClients() { }
-    initializeSpanStream() { }
-    initializeStatStream() { }
-    initializePingStream() { }
-    initializeAgentInfoScheduler() { }
 }
 
+class SpanOnlyFunctionalTestableDataSource extends DataSourceCallCountable {
+    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+        config = Object.assign({}, config, {
+                sendSpan: true,
+                sendSpanChunk: true,
+            })
+        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+    }
+}
+
+class StatOnlyFunctionalTestableDataSource extends DataSourceCallCountable {
+    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+        config = Object.assign({}, config, {
+            sendStat: true,
+        })
+        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+    }
+}
+
+class MetaInfoOnlyDataSource extends DataSourceCallCountable {
+    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+        config = Object.assign({}, config, {
+            sendApiMetaInfo: true,
+            sendStringMetaInfo: true,
+            sendSqlMetaInfo: true,
+            sendSqlUidMetaData: true
+        })
+        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+    }
+}
 
 module.exports = {
     beforeSpecificOne,
@@ -137,6 +249,9 @@ module.exports = {
     getMetadata,
     DataSourceCallCountable,
     ProfilerDataSource,
+    SpanOnlyFunctionalTestableDataSource,
     spanWithId,
     spanMessageWithId,
+    StatOnlyFunctionalTestableDataSource,
+    MetaInfoOnlyDataSource,
 }

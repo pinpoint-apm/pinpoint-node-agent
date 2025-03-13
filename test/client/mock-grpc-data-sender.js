@@ -16,6 +16,10 @@ class MockGrpcStream {
     this.grpcStream.write(data)
   }
 
+  push(data) {
+    this.grpcStream.push(data)
+  }
+
   end() {
   }
 }
@@ -60,7 +64,7 @@ class MockGrpcDataSender extends GrpcDataSender {
   initializeSpanStream() {
     let self = this
     this.spanStream = new MockGrpcStream({
-      write: function (span) {
+      push: function (span) {
         self.actualSpans.push(span)
       },
       end: function () {
@@ -87,7 +91,7 @@ class MockGrpcDataSender extends GrpcDataSender {
   initializeStatStream() {
     let self = this
     this.statStream = new MockGrpcStream({
-      write: function (pmessage) {
+      push: function (pmessage) {
         self.actualPStatMessage = pmessage
       },
       end: function () {

@@ -54,50 +54,21 @@ function agentInfo() {
 
 let agentInfoRefreshInterval
 let fixtureMetadata = []
+let enableAgentInfoScheduler = false
 class AgentInfoOnlyDataSource extends DataSourceCallCountable {
     constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+        config = Object.assign({}, config, {
+            sendAgentInfo: true,
+            agentInfoScheduler: enableAgentInfoScheduler
+        })
         super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
     }
-    initializeMetadataClients() { }
-    initializeSpanStream() { }
-    initializeStatStream() { }
-    initializePingStream() { }
-    initializeProfilerClients() { }
-
     agentInfoRefreshInterval() {
         return agentInfoRefreshInterval ? agentInfoRefreshInterval : super.agentInfoRefreshInterval()
     }
 
     agentClientOptionsBuilder() {
         return super.agentClientOptionsBuilder()
-            .addInterceptor(function (options, nextCall) {
-                return new InterceptingCall(nextCall(options), {
-                    start: function (metadata, listener, next) {
-                        fixtureMetadata.forEach((each) => {
-                            Object.entries(each).forEach(([key, value]) => {
-                                metadata.add(key, value)
-                            })
-                        })
-                        next(metadata, listener, next)
-                    }
-                })
-            })
-    }
-}
-
-class MetaInfoOnlyDataSource extends DataSourceCallCountable {
-    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
-        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
-    }
-    initializeClients() { }
-    initializeSpanStream() { }
-    initializeStatStream() { }
-    initializePingStream() { }
-    initializeProfilerClients() { }
-    initializeAgentInfoScheduler() { }
-
-    metadataClientOptionsBuilder() {
-        return super.metadataClientOptionsBuilder()
             .addInterceptor(function (options, nextCall) {
                 return new InterceptingCall(nextCall(options), {
                     start: function (metadata, listener, next) {
@@ -189,6 +160,70 @@ test('AgentInfo with retries enabled and configured', (t) => {
     })
 })
 
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
+test('sendAgentInfo schedule', (t) => {
+    const server = new grpc.Server()
+    server.addService(services.AgentService, {
+        requestAgentInfo: service
+    })
+    let dataSender
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        fixtureMetadata = []
+        agentInfoRefreshInterval = 100
+        enableAgentInfoScheduler = true
+        dataSender = beforeSpecificOne(port, AgentInfoOnlyDataSource)
+        let count = 0
+        dataSender.sendAgentInfo(agentInfo(), function (error, response) {
+            count++
+            t.true(response.getSuccess(), `${count}st PResult.success is true`)
+            t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined', `${count}st PResult.message is "succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined"`)
+            if (count === 3) {
+                t.equal(dataSender.agentInfoDailyScheduler.jobList.length, 1, 'agentInfoDailyScheduler.jobList.length is 1 for memory leak prevention test')
+                t.end()
+            }
+        })
+    })
+
+    t.teardown(() => {
+        dataSender.close()
+        server.forceShutdown()
+        agentInfoRefreshInterval = null
+    })
+})
+
+class MetaInfoOnlyDataSource extends DataSourceCallCountable {
+    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+        config = Object.assign({}, config, {
+            sendApiMetaInfo: true,
+            sendStringMetaInfo: true,
+            sendSqlMetaInfo: true,
+            sendSqlUidMetaData: true
+        })
+        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+    }
+    initializeClients() { }
+    initializeSpanStream() { }
+    initializeStatStream() { }
+    initializePingStream() { }
+    initializeProfilerClients() { }
+    initializeAgentInfoScheduler() { }
+
+    metadataClientOptionsBuilder() {
+        return super.metadataClientOptionsBuilder()
+            .addInterceptor(function (options, nextCall) {
+                return new InterceptingCall(nextCall(options), {
+                    start: function (metadata, listener, next) {
+                        fixtureMetadata.forEach((each) => {
+                            Object.entries(each).forEach(([key, value]) => {
+                                metadata.add(key, value)
+                            })
+                        })
+                        next(metadata, listener, next)
+                    }
+                })
+            })
+    }
+}
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 test('sendApiMetaInfo retry', (t) => {
     const server = new grpc.Server()
@@ -306,7 +341,7 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
             .setLocation('node_modules/express/lib/application.js')
             .build()
         )
-        fixtureMetadata = [{'succeed-on-retry-attempt': '3', 'respond-with-status': '14'}]
+        fixtureMetadata = [{ 'succeed-on-retry-attempt': '3', 'respond-with-status': '14' }]
         dataSender.initializeMetadataClients()
         dataSender.sendApiMetaInfo(apiMetaInfoActual, function (error, response) {
             t.equal(error.code, 14, `3rd error.code is 14`)
@@ -434,35 +469,5 @@ test('sendSqlUidMetaData retry', (t) => {
             delete process.env.PINPOINT_PROFILER_SQL_STAT
             config.clear()
         })
-    })
-})
-
-// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('sendAgentInfo schedule', (t) => {
-    const server = new grpc.Server()
-    server.addService(services.AgentService, {
-        requestAgentInfo: service
-    })
-    let dataSender
-    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-        fixtureMetadata = []
-        agentInfoRefreshInterval = 100
-        dataSender = beforeSpecificOne(port, AgentInfoOnlyDataSource)
-        let count = 0
-        dataSender.sendAgentInfo(agentInfo(), function (error, response) {
-            count++
-            t.true(response.getSuccess(), `${count}st PResult.success is true`)
-            t.equal(response.getMessage(), 'succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined', `${count}st PResult.message is "succeed-on-retry-attempt: undefined, grpc-previous-rpc-attempts: undefined"`)
-            if (count === 3) {
-                t.equal(dataSender.agentInfoDailyScheduler.jobList.length, 1, 'agentInfoDailyScheduler.jobList.length is 1 for memory leak prevention test')
-                t.end()
-            }
-        })
-    })
-
-    t.teardown(() => {
-        dataSender.close()
-        server.forceShutdown()
-        agentInfoRefreshInterval = null
     })
 })

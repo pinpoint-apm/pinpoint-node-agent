@@ -77,11 +77,16 @@ class MockDataSender extends DataSender {
   }
 }
 
-const dataSender = (conf, agentInfoOrGrpcDataSender) => {
+const dataSender = (conf, agentInfoOrGrpcDataSender, grpcDataSender) => {
   if (typeof agentInfoOrGrpcDataSender?.sendAgentInfo === 'function') {
     return new MockDataSender({
       enabledDataSending: true,
     }, agentInfoOrGrpcDataSender)
+  }
+  if (grpcDataSender) {
+    return new MockDataSender({
+      enabledDataSending: true,
+    }, grpcDataSender)
   }
   if (conf?.collectorSpanPort > 0) {
     return new MockDataSender({

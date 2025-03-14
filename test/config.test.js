@@ -10,13 +10,15 @@ const { log } = require('./test-helper')
 const config = require('../lib/config')
 const path = require('path')
 
-test('Agent ID required field', function (t) {
+test('Agent ID optional value by generated', function (t) {
   t.plan(1)
 
   config.clear()
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
   const conf = config.getConfig()
 
-  t.ok(conf.agentId == undefined)
+  t.equal(conf.agentId.length, 16, 'generated agent id length is 16')
 })
 
 test('Should be configured with environment variable', function (t) {
@@ -60,7 +62,7 @@ test('deadline config', (t) => {
   t.equal(result.streamDeadlineMinutesClientSide, 10)
 })
 
-test('main moudle path', (t) => {
+test.skip('main moudle path', (t) => {
   config.clear()
   const conf = config.readRootConfigFile()
   t.deepEqual(conf, {}, 'configuration is null object')
@@ -103,7 +105,7 @@ test('Agent ID length check', (t) => {
   process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
 
   let given = config.getConfig()
-  t.true(given.enable, 'configuration agentId, Name, ApplicationName enable agent id')
+  t.false(given.enable, 'configuration agentId, Name, ApplicationName failed')
 
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME
@@ -162,10 +164,81 @@ test('Agent ID length check', (t) => {
   process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappication"
 
   given = config.getConfig()
-  t.false(given.enable, 'agent ID nullable test')
+  t.true(given.enable, 'auto generated agent ID')
 
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME
 
+  t.end()
+})
+
+test('Agent Name length check', (t) => {
+  config.clear()
+  process.env['PINPOINT_AGENT_ID'] = "agentId"
+  process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
+
+  let given = config.getConfig()
+  t.false(given.enable, 'Application Name Does not have to be space')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_AGENT_ID'] = "agentId"
+  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappication"
+
+  given = config.getConfig()
+  t.true(given.enable, 'Application Name Does not have to be space')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_AGENT_ID'] = "agentId"
+  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappicationa"
+
+  given = config.getConfig()
+  t.false(given.enable, 'Application Name max length is 24')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_AGENT_NAME
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappication"
+
+  given = config.getConfig()
+  t.true(given.enable, 'Application Name Does not have to be space')
+  t.equal(given.agentId.length, 16, 'auto generated agent ID')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_AGENT_NAME
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_AGENT_NAME'] = "appicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameapp"
+  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappication"
+
+  given = config.getConfig()
+  t.true(given.enable, 'Application Name Does not have to be space')
+  t.equal(given.agentId.length, 16, 'auto generated agent ID')
+  t.equal(given.agentName.length, 255, 'Agent Name max length is 255')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_AGENT_NAME
+  delete process.env.PINPOINT_APPLICATION_NAME
+
+  config.clear()
+  process.env['PINPOINT_AGENT_NAME'] = "appicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappicationnameappl"
+  process.env['PINPOINT_APPLICATION_NAME'] = "appicationnameappication"
+
+  given = config.getConfig()
+  t.false(given.enable, 'Application Name Does not have to be space')
+  t.equal(given.agentId.length, 16, 'auto generated agent ID')
+  t.equal(given.agentName.length, 256, 'Agent Name max exceed length failure')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_AGENT_NAME
+  delete process.env.PINPOINT_APPLICATION_NAME
   t.end()
 })

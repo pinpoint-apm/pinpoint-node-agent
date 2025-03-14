@@ -11,6 +11,8 @@ const { log } = require('../test-helper')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const GrpcServer = require('./grpc-server')
 var _ = require('lodash')
+const grpc = require('@grpc/grpc-js')
+const agent = require('../support/agent-singleton-mock')
 
 let actualsPingSession = {
     serverDataCount: 0,
@@ -307,7 +309,7 @@ function pingSession2(call) {
     })
 }
 
-test.skip('ping ERR_STREAM_WRITE_AFTER_END', (t) => {
+test('ping ERR_STREAM_WRITE_AFTER_END', (t) => {
     actualsPingSession = {
         serverDataCount: 0,
         serverEndCount: 0
@@ -356,5 +358,41 @@ test.skip('ping ERR_STREAM_WRITE_AFTER_END', (t) => {
                 }
             }, _.random(10, 150))
         }
+    })
+})
+
+test('ping deadline test', (t) => {
+    const server = new grpc.Server()
+    server.addService(services.AgentService, {
+        pingSession: (call, callback) => {
+            call.on('data', (ping) => {
+                call.write(ping)
+                t.end()
+            })
+            call.on('end', () => {
+                call.end()
+                server.tryShutdown(() => {
+                })
+            })
+        }
+    })
+    let dataSender
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+        dataSender = new GrpcDataSender('localhost', port, port, port, agent.config)
+        dataSender.pingStream.setDeadlineMinutes(1/60)
+        dataSender.sendPing()
+        dataSender.pingStream.grpcStream.stream.on('end', () => {
+            t.false(previousWritableStream.writable, 'ping stream is ended')
+        })
+        const previousWritableStream = dataSender.pingStream.grpcStream.stream
+        setTimeout(() => {
+            t.true(dataSender.pingStream.grpcStream.stream.writableEnded, 'ping stream is timeout')
+            dataSender.sendPing()
+            t.true(dataSender.pingStream.grpcStream.stream.writable, 'recreated ping stream is writable')
+            t.notEqual(dataSender.pingStream.grpcStream.stream, previousWritableStream, 'stream is recreated')
+        }, 1100)
+    })
+    t.teardown(() => {
+        dataSender.pingStream.grpcStream.stream.end()
     })
 })

@@ -1,8 +1,6 @@
 {
-  "include": [
-    "lib/**/*.js"
-  ],
   "exclude": [
-    "lib/data/grpc/**/*", "test/**/*"
+    "lib/data/v1/**",
+    "test/**"
   ]
 }

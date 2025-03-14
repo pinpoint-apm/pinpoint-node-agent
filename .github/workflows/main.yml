@@ -2,7 +2,7 @@
 
 name: CI
 
-# Controls when the action will run. 
+# Controls when the action will run.
 on: [push, pull_request]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
@@ -36,12 +36,12 @@ jobs:
       #     token: ${{ secrets.UPLOAD_ARTIFACTS_GITHUB_TOKEN }}
       - name: Coverage
         run: npm run coverage
-      - name: Setup LCOV
-        uses: hrishikesh-kadam/setup-lcov@v1
-      - name: Report coverage
-        uses: zgosalvez/github-actions-report-lcov@v3
-        with:
-          coverage-files: coverage/lcov.info
-          artifact-name: code-coverage-report
-          github-token: ${{ secrets.UPLOAD_ARTIFACTS_GITHUB_TOKEN }}
-          update-comment: true
+      # - name: Setup LCOV
+      #   uses: hrishikesh-kadam/setup-lcov@v1
+      # - name: Report coverage
+      #   uses: zgosalvez/github-actions-report-lcov@v3
+      #   with:
+      #     coverage-files: coverage/lcov.info
+      #     artifact-name: code-coverage-report
+      #     github-token: ${{ secrets.UPLOAD_ARTIFACTS_GITHUB_TOKEN }}
+      #     update-comment: true

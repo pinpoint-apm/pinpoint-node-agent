@@ -1,9 +1,18 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [0.8.7] - 2025-03-14
+### Added
+- Support Agent Name
+- Fix Ping gRPC deadline
+
+### Changed
+- AgentId is no longer required; if you don't enter an AgentId, it will be generated automatically.
+- Agent Name is a user-entered value of 255 characters. You can use the pod name.
+
 ## [0.8.6] - 2024-07-17
 ### Changed
-- [[#193](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/193)] Update gRPC version v1.11.0 from v1.2.3 
+- [[#193](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/193)] Update gRPC version v1.11.0 from v1.2.3
 ### Fixed
 - [[#200](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/200)] Fix package.json error
 ### Removed
@@ -58,7 +67,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 - #17 Support Ant style excludeurl
 ### Fixed
 - #12 Fix app crash without callback function in redis instrumentation module(by @wormslab)
-- #14 If it detects that the app is using core-js v2.4 or lower, disable the function using the v8 module. 
+- #14 If it detects that the app is using core-js v2.4 or lower, disable the function using the v8 module.
 
 ## [0.7.0-rc.0] - 2020-10-16
 ### Added

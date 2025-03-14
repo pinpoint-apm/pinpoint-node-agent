@@ -33,7 +33,7 @@ test('should return the string value when the env value is string type', functio
 
 const givenDefaultIdAndName = () => {
     process.env['PINPOINT_AGENT_ID'] = "agentId"
-    process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
+    process.env['PINPOINT_APPLICATION_NAME'] = "appicationname"
 
     const given = config.getConfig()
 
@@ -111,7 +111,7 @@ test('should return the false value when the env value is boolean type', functio
 
 test('should not exist in the process.env property when you do not set an environment variable', function(t) {
     config.clear()
-    
+
     delete process.env.PINPOINT_COLLECTOR_IP
     delete process.env.PINPOINT_LOG_LEVEL
 
@@ -127,7 +127,7 @@ test('should not exist in the process.env property when you do not set an enviro
 
     const given = givenDefaultIdAndName()
     t.equal(given.agentId, "agentId", "No set PINPOINT_AGENT_ID env, should equal default config")
-    t.equal(given.applicationName, "appication name", "No set PINPOINT_APPLICATION_NAME env, should equal default config")
+    t.equal(given.applicationName, "appicationname", "No set PINPOINT_APPLICATION_NAME env, should equal default config")
     t.equal(given.collectorIp, "localhost", "No set PINPOINT_COLLECTOR_IP env, should equal default config")
     t.equal(given.logLevel, "WARN", "No set PINPOINT_LOG_LEVEL env, should equal default config")
 

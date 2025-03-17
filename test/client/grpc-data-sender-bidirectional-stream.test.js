@@ -13,6 +13,7 @@ const GrpcServer = require('./grpc-server')
 var _ = require('lodash')
 const grpc = require('@grpc/grpc-js')
 const agent = require('../support/agent-singleton-mock')
+const shimmer = require('shimmer')
 
 let actualsPingSession = {
     serverDataCount: 0,
@@ -298,101 +299,60 @@ function pingSessionServer(call) {
 let actualsPingSessionServer
 
 
-function pingSession2(call) {
-    call.on('data', (ping) => {
-        actualsPingSession.serverDataCount++
-        call.write(ping)
-    })
-    call.on('end', () => {
-        actualsPingSession.serverEndCount++
-        call.end()
-    })
-}
-
-test('ping ERR_STREAM_WRITE_AFTER_END', (t) => {
-    actualsPingSession = {
-        serverDataCount: 0,
-        serverEndCount: 0
-    }
-    const callCount = 20
-    t.plan(1)
-
-    const server = new GrpcServer()
-    server.addService(services.AgentService, {
-        pingSession: pingSession2
-    })
-    server.addService(services.StatService, {
-        sendAgentStat: pingSessionServer
-    })
-    server.addService(services.SpanService, {
-        sendSpan: pingSessionServer
-    })
-
-    server.startup((port) => {
-        this.grpcDataSender = new GrpcDataSender('localhost', port, port, port, {
-            'agentid': '12121212',
-            'applicationname': 'applicationName',
-            'starttime': Date.now()
-        })
-
-        let callOrder = 0
-        const originData = this.grpcDataSender.pingStream.grpcStream.stream.listeners('data')[0]
-        this.grpcDataSender.pingStream.grpcStream.stream.removeListener('data', originData)
-        this.grpcDataSender.pingStream.grpcStream.stream.on('data', (data) => {
-            callOrder++
-            originData(data)
-        })
-
-        for (let index = 0; index < callCount + 1; index++) {
-            _.delay(() => {
-                if (index == callCount - 8) {
-                    this.grpcDataSender.pingStream.grpcStream.end()
-                    process.nextTick(() => {
-                        t.true(true, `actualsPingSession.serverDataCount: ${actualsPingSession.serverDataCount}, on('data') count : ${callOrder}`)
-                        server.tryShutdown(() => {
-                            t.end()
-                        })
-                    })
-                } else {
-                    this.grpcDataSender.sendPing()
-                }
-            }, _.random(10, 150))
-        }
-    })
-})
-
-test('ping deadline test', (t) => {
+test('ping long live stream test', (t) => {
     const server = new grpc.Server()
+    let serverCall
     server.addService(services.AgentService, {
         pingSession: (call, callback) => {
             call.on('data', (ping) => {
                 call.write(ping)
-                t.end()
+                process.nextTick(() => {
+                    call.end()
+                    serverCall = call
+                })
             })
             call.on('end', () => {
                 call.end()
-                server.tryShutdown(() => {
-                })
             })
         }
     })
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         dataSender = new GrpcDataSender('localhost', port, port, port, agent.config)
-        dataSender.pingStream.setDeadlineMinutes(1/60)
         dataSender.sendPing()
-        dataSender.pingStream.grpcStream.stream.on('end', () => {
-            t.false(previousWritableStream.writable, 'ping stream is ended')
-        })
         const previousWritableStream = dataSender.pingStream.grpcStream.stream
-        setTimeout(() => {
-            t.true(dataSender.pingStream.grpcStream.stream.writableEnded, 'ping stream is timeout')
-            dataSender.sendPing()
-            t.true(dataSender.pingStream.grpcStream.stream.writable, 'recreated ping stream is writable')
-            t.notEqual(dataSender.pingStream.grpcStream.stream, previousWritableStream, 'stream is recreated')
-        }, 1100)
+        let index = 0
+        shimmer.wrap(dataSender.pingStream.grpcStream, 'end', function (original) {
+            return function () {
+                t.false(serverCall.writable, `index: ${index} server call is not writable`)
+                t.true(serverCall.writableEnded, `index: ${index} server call is writableEnded`)
+                t.true(serverCall.writableFinished, `index: ${index} server call is finished`)
+                t.false(serverCall.readable, `index: ${index} server call is not readable`)
+                t.false(serverCall.readableEnded, `index: ${index} server call is not readableEnded`)
+                t.true(previousWritableStream.writable, `index: ${index} ping writable stream is writable`)
+                t.false(previousWritableStream.writableEnded, `index: ${index} ping writable stream is not writableEnded`)
+                t.false(previousWritableStream.readable, `index: ${index} ping writable stream is not readable`)
+                t.true(previousWritableStream.readableEnded, `index: ${index} ping writable stream is readableEnded`)
+                t.equal(previousWritableStream, dataSender.pingStream.grpcStream.stream, `index: ${index} stream is not recreated`)
+
+                original.apply(this, arguments)
+
+                t.false(serverCall.writable, `after stream.end() method called, index: ${index} server call is not writable`)
+                t.true(serverCall.writableEnded, `after stream.end() method called, index: ${index} server call is writableEnded`)
+                t.true(serverCall.writableFinished, `after stream.end() method called, index: ${index} server call is finished`)
+                t.false(serverCall.readable, `after stream.end() method called, index: ${index} server call is not readable`)
+                t.false(serverCall.readableEnded, `after stream.end() method called, index: ${index} server call is not readableEnded`)
+                t.false(previousWritableStream.writable, `after stream.end() method called, index: ${index} ping writable stream is writable`)
+                t.true(previousWritableStream.writableEnded, `after stream.end() method called, index: ${index} ping writable stream is not writableEnded`)
+                t.false(previousWritableStream.readable, `after stream.end() method called, index: ${index} ping writable stream is not readable`)
+                t.true(previousWritableStream.readableEnded, `after stream.end() method called, index: ${index} ping writable stream is readableEnded`)
+                t.equal(previousWritableStream, dataSender.pingStream.grpcStream.stream, `after stream.end() method called, index: ${index} stream is not recreated`)
+                t.end()
+            }
+        })
     })
     t.teardown(() => {
         dataSender.pingStream.grpcStream.stream.end()
+        server.forceShutdown()
     })
 })

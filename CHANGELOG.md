@@ -3,12 +3,17 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 
 ## [0.8.7] - 2025-03-14
 ### Added
-- Support Agent Name
-- Fix Ping gRPC deadline
+- [[#290](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/290)] Added support for displaying the Agent Name in the Inspector.  The Agent Name, configurable via the `PINPOINT_AGENT_NAME` environment variable, is now visible within the Inspector. This allows for easier identification and management of individual agents within the Pinpoint system.
 
-### Changed
-- AgentId is no longer required; if you don't enter an AgentId, it will be generated automatically.
-- Agent Name is a user-entered value of 255 characters. You can use the pod name.
+    <img width="611" alt="Image" src="https://github.com/user-attachments/assets/8022baa4-8b38-4553-9c12-88de17bc8f22" />
+
+### Fixed
+- [[#291](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/291)] Resolved an issue where the Pinpoint Node Agent would occasionally disappear from the Inspector. This fix ensures that the Agent remains consistently visible in the Inspector.
+
+### ⚠️ Breaking Changes
+- **The Pinpoint Node.js Agent can use Node above v14 or higher updated**: The minimum required Node.js version has been updated from `v10` to `v14`. This change was made because the CI environment no longer supports testing on Node.js `v10` and `v12`. As a result, compatibility with these older versions cannot be guaranteed. Please ensure your environment is running Node.js `v14` or higher.
+- **AgentId no longer required**: The `AgentId` field is now optional. If an `AgentId` is not provided, it will be automatically generated. This change may affect systems or scripts that previously relied on manually setting the `AgentId`.
+- **Agent Name Added**: The `Agent Name` field is now a new optional configuration and can be set as a user-defined value with a maximum length of 255 characters. Developer can optionally use the pod name or any other identifier as the Agent Name. Ensure that your configuration aligns with this new behavior.
 
 ## [0.8.6] - 2024-07-17
 ### Changed

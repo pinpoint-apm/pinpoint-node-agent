@@ -13,6 +13,7 @@ const GrpcServer = require('./grpc-server')
 const Span = require('../../lib/context/span')
 const GrpcClientSideStream = require('../../lib/client/grpc-client-side-stream')
 var _ = require('lodash')
+const grpc = require('@grpc/grpc-js')
 
 let endAction
 let actuals
@@ -349,7 +350,7 @@ test('spanStream ERR_STREAM_WRITE_AFTER_END', (t) => {
 })
 
 // https://github.com/pinpoint-apm/pinpoint-node-agent/issues/33#issuecomment-783891805
-test('gRPC stream write retry test', (t) => {
+test('gRPC stream write no retry test', (t) => {
     let retryCount = 0
     const given = new GrpcClientSideStream('spanStream', {}, () => {
         return {
@@ -370,9 +371,7 @@ test('gRPC stream write retry test', (t) => {
 
     t.true(given.grpcStream.stream, 'gRPC stream has streams')
     given.write({})
-    t.equal(retryCount, 2, 'retry only once')
-    t.false(given.stream, 'gRPC stream has ended')
-
+    t.equal(retryCount, 1, 'retry only once')
 
     t.end()
 })
@@ -418,13 +417,12 @@ test('steam is null on HighWaterMark case', (t) => {
             }
         }
     })
-    given.grpcStream.stream = undefined
     t.equal(given.grpcStream.writableHighWaterMarked, undefined, 'if stream is null, writableHighWaterMarked is undefined')
     t.end()
 })
 
 test('sendSpan throw error and then stream is HighWaterMark', (t) => {
-    t.plan(12)
+    t.plan(10)
     let streamCount = 0
     let callEndCount = 0
     let callback
@@ -433,12 +431,14 @@ test('sendSpan throw error and then stream is HighWaterMark', (t) => {
         streamCount++
         if (streamCount == 1) {
             return {
+                writable: true,
+                writableEnded: false,
                 on: function () {
                 },
                 write: function (data, cb) {
                     writeCount++
                     process.nextTick(() => {
-                        t.equal(streamCount, 1, 'sendSpan pass an error')
+                        t.equal(streamCount, 1, `streamCount: ${streamCount} sendSpan pass an error`)
                         cb(new Error('error write'))
                     })
                     return true
@@ -446,18 +446,18 @@ test('sendSpan throw error and then stream is HighWaterMark', (t) => {
                 once: function (eventName) {
                 },
                 end: function () {
+                    this.writable = false
+                    this.writableEnded = true
                     callEndCount++
                     if (callEndCount == 1) {
-                        t.equal(streamCount, 1, 'sendSpan pass an error and then end a stream')
-                    }
-                    if (callEndCount == 2) {
-                        t.false(given.stream, 'stream is not null')
                         t.equal(streamCount, 1, 'sendSpan pass an error and then end a stream')
                     }
                 }
             }
         }
         return {
+            writable: true,
+            writableEnded: false,
             on: function (eventName) {
                 if (eventName == 'error') {
                     t.equal(streamCount, 2, 'after pass an error and then create stream')
@@ -475,7 +475,7 @@ test('sendSpan throw error and then stream is HighWaterMark', (t) => {
     })
     given.write({})
     process.nextTick(() => {
-        t.equal(writeCount, 2, 'sendSpan throw an error and then retry sendSpan and then HightWaterMark')
+        t.equal(writeCount, 1, 'sendSpan throw an error and then retry sendSpan and then HightWaterMark')
 
         given.write({})
         t.equal(writeCount, 2, 'sendSpan canceled, when HightWaterMark')
@@ -510,4 +510,83 @@ test('stream deadline test', (t) => {
 
     given.setDeadlineMinutes(6)
     t.equal(given.grpcStreamDeadline, 6 * 60 * 1000, '6 minutes dealine times')
+})
+
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
+test('client side stream error test', (t) => {
+    const server = new grpc.Server()
+    let callbackCount = 0
+    server.addService(services.SpanService, {
+        sendSpan: (call, callback) => {
+            call.on('data', () => {
+                if (callbackCount == 0) {
+                    call.emit('error', new Error('sendSpan server is emit error'))
+                } else {
+                    dataSender.spanStream.callback()
+                }
+            })
+            call.on('end', () => {
+                callback(null, new Empty())
+            })
+        }
+    })
+
+    server.addService(services.StatService, {
+        sendAgentStat: (call, callback) => {
+            call.on('data', () => {
+                call.emit('error', new Error('stat server is emit error'))
+            })
+            call.on('end', () => {
+                callback(null, new Empty())
+            })
+        }
+    })
+
+    const span = Object.assign(new Span({
+        spanId: 2894367178713953,
+        parentSpanId: -1,
+        transactionId: {
+            "agentId": "express-node-sample-id",
+            "agentStartTime": 1592574173350,
+            "sequence": 0
+        }
+    }, {
+        agentId: "express-node-sample-id",
+        applicationName: "express-node-sample-name",
+        agentStartTime: 1592574173350
+    }), expectedSpan)
+
+    let dataSender
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+        dataSender = new GrpcDataSender('localhost', port, port, port, {
+            'agentid': '12121212',
+            'applicationname': 'applicationName',
+            'starttime': Date.now()
+        })
+        dataSender.spanStream.callback = (error, response) => {
+            callbackCount++
+            const writableStream = dataSender.spanStream.grpcStream.stream
+
+            if (callbackCount == 1) {
+                t.equal(writableStream.writable, false, 'writable is false')
+                t.equal(writableStream.writableEnded, true, 'writableEnded is true')
+                t.equal(writableStream.readable, undefined, 'Client side stream is not readable')
+                dataSender.sendSpan(span)
+            } else if (callbackCount == 2) {
+                t.equal(writableStream.writable, true, `Callback count is ${callbackCount}, writable is true`)
+                t.equal(writableStream.writableEnded, false, `Callback count is ${callbackCount}, writableEnded is false`)
+                t.end()
+            } else {
+                // from server shutdown end event
+                t.false(writableStream.writable, `after server shutdown ${callbackCount}, writable is false`)
+                t.true(writableStream.writableEnded, `after server shutdown ${callbackCount}, writableEnded is true`)
+            }
+        }
+        dataSender.sendSpan(span)
+    })
+
+    t.teardown(() => {
+        dataSender.spanStream.grpcStream.stream.end()
+        server.forceShutdown()
+    })
 })

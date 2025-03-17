@@ -11,10 +11,10 @@ let callcount = 0
 router.get('/', function (req, res, next) {
 
   ioRedis.set("keyio", "value", function (error) {
-    console.log(`${callcount} ioredis set `)
+    // console.log(`${callcount} ioredis set `)
   })
   ioRedis.get("keyio", function (error, data) {
-    console.log(`${callcount} ioredis data ${data}`)
+    // console.log(`${callcount} ioredis data ${data}`)
   })
 
   axios.get(`https://naver.com`, {
@@ -23,7 +23,11 @@ router.get('/', function (req, res, next) {
       httpsAgent: new https.Agent({ keepAlive: false }),
     })
     .then(function (response) {
-      console.log(`response ${response}`)
+      // console.log(`response ${response}`)
+      res.render('index', { title: 'Express' })
+    })
+    .catch(function (error) {
+      console.log(`error ${error}`)
       res.render('index', { title: 'Express' })
     })
 })

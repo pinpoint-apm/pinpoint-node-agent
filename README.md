@@ -57,7 +57,9 @@ The PINPOINT_AGENT_ID, PINPOINT_AGENT_NAME and PINPOINT_APPLICATION_NAME pattern
 ### ⚠️ v0.8.7 Breaking Changes
 - **AgentId no longer required**: The `AgentId` field is now optional. If an `AgentId` is not provided, it will be automatically generated. This change may affect systems or scripts that previously relied on manually setting the `AgentId`.
 - **Agent Name Added**: The `Agent Name` field is now a new optional configuration and can be set as a user-defined value with a maximum length of 255 characters. Developers can optionally use the pod name or any other identifier as the Agent Name. Ensure that your configuration aligns with this new behavior.
-<img width="611" alt="Image" src="https://github.com/user-attachments/assets/8022baa4-8b38-4553-9c12-88de17bc8f22" />
+
+  <img width="611" alt="Image" src="https://github.com/user-attachments/assets/8022baa4-8b38-4553-9c12-88de17bc8f22" />
+
 
 
 name | default | description

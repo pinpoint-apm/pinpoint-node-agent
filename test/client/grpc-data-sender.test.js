@@ -51,6 +51,7 @@ function sendSpan(call) {
     sendSpanMethodOnDataCallback?.(spanOrChunk)
   })
   call.on('end', function () {
+    call.end()
   })
   const callMetadata = getMetadata()
   callMetadata.push(call.metadata)
@@ -143,12 +144,13 @@ test('Should send span', function (t) {
       t.equal(actual.getApplicationservicetype(), 1400, 'applicaiton service type')
       t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
 
-      afterOne(t)
+      dataSender.close()
+      server.tryShutdown(() => {
+        afterOne(t)
+      })
     }
   })
   t.teardown(() => {
-    dataSender.close()
-    server.forceShutdown()
   })
 })
 

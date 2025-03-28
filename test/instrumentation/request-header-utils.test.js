@@ -12,10 +12,11 @@ const { fixture } = require('../test-helper')
 const agent = require('../support/agent-singleton-mock')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const express = require('express')
-const HttpOutgoingRequestHeader = require('../../lib/instrumentation/http/http-outgoing-request-header')
 const HttpRequestTraceBuilder = require('../../lib/instrumentation/http/http-request-trace-builder')
 const TraceHeaderBuilder = require('../../lib/instrumentation/http/trace-header-builder')
 const Header = require('../../lib/instrumentation/http/pinpoint-header')
+const HttpClientRequest = require('../../lib/instrumentation/http/http-client-request')
+const OutgoingClientRequestHeaderWriter = require('../../lib/instrumentation/http/outgoing-client-request-header-writer')
 
 const headers = {
   'Pinpoint-TraceID': fixture.getTraceId().transactionId.toString(),
@@ -55,16 +56,17 @@ test('Should write pinpoint header', async function (t) {
     .on('request', (req, res) => {
       const trace = agent.createTraceObject()
       localStorage.run(trace, () => {
-        const requestHeader = new HttpOutgoingRequestHeader(agent.getAgentInfo(), req)
-        const request = requestHeader.request.request
-        requestHeader.request.getHeader = (name) => {
+        const clientRequest = new HttpClientRequest(req)
+        const request = clientRequest.request
+        clientRequest.getHeader = (name) => {
           return request.headers[name]
         }
-        requestHeader.request.setHeader = (name, value) => {
+        clientRequest.setHeader = (name, value) => {
           request.headers[name] = value
         }
         const nextTraceId = trace.getTraceId().getNextTraceId()
-        requestHeader.write(nextTraceId)
+        const headerWriter = new OutgoingClientRequestHeaderWriter(clientRequest)
+        headerWriter.write(nextTraceId, agent.getAgentInfo())
         t.equal(request.headers[Header.traceId], trace.spanBuilder.traceRoot.getTraceId().toStringDelimiterFormatted(), "trace ID new ID was added in Header")
       })
     })

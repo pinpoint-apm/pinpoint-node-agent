@@ -59,6 +59,11 @@ class MockDataSender extends DataSender {
   findSpanChunk(asyncId) {
     return this.mockSpanChunks.find(spanChunk => spanChunk.localAsyncId.asyncId === (asyncId.asyncId || asyncId))
   }
+
+  findSpanChunks(asyncId) {
+    return this.mockSpanChunks.filter(spanChunk => spanChunk.localAsyncId.asyncId === (asyncId.asyncId || asyncId))
+  }
+
   findSpanEvent(apiId) {
     return this.mockSpan.spanEventList.find(event => event.apiId === apiId)
   }
@@ -74,6 +79,14 @@ class MockDataSender extends DataSender {
   close() {
     super.close()
     this.closed = true
+  }
+
+  getSpan(traceRoot) {
+    return this.mockSpans.find(span => span.traceRoot === traceRoot)
+  }
+
+  getSpanChunk(traceRoot) {
+    return this.mockSpanChunks.find(spanChunk => spanChunk.traceRoot === traceRoot)
   }
 }
 

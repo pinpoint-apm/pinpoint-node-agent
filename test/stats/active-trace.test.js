@@ -53,8 +53,6 @@ test(`Active trace should be recorded with HTTP call`, function (t) {
     })
   })
   t.teardown(() => {
-    collectorServer.tryShutdown(() => {
-
-    })
+    collectorServer.forceShutdown()
   })
 })

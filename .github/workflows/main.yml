@@ -2,7 +2,7 @@
 
 name: CI
 
-# Controls when the action will run. 
+# Controls when the action will run.
 on: [push, pull_request]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
@@ -14,9 +14,9 @@ jobs:
     strategy:
       matrix:
         node_version:
-          - 16
           - 18
           - 20
+          - 22
 
     name: Node ${{ matrix.node_version }} on ubuntu-latest
     steps:
@@ -29,7 +29,7 @@ jobs:
       - run: npm test
       # - name: Lint
       #   run: npm run lint
-      # - name: Upload checkstyle report 
+      # - name: Upload checkstyle report
       #   uses: jwgmeligmeyling/checkstyle-github-action@master
       #   with:
       #     path: '**/checkstyle-result.xml'
@@ -37,7 +37,7 @@ jobs:
         run: npm run coverage
       # Required for generating html artifact, can be skipped if not generating html artifact
       # - name: Report coverage
-      #   uses: hrishikesh-kadam/setup-lcov@v1 
+      #   uses: hrishikesh-kadam/setup-lcov@v1
       # - name: Upload coverage report
       #   uses: kefasjw/lcov-pull-request-report@v1
       #   with:

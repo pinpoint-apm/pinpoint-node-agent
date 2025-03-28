@@ -51,6 +51,7 @@ function sendSpan(call) {
     sendSpanMethodOnDataCallback?.(spanOrChunk)
   })
   call.on('end', function () {
+    call.end()
   })
   const callMetadata = getMetadata()
   callMetadata.push(call.metadata)
@@ -143,12 +144,13 @@ test('Should send span', function (t) {
       t.equal(actual.getApplicationservicetype(), 1400, 'applicaiton service type')
       t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
 
-      afterOne(t)
+      dataSender.close()
+      server.tryShutdown(() => {
+        afterOne(t)
+      })
     }
   })
   t.teardown(() => {
-    dataSender.close()
-    server.forceShutdown()
   })
 })
 
@@ -273,14 +275,14 @@ test('sendSpanChunk redis.GET.end', (t) => {
       t.equal(actualLocalAsyncId.getSequence(), asyncId.getSequence(), 'local async id sequence')
 
       t.equal(actualSpanChunk.getKeytime(), spanChunkBuilder.keyTime, `keytime ${actualSpanChunk.getKeytime()}`)
-      const actualSpanEvents = actualSpanChunk.getSpaneventList()
-      actualSpanEvents.forEach((pSpanEvent, index) => {
+      const actualPSpanEvents = actualSpanChunk.getSpaneventList()
+      actualPSpanEvents.forEach((pSpanEvent, index) => {
         if (index == 1) {
           t.equal(pSpanEvent.getSequence(), 1, 'sequence')
           t.equal(pSpanEvent.getDepth(), 2, 'depth')
 
           const expectedSpanChunk = repository.dataSender.findSpanChunk(childTraceBuilder.localAsyncId)
-          const expectedSpanEvent = expectedSpanChunk.spanEventList[0]
+          const expectedSpanEvent = expectedSpanChunk.spanEventList[index]
           t.equal(pSpanEvent.getStartelapsed(), expectedSpanEvent.startElapsedTime, 'startElapsed')
           t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
 

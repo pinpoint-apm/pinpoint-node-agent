@@ -252,14 +252,11 @@ class MockAgent extends Agent {
     }
 
     bindHttpWithCallSite(conf) {
-        if (conf instanceof GrpcDataSender) {
-            const grpcDataSender = conf
-            this.bindHttp(grpcDataSender)
-        } else {
+        if (!(conf instanceof GrpcDataSender)) {
             conf = portProperties(conf)
             conf = Object.assign({}, { 'trace-location-and-filename-of-call-site': true }, conf)
-            this.bindHttp(conf)
         }
+        this.bindHttp(conf)
     }
 
     completeTraceObject(trace) {

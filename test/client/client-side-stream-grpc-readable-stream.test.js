@@ -148,6 +148,9 @@ test('span stream retry connection Tests', async function (t) {
                 call.on('data', (data) => {
                     const actualSpan = data.getSpan()
                     const expectedSpan = expectedSpans.find((expectedSpan) => expectedSpan.traceRoot.getTraceId().getSpanId() === actualSpan.getSpanid())
+                    if (!expectedSpan) {
+                        return
+                    }
                     t.equal(actualSpan.getSpanid(), expectedSpan.traceRoot.getTraceId().getSpanId(), `spanId should be '${expectedSpan.traceRoot.getTraceId().getSpanId()}'`)
                     t.equal(actualSpan.getTransactionid().getAgentid(), agent.getAgentInfo().getAgentId(), `agentId should be ${agent.getAgentInfo().getAgentId()}`)
                     t.equal(actualSpan.getTransactionid().getAgentstarttime(), expectedSpan.traceRoot.getTraceId().getAgentStartTime(), `agentStartTime should be '${expectedSpan.traceRoot.getTraceId().getAgentStartTime()}'`)

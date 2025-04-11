@@ -53,6 +53,13 @@ Based on the [pinpoint-config-default.json](/lib/pinpoint-config-default.json) f
 
 The PINPOINT_AGENT_ID, PINPOINT_AGENT_NAME and PINPOINT_APPLICATION_NAME pattern are `[a-zA-Z0-9\\._\\-]+`.
 
+
+### ⚠️ v0.8.7 or v1.0 higher Breaking Changes
+- **AgentId no longer required**: The `AgentId` field is now optional. If an `AgentId` is not provided, it will be automatically generated. This change may affect systems or scripts that previously relied on manually setting the `AgentId`.
+- **Agent Name Added**: The `Agent Name` field is now a new optional configuration and can be set as a user-defined value with a maximum length of 255 characters. Developers can optionally use the pod name or any other identifier as the Agent Name. Ensure that your configuration aligns with this new behavior.
+
+  <img width="611" alt="Image" src="https://github.com/user-attachments/assets/8022baa4-8b38-4553-9c12-88de17bc8f22" />
+
 name | default | description
 -----|---------|------------
 PINPOINT_AGENT_ID |  | The maximum length is 24. If you don't set an Agent ID, it will be set to a random hex value.
@@ -81,6 +88,8 @@ PINPOINT_AGENT_ID=${HOSTNAME} pm2 start ~/service/bin/pm2_start.json​
 * HTTP, HTTPS
 * Redis, ioredis(>=2.0.0 <5.0.0)
 * mysql and mysql2
+* mongoDB driver v4.0 or higher
+* [Fetch API with Undici in Node.js](https://nodejs.org/en/learn/getting-started/fetch)
 
 ## Agent - Collector compatibility table
 Agent Version | Collector 1.x | Collector 2.x | Collector 3.x

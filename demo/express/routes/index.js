@@ -49,7 +49,7 @@ router.get('/', async function(req, res, next) {
   const json = await response.json()
   // console.log(json)
 
-  const client = new MongoClient(`mongodb://admin:${process.env.ADMIN_PASSWORD}@localhost:27017`, { directConnection: true })
+  const client = new MongoClient(`mongodb://localhost:27017`, { directConnection: true })
   const result = await client.db('test1').collection('test').insertOne({ name: 'test' })
   client.close()
 

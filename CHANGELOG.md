@@ -1,6 +1,57 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [1.0.0] - 2025-04-11
+### Added
+- [[#214](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/214)] Support Active Request
+
+    <img width="611" alt="Image" src="https://github.com/user-attachments/assets/d3c3c02e-2e0f-461e-a958-0e68fbd92442" />
+- [[#290](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/290)] Added support for displaying the Agent Name in the Inspector.  The Agent Name, configurable via the `PINPOINT_AGENT_NAME` environment variable, is now visible within the Inspector. This allows for easier identification and management of individual agents within the Pinpoint system.
+
+    <img width="611" alt="Image" src="https://github.com/user-attachments/assets/8022baa4-8b38-4553-9c12-88de17bc8f22" />
+- [[#265](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/265)] Support MongoDB
+- [[#216](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/216)] [Fetch API with Undici in Node.js](https://nodejs.org/en/learn/getting-started/fetch)
+   * Since the Undici library requires Node.js >=20.18.1, please ensure your application’s Node.js version is compatible before adopting fetch or undici.
+### Fixed
+- [[#291](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/291)] Resolved an issue where the Pinpoint Node Agent would occasionally disappear from the Inspector. This fix ensures that the Agent remains consistently visible in the Inspector.
+
+### ⚠️ Breaking Changes
+- **The Pinpoint Node.js Agent can use Node above v14 or higher updated**: The minimum required Node.js version has been updated from `v10` to `v14`. This change was made because the CI environment no longer supports testing on Node.js `v10` and `v12`. As a result, compatibility with these older versions cannot be guaranteed. Please ensure your environment is running Node.js `v14` or higher.
+- **AgentId no longer required**: The `AgentId` field is now optional. If an `AgentId` is not provided, it will be automatically generated. This change may affect systems or scripts that previously relied on manually setting the `AgentId`.
+- **Agent Name Added**: The `Agent Name` field is now a new optional configuration and can be set as a user-defined value with a maximum length of 255 characters. Developer can optionally use the pod name or any other identifier as the Agent Name. Ensure that your configuration aligns with this new behavior.
+
+## [0.8.7] - 2025-03-14
+### Added
+- [[#290](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/290)] Added support for displaying the Agent Name in the Inspector.  The Agent Name, configurable via the `PINPOINT_AGENT_NAME` environment variable, is now visible within the Inspector. This allows for easier identification and management of individual agents within the Pinpoint system.
+
+    <img width="611" alt="Image" src="https://github.com/user-attachments/assets/8022baa4-8b38-4553-9c12-88de17bc8f22" />
+
+### Fixed
+- [[#291](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/291)] Resolved an issue where the Pinpoint Node Agent would occasionally disappear from the Inspector. This fix ensures that the Agent remains consistently visible in the Inspector.
+
+### ⚠️ Breaking Changes
+- **The Pinpoint Node.js Agent can use Node above v14 or higher updated**: The minimum required Node.js version has been updated from `v10` to `v14`. This change was made because the CI environment no longer supports testing on Node.js `v10` and `v12`. As a result, compatibility with these older versions cannot be guaranteed. Please ensure your environment is running Node.js `v14` or higher.
+- **AgentId no longer required**: The `AgentId` field is now optional. If an `AgentId` is not provided, it will be automatically generated. This change may affect systems or scripts that previously relied on manually setting the `AgentId`.
+- **Agent Name Added**: The `Agent Name` field is now a new optional configuration and can be set as a user-defined value with a maximum length of 255 characters. Developer can optionally use the pod name or any other identifier as the Agent Name. Ensure that your configuration aligns with this new behavior.
+
+## [0.8.6] - 2024-07-17
+### Changed
+- [[#193](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/193)] Update gRPC version v1.11.0 from v1.2.3
+### Fixed
+- [[#200](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/200)] Fix package.json error
+### Removed
+- [[#200](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/200)] Remove no needs resolutions for semver
+- [[#200](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/200)] Remove no needed files in npm published package
+- [[#195](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/195)] Remove no used modules mysql, mysql2 syntax errors below v0.9
+
+## [0.8.5] - 2024-05-13
+### Fixed
+- #190 Remove JSON.stringify on Info Logger
+
+## [0.8.4] - 2024-05-03
+### Changed
+- #186 Change error log level to info log
+
 ## [0.9.0] - 2024-04-30
 ### Added
 - #86 Express with method name
@@ -51,7 +102,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 - #17 Support Ant style excludeurl
 ### Fixed
 - #12 Fix app crash without callback function in redis instrumentation module(by @wormslab)
-- #14 If it detects that the app is using core-js v2.4 or lower, disable the function using the v8 module. 
+- #14 If it detects that the app is using core-js v2.4 or lower, disable the function using the v8 module.
 
 ## [0.7.0-rc.0] - 2020-10-16
 ### Added

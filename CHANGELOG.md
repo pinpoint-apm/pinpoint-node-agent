@@ -14,9 +14,10 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
    * Since the Undici library requires Node.js >=20.18.1, please ensure your application’s Node.js version is compatible before adopting fetch or undici.
 ### Fixed
 - [[#291](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/291)] Resolved an issue where the Pinpoint Node Agent would occasionally disappear from the Inspector. This fix ensures that the Agent remains consistently visible in the Inspector.
+- [[#303](https://github.com/pinpoint-apm/pinpoint-node-agent/pull/303)] fix: fix remote address fn ([Thanks @YangJonghun](https://github.com/YangJonghun))
 
 ### ⚠️ Breaking Changes
-- **The Pinpoint Node.js Agent can use Node above v14 or higher updated**: The minimum required Node.js version has been updated from `v10` to `v14`. This change was made because the CI environment no longer supports testing on Node.js `v10` and `v12`. As a result, compatibility with these older versions cannot be guaranteed. Please ensure your environment is running Node.js `v14` or higher.
+- **The Pinpoint Node.js Agent can use Node above v18 or higher updated**: The minimum required Node.js version has been updated from `v14` to `v18`. The Node.js fetch API now includes a version check. If the Node.js runtime version is below v18, an error will be thrown to prevent unsupported usage.
 - **AgentId no longer required**: The `AgentId` field is now optional. If an `AgentId` is not provided, it will be automatically generated. This change may affect systems or scripts that previously relied on manually setting the `AgentId`.
 - **Agent Name Added**: The `Agent Name` field is now a new optional configuration and can be set as a user-defined value with a maximum length of 255 characters. Developer can optionally use the pod name or any other identifier as the Agent Name. Ensure that your configuration aligns with this new behavior.
 

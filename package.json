@@ -5,7 +5,7 @@
   "types": "index.d.ts",
   "type": "commonjs",
   "scripts": {
-    "test": "tape 'test/**/*.test.js'",
+    "test": "tape -i .testignore 'test/**/*.test.js'",
     "lint": "eslint -f checkstyle ./lib > checkstyle-result.xml;exit 0",
     "coverage": "nyc --reporter=lcov --reporter=text-summary npm run test"
   },
@@ -15,7 +15,7 @@
     "url": "git+https://github.com/pinpoint-apm/pinpoint-node-agent.git"
   },
   "contributors": [
-    "Yongseok <feelform@gmail.com> (https://github.com/feelform)"
+    "Yongseok (https://github.com/feelform)"
   ],
   "license": "Apache-2.0",
   "bugs": {

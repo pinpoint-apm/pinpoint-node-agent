@@ -6,7 +6,7 @@
 
 const test = require('tape')
 const axios = require('axios')
-const agent = require('../support/agent-singleton-mock')
+const agent = require('../../support/agent-singleton-mock')
 const express = require('express')
 const http = require('http')
 const grpc = require('@grpc/grpc-js')

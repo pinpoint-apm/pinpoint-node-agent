@@ -1,3 +1,6 @@
 # grpc
 *_pb.js
 *.proto
+
+# Exclude nextjs-app-router
+test/instrumentation/module/nextjs/nextjs-app-router/

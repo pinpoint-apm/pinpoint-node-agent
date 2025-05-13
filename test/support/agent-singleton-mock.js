@@ -123,13 +123,12 @@ class MockAgent extends Agent {
         activeRequestRepository.activeTraceCache.cache.clear()
         transactionIdGenerator.reset()
 
-        httpShared.clearPathMatcher()
         const http = require('http')
         log.debug('shimming http.Server.prototype.emit function')
-        shimmer.wrap(http && http.Server && http.Server.prototype, 'emit', httpShared.instrumentRequest2(agent, 'http'))
+        shimmer.wrap(http && http.Server && http.Server.prototype, 'emit', httpShared.instrumentRequest(agent, 'http'))
 
         log.debug('shimming http.request function')
-        shimmer.wrap(http, 'request', httpShared.traceOutgoingRequest2(agent, 'http'))
+        shimmer.wrap(http, 'request', httpShared.traceOutgoingRequest(agent, 'http'))
 
         localStorage.disable()
 

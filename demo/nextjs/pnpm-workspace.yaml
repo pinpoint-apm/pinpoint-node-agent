@@ -1,0 +1,7 @@
+onlyBuiltDependencies:
+  - bcrypt
+  - sharp
+  - unrs-resolver
+
+overrides:
+  pinpoint-node-agent: link:../../../../../Library/pnpm/global/5/node_modules/pinpoint-node-agent

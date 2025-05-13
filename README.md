@@ -29,6 +29,44 @@ CommonJS
 ```javascript
   require('pinpoint-node-agent')
 ```
+
+#### Next.js
+In Next.js application, the Pinpoint Node Agent can be integrated:
+- `package.json` using `NODE_OPTIONS`
+#### Package.json
+```
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev --turbopack",
+    "start": "NODE_OPTIONS=--require=pinpoint-node-agent next start"
+  },
+```
+The `PINPOINT_TRACE_EXCLUSION_URL_PATTERN` value cannot be set using environment variables from a `.env` file. While there are alternative approaches, one option is to modify the `"start"` script in `package.json` to point to a shell script (e.g., `start.sh`) where common environment variables can be configured.
+
+##### Example
+Update the `package.json`:
+```json
+"scripts": {
+  "start": "./start.sh"
+}
+```
+
+Create a `start.sh` file:
+```sh
+#!/bin/bash
+
+export PINPOINT_TRACE_EXCLUSION_URL_PATTERN="/health_check,/admin/**"
+export PINPOINT_APPLICATION_NAME="your-app-name"
+
+# 2. Run Next.js with Pinpoint agent
+NODE_OPTIONS=--require=pinpoint-node-agent next start
+```
+
+Make the script executable:
+```sh
+chmod +x start.sh
+```
+
 #### Webpack with `node -r` (required: above v0.8.2)
 In Node with Webpack, if the Pinpoint Node agent cannot hook the HTTP module, it is the case that http.createServer is called first in the JS code compiled by webpack.
 
@@ -90,6 +128,7 @@ PINPOINT_AGENT_ID=${HOSTNAME} pm2 start ~/service/bin/pm2_start.json​
 * mysql and mysql2
 * mongoDB driver v4.0 or higher
 * [Fetch API with Undici in Node.js](https://nodejs.org/en/learn/getting-started/fetch)
+* Next.js
 
 ## Agent - Collector compatibility table
 Agent Version | Collector 1.x | Collector 2.x | Collector 3.x

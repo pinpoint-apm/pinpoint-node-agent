@@ -176,6 +176,17 @@ test('config env exclusion URL', (t) => {
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 })
 
+test('exclusion URL sampling test', (t) => {
+    process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = '/healthcheck,/metrics'
+    agent.bindHttp()
+    t.deepEqual(agent.traceContext.traceSampler.pathMatcher.patterns, ["/healthcheck", "/metrics"])
+    let state = agent.traceContext.traceSampler.newState('/healthcheck')
+    t.equal(state.isSampled(), false, 'isSampled is false')
+    state = agent.traceContext.traceSampler.newState('/metrics')
+    t.equal(state.isSampled(), false, 'isSampled is false')
+    t.end()
+})
+
 test('outgoing request when canSample true', async (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check"
     agent.bindHttp()
@@ -196,43 +207,33 @@ async function outgoingRequest(t, path, expectedSampling, expectUnits) {
         const PATH = path
         const app = new express()
 
-        pathMatcher = new AntPathMatcher(agent.config)
-        const sampling = !pathMatcher.matchPath(PATH)
-
-        if (typeof expectedSampling !== 'undefined') {
-            t.equal(sampling, expectedSampling, `expectedMatch ${expectedSampling}`)
-        }
-
         let actualTrace
         app.get(PATH, async (req, res) => {
-            const https = require('https')
-            const options = {
-                hostname: 'naver.com',
-                port: 443,
-                path: '/',
-                method: 'GET'
-            }
-
             actualTrace = agent.currentTraceObject()
-
+            if (typeof expectedSampling === 'boolean') {
+                if (expectedSampling) {
+                    t.equal(actualTrace.constructor.name, 'Trace', 'actualTrace is Trace')
+                } else {
+                    t.equal(actualTrace.constructor.name, 'DisableTrace', 'actualTrace is DisableTrace')
+                }
+            }
             const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
-            t.equal(result1.data, 'ok get', `sampling is ${sampling}, outgoing req ok`)
+            t.equal(result1.data, 'ok get', `sampling is ${actualTrace.constructor.name !== 'DisableTrace'}, outgoing req ok`)
             res.send('ok get')
         })
 
         const OUTGOING_PATH = '/outgoingrequest'
         app.get(OUTGOING_PATH, async (req, res) => {
             const headers = req.headers
-            if (sampling) {
+            if (actualTrace.constructor.name === 'DisableTrace') {
+                t.equal('s0', headers['pinpoint-sampled'], 'When no sampling, pinpoint-sampled is s0')
+            } else {
                 t.equal(actualTrace.spanBuilder.getTraceRoot().getTraceId().toStringDelimiterFormatted(), headers['pinpoint-traceid'])
                 t.equal(actualTrace.spanBuilder.getTraceRoot().getTraceId().getSpanId(), headers['pinpoint-pspanid'])
                 t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
                 t.equal(agent.config.serviceType, Number(headers['pinpoint-papptype']))
                 t.equal(actualTrace.spanBuilder.getTraceRoot().getTraceId().flags, headers['pinpoint-flags'])
-            } else {
-                // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
-                // TODO: Think about for outgoing request pinpoint-sampled
-                t.equal(undefined, headers['pinpoint-sampled'], 'When no sampling, pinpoint-sampled is s0')
+                t.equal(headers['pinpoint-sampled'], undefined, 'When sampling, pinpoint-sampled is undefined')
             }
             res.send('ok get')
         })
@@ -243,7 +244,7 @@ async function outgoingRequest(t, path, expectedSampling, expectUnits) {
                 httpAgent: new http.Agent({ keepAlive: false }),
                 httpsAgent: new https.Agent({ keepAlive: false }),
             })
-            t.equal(result1.status, 200, `sampling is ${sampling}, response status 200 ok`)
+            t.equal(result1.status, 200, `sampling is ${actualTrace.constructor.name !== 'DisableTrace'}, response status 200 ok`)
 
             if (expectUnits) {
                 expectUnits(t)

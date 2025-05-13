@@ -15,6 +15,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 ### Fixed
 - [[#291](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/291)] Resolved an issue where the Pinpoint Node Agent would occasionally disappear from the Inspector. This fix ensures that the Agent remains consistently visible in the Inspector.
 - [[#303](https://github.com/pinpoint-apm/pinpoint-node-agent/pull/303)] fix: fix remote address fn ([Thanks @YangJonghun](https://github.com/YangJonghun))
+- [[#309](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/309)]PINPOINT_TRACE_EXCLUSION_URL_PATTERN not respected
 
 ### ⚠️ Breaking Changes
 - **The Pinpoint Node.js Agent can use Node above v18 or higher updated**: The minimum required Node.js version has been updated from `v14` to `v18`. The Node.js fetch API now includes a version check. If the Node.js runtime version is below v18, an error will be thrown to prevent unsupported usage.

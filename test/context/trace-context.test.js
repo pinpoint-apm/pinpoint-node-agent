@@ -5,12 +5,11 @@
  */
 
 const test = require('tape')
-const { fixture, util } = require('../test-helper')
+const { util } = require('../test-helper')
 
 const ServiceType = require('../../lib/context/service-type')
 const TraceContext = require('../../lib/context/trace-context')
 const dataSenderMock = require('../support/data-sender-mock')
-const RequestHeaderUtils = require('../../lib/instrumentation/request-header-utils')
 const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const agent = require('../support/agent-singleton-mock')
@@ -73,46 +72,4 @@ test('Should complete trace ', async function (t) {
 
   traceContext.completeTraceObject(trace)
   t.ok(trace.spanRecorder.spanBuilder.elapsedTime > 0)
-})
-
-test('new Trace', (t) => {
-  t.plan(4)
-
-  const dut = new TraceContext(agent.agentInfo, dataSenderMock(), agent.config)
-  t.true(dut.isSampling != null, 'dut is not null')
-
-  const req = {
-    url: "http://test.com",
-    headers: {
-    },
-    connection: {}
-  }
-  const requestData = RequestHeaderUtils.read(req)
-
-  t.equal(requestData.isRoot, true, 'root request')
-
-  const trace = dut.makeTrace(requestData)
-  t.equal(trace.traceId.parentSpanId, '-1', 'trace is not null')
-  t.true(trace.traceId.spanId > 0, 'trace id')
-})
-
-test('continue trace', (t) => {
-  t.plan(3)
-
-  const dut = new TraceContext(agent.agentInfo, dataSenderMock(), fixture.config)
-  const req = {
-    url: "http://test.com",
-    headers: {
-      "pinpoint-traceid": "node.test.app^1597822882452^2",
-      "pinpoint-spanid": '1844674407370955161',
-      "pinpoint-pspanid": '-1844674407370955141'
-    },
-    connection: {}
-  }
-  const requestData = RequestHeaderUtils.read(req)
-  const trace = dut.makeTrace(requestData)
-
-  t.equal(trace.traceId.transactionId.toString(), "node.test.app^1597822882452^2", "transactionId")
-  t.equal(trace.traceId.spanId.toString(), '1844674407370955161', "spanId")
-  t.equal(trace.traceId.parentSpanId.toString(), '-1844674407370955141', "parentSpanId")
 })

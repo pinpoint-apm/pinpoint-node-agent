@@ -35,8 +35,10 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
     ctx.body = 'ok. get'
 
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code')
-      t.equal(trace.spanBuilder.annotations[0].value, 200, 'response status is 200')
+      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_INTERNAL_DISPLAY.getCode(), 'HTTP URL')
+      t.equal(trace.spanBuilder.annotations[0].value, 'GET /koa-router1', 'request url matching')
+      t.equal(trace.spanBuilder.annotations[1].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code')
+      t.equal(trace.spanBuilder.annotations[1].value, 200, 'response status is 200')
 
       let actualBuilder = new MethodDescriptorBuilder('get')
         .setClassName('Router')
@@ -83,8 +85,10 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
     ctx.body = 'ok. get'
 
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code')
-      t.equal(trace.spanBuilder.annotations[0].value, 200, 'response status is 200')
+      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_INTERNAL_DISPLAY.getCode(), 'HTTP URL')
+      t.equal(trace.spanBuilder.annotations[0].value, 'GET /koa-router1', 'request url matching')
+      t.equal(trace.spanBuilder.annotations[1].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code')
+      t.equal(trace.spanBuilder.annotations[1].value, 200, 'response status is 200')
 
       let actualBuilder = new MethodDescriptorBuilder('get')
         .setClassName('Router')

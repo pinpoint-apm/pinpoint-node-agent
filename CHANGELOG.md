@@ -12,6 +12,8 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 - [[#265](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/265)] Support MongoDB
 - [[#216](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/216)] [Fetch API with Undici in Node.js](https://nodejs.org/en/learn/getting-started/fetch)
    * Since the Undici library requires Node.js >=20.18.1, please ensure your application’s Node.js version is compatible before adopting fetch or undici.
+- [[#317](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/317)] Warning message Warning: Collector returned 13 INTERNAL error. Too much Span data may be sent. Try increasing PINPOINT_SAMPLING_RATE to reduce traffic.
+
 ### Fixed
 - [[#291](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/291)] Resolved an issue where the Pinpoint Node Agent would occasionally disappear from the Inspector. This fix ensures that the Agent remains consistently visible in the Inspector.
 - [[#303](https://github.com/pinpoint-apm/pinpoint-node-agent/pull/303)] fix: fix remote address fn ([Thanks @YangJonghun](https://github.com/YangJonghun))
@@ -21,6 +23,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 - **The Pinpoint Node.js Agent can use Node above v18 or higher updated**: The minimum required Node.js version has been updated from `v14` to `v18`. The Node.js fetch API now includes a version check. If the Node.js runtime version is below v18, an error will be thrown to prevent unsupported usage.
 - **AgentId no longer required**: The `AgentId` field is now optional. If an `AgentId` is not provided, it will be automatically generated. This change may affect systems or scripts that previously relied on manually setting the `AgentId`.
 - **Agent Name Added**: The `Agent Name` field is now a new optional configuration and can be set as a user-defined value with a maximum length of 255 characters. Developer can optionally use the pod name or any other identifier as the Agent Name. Ensure that your configuration aligns with this new behavior.
+- Added a waring message when the PINPOINT_SAMPLING_RATE is set too low, causing excessive span data to be sent to the collector. If the collector cannot handle the data and return an error to Pinpoint Node agent, a warning is now logged advising users to increase the PINPOINT_SAMPLING_RATE.
 
 ## [0.8.7] - 2025-03-14
 ### Added

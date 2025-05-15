@@ -15,7 +15,6 @@ const spanMessages = require('../../../lib/data/v1/Span_pb')
 const { MongoClient } = require('mongodb')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
-const { expected } = require('../../fixtures/instrument-support')
 const { beforeSpecificOne, MetaInfoOnlyDataSource } = require('../../client/grpc-fixture')
 
 test('mongodb query', async (t) => {

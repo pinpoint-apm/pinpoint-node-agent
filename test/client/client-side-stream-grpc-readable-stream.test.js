@@ -99,33 +99,29 @@ test('span stream retry connection Tests', async function (t) {
                 t.equal(writableStream.backoffRetry.attempts, 3, `3rd retry connection is failed`)
 
                 let index = 0
-                for await (const spanStreamWritableEnded of setInterval(1000, dataSender.spanStream.writableStream.writableEnded)) {
+                for await (const spanStreamWritableEnded of setInterval(1000, dataSender.spanStream.writableStream.ended)) {
                     if (index === 0) {
                         t.true(spanStreamWritableEnded, `writableEnded = true, When 1st sendSpan call in for loop`)
                         bindAsyncServer2()
+
+                        shimmer.wrap(dataSender.spanStream, 'pipeWritableStream', function (original) {
+                            return function () {
+                                if (index === 0) {
+                                    t.true(dataSender.spanStream.writableStream.shouldCreateNewStream(), `availableRetry = true, index=${index}`)
+                                    t.equal(dataSender.spanStream.writableStream.backoffRetry.attempts, 4, `backoffRetry.attempts: ${dataSender.spanStream.writableStream.backoffRetry.attempts}, index=${index}`)
+                                }
+                                original.apply(this, arguments)
+                                if (index === 0) {
+                                    t.false(dataSender.spanStream.writableStream.shouldCreateNewStream(), `availableRetry = false, index=${index} after pipeWritableStream() call`)
+                                    t.notEqual(writableStream, dataSender.spanStream.writableStream, `new GrpcReadableStream.writableStream, index=${index} after pipeWritableStream() call`)
+                                    writableStream = dataSender.spanStream.writableStream
+                                }
+                            }
+                        })
                     }
-
-                    shimmer.wrap(dataSender.spanStream, 'pipeWritableStream', function (original) {
-                        return function () {
-                            if (index === 0) {
-                                t.true(dataSender.spanStream.writableStream.availableRetry(), `availableRetry = true, index=${index}`)
-                                t.equal(dataSender.spanStream.writableStream.backoffRetry.attempts, 4, `backoffRetry.attempts: ${dataSender.spanStream.writableStream.backoffRetry.attempts}, index=${index}`)
-                            }
-                            original.apply(this, arguments)
-                            if (index === 0) {
-                                t.false(dataSender.spanStream.writableStream.availableRetry(), `availableRetry = false, index=${index} after pipeWritableStream() call`)
-                                t.notEqual(writableStream, dataSender.spanStream.writableStream, `new GrpcReadableStream.writableStream, index=${index} after pipeWritableStream() call`)
-                                writableStream = dataSender.spanStream.writableStream
-
-
-                            }
-                        }
-                    })
 
                     const expected = spanWithId(`1${index}`)
-                    if (dataSender.spanStream.writableStream.writableStream.writable) {
-                        expectedSpans.push(expected)
-                    }
+                    expectedSpans.push(expected)
                     dataSender.sendSpan(expected)
 
                     if (index === 10) {

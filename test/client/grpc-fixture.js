@@ -82,7 +82,7 @@ class DataSourceCallCountable extends GrpcDataSender {
     }
 
     initializeClients() {
-        if (this.config.sendAgentInfo) {
+        if (this.config.sendAgentInfo || this.config.sendPing) {
             super.initializeClients()
         }
     }

@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
-## [1.0.0] - 2025-04-11
+## [1.0.0] - 2025-05-22
 ### Added
 - [[#214](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/214)] Support Active Request
 

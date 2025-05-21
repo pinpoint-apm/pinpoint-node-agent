@@ -22,7 +22,7 @@ const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')
 const { asyncSpanChunkMySQLMatcher } = require('../../fixtures/instrument-support')
 const express = require('express')
 const axios = require('axios')
-
+const http = require('http')
 test(`getConnection query hooking`, async (t) => {
     agent.bindHttpWithCallSite()
     const source = path.resolve(fixtures, 'mysql.sql')
@@ -360,16 +360,16 @@ test(`Connection Pool with query`, async (t) => {
 
             asyncSpanChunkMySQLMatcher(t, trace, actualSpanEvent)
 
-            actualBuilder = new MethodDescriptorBuilder('getConnection')
-                .setClassName('Pool')
-                .setLineNumber(202)
-                .setFileName('Pool.js')
+            actualBuilder = new MethodDescriptorBuilder('query')
+                .setClassName('PoolConnection')
+                .setLineNumber(301)
+                .setFileName('mysql.test.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             actualSpanEvent = trace.spanBuilder.spanEventList[2]
             t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'Pool.getConnection spanEvent apiId on pool.query')
             t.equal(actualSpanEvent.depth, 1, 'Pool.getConnection spanEvent depth on pool.query')
             t.equal(actualSpanEvent.sequence, 2, 'Pool.getConnection spanEvent sequence on pool.query')
-            t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'Pool.getConnection spanEvent serviceType on pool.query')
+            t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'PoolConnection.query spanEvent serviceType on pool.query')
 
             actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualSpanEvent.asyncId)
             t.equal(actualSpanChunk.spanId, actualSpanEvent.spanId, 'spanChunk spanId on pool.query')
@@ -381,17 +381,6 @@ test(`Connection Pool with query`, async (t) => {
             t.equal(actualSpanChunk.spanEventList[0].sequence, 0, 'spanChunk spanEventList[0].sequence is 0 on pool.query')
             t.equal(actualSpanChunk.spanEventList[0].serviceType, ServiceType.async.getCode(), 'spanChunk spanEventList[0].serviceType is ServiceTypeCode.async on pool.query')
 
-            actualBuilder = new MethodDescriptorBuilder('query')
-                .setClassName('PoolConnection')
-                .setLineNumber(214)
-                .setFileName('Pool.js')
-            actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            actualSpanEvent = actualSpanChunk.spanEventList[1]
-            t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'PoolConnection.query spanEvent apiId on pool.query')
-            t.equal(actualSpanEvent.depth, 2, 'PoolConnection.query spanEvent depth on pool.query')
-            t.equal(actualSpanEvent.sequence, 1, 'PoolConnection.query spanEvent sequence on pool.query')
-            t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'PoolConnection.query spanEvent serviceType on pool.query')
-            asyncSpanChunkMySQLMatcher(t, trace, actualSpanEvent)
             t.end()
         })
     })
@@ -463,7 +452,7 @@ test(`Cluster with query`, async (t) => {
 
         agent.callbackTraceClose((trace) => {
             let actualBuilder = new MethodDescriptorBuilder('createPoolCluster')
-                .setLineNumber(417)
+                .setLineNumber(406)
                 .setFileName('mysql.test.js')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             let actualSpanEvent = trace.spanBuilder.spanEventList[0]
@@ -505,7 +494,7 @@ test(`Cluster with query`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('PoolConnection')
-                .setLineNumber(448)
+                .setLineNumber(437)
                 .setFileName('mysql.test.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             actualSpanEvent = actualSpanChunk.spanEventList[1]
@@ -520,11 +509,11 @@ test(`Cluster with query`, async (t) => {
     })
 })
 
-test('Disable trace', async (t) => {
-    agent.bindHttp()
+let container
+test('setup', async (t) => {
     const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer()
-        .withCommand(['--default-authentication-plugin=mysql_native_password'])
+    container = await new MySqlContainer()
+        .withCommand('--default-authentication-plugin=mysql_native_password')
         .withEnvironment({
             'MYSQL_DATABASE': 'test',
             'TZ': 'Asia/Seoul',
@@ -534,6 +523,12 @@ test('Disable trace', async (t) => {
             target: '/docker-entrypoint-initdb.d/mysql.sql'
         }])
         .start()
+    t.pass('setup complete')
+    t.end()
+})
+
+test('Disable trace', async (t) => {
+    agent.bindHttp()
 
     const app = new express()
     const connection = mysql.createConnection({
@@ -564,9 +559,9 @@ test('Disable trace', async (t) => {
                 t.equal(trace.spanBuilder.spanEventList.length, 2, 'spanEventList length is 2')
 
                 let actualBuilder = new MethodDescriptorBuilder('get')
-                                            .setClassName('Router')
-                let actualMethodDescriptor =apiMetaService.cacheApiWithBuilder(actualBuilder)
-                let actualSpanEvent = trace.spanBuilder.spanEventList.find( spanEvent => spanEvent.sequence == 0)
+                    .setClassName('Router')
+                let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+                let actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence == 0)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualMethodDescriptor.className, 'Router', 'className in sampled Trace of DisableTrace Functional Tests')
@@ -579,9 +574,9 @@ test('Disable trace', async (t) => {
                 t.equal(actualSpanEvent.nextSpanId, '-1', 'spanEvent.nextSpanId Router.get in sampled Trace of DisableTrace Functional Tests')
 
                 actualBuilder = new MethodDescriptorBuilder('query')
-                                            .setClassName('Connection')
+                    .setClassName('Connection')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-                actualSpanEvent = trace.spanBuilder.spanEventList.find( spanEvent => spanEvent.sequence == 1)
+                actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence == 1)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId Connection.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualMethodDescriptor.apiDescriptor, 'Connection.query', 'apiDescriptor Connection.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualMethodDescriptor.className, 'Connection', 'className Connection.query in sampled Trace of DisableTrace Functional Tests')
@@ -617,8 +612,76 @@ test('Disable trace', async (t) => {
         t.equal(result.status, 200, 'status code is 200')
 
         connection.end()
-        await container.stop()
         t.end()
         server.close()
     })
+})
+
+// https://github.com/pinpoint-apm/pinpoint-node-agent/issues/316
+test('Fix wrong transactionId', (t) => {
+    agent.bindHttp()
+
+    const pool = mysql.createPool({
+        host: container.getHost(),
+        port: container.getPort(),
+        database: 'test',
+        user: container.getUsername(),
+        password: container.getUserPassword(),
+        acquireTimeout: 10000000,
+        timezone: '+09:00'
+    })
+
+    const app = new express()
+    const actualTraces = []
+    app.get('/test1', (req, res) => {
+        pool.query('SELECT * FROM `member` where id = ?', 'a', function (error, results, fields) {
+            if (error) throw error
+        })
+
+        pool.query('SELECT * FROM `member` where id = ?', 'a', async function (error, results, fields) {
+            if (error) throw error
+            // console.log('The solution is: ', results[0])
+
+            pool.query('SELECT * FROM `member` where id = ?', 'a', function (error, results, fields) {
+            })
+
+            await axios.get(`http://localhost:5006/api`, { httpAgent: new http.Agent({ keepAlive: false }) })
+        })
+
+        agent.callbackTraceClose((trace) => {
+            actualTraces.push(trace)
+        })
+        res.send('ok')
+    })
+
+    let apiCallCount = 0
+    app.get('/api', function (req, res) {
+        agent.callbackTraceClose((trace) => {
+            t.equal(req.headers['pinpoint-traceid'].split('^')[2], trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `req.headers['pinpoint-traceid'] ${req.headers['pinpoint-traceid'].split('^')[2]}`)
+            t.equal(trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), actualTraces[apiCallCount].spanBuilder.traceRoot.getTransactionId(), `traceRoot.transactionId index ${apiCallCount} is ${trace.spanBuilder.traceRoot.getTraceId().getTransactionId()}`)
+
+            apiCallCount++
+            if (apiCallCount == 2) {
+                t.end()
+            }
+        })
+        res.status(200).json({ 'result': 'ok' })
+    })
+
+    const server = app.listen(5006, async () => {
+        let result = await axios.get('http://localhost:5006/test1', { httpAgent: new http.Agent({ keepAlive: false }) })
+        t.equal(result.status, 200, 'status code is 200')
+        result = await axios.get('http://localhost:5006/test1', { httpAgent: new http.Agent({ keepAlive: false }) })
+    })
+
+    t.teardown(() => {
+        pool.end()
+        server.close()
+    })
+})
+
+test('teardown', async (t) => {
+    await container.stop()
+    t.pass('teardown complete')
+    t.end()
 })

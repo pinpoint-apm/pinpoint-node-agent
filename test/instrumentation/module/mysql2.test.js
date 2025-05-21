@@ -281,10 +281,10 @@ test(`Connection Pool with query hooking`, async (t) => {
             t.equal(actualSpanEvent.depth, 1, 'depth in createPool spanEvent')
             t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'serviceType in createPool spanEvent')
 
-            actualBuilder = new MethodDescriptorBuilder('getConnection')
-                .setClassName('Pool')
-                .setLineNumber(144)
-                .setFileName('pool.js')
+            actualBuilder = new MethodDescriptorBuilder('query')
+                .setClassName('PoolConnection')
+                .setLineNumber(365)
+                .setFileName('promise.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             actualSpanEvent = trace.spanBuilder.spanEventList.find( spanEvent => spanEvent.sequence == 1)
             t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in Pool.getConnection() spanEvent')
@@ -292,7 +292,7 @@ test(`Connection Pool with query hooking`, async (t) => {
             t.equal(actualSpanEvent.destinationId, 'test', 'destinationId in Pool.getConnection() spanEvent')
             t.equal(actualSpanEvent.sequence, 1, 'sequence in Pool.getConnection() spanEvent')
             t.equal(actualSpanEvent.depth, 1, 'depth in Pool.getConnection() spanEvent')
-            t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'serviceType in Pool.getConnection() spanEvent')
+            t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType in Pool.query() spanEvent')
 
             let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualSpanEvent.asyncId)
             t.equal(actualSpanChunk.traceRoot.getTraceId().getSpanId(), trace.spanBuilder.getTraceRoot().getTraceId().getSpanId(), 'spanId in spanChunk in Pool.getConnection()')
@@ -303,18 +303,6 @@ test(`Connection Pool with query hooking`, async (t) => {
             t.equal(actualSpanChunk.spanEventList[0].sequence, 0, 'sequence in spanChunk in Pool.getConnection()')
             t.equal(actualSpanChunk.spanEventList[0].depth, 1, 'depth in spanChunk in Pool.getConnection()')
             t.equal(actualSpanChunk.spanEventList[0].serviceType, ServiceType.async.getCode(), 'serviceType in spanChunk in Pool.getConnection()')
-
-            actualBuilder = new MethodDescriptorBuilder('query')
-                .setClassName('PoolConnection')
-                .setLineNumber(154)
-                .setFileName('pool.js')
-            actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            actualSpanEvent = actualSpanChunk.spanEventList[1]
-            t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in PoolConnection.query() spanEvent')
-            t.equal(actualSpanEvent.depth, 2, 'depth in PoolConnection.query() spanEvent')
-            t.equal(actualSpanEvent.sequence, 1, 'sequence in PoolConnection.query() spanEvent')
-            t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType in PoolConnection.query() spanEvent')
-
         })
 
         setImmediate(() => {

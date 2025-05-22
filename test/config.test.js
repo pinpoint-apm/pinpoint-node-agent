@@ -7,6 +7,7 @@
 const test = require('tape')
 const { log } = require('./test-helper')
 const config = require('../lib/config')
+const HttpStatusCodeErrorsBuilder = require('../lib/instrumentation/http/http-status-code-errors-builder')
 
 test('Agent ID required field', function (t) {
   t.plan(1)
@@ -277,5 +278,18 @@ test('sampling Rate', (t) => {
   conf = require('../lib/config').getConfig({ 'sampling': { 'rate': 20} })
   t.equal(conf.sampleRate, 20, 'sampling rate is 20')
 
+  t.end()
+})
+
+test('HTTP Status Code Errors', (t) => {
+  config.clear()
+  let conf = require('../lib/config').getConfig()
+  t.equal(conf.httpStatusCodeErrors, '5xx,401,403', 'default http status code errors is 5xx,401,403')
+
+  const errors = new HttpStatusCodeErrorsBuilder(conf.httpStatusCodeErrors).build()
+  t.equal(errors.isErrorCode(500), true, '500 is error code')
+  t.equal(errors.isErrorCode(200), false, '200 is not error code')
+  t.equal(errors.isErrorCode(401), true, '401 is error code')
+  t.equal(errors.isErrorCode(403), true, '403 is error code')
   t.end()
 })

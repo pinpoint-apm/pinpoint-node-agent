@@ -12,9 +12,9 @@
     "enable": true,
     "rate": 1
   },
-  "http-status-code-errors": [
-    "5xx"
-  ],
+  "http-status-code": {
+    "errors": "5xx,401,403"
+  },
   "log-level": "INFO",
   "enable": true,
   "enabled-data-sending": true,

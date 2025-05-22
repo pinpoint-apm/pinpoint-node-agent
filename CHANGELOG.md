@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [1.0.1] - 2025-05-23
+### Added
+- [[#319](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/319)] Add support for custom error status code configuration
+
+### ⚠️ Breaking Changes
+In unsupported web frameworks such as Next.js App Router, HTTP responses with status code 500 may not appear in scatter charts. You can customizing HTTP error status code.
+
 ## [1.0.0] - 2025-05-22
 ### Added
 - [[#214](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/214)] Support Active Request

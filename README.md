@@ -112,6 +112,7 @@ PINPOINT_TRACE_EXCLUSION_URL_PATTERN |  | comma-separated string. ex) `/health_c
 PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE | | If the app is designed so that the pathname of the URL is fixed, if the cache size is set, the pathname of the frequently used URL does not match with patterns. In case of using query for pathname like `/user/1000`, cache is unnecessarily. [Unit tests](https://github.com/pinpoint-apm/pinpoint-node-agent/blob/01fcbdefe5a0ffba9c957bee0da3fb7397638182/test/utils/ant-path-matcher.test.js#L447)
 PINPOINT_PROFILER_SQL_STAT | false | SQL uid
 PINPOINT_TRACE_LOCATION_AND_FILENAME_OF_CALL_SITE | false | CallSite line number and filename
+PINPOINT_HTTP_STATUS_CODE_ERRORS | 5xx,401,403 | Comma-separated list of HTTP status codes that should be treated as errors. When a response matches one of these codes, the agent will record the request as an error in Pinpoint. You can customize this list to include any status codes relevant to your application's error.
 
 ### Agent ID
 The agent ID is used as the identifier per the server or node. You need to set the hostname or node identifier(The maximum length is 24) on the server.

@@ -64,6 +64,7 @@
   "devDependencies": {
     "@testcontainers/mongodb": "^10.18.0",
     "@testcontainers/mysql": "^10.18.0",
+    "@testcontainers/postgresql": "^11.0.3",
     "@testcontainers/redis": "^10.18.0",
     "@types/semver": "^7.3.13",
     "@types/shimmer": "^1.0.2",
@@ -85,10 +86,12 @@
     "mysql": "^2.18.1",
     "mysql2": "3.10.2",
     "nyc": "^17.1.0",
+    "pg": "^8.11.3",
     "redis": "^3.1.2",
     "rimraf": "^2.6.2",
     "tape": "^4.16.0",
     "testcontainers": "^10.10.3",
+    "typeorm": "^0.3.17",
     "typescript": "^4.8.3",
     "undici": "^7.6.0"
   }

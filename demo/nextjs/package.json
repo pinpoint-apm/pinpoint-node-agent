@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "NODE_OPTIONS=--require=pinpoint-node-agent next dev --turbopack",
+    "dev": "next dev --turbopack",
     "start": "./start.sh"
   },
   "dependencies": {

@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [1.1] - 2025-06-18
+### Added
+- [#321] Support Postgresql and TypeORM by [sjstyle](https://github.com/sjstyle)
+
 ## [1.0.1] - 2025-05-23
 ### Added
 - [[#319](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/319)] Add support for custom error status code configuration

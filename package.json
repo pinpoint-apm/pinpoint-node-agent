@@ -1,6 +1,6 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "main": "index.js",
   "types": "index.d.ts",
   "type": "commonjs",
@@ -75,8 +75,7 @@
     "eslint-plugin-prettier": "^5.0.0",
     "express": "^4.16.4",
     "install": "^0.13.0",
-    "ioredis": "^4.3.0",
-    "ioredis-mock": "^4.19.0",
+    "ioredis": "^5.6.1",
     "koa": "^2.6.1",
     "koa-bodyparser": "^4.2.1",
     "koa-router": "^7.4.0",

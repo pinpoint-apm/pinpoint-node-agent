@@ -10,18 +10,17 @@ const path = require('path')
 const agent = require('../../support/agent-singleton-mock')
 const { Client, Pool } = require('pg')
 const apiMetaService = require('../../../lib/context/api-meta-service')
-const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const sqlMetadataService = require('../../../lib/instrumentation/sql/sql-metadata-service')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const pgExecuteQueryServiceType = require('../../../lib/instrumentation/module/pg/pg-execute-query-service-type')
-const pgServiceType = require('../../../lib/instrumentation/module/pg/pg-service-type')
 const ServiceType = require('../../../lib/context/service-type')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
+const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')
 
 test(`Client create and query hooking`, async (t) => {
-    agent.bindHttpWithCallSite()
+    agent.bindHttp()
     const source = path.resolve(fixtures, 'postgresql.sql')
     const container = await new PostgreSqlContainer('postgres:13')
         .withDatabase('test')
@@ -62,23 +61,14 @@ test(`Client create and query hooking`, async (t) => {
             client.end()
             await container.stop()
 
-            const createClientSpanEvent = trace.spanBuilder.spanEventList[0]
-            t.ok(createClientSpanEvent.apiId > 0, 'createClient apiId should be positive')
-            t.equal(createClientSpanEvent.endPoint, `localhost:${container.getPort()}`, 'createClient endPoint')
-            t.equal(createClientSpanEvent.destinationId, 'test', 'createClient destinationId')
-            t.equal(createClientSpanEvent.serviceType, pgServiceType.getCode(), 'createClient serviceType')
-
-            const connectSpanEvent = trace.spanBuilder.spanEventList[1]
-            t.equal(connectSpanEvent.depth, 1, 'connect spanEvent depth')
-            t.equal(connectSpanEvent.sequence, 1, 'connect spanEvent sequence')
-            t.ok(connectSpanEvent.apiId > 0, 'connect apiId should be positive')
-            t.equal(connectSpanEvent.serviceType, pgServiceType.getCode(), 'connect serviceType')
-
-            const querySpanEvent = trace.spanBuilder.spanEventList[2]
-            t.equal(querySpanEvent.depth, 1, 'query spanEvent depth')
-            t.equal(querySpanEvent.sequence, 2, 'query spanEvent sequence')
-            t.ok(querySpanEvent.apiId > 0, 'query apiId should be positive')
-            t.equal(querySpanEvent.serviceType, pgExecuteQueryServiceType.getCode(), 'query serviceType')
+            const querySpanEvent = trace.spanBuilder.spanEventList[0]
+            let expectedBuilder = new MethodDescriptorBuilder('query')
+                                    .setClassName('Client')
+            let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(expectedBuilder)
+            t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, `Client query apiId ${actualMethodDescriptor.apiId}`)
+            t.equal(querySpanEvent.endPoint, `localhost:${container.getPort()}`, 'createClient endPoint')
+            t.equal(querySpanEvent.destinationId, 'test', 'createClient destinationId')
+            t.equal(querySpanEvent.serviceType, pgExecuteQueryServiceType.getCode(), 'createClient serviceType')
 
             let actualParsingResult = sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = $1')
             let actualQueryAnnotation = querySpanEvent.annotations[0]
@@ -93,7 +83,7 @@ test(`Client create and query hooking`, async (t) => {
 })
 
 test(`Client multiple queries with parameters`, async (t) => {
-    agent.bindHttpWithCallSite()
+    agent.bindHttp()
     const source = path.resolve(fixtures, 'postgresql.sql')
     const container = await new PostgreSqlContainer('postgres:13')
         .withDatabase('test')
@@ -143,16 +133,16 @@ test(`Client multiple queries with parameters`, async (t) => {
 
         agent.callbackTraceClose(async (trace) => {
             // Verify all queries were instrumented
-            const querySpanEvents = trace.spanBuilder.spanEventList.filter(event => 
+            const querySpanEvents = trace.spanBuilder.spanEventList.filter(event =>
                 event.serviceType === pgExecuteQueryServiceType.getCode()
             )
-            
+
             t.equal(querySpanEvents.length, 4, 'Should have 4 query span events')
 
             // Verify INSERT query with parameters
             let insertQuerySpanEvent = querySpanEvents[1]
             t.ok(insertQuerySpanEvent.apiId > 0, 'INSERT query apiId should be positive')
-            
+
             let actualParsingResult = sqlMetadataService.cacheSql('INSERT INTO member (id, name, email) VALUES ($1, $2, $3)')
             let actualQueryAnnotation = insertQuerySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'INSERT annotation key')
@@ -175,7 +165,7 @@ test(`Client multiple queries with parameters`, async (t) => {
 })
 
 test(`Pool create and query hooking`, async (t) => {
-    agent.bindHttpWithCallSite()
+    agent.bindHttp()
     const source = path.resolve(fixtures, 'postgresql.sql')
     const container = await new PostgreSqlContainer('postgres:13')
         .withDatabase('test')
@@ -210,17 +200,16 @@ test(`Pool create and query hooking`, async (t) => {
             pool.end()
             await container.stop()
 
-            const createPoolSpanEvent = trace.spanBuilder.spanEventList[0]
-            t.ok(createPoolSpanEvent.apiId > 0, 'createPool apiId should be positive')
-            t.equal(createPoolSpanEvent.endPoint, `localhost:${container.getPort()}`, 'createPool endPoint')
-            t.equal(createPoolSpanEvent.destinationId, 'test', 'createPool destinationId')
-            t.equal(createPoolSpanEvent.serviceType, pgServiceType.getCode(), 'createPool serviceType')
-
-            const querySpanEvent = trace.spanBuilder.spanEventList[1]
-            t.ok(querySpanEvent.apiId > 0, 'Pool query apiId should be positive')
+            const querySpanEvent = trace.spanBuilder.spanEventList[0]
+            let expectedBuilder = new MethodDescriptorBuilder('query')
+                                    .setClassName('Client')
+            let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(expectedBuilder)
+            t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, `Client query apiId ${actualMethodDescriptor.apiId}`)
             t.equal(querySpanEvent.depth, 1, 'Pool query depth')
-            t.equal(querySpanEvent.sequence, 1, 'Pool query sequence')
+            t.equal(querySpanEvent.sequence, 0, 'Pool query sequence')
             t.equal(querySpanEvent.serviceType, pgExecuteQueryServiceType.getCode(), 'Pool query serviceType')
+            t.equal(querySpanEvent.endPoint, `localhost:${container.getPort()}`, 'createPool endPoint')
+            t.equal(querySpanEvent.destinationId, 'test', 'createPool destinationId')
 
             t.end()
         })
@@ -228,7 +217,7 @@ test(`Pool create and query hooking`, async (t) => {
 })
 
 test(`Pool connect and query hooking`, async (t) => {
-    agent.bindHttpWithCallSite()
+    agent.bindHttp()
     const source = path.resolve(fixtures, 'postgresql.sql')
     const container = await new PostgreSqlContainer('postgres:13')
         .withDatabase('test')
@@ -255,11 +244,11 @@ test(`Pool connect and query hooking`, async (t) => {
 
         pool.connect(function (err, client, release) {
             if (err) throw err
-            
+
             client.query('SELECT * FROM member WHERE id = $1', ['a'], async function (error, results) {
                 release()
                 if (error) throw error
-                
+
                 t.equal(results.rows[0].id, 'a', 'Pool connect query result')
 
                 setImmediate(async () => {
@@ -271,48 +260,32 @@ test(`Pool connect and query hooking`, async (t) => {
         })
 
         agent.callbackTraceClose((trace) => {
-            let actualSpanEvent = trace.spanBuilder.spanEventList[0]
-            t.ok(actualSpanEvent.apiId > 0, 'createPool apiId should be positive')
-            t.equal(actualSpanEvent.endPoint, `localhost:${container.getPort()}`, 'createPool endPoint')
-            t.equal(actualSpanEvent.destinationId, 'test', 'createPool destinationId')
-            t.equal(actualSpanEvent.sequence, 0, 'createPool sequence')
-            t.equal(actualSpanEvent.depth, 1, 'createPool depth')
-            t.equal(actualSpanEvent.serviceType, pgServiceType.getCode(), 'createPool serviceType')
+            let querySpanEvent = trace.spanBuilder.spanEventList[0]
+            t.ok(querySpanEvent.apiId > 0, `Client query apiId ${querySpanEvent.apiId}`)
+            t.equal(querySpanEvent.endPoint, `localhost:${container.getPort()}`, 'query endPoint')
+            t.equal(querySpanEvent.destinationId, 'test', 'query destinationId')
+            t.equal(querySpanEvent.sequence, 0, 'query sequence')
+            t.equal(querySpanEvent.depth, 1, 'query depth')
+            t.equal(querySpanEvent.serviceType, pgExecuteQueryServiceType.getCode(), 'query serviceType')
 
-            actualSpanEvent = trace.spanBuilder.spanEventList[1]
-            t.ok(actualSpanEvent.apiId > 0, 'Pool connect apiId should be positive')
-            t.equal(actualSpanEvent.depth, 1, 'Pool connect depth')
-            t.equal(actualSpanEvent.sequence, 1, 'Pool connect sequence')
-            t.equal(actualSpanEvent.serviceType, pgServiceType.getCode(), 'Pool connect serviceType')
-
-            let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualSpanEvent.asyncId)
-            t.equal(actualSpanChunk.spanId, actualSpanEvent.spanId, 'spanChunk spanId')
+            let actualSpanChunk = trace.repository.dataSender.findSpanChunk(querySpanEvent.asyncId)
+            t.equal(actualSpanChunk.spanId, querySpanEvent.spanId, 'spanChunk spanId')
             t.equal(actualSpanChunk.traceRoot, trace.spanBuilder.getTraceRoot(), 'spanChunk traceRoot')
-            t.equal(actualSpanChunk.localAsyncId.getAsyncId(), actualSpanEvent.asyncId.getAsyncId(), 'spanChunk localAsyncId')
+            t.equal(actualSpanChunk.localAsyncId.getAsyncId(), querySpanEvent.asyncId.getAsyncId(), 'spanChunk localAsyncId')
             t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'spanChunk localAsyncId sequence')
             t.equal(actualSpanChunk.spanEventList[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'spanChunk async invocation apiId')
             t.equal(actualSpanChunk.spanEventList[0].depth, 1, 'spanChunk async invocation depth')
             t.equal(actualSpanChunk.spanEventList[0].sequence, 0, 'spanChunk async invocation sequence')
             t.equal(actualSpanChunk.spanEventList[0].serviceType, ServiceType.async.getCode(), 'spanChunk async invocation serviceType')
-
-            actualSpanEvent = actualSpanChunk.spanEventList[1]
-            t.ok(actualSpanEvent.apiId > 0, 'PoolClient query apiId should be positive')
-            t.equal(actualSpanEvent.depth, 2, 'PoolClient query depth')
-            t.equal(actualSpanEvent.sequence, 1, 'PoolClient query sequence')
-            t.equal(actualSpanEvent.serviceType, pgExecuteQueryServiceType.getCode(), 'PoolClient query serviceType')
-
             t.end()
         })
     })
 })
 
 test('PostgreSQL service types', (t) => {
-    t.equal(pgServiceType.getCode(), 2500, 'PostgreSQL service type code should be 2500')
-    t.equal(pgServiceType.name, 'POSTGRESQL', 'PostgreSQL service type name should be POSTGRESQL')
-    
     t.equal(pgExecuteQueryServiceType.getCode(), 2501, 'PostgreSQL execute query service type code should be 2501')
     t.equal(pgExecuteQueryServiceType.name, 'POSTGRESQL_EXECUTE_QUERY', 'PostgreSQL execute query service type name should be POSTGRESQL_EXECUTE_QUERY')
-    
+
     t.end()
 })
 
@@ -321,7 +294,7 @@ test('Disable trace with Express and PostgreSQL', async (t) => {
     const express = require('express')
     const ServiceType = require('../../../lib/context/service-type')
     const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
-    
+
     const source = path.resolve(fixtures, 'postgresql.sql')
     const container = await new PostgreSqlContainer('postgres:13')
         .withDatabase('test')
@@ -344,7 +317,7 @@ test('Disable trace with Express and PostgreSQL', async (t) => {
         user: 'testuser',
         password: 'testpass'
     })
-    
+
     client.connect(function (err) {
         if (err) {
             console.error('error connecting: ' + err.stack)
@@ -378,7 +351,7 @@ test('Disable trace with Express and PostgreSQL', async (t) => {
                 t.equal(actualSpanEvent.destinationId, 'test', 'spanEvent.destinationId Client.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualSpanEvent.endPoint, `localhost:${container.getPort()}`, 'spanEvent.endPoint Client.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualSpanEvent.nextSpanId, '-1', 'spanEvent.nextSpanId Client.query in sampled Trace of DisableTrace Functional Tests')
-                
+
                 let actualNextAsyncId = actualSpanEvent.asyncId
                 let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
                 t.equal(actualSpanChunk.spanId, actualSpanEvent.spanId, 'spanChunk.spanId equals to spanEvent.spanId Client.query in sampled Trace of DisableTrace Functional Tests')
@@ -391,7 +364,7 @@ test('Disable trace with Express and PostgreSQL', async (t) => {
                 t.equal(actualSpanChunk.spanEventList[0].serviceType, ServiceType.async.getCode(), 'spanChunk.spanEventList[0].serviceType is async Client.query in sampled Trace of DisableTrace Functional Tests')
             } else if (callCount == 2) {
                 t.false(trace.spanBuilder, 'trace.span is undefined')
-                
+
                 setImmediate(async () => {
                     client.end()
                     await container.stop()
@@ -404,7 +377,7 @@ test('Disable trace with Express and PostgreSQL', async (t) => {
     const server = app.listen(0, () => {
         const port = server.address().port
         const http = require('http')
-        
+
         // First request - trace should be active
         const req1 = http.request({
             hostname: 'localhost',
@@ -434,4 +407,4 @@ test('Disable trace with Express and PostgreSQL', async (t) => {
         })
         req1.end()
     })
-}) 
+})

@@ -6,7 +6,6 @@
 
 'use strict'
 
-const EventEmitter = require('events')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
@@ -21,7 +20,6 @@ const SqlUidMetaData = require('../../lib/client/sql-uid-meta-data')
 class MockDataSender extends DataSender {
   constructor(config, dataSender) {
     super(config, dataSender)
-    this.emitter = new EventEmitter()
     this.mockAPIMetaInfos = []
     this.mockSpanChunks = []
     this.mockSpans = []
@@ -45,12 +43,10 @@ class MockDataSender extends DataSender {
       this.mockSpans.push(data)
     } else if (data instanceof SpanChunk) {
       this.mockSpanChunks.push(data)
-      this.emitter.emit('spanChunk', data)
     } else if (data instanceof SqlMetaData) {
       this.mockSqlMetadata.push(data)
     } else if (data?.isAsyncSpanChunk?.()) {
       this.mockSpanChunks.push(data)
-      this.emitter.emit('spanChunk', data)
     } else if (data?.isSpan?.()) {
       this.mockSpan = data
       this.mockSpans.push(data)

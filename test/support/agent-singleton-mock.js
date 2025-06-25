@@ -116,10 +116,6 @@ class MockAgent extends Agent {
         this.agentInfo = this.createAgentInfo(this.config, Date.now())
 
         sqlMetadataService.cache = new SimpleCache(1024)
-        apiMetaService.cache = new SimpleCache(1024)
-        stringMetaService.cache = new SimpleCache(1024)
-        require('../../lib/context/sequence-generators').apiMetaCacheKeyGenerator.reset()
-        require('../../lib/context/sequence-generators').stringMetaCacheKeyGenerator.reset()
         this.traceContext.isSampling = sampler.getIsSampling(config.sampling, config.sampleRate)
         if (sampler.getSamplingCountGenerator()) {
             sampler.getSamplingCountGenerator().reset()

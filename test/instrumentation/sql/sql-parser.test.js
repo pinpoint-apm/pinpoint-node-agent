@@ -51,6 +51,13 @@ test(`normalized`, async (t) => {
     normalizedSql = SqlParser.normalizedSql(`SELECT * from table a=123 and b='abc' and c=1-3`)
     t.equal(normalizedSql.normalizedSql, `SELECT * from table a=0# and b='1$' and c=2#-3#`)
     t.equal(normalizedSql.parseParameter, `123,abc,1,3`)
-    
+
+    normalizedSql = SqlParser.normalizedSql(`SELECT * FROM member WHERE id = $1`)
+    t.equal(normalizedSql.normalizedSql, `SELECT * FROM member WHERE id = $1`, `PostgreSQL positional parameter no changes 'SELECT * FROM member WHERE id = $1'`)
+    t.equal(normalizedSql.parseParameter, ``, `PostgreSQL positional parameter parseParameter is empty 'SELECT * FROM member WHERE id = $1'`)
+
+    normalizedSql = SqlParser.normalizedSql(`SELECT * FROM member WHERE id = $122309`)
+    t.equal(normalizedSql.normalizedSql, `SELECT * FROM member WHERE id = $122309`, `PostgreSQL positional parameter no changes 'SELECT * FROM member WHERE id = $122309'`)
+    t.equal(normalizedSql.parseParameter, ``, `PostgreSQL positional parameter parseParameter is empty 'SELECT * FROM member WHERE id = $122309'`)
     t.end()
 })

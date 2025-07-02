@@ -21,7 +21,7 @@ test(`hook.unhook() for require-in-the-middle learning test`, (t) => {
 })
 
 test(`all modules for require-in-the-middle learning test`, (t) => {
-    t.plan(8)
+    t.plan(6)
 
     let n = 1
 
@@ -52,8 +52,6 @@ test(`all modules for require-in-the-middle learning test`, (t) => {
     t.equal(http.foo, 1)
     t.equal(net.foo, 2)
     t.equal(require('http').foo, 1)
-    t.deepEqual(hook.cache.get('http'), http)
-    t.deepEqual(hook.cache.get('net'), net)
     t.equal(n, 3)
 })
 

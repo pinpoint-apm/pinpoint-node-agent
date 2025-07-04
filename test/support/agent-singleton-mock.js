@@ -6,13 +6,11 @@
 
 'use strict'
 
-const { log } = require('../test-helper')
 const enableDataSending = require('../test-helper').enableDataSending
 enableDataSending()
 const Agent = require('../../lib/agent')
 const dataSenderMock = require('./data-sender-mock')
 const shimmer = require('@pinpoint-apm/shimmer')
-const httpShared = require('../../lib/instrumentation/http-shared')
 const activeTrace = require('../../lib/metric/active-trace')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const sqlMetadataService = require('../../lib/instrumentation/sql/sql-metadata-service')
@@ -95,7 +93,6 @@ class MockAgent extends Agent {
     }
 
     bindHttp(json) {
-        this.cleanHttp()
         this.dataSender.clear()
 
         let grpcDataSender
@@ -122,13 +119,6 @@ class MockAgent extends Agent {
         }
         activeRequestRepository.activeTraceCache.cache.clear()
         transactionIdGenerator.reset()
-
-        const http = require('http')
-        log.debug('shimming http.Server.prototype.emit function')
-        shimmer.wrap(http && http.Server && http.Server.prototype, 'emit', httpShared.instrumentRequest(agent, 'http'))
-
-        log.debug('shimming http.request function')
-        shimmer.wrap(http, 'request', httpShared.traceOutgoingRequest(agent, 'http'))
 
         localStorage.disable()
 
@@ -232,12 +222,6 @@ class MockAgent extends Agent {
                 return returned
             }
         })
-    }
-
-    cleanHttp() {
-        const http = require('http')
-        shimmer.unwrap(http && http.Server && http.Server.prototype, 'emit')
-        shimmer.unwrap(http, 'request')
     }
 
     callbackTraceClose(callback) {

@@ -151,7 +151,7 @@ test('span stream retry connection Tests', async function (t) {
 
                     if (expectedSpan.traceRoot.getTraceId().getTransactionId() === '110') {
                         // t.equal(dataSender.spanStream.writableStream.backoffRetry.attempts, 3, `backoffRetry.attempts: ${dataSender.spanStream.writableStream.backoffRetry.attempts}`)
-                        t.comment(`Test End !!!! expectedSpans.length: ${expectedSpans.length}, spanCallCount: ${spanCallCount}`)
+                        t.comment(`expectedSpans.length: ${expectedSpans.length}, spanCallCount: ${spanCallCount}`)
                         t.end()
                     }
                     spanCallCount++

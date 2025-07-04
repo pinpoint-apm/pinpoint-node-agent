@@ -7,9 +7,7 @@
 'use strict'
 
 const test = require('tape')
-const mockAgent = require('../support/agent-singleton-mock')
-const ModuleHook = require('../../lib/instrumentation/module-hook')
-const Hook = require('require-in-the-middle')
+const { Hook } = require('require-in-the-middle')
 
 test(`hook.unhook() for require-in-the-middle learning test`, (t) => {
     const hook = Hook(['http'], function (exports, name, basedir) {
@@ -25,7 +23,7 @@ test(`all modules for require-in-the-middle learning test`, (t) => {
 
     let n = 1
 
-    const hook = Hook(function (exports, name, basedir) {
+    const hook = new Hook(function (exports, name, basedir) {
         switch (n) {
             case 1:
                 t.equal(name, 'http')
@@ -53,15 +51,4 @@ test(`all modules for require-in-the-middle learning test`, (t) => {
     t.equal(net.foo, 2)
     t.equal(require('http').foo, 1)
     t.equal(n, 3)
-})
-
-test(`hook`, (t) => {
-    t.plan(1)
-
-    const moduleHook = new ModuleHook(mockAgent)
-    t.true(moduleHook.hook, 'Hook member instance created')
-
-    // const http = require('http')
-    moduleHook.unhook()
-    t.end()
 })

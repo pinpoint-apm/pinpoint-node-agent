@@ -35,3 +35,8 @@ test('load modules with versions', (t) => {
 
     t.end()
 })
+
+test('load module names', (t) => {
+
+    t.end()
+})

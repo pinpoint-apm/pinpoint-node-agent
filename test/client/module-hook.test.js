@@ -6,7 +6,6 @@
 
 const test = require('tape')
 const agent = require('../support/agent-singleton-mock')
-const { ModuleHook } = require('../../lib/instrumentation/module-hook')
 
 test('load modules with versions', (t) => {
     const http1 = require('http')

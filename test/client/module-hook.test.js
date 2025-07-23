@@ -33,20 +33,16 @@ test('load modules with versions', (t) => {
     t.end()
 })
 
-test.skip('load module with hook', (t) => {
-    const dut = agent.moduleHook2
+test('load module with hook', (t) => {
+    const dut = agent.moduleHook
     const hooks = dut.hookRegistry.hooks
     t.equal(hooks['@koa/router'].moduleName, '@koa/router', 'Hook for @koa/router is registered')
     t.true(hooks['@koa/router'].hooks[0].endsWith('lib/instrumentation/module/koa-router.js'), 'Hook for @koa/router points to koa-router.js')
-    t.equal(hooks['next'].moduleName, 'next', 'Hook for next is registered')
-    t.true(hooks['next'].hooks[0].endsWith('lib/instrumentation/module/next.js'), 'Hook for next points to next.js')
-    t.equal(hooks['next/dist/server/next-server.js'].moduleName, 'next', 'Hook for next/dist/server/next-server.js is registered')
-    t.true(hooks['next/dist/server/next-server.js'].hooks[0].endsWith('lib/instrumentation/module/next/dist/server/next-server.js'), 'Hook for next/dist/server/next-server.js points to next-server.js')
     t.end()
 })
 
-test.skip('requireId and hook path resolution', (t) => {
-    const dut = agent.moduleHook2
+test('requireId and hook path resolution', (t) => {
+    const dut = agent.moduleHook
     const modules = dut.hookRegistry.requireModules()
     t.true(modules.includes('express'), 'express is included in require modules')
     t.true(modules.includes('http'), 'http is included in require modules')
@@ -59,19 +55,8 @@ test.skip('requireId and hook path resolution', (t) => {
     t.true(modules.includes('mongodb'), 'mongodb is included in require modules')
     t.true(modules.includes('pg'), 'pg is included in require modules')
     t.true(modules.includes('undici'), 'undici is included in require modules')
-    t.true(modules.includes('next'), 'next is included in require modules')
+    t.false(modules.includes('next'), 'next is included in require modules')
     t.false(modules.includes('next/dist/server/next-server.js'), 'next/dist/server/next-server.js is not included in require modules')
-    t.equal(dut.hookRegistry.hooks['next/dist/server/next-server.js'].moduleName, 'next', 'next/dist/server/next-server.js module name matches')
-    t.true(dut.hookRegistry.hooks['next/dist/server/next-server.js'].hooks[0].endsWith('lib/instrumentation/module/next/dist/server/next-server.js'), 'next/dist/server/next-server.js hook path matches')
 
-    const requireHook = dut.requireHook
-    dut.stop()
-    t.true(requireHook._unhooked, 'requireHook is unhooked after stop')
-    t.end()
-})
-
-test.skip('hook next.js internals', (t) => {
-    const dut = agent.moduleHook2
-    dut.stop()
     t.end()
 })

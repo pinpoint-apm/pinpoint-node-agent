@@ -70,8 +70,8 @@ test.skip('requireId and hook path resolution', (t) => {
     t.end()
 })
 
-test.skip('hook next.js internals', (t) => {
-    const dut = agent.moduleHook2
+test('hook next.js internals', (t) => {
+    const dut = agent.moduleHook
     dut.stop()
     t.end()
 })

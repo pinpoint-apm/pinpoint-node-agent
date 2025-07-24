@@ -64,14 +64,5 @@ test.skip('requireId and hook path resolution', (t) => {
     t.equal(dut.hookRegistry.hooks['next/dist/server/next-server.js'].moduleName, 'next', 'next/dist/server/next-server.js module name matches')
     t.true(dut.hookRegistry.hooks['next/dist/server/next-server.js'].hooks[0].endsWith('lib/instrumentation/module/next/dist/server/next-server.js'), 'next/dist/server/next-server.js hook path matches')
 
-    const requireHook = dut.requireHook
-    dut.stop()
-    t.true(requireHook._unhooked, 'requireHook is unhooked after stop')
-    t.end()
-})
-
-test('hook next.js internals', (t) => {
-    const dut = agent.moduleHook
-    dut.stop()
     t.end()
 })

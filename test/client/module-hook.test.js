@@ -26,10 +26,18 @@ test('load modules with versions', (t) => {
 
     const koa1 = require('koa-router')
     const koa2 = require('koa-router')
+    const koa3 = require('@koa/router')
     t.equal(koa1, koa2, 'Hook modules caches koa')
+    t.notEqual(koa2, koa3, 'Hook modules does not cache @koa/router')
     const koaModule = agent.moduleHook.hookRegistry.getHooks('koa-router')[0]
     t.true(koaModule.endsWith('module/koa-router.js'), 'module koa-router hook path matches')
+    const koa3Module = agent.moduleHook.hookRegistry.getHooks('@koa/router')[0]
+    t.true(koa3Module.endsWith('module/koa-router.js'), 'module @koa/router hook path matches')
 
+    const react = require('react')
+    const versionCache = Array.from(agent.moduleHook.versionCache.entries()).find(([key]) => key.endsWith('react'))
+    t.true(react, 'react module is loaded')
+    t.false(versionCache, 'hook does not cache react module')
     t.end()
 })
 

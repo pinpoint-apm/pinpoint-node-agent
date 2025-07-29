@@ -483,10 +483,10 @@ test('semver test', (t) => {
 test('express version check', (t) => {
   const hook = require('../../../lib/instrumentation/module/express')
   const expected = { name: 'module' }
-  let actual = hook(null, '5.0', expected)
+  let actual = hook(agent, '5.0', expected)
   t.equal(actual.name, 'module', 'express version 5.0 test')
 
-  actual = hook(null, '5.0.0', expected)
+  actual = hook(agent, '5.0.0', expected)
   t.equal(actual.name, 'module', 'express version 5.0.0 test')
   t.end()
 })

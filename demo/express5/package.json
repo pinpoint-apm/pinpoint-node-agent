@@ -1,0 +1,27 @@
+{
+  "name": "pinpoint-express5-demo",
+  "version": "1.0.0",
+  "description": "Pinpoint Node.js Agent Express 5 Demo Application",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "axios": "^1.6.8",
+    "pinpoint-node-agent": "file:../../"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "pinpoint",
+    "express5",
+    "monitoring",
+    "apm",
+    "demo"
+  ],
+  "author": "Pinpoint APM",
+  "license": "Apache-2.0"
+}

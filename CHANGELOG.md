@@ -1,6 +1,20 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [1.2.0] - 2025-08-01
+### Added
+- [[#344](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/344)] **Express 5 Support**: Extended version compatibility to support Express 5.x (>=4.0.0 <6)
+  - Added Router.prototype compatibility for Express 5 instrumentation
+  - Native async/await route handlers support with improved error handling
+  - Comprehensive test suite for Express 5 specific features
+  - Automatic Promise error catching without manual try/catch blocks
+  - Enhanced testing infrastructure with npm aliases for multi-version Express testing (express4/express5)
+  - Updated express instrumentation to handle both Express 4 and 5 Router architectures
+  - Improved semver version range checking for Express compatibility
+
+### Changed
+- [[#346](https://github.com/pinpoint-apm/pinpoint-node-agent/pull/346)] [[#337](https://github.com/pinpoint-apm/pinpoint-node-agent/pull/337)] **require-in-the-middle Package Upgrade**: Updated require-in-the-middle to support hooking modules within packages for enhanced instrumentation capabilities
+
 ## [1.1] - 2025-06-18
 ### Added
 - [#321] Support Postgresql by [sjstyle](https://github.com/sjstyle)

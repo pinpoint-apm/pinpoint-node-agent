@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Express 5 + Pinpoint Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 48px rgba(0,0,0,0.15);
+        }
+
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+        }
+
+        .card p {
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .api-endpoint {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+        }
+
+        .method {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            margin-right: 8px;
+            font-size: 0.8rem;
+        }
+
+        .method.get { background: #28a745; }
+        .method.post { background: #007bff; }
+        .method.put { background: #ffc107; color: #333; }
+        .method.delete { background: #dc3545; }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .feature {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+
+        .feature strong {
+            color: #28a745;
+        }
+
+        .test-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            opacity: 0.8;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #28a745;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .monitoring-list {
+            margin-left: 20px;
+            color: #666;
+        }
+
+        .error-note {
+            margin-top: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .dev-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .dev-info h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .code-block {
+            display: block;
+            margin: 5px 0;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            .test-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🚀 Express 5 + Pinpoint Demo</h1>
+            <p><span class="status-indicator"></span>Server running with native async/await support</p>
+        </header>
+
+        <div class="cards">
+            <div class="card">
+                <h3>🆕 Express 5 Features</h3>
+                <p>Experience the latest Express framework with enhanced capabilities:</p>
+                <div class="features">
+                    <div class="feature">
+                        <strong>Native Async/Await:</strong> No more callback hell or manual try/catch blocks
+                    </div>
+                    <div class="feature">
+                        <strong>Auto Error Handling:</strong> Promise rejections are automatically caught
+                    </div>
+                    <div class="feature">
+                        <strong>Enhanced Router:</strong> Improved Router.prototype architecture
+                    </div>
+                    <div class="feature">
+                        <strong>Better Performance:</strong> Optimized for modern Node.js applications
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>📊 Pinpoint Monitoring</h3>
+                <p>Full APM integration for comprehensive application monitoring:</p>
+                <ul class="monitoring-list">
+                    <li>Request/Response tracing</li>
+                    <li>External API call monitoring</li>
+                    <li>Error tracking and analysis</li>
+                    <li>Performance metrics</li>
+                    <li>Database query tracing</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>🌐 API Endpoints</h3>
+                <p>Test the Express 5 routes with Pinpoint tracing:</p>
+
+                <div class="api-endpoint">
+                    <span class="method get">GET</span> / - Welcome page
+                </div>
+                <div class="api-endpoint">
+                    <span class="method get">GET</span> /api/users - External API call
+                </div>
+                <div class="api-endpoint">
+                    <span class="method get">GET</span> /api/search?q=term - Search endpoint
+                </div>
+                <div class="api-endpoint">
+                    <span class="method get">GET</span> /api/v1/status - Service status
+                </div>
+                <div class="api-endpoint">
+                    <span class="method post">POST</span> /api/v1/echo - Echo request
+                </div>
+                <div class="api-endpoint">
+                    <span class="method get">GET</span> /health - Health check
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🧪 Test Routes</h3>
+                <p>Try these endpoints to see Express 5 and Pinpoint in action:</p>
+
+                <div class="test-buttons">
+                    <a href="/api/users" class="btn btn-primary">Fetch Users</a>
+                    <a href="/api/search?q=express&limit=5" class="btn btn-success">Search Demo</a>
+                    <a href="/api/v1/status" class="btn btn-primary">Service Status</a>
+                    <a href="/health" class="btn btn-success">Health Check</a>
+                </div>
+
+                <p class="error-note">
+                    <strong>Error Testing:</strong> Try /error or /async-error to see Express 5's improved error handling
+                </p>
+
+                <div class="test-buttons">
+                    <a href="/error" class="btn btn-warning">Test Sync Error</a>
+                    <a href="/async-error" class="btn btn-danger">Test Async Error</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>💻 Development Info</h3>
+            <p><strong>Express Version:</strong> 5.x</p>
+            <p><strong>Node.js:</strong> <span id="nodeVersion">Loading...</span></p>
+            <p><strong>Pinpoint Agent:</strong> Active</p>
+            <p><strong>Server Port:</strong> 3005</p>
+
+            <div class="dev-info">
+                <h4>Quick Commands:</h4>
+                <code class="code-block">curl http://localhost:3005/api/users</code>
+                <code class="code-block">curl -X POST http://localhost:3005/api/v1/echo -H "Content-Type: application/json" -d '{"test": "data"}'</code>
+                <code class="code-block">curl "http://localhost:3005/api/search?q=express&limit=3"</code>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>Express 5 Demo Application with Pinpoint Node.js Agent</p>
+            <p>Showcasing modern async/await patterns and APM integration</p>
+        </footer>
+    </div>
+
+    <script>
+        // Fetch and display Node.js version
+        // fetch('/api/v1/status')
+        //     .then(response => response.json())
+        //     .then(data => {
+        //         document.getElementById('nodeVersion').textContent = process.version || 'Unknown';
+        //     })
+        //     .catch(() => {
+        //         document.getElementById('nodeVersion').textContent = 'Unable to fetch';
+        //     });
+
+        // Add click handlers for better UX
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                if (this.href.includes('/error')) {
+                    if (!confirm('This will trigger an error for testing. Continue?')) {
+                        e.preventDefault();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

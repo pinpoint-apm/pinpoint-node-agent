@@ -8,7 +8,6 @@ const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
 const axios = require('axios')
 const annotationKey = require('../../../lib/constant/annotation-key')
-const { expected } = require('../../fixtures/instrument-support')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 

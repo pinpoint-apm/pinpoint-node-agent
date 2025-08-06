@@ -24,7 +24,7 @@ const mysql2 = require('mysql2')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../../lib/data/v1/Service_grpc_pb')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
-const log = require('../../../lib/utils/logger')
+const log = require('../../../lib/utils/log/logger')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const sqlMetadataService = require('../../../lib/instrumentation/sql/sql-metadata-service')
 

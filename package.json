@@ -1,8 +1,16 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "1.2.0",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "version": "1.3.0",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "require": "./index.js"
+    },
+    "./logging": {
+      "types": "./lib/utils/log/types.d.ts",
+      "require": "./lib/utils/log/index.js"
+    }
+  },
   "type": "commonjs",
   "scripts": {
     "test": "tape -i .testignore 'test/**/*.test.js'",
@@ -56,7 +64,7 @@
     "end-of-stream": "^1.4.1",
     "google-protobuf": "^3.13.0",
     "internal-ip": "^3.0.1",
-    "loglevel": "^1.6.1",
+    "loglevel": "^1.9.2",
     "murmur-128": "^1.0.0",
     "require-in-the-middle": "^7.5.2",
     "semver": "^7.5.3"

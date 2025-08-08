@@ -1,16 +1,80 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+
+## [1.3.0] - 2025-08-13
+### Added
+- [[#352](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/352)] **PINPOINT_LOGGER_LEVELS Environment Variable**: Added support for configuring log levels dynamically through environment variables using comma-separated key=value pairs
+
+  **Environment Variable Example:**
+  ```bash
+  export PINPOINT_LOGGER_LEVELS="default-logger=WARN,.debug-appender=DEBUG,grpc.debug-appender=INFO"
+  ```
+
+  **Usage Example:**
+  ```javascript
+  const log = require('pinpoint-node-agent/lib/utils/log/logger')
+  const { LogBuilder } = require('pinpoint-node-agent/lib/utils/log/log-builder')
+
+  const debugAppender = {
+    name: 'debug-appender',
+    debug: (msg) => console.log(`[DEBUG] ${msg}`),
+    info: (msg) => console.log(`[INFO] ${msg}`),
+    warn: (msg) => console.log(`[WARN] ${msg}`),
+    error: (msg) => console.log(`[ERROR] ${msg}`)
+  }
+
+  const grpcLogger = log.getLogger(
+    new LogBuilder('grpc')
+      .setConfig(config.getConfig())
+      .addAppender(debugAppender)
+      .build()
+  )
+
+  grpcLogger.debug('This message level is controlled by env var')
+  ```
+
+  - **Hierarchical precedence**: specific appender > global appender > appender default > logger default
+  - **Supports all log levels**: TRACE, DEBUG, INFO, WARN, ERROR, SILENT
+
 ## [1.2.0] - 2025-08-01
 ### Added
 - [[#344](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/344)] **Express 5 Support**: Extended version compatibility to support Express 5.x (>=4.0.0 <6)
-  - Added Router.prototype compatibility for Express 5 instrumentation
   - Native async/await route handlers support with improved error handling
-  - Comprehensive test suite for Express 5 specific features
   - Automatic Promise error catching without manual try/catch blocks
   - Enhanced testing infrastructure with npm aliases for multi-version Express testing (express4/express5)
-  - Updated express instrumentation to handle both Express 4 and 5 Router architectures
-  - Improved semver version range checking for Express compatibility
+
+  **Express 5 Async/Await Example:**
+  ```javascript
+  const express = require('express')
+  const app = express()
+
+  // Express 5: Native async/await support with automatic error handling
+  app.get('/users/:id', async (req, res) => {
+    // No try/catch needed - Express 5 automatically catches Promise rejections
+    const user = await getUserFromDatabase(req.params.id) // May throw/reject
+    const profile = await getUserProfile(user.id)         // May throw/reject
+
+    res.json({ user, profile })
+  })
+
+  // Express 4: Required manual error handling
+  app.get('/users-old/:id', (req, res, next) => {
+    getUserFromDatabase(req.params.id)
+      .then(user => getUserProfile(user.id))
+      .then(profile => res.json({ user, profile }))
+      .catch(next) // Manual error handling required
+  })
+
+  async function getUserFromDatabase(id) {
+    if (!id) throw new Error('User ID required')
+    return { id, name: 'User ' + id }
+  }
+
+  async function getUserProfile(id) {
+    return { preferences: 'dark-mode', notifications: true }
+  }
+  ```
 
 ### Changed
 - [[#346](https://github.com/pinpoint-apm/pinpoint-node-agent/pull/346)] [[#337](https://github.com/pinpoint-apm/pinpoint-node-agent/pull/337)] **require-in-the-middle Package Upgrade**: Updated require-in-the-middle to support hooking modules within packages for enhanced instrumentation capabilities

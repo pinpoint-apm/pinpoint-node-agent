@@ -293,3 +293,25 @@ test('HTTP Status Code Errors', (t) => {
   t.equal(errors.isErrorCode(403), true, '403 is error code')
   t.end()
 })
+
+test('Logger levels', (t) => {
+  config.clear()
+  const conf = require('../lib/config').getConfig()
+  t.deepEqual(conf.loggerLevels, {'default-logger': 'WARN'}, 'default logger levels is =warn')
+
+  config.clear()
+  process.env['PINPOINT_LOGGER_LEVELS'] = 'grpc=INFO,sql=WARN,http=INFO'
+  const confWithEnv = require('../lib/config').getConfig()
+  t.deepEqual(confWithEnv.loggerLevels, {'grpc': 'INFO', 'sql': 'WARN', 'http': 'INFO'}, 'logger levels from env is grpc=INFO,sql=WARN,http=INFO')
+
+  config.clear()
+  process.env['PINPOINT_LOGGER_LEVELS'] = '.nemo=DEBUG'
+  const confWithAppender = require('../lib/config').getConfig()
+  t.deepEqual(confWithAppender.loggerLevels, {'.nemo': 'DEBUG'}, 'logger levels from env is .nemo=DEBUG')
+
+  config.clear()
+  process.env['PINPOINT_LOGGER_LEVELS'] = 'grpc=DEBUG,sql=ERROR,http=TRACE'
+  const confWithEnvDebug = require('../lib/config').getConfig()
+  t.deepEqual(confWithEnvDebug.loggerLevels, {'grpc': 'DEBUG', 'sql': 'ERROR', 'http': 'TRACE'}, 'logger levels from env is grpc=DEBUG,sql=ERROR,http=TRACE')
+  t.end()
+})

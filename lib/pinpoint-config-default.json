@@ -14,6 +14,9 @@
     "errors": "5xx,401,403"
   },
   "log-level": "WARN",
+  "logger-levels": {
+    "default-logger": "WARN"
+  },
   "enable": true,
   "enabled-data-sending": true,
   "enabled-stats-monitor-sending": true,
@@ -34,8 +37,5 @@
   "stream-deadline-minutes": {
     "client-side": 10
   },
-  "trace-location-and-filename-of-call-site": false,
-  "log": {
-    "error": false
-  }
+  "trace-location-and-filename-of-call-site": false
 }

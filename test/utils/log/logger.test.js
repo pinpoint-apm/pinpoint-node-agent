@@ -48,6 +48,7 @@ test('appenders', (t) => {
     t.equal(testLog.appenders.length, 0, 'appenders length')
 
     const validAppender = {
+        name: 'test-appender',
         loggingLevel: LogLevel.DEBUG,
         debug: (msg) => msg,
         info: (msg) => msg,
@@ -59,10 +60,11 @@ test('appenders', (t) => {
 })
 
 test('addAppender validation', (t) => {
-    t.plan(6)
+    t.plan(8)
 
     // Valid appender
     const validAppender = {
+        name: 'console',
         loggingLevel: LogLevel.DEBUG,
         debug: (msg) => msg,
         info: (msg) => msg,
@@ -83,6 +85,7 @@ test('addAppender validation', (t) => {
 
     // Invalid appender - missing methods
     const invalidAppender = {
+        name: 'invalid',
         loggingLevel: LogLevel.DEBUG,
         debug: (msg) => msg
         // missing info, warn, error
@@ -93,6 +96,7 @@ test('addAppender validation', (t) => {
 
     // Invalid appender - non-function methods
     const nonFunctionAppender = {
+        name: 'non-function',
         loggingLevel: LogLevel.DEBUG,
         debug: 'not a function',
         info: (msg) => msg,
@@ -102,6 +106,31 @@ test('addAppender validation', (t) => {
 
     const logWithNonFunctionAppender = new LogBuilder('test8').addAppender(nonFunctionAppender).build()
     t.equal(logWithNonFunctionAppender.appenders.length, 0, 'Non-function methods should be ignored')
+
+    // Invalid appender - missing name
+    const noNameAppender = {
+        loggingLevel: LogLevel.DEBUG,
+        debug: (msg) => msg,
+        info: (msg) => msg,
+        warn: (msg) => msg,
+        error: (msg) => msg
+    }
+
+    const logWithNoNameAppender = new LogBuilder('test8-noname').addAppender(noNameAppender).build()
+    t.equal(logWithNoNameAppender.appenders.length, 0, 'Appender without name should be ignored')
+
+    // Invalid appender - non-string name
+    const nonStringNameAppender = {
+        name: 123,
+        loggingLevel: LogLevel.DEBUG,
+        debug: (msg) => msg,
+        info: (msg) => msg,
+        warn: (msg) => msg,
+        error: (msg) => msg
+    }
+
+    const logWithNonStringNameAppender = new LogBuilder('test8-nonstring').addAppender(nonStringNameAppender).build()
+    t.equal(logWithNonStringNameAppender.appenders.length, 0, 'Appender with non-string name should be ignored')
 
     // Mixed valid and invalid appenders
     const mixedLog = new LogBuilder('test9')
@@ -142,6 +171,7 @@ test('appender message forwarding', (t) => {
 
     let capturedMessages = []
     const mockAppender = {
+        name: 'mock-appender',
         loggingLevel: LogLevel.DEBUG,
         debug: (msg) => capturedMessages.push(`DEBUG: ${msg}`),
         info: (msg) => capturedMessages.push(`INFO: ${msg}`),
@@ -170,6 +200,7 @@ test('appender message forwarding', (t) => {
 
     // Test with WARN level (only processes WARN and ERROR)
     const warnMockAppender = {
+        name: 'warn-mock-appender',
         loggingLevel: LogLevel.WARN,
         debug: (msg) => capturedMessages.push(`DEBUG: ${msg}`),
         info: (msg) => capturedMessages.push(`INFO: ${msg}`),
@@ -195,6 +226,7 @@ test('appender message forwarding', (t) => {
 
     // Test with SILENT level (processes no messages)
     const silentMockAppender = {
+        name: 'silent-mock-appender',
         loggingLevel: LogLevel.SILENT,
         debug: (msg) => capturedMessages.push(`DEBUG: ${msg}`),
         info: (msg) => capturedMessages.push(`INFO: ${msg}`),
@@ -249,6 +281,7 @@ test('guard clause - no appenders', (t) => {
     // Test log level filtering with appenders
     let errorCallCount = 0
     const mockAppender = {
+        name: 'error-level-appender',
         loggingLevel: LogLevel.ERROR,
         debug: () => {},
         info: () => {},
@@ -274,6 +307,7 @@ test('guard clause - no appenders', (t) => {
     // Test SILENT level - should never call any appender methods
     let silentCallCount = 0
     const silentMockAppender = {
+        name: 'silent-level-appender',
         loggingLevel: LogLevel.SILENT,
         debug: () => { silentCallCount++ },
         info: () => { silentCallCount++ },
@@ -302,6 +336,7 @@ test('per-appender loggingLevel configuration', (t) => {
 
     const warnAppenderMessages = []
     const warnAppender = {
+        name: 'warn-appender',
         loggingLevel: LogLevel.WARN,
         debug: (msg) => warnAppenderMessages.push(`WARN-APPENDER DEBUG: ${msg}`),
         info: (msg) => warnAppenderMessages.push(`WARN-APPENDER INFO: ${msg}`),
@@ -311,6 +346,7 @@ test('per-appender loggingLevel configuration', (t) => {
 
     const errorAppenderMessages = []
     const errorAppender = {
+        name: 'error-appender',
         loggingLevel: LogLevel.ERROR,
         debug: (msg) => errorAppenderMessages.push(`ERROR-APPENDER DEBUG: ${msg}`),
         info: (msg) => errorAppenderMessages.push(`ERROR-APPENDER INFO: ${msg}`),
@@ -344,6 +380,7 @@ test('per-appender loggingLevel configuration', (t) => {
 
     // Test that appender has loggingLevel property
     const testAppender = {
+        name: 'property-test-appender',
         loggingLevel: LogLevel.INFO,
         debug: () => {},
         info: () => {},

@@ -5,7 +5,6 @@
  */
 
 const test = require('tape')
-const { util } = require('../test-helper')
 
 const ServiceType = require('../../lib/context/service-type')
 const TraceContext = require('../../lib/context/trace-context')
@@ -68,7 +67,7 @@ test('Should complete trace ', async function (t) {
   const traceContext = new TraceContext(agent.agentInfo, dataSenderMock(), agent.config)
   const trace = traceContext.newTraceObject2('/')
 
-  await util.sleep(501)
+  await new Promise(resolve => setTimeout(resolve, 501))
 
   traceContext.completeTraceObject(trace)
   t.ok(trace.spanRecorder.spanBuilder.elapsedTime > 0)

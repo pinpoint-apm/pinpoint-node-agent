@@ -6,7 +6,6 @@
 
 const test = require('tape')
 const axios = require('axios')
-const { log, util } = require('../../test-helper')
 const agent = require('../../support/agent-singleton-mock')
 const express = require('express')
 const annotationKey = require('../../../lib/constant/annotation-key')
@@ -18,6 +17,7 @@ const DisableTrace = require('../../../lib/context/disable-trace')
 const http = require('http')
 const https = require('https')
 const { getTransactionId, getDisabledId } = require('../../../lib/context/trace/id-generator')
+
 
 
 const TEST_ENV = {
@@ -252,7 +252,7 @@ test(`[${testName2}] Should record request in express.Router`, function (t) {
 
   const router2 = express.Router()
   router2.get(PATH, async (req, res) => {
-    await util.sleep(1000)
+    await new Promise(resolve => setTimeout(resolve, 1000))
     res.send('ok router2')
   })
 

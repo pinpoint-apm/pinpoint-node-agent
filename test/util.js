@@ -5,7 +5,7 @@
  */
 
 const sleep = (ms) => {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 const randomBetween = (min, max) => {

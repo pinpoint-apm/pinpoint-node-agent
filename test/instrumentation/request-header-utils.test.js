@@ -8,7 +8,6 @@ const test = require('tape')
 const axios = require('axios')
 const http = require('http')
 const https = require('https')
-const { fixture } = require('../test-helper')
 const agent = require('../support/agent-singleton-mock')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const express = require('express')
@@ -17,6 +16,7 @@ const TraceHeaderBuilder = require('../../lib/instrumentation/http/trace-header-
 const Header = require('../../lib/instrumentation/http/pinpoint-header')
 const HttpClientRequest = require('../../lib/instrumentation/http/http-client-request')
 const OutgoingClientRequestHeaderWriter = require('../../lib/instrumentation/http/outgoing-client-request-header-writer')
+const fixture = require('../fixture')
 
 const headers = {
   'Pinpoint-TraceID': fixture.getTraceId().transactionId.toString(),

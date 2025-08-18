@@ -6,8 +6,6 @@
 
 const test = require('tape')
 const axios = require('axios')
-
-const { log } = require('../../test-helper')
 const agent = require('../../support/agent-singleton-mock')
 const Koa = require('koa')
 const Router = require('koa-router')
@@ -17,10 +15,12 @@ const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-
 const http = require('http')
 const https = require('https')
 
+
 const TEST_ENV = {
   host: 'localhost',
   port: 5006,
 }
+
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 const testName1 = 'koa-router1'

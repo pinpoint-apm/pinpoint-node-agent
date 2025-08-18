@@ -5,8 +5,6 @@
  */
 
 const test = require('tape')
-const { log, fixture, util } = require('../test-helper')
-
 const annotationConstant = require('../../lib/constant/annotation')
 const AnnotationKeyProperty = annotationConstant.AnnotationKeyProperty
 

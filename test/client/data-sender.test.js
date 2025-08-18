@@ -7,11 +7,10 @@
 const test = require('tape')
 
 const agent = require('../support/agent-singleton-mock')
-const { fixture } = require('../test-helper')
 const dataSenderMock = require('../support/data-sender-mock')
 const dataSender = dataSenderMock()
 const AgentInfo = require('../../lib/data/dto/agent-info')
-const agentInfo = AgentInfo.create(fixture.config, Date.now())
+const agentInfo = AgentInfo.make(agent.config)
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')

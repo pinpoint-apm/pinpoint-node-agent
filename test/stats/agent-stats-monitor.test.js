@@ -6,14 +6,6 @@
 
 const test = require('tape')
 const axios = require('axios')
-
-const { log, fixture, util, enableDataSending, enableStatsMonitorSending } = require('../test-helper')
-enableDataSending()
-enableStatsMonitorSending()
-
-const agent = require('../support/agent-singleton-mock')
-const AgentStatsMonitor = require('../../lib/metric/agent-stats-monitor')
-
 const express = require('express')
 
 const TEST_ENV = {

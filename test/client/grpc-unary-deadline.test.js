@@ -10,10 +10,10 @@ const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const dataConvertor = require('../../lib/data/grpc-data-convertor')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
-const { log } = require('../test-helper')
 var _ = require('lodash')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const spanMessages = require('../../lib/data/v1/Span_pb')
+const log = require('../../lib/utils/log/logger')
 
 let statClient
 let endAction
@@ -22,29 +22,6 @@ const agentStartTime = Date.now()
 let callWriteOrder = 0
 let call
 let callCount = 5
-let dataCount = 0
-
-function sendAgentStat(call, callback) {
-    call.on('data', function (statMessage) {
-        dataCount++
-
-        if (statMessage) {
-            const agentStat = statMessage.getAgentstat()
-            serverT.equal(agentStat.getCollectinterval(), 1000, 'agentStat.getCollectinterval(), 1000 in server call.on("data")')
-
-            const memory = agentStat.getGc()
-            serverT.true(memory.getJvmmemoryheapused() >= 0, `index: ${memory.getJvmmemoryheapused()} equlity jvm memory heap used in server call.on("data")`)
-        }
-    })
-    call.on('error', function (error) {
-        serverT.true(false, 'when dealine, gRPC should never error in server call.on("error")')
-        log.debug(`error: ${error}`)
-    })
-    call.on('end', function () {
-        serverT.true(dataCount > 0, `dataCount: ${dataCount} matches datacount and callWirteOrder in server call.on('end')`)
-        callback(null, new Empty())
-    })
-}
 
 function createStatCall(t) {
     const deadline = new Date()
@@ -96,8 +73,29 @@ function callStat(t) {
 
 test('client side streaming with deadline', function (t) {
     const server = new grpc.Server()
+    let dataCount = 0
     server.addService(services.StatService, {
-        sendAgentStat: sendAgentStat
+        sendAgentStat: function sendAgentStat(call, callback) {
+            call.on('data', function (statMessage) {
+                dataCount++
+
+                if (statMessage) {
+                    const agentStat = statMessage.getAgentstat()
+                    serverT.equal(agentStat.getCollectinterval(), 1000, 'agentStat.getCollectinterval(), 1000 in server call.on("data")')
+
+                    const memory = agentStat.getGc()
+                    serverT.true(memory.getJvmmemoryheapused() >= 0, `index: ${memory.getJvmmemoryheapused()} equlity jvm memory heap used in server call.on("data")`)
+                }
+            })
+            call.on('error', function (error) {
+                serverT.true(false, 'when dealine, gRPC should never error in server call.on("error")')
+                log.debug(`error: ${error}`)
+            })
+            call.on('end', function () {
+                serverT.true(dataCount > 0, `dataCount: ${dataCount} matches datacount and callWirteOrder in server call.on('end')`)
+                callback(null, new Empty())
+            })
+        }
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         const headerInterceptor = function (options, nextCall) {

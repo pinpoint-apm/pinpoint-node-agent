@@ -106,6 +106,9 @@ class MockGrpcDataSender extends GrpcDataSender {
   initializePingStream() {
     let self = this
     this.pingStream = new MockGrpcStream({
+      push: function (pmessage) {
+        self.actualPingMessage = pmessage
+      },
       write: function (pmessage) {
         self.actualPingMessage = pmessage
       },

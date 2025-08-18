@@ -5,9 +5,9 @@
  */
 
 const test = require('tape')
-const { log } = require('./test-helper')
 const config = require('../lib/config')
 const HttpStatusCodeErrorsBuilder = require('../lib/instrumentation/http/http-status-code-errors-builder')
+const log = require('../lib/utils/log/logger')
 
 test('Agent ID required field', function (t) {
   t.plan(1)

@@ -6,9 +6,6 @@
 
 'use strict'
 
-const enableDataSending = require('../test-helper').enableDataSending
-enableDataSending()
-const Agent = require('../../lib/agent')
 const dataSenderMock = require('./data-sender-mock')
 const shimmer = require('@pinpoint-apm/shimmer')
 const activeTrace = require('../../lib/metric/active-trace')
@@ -23,6 +20,9 @@ const stringMetaService = require('../../lib/context/string-meta-service')
 const apiMetaService = require('../../lib/context/api-meta-service')
 const activeRequestRepository = require('../../lib/metric/active-request-repository')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
+const AgentBuilder = require('../../lib/agent-builder')
+const AgentInfo = require('../../lib/data/dto/agent-info')
+const { getConfig } = require('../../lib/config')
 
 let traces = []
 const resetTraces = () => {
@@ -62,39 +62,39 @@ const getSpanEventByAsyncId = (asyncId) => {
     return getSpanEvents().find(spanEvent => spanEvent.asyncId?.getAsyncId() === asyncId.getAsyncId())
 }
 
-const getCallerTraceByAsyncId = (asyncId) => {
-    return getTraces().find(trace => {
-        let spanEvents = trace.callStack.stack.concat(trace.repository.buffer)
-        if (trace.repository.spanChunkedSpanEvents) {
-            spanEvents = spanEvents.concat(trace.repository.spanChunkedSpanEvents)
+function portProperties(conf) {
+    if (!conf) {
+        return conf
+    }
+
+    if (typeof conf !== 'number') {
+        if (conf.collector) {
+            return conf
         }
-        const asyncSpanEvent = spanEvents.find(spanEvent => spanEvent.asyncId?.getAsyncId() === asyncId.getAsyncId())
-        return asyncSpanEvent ? trace : null
-    })
+        const collectorConf = { 'ip': '127.0.0.1', 'span-port': -1, 'stat-port': -1, 'tcp-port': -1 }
+        return Object.assign(conf, { collector: collectorConf })
+    }
+    const portNumber = conf
+    const collectorConf = Object.assign(require('../pinpoint-config-test').collector, { 'span-port': portNumber, 'stat-port': portNumber, 'tcp-port': portNumber })
+    return Object.assign({ collector: collectorConf })
 }
 
-class MockAgent extends Agent {
-    constructor(initOptions) {
-        initOptions.collector['span-port'] = -1
-        initOptions.collector['stat-port'] = -1
-        initOptions.collector['tcp-port'] = -1
-        initOptions = portProperties(initOptions)
-        super(initOptions)
-    }
+let json = require('../pinpoint-config-test.json')
+json.collector['span-port'] = -1
+json.collector['stat-port'] = -1
+json.collector['tcp-port'] = -1
+json = Object.assign({}, require('../pinpoint-config-test'), json)
+const config = getConfig(json)
+const agentInfo = AgentInfo.make(config)
+const agentBuilder = new AgentBuilder(agentInfo)
+    .setConfig(config)
+    .setDataSender(dataSenderMock(config, agentInfo))
+    .disablePingScheduler()
+    .disableStatsScheduler()
+const agent = agentBuilder.build()
 
-    startSchedule(agentId, agentStartTime) {
-        this.mockAgentId = agentId
-        this.mockAgentStartTime = agentStartTime
-    }
-
-    initializeDataSender() {
-        this.dataSender = dataSenderMock()
-        this.dataSender.send(this.agentInfo)
-    }
-
+class MockAgent {
     bindHttp(json) {
-        this.dataSender.clear()
-
         let grpcDataSender
         if (json instanceof GrpcDataSender) {
             grpcDataSender = json
@@ -104,13 +104,13 @@ class MockAgent extends Agent {
         if (!json) {
             json = require('../pinpoint-config-test')
         } else {
-            json = Object.assign({}, require('../pinpoint-config-test'), json)
+            json = Object.assign({}, require('../pinpoint-config-test.json'), json)
         }
         require('../../lib/config').clear()
         const config = require('../../lib/config').getConfig(json)
         this.config = config
 
-        this.agentInfo = this.createAgentInfo(this.config, Date.now())
+        this.agentInfo = AgentInfo.make(config)
 
         sqlMetadataService.cache = new SimpleCache(1024)
         this.traceContext.isSampling = sampler.getIsSampling(config.sampling, config.sampleRate)
@@ -130,7 +130,7 @@ class MockAgent extends Agent {
         this.traceContext.traceSampler = new TraceSampler(this.agentInfo, config)
         this.traceContext.config = config
 
-        const dataSender = this.makeDataSender(grpcDataSender)
+        const dataSender = dataSenderMock(this.config, this.agentInfo, grpcDataSender)
         this.traceContext.dataSender = dataSender
         this.dataSender.close()
         this.dataSender = dataSender
@@ -242,24 +242,12 @@ class MockAgent extends Agent {
         this.bindHttp(conf)
     }
 
-    completeTraceObject(trace) {
-        super.completeTraceObject(trace)
-    }
-
-    getTraces() {
-        return getTraces()
-    }
-
     getTrace(index) {
         return getTraces()[index]
     }
 
-    getTraceByAsyncId(asyncId) {
-        return getTraces().find(trace => trace.findSpanEventByAsyncId(asyncId))
-    }
-
-    getSpanEventByAsyncId(asyncId) {
-        return getSpanEventByAsyncId(asyncId)
+    getTraces() {
+        return getTraces()
     }
 
     getSendedApiMetaInfos() {
@@ -270,32 +258,15 @@ class MockAgent extends Agent {
         return getSqlMetadata()
     }
 
-    getCallerTraceByAsyncId(asyncId) {
-        return getCallerTraceByAsyncId(asyncId)
-    }
-
-    makeDataSender(grpcDataSender) {
-        return dataSenderMock(this.config, this.agentInfo, grpcDataSender)
+    getSpanEventByAsyncId(asyncId) {
+        return getSpanEventByAsyncId(asyncId)
     }
 }
 
-function portProperties(conf) {
-    if (!conf) {
-        return conf
-    }
+// ref: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/setPrototypeOf
+// ref: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Inheritance_and_the_prototype_chain
+Object.setPrototypeOf(MockAgent.prototype, agent)
+const mockAgent = new MockAgent()
+mockAgent.start()
 
-    if (typeof conf !== 'number') {
-        if (conf.collector) {
-            return conf
-        }
-        const collectorConf = Object.assign({ 'ip': '127.0.0.1', 'span-port': -1, 'stat-port': -1, 'tcp-port': -1 })
-        return Object.assign(conf, { collector: collectorConf })
-    }
-    const portNumber = conf
-    const collectorConf = Object.assign(require('../pinpoint-config-test').collector, { 'span-port': portNumber, 'stat-port': portNumber, 'tcp-port': portNumber })
-    return Object.assign({ collector: collectorConf })
-}
-
-
-const agent = new MockAgent(require('../pinpoint-config-test'))
-module.exports = agent
+module.exports = mockAgent

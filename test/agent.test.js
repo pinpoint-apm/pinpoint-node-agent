@@ -6,13 +6,10 @@
 
 const test = require('tape')
 
-const { enableDataSending } = require('./test-helper')
-enableDataSending()
-
 test('Should initialize agent', function (t) {
   t.plan(2)
 
   const agent = require('./support/agent-singleton-mock')
   t.ok(agent)
-  t.equal(agent.pinpointClient.agentInfo.agentVersion, '1.3.0', 'agent version from package.json')
+  t.equal(agent.agentInfo.agentVersion, '1.3.0', 'agent version from package.json')
 })

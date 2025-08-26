@@ -14,6 +14,7 @@ var _ = require('lodash')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const spanMessages = require('../../lib/data/v1/Span_pb')
 const log = require('../../lib/utils/log/logger')
+const AgentInfo = require('../../lib/data/dto/agent-info')
 
 let statClient
 let endAction
@@ -150,10 +151,11 @@ test('sendAgentInfo deadline and metadata', (t) => {
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
 
-        grpcDataSender.sendAgentInfo({
+        const agentInfo = Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
             hostname: 'hostname',
-            "serviceType": 1400,
-        }, (err, response) => {
+            serviceType: 1400
+        })
+        grpcDataSender.sendAgentInfo(agentInfo, (err, response) => {
             t.true(response, '1st sendAgentInfo response is success')
             t.false(err, '1st sendAgentInfo err is false')
             deadlineFunctionalTest()
@@ -176,10 +178,10 @@ test('sendAgentInfo deadline and metadata', (t) => {
             }
             grpcDataSender.unaryDeadlineOptionsBuilder.setSeconds(0.1)
 
-            grpcDataSender.sendAgentInfo({
+            grpcDataSender.sendAgentInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
                 hostname: 'hostname',
                 "serviceType": 1400,
-            }, callback)
+            }), callback)
         }
     })
 })
@@ -210,10 +212,10 @@ test('sendAgentInfo deadline and no agent name metadata', (t) => {
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
 
-        grpcDataSender.sendAgentInfo({
+        grpcDataSender.sendAgentInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
             hostname: 'hostname',
             "serviceType": 1400,
-        }, (err, response) => {
+        }), (err, response) => {
             t.true(response, '1st sendAgentInfo response is success')
             t.false(err, '1st sendAgentInfo err is false')
             deadlineFunctionalTest()
@@ -236,10 +238,10 @@ test('sendAgentInfo deadline and no agent name metadata', (t) => {
                 t.end()
             }
 
-            grpcDataSender.sendAgentInfo({
+            grpcDataSender.sendAgentInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
                 hostname: 'hostname',
                 "serviceType": 1400,
-            }, callback)
+            }), callback)
         }
     })
 })
@@ -269,10 +271,10 @@ test('sendApiMetaInfo deadline', (t) => {
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
 
-        grpcDataSender.sendApiMetaInfo({
+        grpcDataSender.sendApiMetaInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
             hostname: 'hostname',
             "serviceType": 1400,
-        }, (err, response) => {
+        }), (err, response) => {
             t.true(response, '1st sendApiMetaInfo response is success')
             t.false(err, '1st sendApiMetaInfo err is false')
 
@@ -286,10 +288,10 @@ test('sendApiMetaInfo deadline', (t) => {
 
         function apiMetaInfoFunctionalTest() {
             grpcDataSender.unaryDeadlineOptionsBuilder.setSeconds(0.1)
-            grpcDataSender.sendApiMetaInfo({
+            grpcDataSender.sendApiMetaInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
                 hostname: 'hostname',
                 "serviceType": 1400,
-            }, (err, response) => {
+            }), (err, response) => {
                 t.false(response, '2st sendApiMetaInfo response is undefined')
                 t.equal(err.code, 4, '2st sendApiMetaInfo err.code is 4')
                 t.true(err.details.startsWith('Deadline exceeded'), '2st sendApiMetaInfo err.details is Deadline exceeded')
@@ -324,10 +326,10 @@ test('sendStringMetaInfo deadline', (t) => {
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
-        grpcDataSender.sendStringMetaInfo({
+        grpcDataSender.sendStringMetaInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
             hostname: 'hostname',
             "serviceType": 1400,
-        }, (err, response) => {
+        }), (err, response) => {
             t.true(response, '1st sendStringMetaInfo response is success')
             t.false(err, '1st sendStringMetaInfo err is false')
 
@@ -341,10 +343,10 @@ test('sendStringMetaInfo deadline', (t) => {
 
         function stringMetaInfoFunctionalTest() {
             grpcDataSender.unaryDeadlineOptionsBuilder.setSeconds(0.1)
-            grpcDataSender.sendStringMetaInfo({
+            grpcDataSender.sendStringMetaInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
                 hostname: 'hostname',
                 "serviceType": 1400,
-            }, (err, response) => {
+            }), (err, response) => {
                 t.false(response, '2st sendStringMetaInfo response is undefined')
                 t.equal(err.code, 4, '2st sendStringMetaInfo err.code is 4')
                 t.true(err.details.startsWith('Deadline exceeded'), '2st sendStringMetaInfo err.details is Deadline exceeded')

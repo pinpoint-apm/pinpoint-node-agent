@@ -6,7 +6,7 @@
 
 'use strict'
 
-const AgentBuilder = require('./lib/agent-builder')
+const { AgentBuilder } = require('./lib/agent-builder')
 const AgentInfo = require('./lib/data/dto/agent-info')
 const { getConfig } = require('./lib/config')
 

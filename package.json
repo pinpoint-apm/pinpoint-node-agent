@@ -4,11 +4,28 @@
   "exports": {
     ".": {
       "types": "./index.d.ts",
+      "import": "./index.js",
       "require": "./index.js"
     },
     "./logging": {
       "types": "./lib/utils/log/types.d.ts",
+      "import": "./lib/utils/log/index.js",
       "require": "./lib/utils/log/index.js"
+    },
+    "./agent-builder": {
+      "types": "./lib/agent-builder.d.ts",
+      "import": "./lib/agent-builder.js",
+      "require": "./lib/agent-builder.js"
+    },
+    "./config": {
+      "types": "./lib/config.d.ts",
+      "import": "./lib/config.js",
+      "require": "./lib/config.js"
+    },
+    "./agent-info": {
+      "types": "./lib/data/dto/agent-info.d.ts",
+      "import": "./lib/data/dto/agent-info.js",
+      "require": "./lib/data/dto/agent-info.js"
     }
   },
   "type": "commonjs",

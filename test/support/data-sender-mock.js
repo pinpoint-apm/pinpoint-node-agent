@@ -9,8 +9,6 @@
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
-const Span = require('../../lib/context/span')
-const SpanChunk = require('../../lib/context/span-chunk')
 const DataSender = require('../../lib/client/data-sender')
 const MockGrpcDataSender = require('../client/mock-grpc-data-sender')
 const SqlMetaData = require('../../lib/client/sql-meta-data')
@@ -38,14 +36,9 @@ class MockDataSender extends DataSender {
       this.mockAPIMetaInfos.push(data)
     } else if (data instanceof StringMetaInfo) {
       this.mockMetaInfo = data
-    } else if (data instanceof Span) {
-      this.mockSpan = data
-      this.mockSpans.push(data)
-    } else if (data instanceof SpanChunk) {
-      this.mockSpanChunks.push(data)
     } else if (data instanceof SqlMetaData) {
       this.mockSqlMetadata.push(data)
-    } else if (data?.isAsyncSpanChunk?.()) {
+    } else if (data?.isSpanChunk?.()) {
       this.mockSpanChunks.push(data)
     } else if (data?.isSpan?.()) {
       this.mockSpan = data

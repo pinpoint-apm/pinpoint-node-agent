@@ -20,7 +20,7 @@ const stringMetaService = require('../../lib/context/string-meta-service')
 const apiMetaService = require('../../lib/context/api-meta-service')
 const activeRequestRepository = require('../../lib/metric/active-request-repository')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
-const AgentBuilder = require('../../lib/agent-builder')
+const { AgentBuilder } = require('../../lib/agent-builder')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const { getConfig } = require('../../lib/config')
 

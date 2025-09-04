@@ -8,10 +8,10 @@
 
 const test = require('tape')
 const log = require('../../../lib/utils/log/logger')
-const { LogBuilder } = require('../../../lib/utils/log/log-builder')
-const levels = require('loglevel').levels
+const { LogBuilder, LogLevel } = require('../../../lib/utils/log/log-builder')
+const levels = LogLevel
 
-test.skip('isDebug', (t) => {
+test('isDebug', (t) => {
     t.plan(4)
     t.equal(log.isDebug(), false, 'debug null')
 
@@ -23,26 +23,26 @@ test.skip('isDebug', (t) => {
     t.equal(testLog2.isInfo(), false, 'same name logger is not info false')
 })
 
-test.skip('isInfo', (t) => {
+test('isInfo', (t) => {
     t.plan(2)
     const testLog = log.getLogger(new LogBuilder('test1').logLevelInfo().build())
     t.equal(testLog.isInfo(), true, 'info')
     t.equal(testLog.isDebug(), false, 'debug false')
 })
 
-test.skip('warn log', (t) => {
+test('warn log', (t) => {
     t.plan(1)
     const testLog = log.getLogger(new LogBuilder('test2').logLevelWarn().build())
     t.equal(testLog.loglevel.getLevel(), testLog.loglevel.levels.WARN, 'warn log level')
 })
 
-test.skip('error log', (t) => {
+test('error log', (t) => {
     t.plan(1)
     const testLog = log.getLogger(new LogBuilder('test3').logLevelError().build())
     t.equal(testLog.loglevel.getLevel(), testLog.loglevel.levels.ERROR, 'error log level')
 })
 
-test.skip('appenders', (t) => {
+test('appenders', (t) => {
     t.plan(2)
     const testLog = log.getLogger(new LogBuilder('test4').logLevelDebug().build())
     t.equal(testLog.appenders.length, 0, 'appenders length')
@@ -59,7 +59,7 @@ test.skip('appenders', (t) => {
     t.equal(testLog2.appenders.length, 1, 'appenders length with valid appender')
 })
 
-test.skip('addAppender validation', (t) => {
+test('addAppender validation', (t) => {
     t.plan(8)
 
     const validAppender = {
@@ -133,7 +133,7 @@ test.skip('addAppender validation', (t) => {
     t.equal(mixedLog.appenders.length, 1, 'Only valid appenders should be added in mixed scenario')
 })
 
-test.skip('formatMessage', (t) => {
+test('formatMessage', (t) => {
     t.plan(4)
     const testLog = log.getLogger(new LogBuilder('test10').logLevelDebug().build())
 
@@ -153,7 +153,7 @@ test.skip('formatMessage', (t) => {
     t.ok(message4.includes('[Object object]'), 'Circular references should be handled gracefully')
 })
 
-test.skip('appender message forwarding', (t) => {
+test('appender message forwarding', (t) => {
     t.plan(7)
 
     let capturedMessages = []
@@ -233,7 +233,7 @@ test.skip('appender message forwarding', (t) => {
     t.equal(capturedMessages.length, 0, 'SILENT level should process no messages')
 })
 
-test.skip('guard clause - no appenders', (t) => {
+test('guard clause - no appenders', (t) => {
     t.plan(4)
 
     const testLog = log.getLogger(new LogBuilder('test12').logLevelDebug().build())
@@ -310,7 +310,7 @@ test.skip('guard clause - no appenders', (t) => {
     t.equal(silentCallCount, 0, 'appender methods should never be called at SILENT level')
 })
 
-test.skip('per-appender loggingLevel configuration', (t) => {
+test('per-appender loggingLevel configuration', (t) => {
     t.plan(6)
 
     const warnAppenderMessages = []

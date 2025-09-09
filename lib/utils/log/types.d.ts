@@ -25,19 +25,17 @@ export declare interface Appender {
 }
 
 export declare class LogBuilder {
-    constructor(name?: string);
+    static createDefaultLogBuilder(): LogBuilder;
 
+    constructor(name?: string);
+    build(): Log;
     logLevelDebug(): LogBuilder;
     logLevelInfo(): LogBuilder;
     logLevelWarn(): LogBuilder;
     logLevelError(): LogBuilder;
     logLevelSilent(): LogBuilder;
-
     addAppender(appender: Appender): LogBuilder;
-
-    build(): Log;
-
-    static LogLevel: typeof LogLevel;
+    setConfig(config: { [key: string]: any }): LogBuilder;
 }
 
 export declare class Log {
@@ -53,22 +51,20 @@ export declare interface Logging {
     info(...args: any[]): void;
     warn(...args: any[]): void;
     error(...args: any[]): void;
-
     isDebug(): boolean;
     isInfo(): boolean;
 }
 
 export declare class Logger implements Logging {
-
     debug(...args: any[]): void;
     info(...args: any[]): void;
     warn(...args: any[]): void;
     error(...args: any[]): void;
-
     isDebug(): boolean;
     isInfo(): boolean;
 
     getLogger(log: Log): Logger;
+    setRootLogger(log: Log): void;
 }
 
 export declare class ChildLogger implements Logging {
@@ -78,7 +74,6 @@ export declare class ChildLogger implements Logging {
     info(...args: any[]): void;
     warn(...args: any[]): void;
     error(...args: any[]): void;
-
     isDebug(): boolean;
     isInfo(): boolean;
 }

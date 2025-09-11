@@ -5,22 +5,22 @@
  */
 
 const test = require('tape')
-const config = require('../../lib/config')
+const { getConfig, clear, isContainerEnvironment } = require('../../lib/config')
 
 function isRunGithubAction() {
-    return config.isContainerEnvironment()
+    return isContainerEnvironment
 }
 
 
 test('should return the string value when the env value is string type', function(t) {
-    config.clear()
+    clear()
 
     process.env['PINPOINT_AGENT_ID'] = "agentId"
     process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
     process.env['PINPOINT_COLLECTOR_IP'] = "192.168.78.79"
     process.env['PINPOINT_LOG_LEVEL'] = "Debug"
 
-    const given = config.getConfig()
+    const given = getConfig()
     t.equal(given.agentId, "agentId", "given PINPOINT_AGENT_ID env, should equal config")
     t.equal(given.applicationName, "appication name", "given PINPOINT_APPLICATION_NAME env, should equal config")
     t.equal(given.collectorIp, "192.168.78.79", "given PINPOINT_COLLECTOR_IP env, should equal config")
@@ -31,7 +31,7 @@ test('should return the string value when the env value is string type', functio
     delete process.env.PINPOINT_COLLECTOR_IP
     delete process.env.PINPOINT_LOG_LEVEL
 
-    config.clear()
+    clear()
     t.end()
 })
 
@@ -39,7 +39,7 @@ const givenDefaultIdAndName = () => {
     process.env['PINPOINT_AGENT_ID'] = "agentId"
     process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
 
-    const given = config.getConfig()
+    const given = getConfig()
 
     delete process.env.PINPOINT_AGENT_ID
     delete process.env.PINPOINT_APPLICATION_NAME
@@ -48,7 +48,7 @@ const givenDefaultIdAndName = () => {
 }
 
 test('should return the number value when the env value is number type', function(t) {
-    config.clear()
+    clear()
 
     process.env['PINPOINT_SERVICE_TYPE'] = "1400"
     process.env['PINPOINT_COLLECTOR_TCP_PORT'] = "9894"
@@ -69,12 +69,12 @@ test('should return the number value when the env value is number type', functio
     delete process.env.PINPOINT_COLLECTOR_SPAN_PORT
     delete process.env.PINPOINT_SAMPLING_RATE
 
-    config.clear()
+    clear()
     t.end()
 })
 
 test('should return the true value when the env value is boolean type', function(t) {
-    config.clear()
+    clear()
 
     process.env['PINPOINT_SAMPLING'] = "true"
     process.env['PINPOINT_ENABLE'] = "true"
@@ -89,18 +89,18 @@ test('should return the true value when the env value is boolean type', function
     delete process.env.PINPOINT_ENABLE
     delete process.env.PINPOINT_CONTAINER
 
-    config.clear()
+    clear()
     t.end()
 })
 
 test('should return the false value when the env value is boolean type', function(t) {
-    config.clear()
+    clear()
 
     process.env['PINPOINT_SAMPLING'] = "false"
     process.env['PINPOINT_ENABLE'] = "false"
     process.env['PINPOINT_CONTAINER'] = "false"
 
-    const given = config.getConfig()
+    const given = getConfig()
     t.equal(given.sampling, false, 'given PINPOINT_SAMPLING env, should equal config')
     t.equal(given.enable, false, 'given PINPOINT_ENABLE env, should equal config')
     if (!isRunGithubAction()) {
@@ -111,12 +111,12 @@ test('should return the false value when the env value is boolean type', functio
     delete process.env.PINPOINT_ENABLE
     delete process.env.PINPOINT_CONTAINER
 
-    config.clear()
+    clear()
     t.end()
 })
 
 test('should not exist in the process.env property when you do not set an environment variable', function(t) {
-    config.clear()
+    clear()
 
     delete process.env.PINPOINT_COLLECTOR_IP
     delete process.env.PINPOINT_LOG_LEVEL
@@ -149,12 +149,12 @@ test('should not exist in the process.env property when you do not set an enviro
     t.equal(given.collectorSpanPort, 9993, 'No set PINPOINT_COLLECTOR_SPAN_PORT env, should equal default config')
     t.equal(given.sampleRate, 10, 'No set PINPOINT_SAMPLING_RATE env, should equal default config')
 
-    config.clear()
+    clear()
     t.end()
 })
 
 test(`default config`, (t) => {
-    config.clear()
+    clear()
 
     const given = givenDefaultIdAndName()
     t.equal(given.enabledActiveThreadCount, false, 'No set activeThreadCount')
@@ -163,10 +163,10 @@ test(`default config`, (t) => {
 })
 
 test(`detect container`, (t) => {
-    config.clear()
+    clear()
 
     process.env['KUBERNETES_SERVICE_HOST'] = "aaa"
-    const given = config.getConfig()
+    const given = getConfig()
 
     t.plan(1)
     t.equal(given.container, true, 'container detect')
@@ -175,10 +175,10 @@ test(`detect container`, (t) => {
 })
 
 test(`detect container2`, (t) => {
-    config.clear()
+    clear()
 
     if (!isRunGithubAction()) {
-        const given = config.getConfig()
+        const given = getConfig()
         t.equal(given.container, false, 'container detect')
     }
 

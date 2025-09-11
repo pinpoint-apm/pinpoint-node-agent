@@ -56,7 +56,7 @@ test('shimming require(undici) cause by require-in-the-middle package', function
                     const actualOutgoingRequestAcceptEvent = actualOutgoingRequestSpan.getAcceptevent()
                     t.equal(actualOutgoingRequestAcceptEvent.getRpc(), '/outgoing', 'Outgoing request Span rpc is /outgoing')
                     t.equal(actualOutgoingRequestAcceptEvent.getEndpoint(), 'localhost:5006', 'Outgoing request Span endpoint is localhost:5006')
-                    t.equal(actualOutgoingRequestAcceptEvent.getRemoteaddr(), '::1', 'Outgoing request Span remote address is ::1')
+                    t.equal(actualOutgoingRequestAcceptEvent.getRemoteaddr(), actualTestSpan.remoteAddress, `Outgoing request Span remote address is ${actualTestSpan.remoteAddress}`)
 
                     t.equal(actualOutgoingRequestSpan.getFlag(), 0, 'Outgoing request Span flag is 0')
                     t.equal(actualOutgoingRequestSpan.getErr(), 1, 'Outgoing request Span error is 1')
@@ -159,7 +159,7 @@ test('shimming require(undici) cause by require-in-the-middle package', function
                     const actualAcceptEvent = actualPSpan.getAcceptevent()
                     t.equal(actualAcceptEvent.getRpc(), '/test', 'rpc is /outgoing')
                     t.equal(actualAcceptEvent.getEndpoint(), 'localhost:5006', 'endpoint is localhost:5006')
-                    t.equal(actualAcceptEvent.getRemoteaddr(), '::1', 'remote address is ::1')
+                    t.equal(actualAcceptEvent.getRemoteaddr(), actualTestSpan.remoteAddress, `remote address is ${actualTestSpan.remoteAddress}`)
 
                     t.equal(actualPSpan.getFlag(), 0, 'flag is 0')
                     t.equal(actualPSpan.getErr(), 0, 'error is 0')
@@ -286,7 +286,7 @@ test('shimming udici by global nodejs fetch', function (t) {
                     const actualOutgoingRequestAcceptEvent = actualOutgoingRequestSpan.getAcceptevent()
                     t.equal(actualOutgoingRequestAcceptEvent.getRpc(), '/outgoing', 'Outgoing request Span rpc is /outgoing')
                     t.equal(actualOutgoingRequestAcceptEvent.getEndpoint(), 'localhost:5006', 'Outgoing request Span endpoint is localhost:5006')
-                    t.equal(actualOutgoingRequestAcceptEvent.getRemoteaddr(), '::1', 'Outgoing request Span remote address is ::1')
+                    t.equal(actualOutgoingRequestAcceptEvent.getRemoteaddr(), actualTestSpan.remoteAddress, `Outgoing request Span remote address is ${actualTestSpan.remoteAddress}`)
 
                     t.equal(actualOutgoingRequestSpan.getFlag(), 0, 'Outgoing request Span flag is 0')
                     t.equal(actualOutgoingRequestSpan.getErr(), 0, 'Outgoing request Span error is 0')
@@ -384,7 +384,7 @@ test('shimming udici by global nodejs fetch', function (t) {
                     const actualAcceptEvent = actualPSpan.getAcceptevent()
                     t.equal(actualAcceptEvent.getRpc(), '/test', 'rpc is /outgoing')
                     t.equal(actualAcceptEvent.getEndpoint(), 'localhost:5006', 'endpoint is localhost:5006')
-                    t.equal(actualAcceptEvent.getRemoteaddr(), '::1', 'remote address is ::1')
+                    t.equal(actualAcceptEvent.getRemoteaddr(), actualTestSpan.remoteAddress, `remote address is ${actualTestSpan.remoteAddress}`)
 
                     t.equal(actualPSpan.getFlag(), 0, 'flag is 0')
                     t.equal(actualPSpan.getErr(), 0, 'error is 0')

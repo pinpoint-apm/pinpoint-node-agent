@@ -7,7 +7,7 @@
 'use strict'
 
 const agent = require('../support/agent-singleton-mock')
-const config = require('../../lib/config')
+const { clear, getConfig } = require('../../lib/config')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const SpanBuilder = require('../../lib/context/span-builder')
 const RemoteTraceRootBuilder = require('../../lib/context/remote-trace-root-builder')
@@ -20,15 +20,19 @@ let callMetadata = []
 function beforeSpecificOne(port, one, serviceConfig) {
     callCount = 0
     afterCount = 0
-    config.clear()
+    clear()
     callRequests = []
     callMetadata = []
-    const actualConfig = config.getConfig({ 'grpc.service_config': serviceConfig })
-    actualConfig.collectorIp = '127.0.0.1'
-    actualConfig.collectorTcpPort = port
-    actualConfig.collectorStatPort = port
-    actualConfig.collectorSpanPort = port
-    actualConfig.enabledDataSending = true
+    const actualConfig = getConfig({
+        'grpc': { 'service_config': serviceConfig },
+        'collector': {
+            'ip': '127.0.0.1',
+            'span-port': port,
+            'stat-port': port,
+            'tcp-port': port
+        },
+        'enabled-data-sending': true,
+    })
     const dataSource = new one(
         actualConfig.collectorIp,
         actualConfig.collectorTcpPort,

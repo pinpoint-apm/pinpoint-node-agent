@@ -83,7 +83,7 @@ test('http error status code', (t) => {
             const pAcceptEvent = pSpan.getAcceptevent()
             t.equal(pAcceptEvent.getRpc(), '/', 'rpc should be /')
             t.equal(pAcceptEvent.getEndpoint(), actualSpan.endPoint, `endpoint should be ${actualSpan.endPoint}`)
-            t.equal(pAcceptEvent.getRemoteaddr(), '::1', 'remoteAddr should be ::1')
+            t.equal(pAcceptEvent.getRemoteaddr(), actualSpan.remoteAddress, `remoteAddress should be ${actualSpan.remoteAddress}`)
 
             t.equal(pSpan.getFlag(), 0, 'flag should be 0')
             t.equal(pSpan.getErr(), 1, 'error should be 1')

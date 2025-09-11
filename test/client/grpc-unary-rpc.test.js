@@ -14,7 +14,7 @@ const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
-const config = require('../../lib/config')
+const { clear, getConfig  } = require('../../lib/config')
 const SqlMetaData = require('../../lib/client/sql-meta-data')
 const sqlMetadataService = require('../../lib/instrumentation/sql/sql-metadata-service')
 const SqlUidMetaData = require('../../lib/client/sql-uid-meta-data')
@@ -424,10 +424,10 @@ test('sendSqlMetaData retry', (t) => {
 })
 
 test('sendSqlUidMetaData retry', (t) => {
-    config.clear()
+    clear()
     process.env['PINPOINT_PROFILER_SQL_STAT'] = 'true'
     sqlMetadataService.cache.cache.clear()
-    const conf = config.getConfig()
+    const conf = getConfig()
     t.true(conf.profilerSqlStat, 'profiler SQL Stat is false')
 
     const server = new grpc.Server()
@@ -467,7 +467,7 @@ test('sendSqlUidMetaData retry', (t) => {
             dataSender.close()
             server.forceShutdown()
             delete process.env.PINPOINT_PROFILER_SQL_STAT
-            config.clear()
+            clear()
         })
     })
 })

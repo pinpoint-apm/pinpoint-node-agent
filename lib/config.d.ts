@@ -8,7 +8,7 @@ export interface LoggerLevels {
   [loggerName: string]: string;
 }
 
-export interface PinpointConfig {
+export interface Config {
   enable: boolean;
   agentId: string;
   agentName?: string;
@@ -40,11 +40,14 @@ export interface PinpointConfig {
   [key: string]: any;
 }
 
-export declare function getConfig(initOptions?: { [key: string]: any }): PinpointConfig;
+export declare class ConfigBuilder {
+  constructor(agentStartupUserDefinedJson?: { [key: string]: any });
+  setDefaultJson(json: { [key: string]: any }): ConfigBuilder;
+  setUserDefinedJson(json: { [key: string]: any }): ConfigBuilder;
+  build(): Config;
+}
+
+export declare function getConfig(initOptions?: { [key: string]: any }): Config;
+export declare function setConfig(config: Config): void;
 export declare function clear(): void;
-export declare function readConfigJson(formattedConfig: any): Partial<PinpointConfig>;
-export declare function readRootConfigFile(): { [key: string]: any };
-export declare function getMainModulePath(requireFunction: NodeRequire): string | undefined;
 export declare function isContainerEnvironment(): boolean;
-export declare function initializeConfig(initOptions?: { [key: string]: any }): void;
-export declare function registerLoadedConfig(propertyName: string, callback: (value: any) => void): void;

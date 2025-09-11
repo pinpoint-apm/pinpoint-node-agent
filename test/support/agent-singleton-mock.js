@@ -22,7 +22,7 @@ const activeRequestRepository = require('../../lib/metric/active-request-reposit
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const { AgentBuilder } = require('../../lib/agent-builder')
 const AgentInfo = require('../../lib/data/dto/agent-info')
-const { getConfig } = require('../../lib/config')
+const { getConfig, clear } = require('../../lib/config')
 
 let traces = []
 const resetTraces = () => {
@@ -106,7 +106,7 @@ class MockAgent {
         } else {
             json = Object.assign({}, require('../pinpoint-config-test.json'), json)
         }
-        require('../../lib/config').clear()
+        clear()
         const config = require('../../lib/config').getConfig(json)
         this.config = config
 

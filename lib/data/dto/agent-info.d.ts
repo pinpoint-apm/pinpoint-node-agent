@@ -4,7 +4,7 @@
  * Apache License v2.0
  */
 
-import { PinpointConfig } from '../../config';
+import { Config } from '../../config';
 
 declare class AgentInfo {
   agentId: string;
@@ -21,9 +21,9 @@ declare class AgentInfo {
   ports: string;
   vmVersion: string;
 
-  constructor(config: PinpointConfig, agentStartTime: string);
+  constructor(config: Config, agentStartTime: string);
 
-  static make(config: PinpointConfig): AgentInfo;
+  static make(config: Config): AgentInfo;
 
   getAgentId(): string;
   getAgentName(): string;

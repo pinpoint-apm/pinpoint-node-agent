@@ -4,7 +4,7 @@
  * Apache License v2.0
  */
 
-import { PinpointConfig } from './config';
+import { Config } from './config';
 import AgentInfo = require('./data/dto/agent-info');
 
 interface TraceObject {
@@ -25,7 +25,7 @@ interface DataSender {
 
 interface Agent {
   agentInfo: AgentInfo;
-  config: PinpointConfig;
+  config: Config;
   dataSender: DataSender;
   traceContext: TraceContext;
   services: Array<() => void>;
@@ -42,7 +42,7 @@ interface Agent {
 declare class AgentBuilder {
   constructor(agentInfo: AgentInfo);
 
-  setConfig(config: PinpointConfig): AgentBuilder;
+  setConfig(config: Config): AgentBuilder;
   setDataSender(dataSender: DataSender): AgentBuilder;
   addService(service: () => void): AgentBuilder;
   disableStatsScheduler(): AgentBuilder;

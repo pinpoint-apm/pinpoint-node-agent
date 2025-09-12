@@ -47,4 +47,3 @@ export declare function readRootConfigFile(): { [key: string]: any };
 export declare function getMainModulePath(requireFunction: NodeRequire): string | undefined;
 export declare function isContainerEnvironment(): boolean;
 export declare function initializeConfig(initOptions?: { [key: string]: any }): void;
-export declare function registerLoadedConfig(propertyName: string, callback: (value: any) => void): void;

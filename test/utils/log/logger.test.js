@@ -475,3 +475,56 @@ test('PINPOINT_LOGGER_LEVELS environment variable log levels', (t) => {
     t.ok(noLevelAppenderMessages2[3].includes('NO-LEVEL-APPENDER2 WARN: warn message'), 'NO-LEVEL appender 2 should receive warn message from grpc logger')
     t.ok(noLevelAppenderMessages2[4].includes('NO-LEVEL-APPENDER2 ERROR: error message'), 'NO-LEVEL appender 2 should receive error message from grpc logger')
 })
+
+test('getLogger with string parameter should return existing logger', (t) => {
+    t.plan(4)
+
+    // Create a logger with LogBuilder first
+    const logName = 'test-string-logger'
+    const originalLogger = log.getLogger(new LogBuilder(logName).logLevelDebug().build())
+
+    // Get logger with string parameter - should return the existing logger
+    const stringLogger = log.getLogger(logName)
+
+    t.equal(stringLogger, originalLogger, 'getLogger with string should return the same instance')
+    t.equal(stringLogger.name, logName, 'Logger name should match')
+
+    // Test with another logger to ensure it works for multiple loggers
+    const logName2 = 'test-string-logger-2'
+    const originalLogger2 = log.getLogger(new LogBuilder(logName2).logLevelInfo().build())
+    const stringLogger2 = log.getLogger(logName2)
+
+    t.equal(stringLogger2, originalLogger2, 'getLogger with string should return the same instance for second logger')
+    t.equal(stringLogger2.name, logName2, 'Second logger name should match')
+})
+
+test('getLogger with string parameter for non-existing logger', (t) => {
+    t.plan(2)
+
+    // Try to get a logger that doesn't exist with string parameter
+    const nonExistentLogName = 'non-existent-logger'
+    const logger = log.getLogger(nonExistentLogName)
+
+    t.ok(logger, 'Logger should be created even if it did not exist before')
+    t.equal(logger.name, 'default-logger', 'Logger should have default name since it was created without LogBuilder')
+})
+
+test('getLogger caching behavior with string and LogBuilder', (t) => {
+    t.plan(3)
+
+    const logName = 'cache-test-logger'
+
+    // First, get logger with string (non-existing)
+    const firstLogger = log.getLogger(logName)
+
+    // Then, get logger with LogBuilder with same name
+    const secondLogger = log.getLogger(new LogBuilder(logName).logLevelWarn().build())
+
+    // Then, get logger with string again
+    const thirdLogger = log.getLogger(logName)
+
+    // All should be the same instance due to caching
+    t.notEqual(firstLogger, secondLogger, 'Logger is different instances when no created with LogBuilder first')
+    t.equal(secondLogger, thirdLogger, 'Logger obtained again with string should be the same instance')
+    t.equal(firstLogger.name, 'default-logger', 'Logger is not created with LogBuilder first has default name')
+})

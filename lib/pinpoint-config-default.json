@@ -13,9 +13,9 @@
   "http-status-code": {
     "errors": "5xx,401,403"
   },
-  "log-level": "WARN",
   "logger-levels": {
-    "default-logger": "WARN"
+    "default-logger": "WARN",
+    "grpcLogger": "SILENT"
   },
   "enable": true,
   "enabled-data-sending": true,

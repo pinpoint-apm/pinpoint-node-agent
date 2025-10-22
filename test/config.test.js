@@ -337,7 +337,7 @@ test('HTTP Status Code Errors with config changes', (t) => {
 test('Logger levels', (t) => {
   clear()
   const conf = require('../lib/config').getConfig()
-  t.deepEqual(conf.loggerLevels, {'default-logger': 'WARN'}, 'default logger levels is =warn')
+  t.deepEqual(conf.loggerLevels, {'default-logger': 'WARN', grpcLogger: 'SILENT'}, 'default logger levels is warn and grpcLogger is silent')
 
   clear()
   process.env['PINPOINT_LOGGER_LEVELS'] = 'grpc=INFO,sql=WARN,http=INFO'

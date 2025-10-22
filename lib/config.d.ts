@@ -21,8 +21,7 @@ export interface Config {
   collectorSpanPort: number;
   sampling: boolean;
   sampleRate: number;
-  logLevel: string;
-  loggerLevels?: LoggerLevels;
+  loggerLevels: LoggerLevels;
   enabledDataSending?: boolean;
   enabledStatsMonitor: boolean;
   enabledActiveThreadCount?: boolean;

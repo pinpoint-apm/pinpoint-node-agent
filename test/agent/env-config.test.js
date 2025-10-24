@@ -18,18 +18,18 @@ test('should return the string value when the env value is string type', functio
     process.env['PINPOINT_AGENT_ID'] = "agentId"
     process.env['PINPOINT_APPLICATION_NAME'] = "appication name"
     process.env['PINPOINT_COLLECTOR_IP'] = "192.168.78.79"
-    process.env['PINPOINT_LOG_LEVEL'] = "Debug"
+    process.env['PINPOINT_LOGGER_LEVELS'] = "default-logger=DEBUG"
 
     const given = getConfig()
     t.equal(given.agentId, "agentId", "given PINPOINT_AGENT_ID env, should equal config")
     t.equal(given.applicationName, "appication name", "given PINPOINT_APPLICATION_NAME env, should equal config")
     t.equal(given.collectorIp, "192.168.78.79", "given PINPOINT_COLLECTOR_IP env, should equal config")
-    t.equal(given.logLevel, "Debug", "given PINPOINT_LOG_LEVEL env, should equal config")
+    t.equal(given.loggerLevels['default-logger'], "DEBUG", "given PINPOINT_LOGGER_LEVELS env, should equal config")
 
     delete process.env.PINPOINT_AGENT_ID
     delete process.env.PINPOINT_APPLICATION_NAME
     delete process.env.PINPOINT_COLLECTOR_IP
-    delete process.env.PINPOINT_LOG_LEVEL
+    delete process.env.PINPOINT_LOGGER_LEVELS
 
     clear()
     t.end()
@@ -119,7 +119,7 @@ test('should not exist in the process.env property when you do not set an enviro
     clear()
 
     delete process.env.PINPOINT_COLLECTOR_IP
-    delete process.env.PINPOINT_LOG_LEVEL
+    delete process.env.PINPOINT_LOGGER_LEVELS
 
     delete process.env.PINPOINT_SAMPLING
     delete process.env.PINPOINT_ENABLE
@@ -135,7 +135,7 @@ test('should not exist in the process.env property when you do not set an enviro
     t.equal(given.agentId, "agentId", "No set PINPOINT_AGENT_ID env, should equal default config")
     t.equal(given.applicationName, "appication name", "No set PINPOINT_APPLICATION_NAME env, should equal default config")
     t.equal(given.collectorIp, "localhost", "No set PINPOINT_COLLECTOR_IP env, should equal default config")
-    t.equal(given.logLevel, "WARN", "No set PINPOINT_LOG_LEVEL env, should equal default config")
+    t.deepEqual(given.loggerLevels, { 'default-logger': 'WARN', 'grpcLogger': 'SILENT' }, "No set PINPOINT_ LOGGER_LEVELS env, should equal default config")
 
     t.equal(given.sampling, true, 'No set PINPOINT_SAMPLING env, should equal default config')
     t.equal(given.enable, false, 'No set PINPOINT_ENABLE env, should equal default config')

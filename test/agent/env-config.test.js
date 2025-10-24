@@ -135,7 +135,7 @@ test('should not exist in the process.env property when you do not set an enviro
     t.equal(given.agentId, "agentId", "No set PINPOINT_AGENT_ID env, should equal default config")
     t.equal(given.applicationName, "appication name", "No set PINPOINT_APPLICATION_NAME env, should equal default config")
     t.equal(given.collectorIp, "localhost", "No set PINPOINT_COLLECTOR_IP env, should equal default config")
-    t.deepEqual(given.loggerLevels, { 'default-logger': 'WARN' }, "No set PINPOINT_ LOGGER_LEVELS env, should equal default config")
+    t.deepEqual(given.loggerLevels, { 'default-logger': 'WARN', 'grpcLogger': 'SILENT' }, "No set PINPOINT_ LOGGER_LEVELS env, should equal default config")
 
     t.equal(given.sampling, true, 'No set PINPOINT_SAMPLING env, should equal default config')
     t.equal(given.enable, false, 'No set PINPOINT_ENABLE env, should equal default config')

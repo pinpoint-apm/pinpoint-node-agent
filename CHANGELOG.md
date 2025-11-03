@@ -2,7 +2,7 @@
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
 
-## [1.3.0] - 2025-08-13
+## [1.3.0] - 2025-11-03
 ### Added
 - [[#352](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/352)] **PINPOINT_LOGGER_LEVELS Environment Variable**: Added support for configuring log levels dynamically through environment variables using comma-separated key=value pairs
 

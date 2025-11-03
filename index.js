@@ -14,11 +14,12 @@ const logger = require('./lib/utils/log/logger')
 
 const config = new ConfigBuilder().build()
 setConfig(config)
-logger.setRootLogger(LogBuilder.createDefaultLogBuilder().setConfig(config).build())
 
 const agentInfo = AgentInfo.make(config)
+const defaultLogger = logger.getLogger(LogBuilder.createDefaultLogBuilder().setConfig(config).build())
 const agent = new AgentBuilder(agentInfo)
                 .setConfig(config)
+                .setLogger(defaultLogger)
                 .build()
 agent.start()
 module.exports = agent

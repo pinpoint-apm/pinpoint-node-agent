@@ -7,44 +7,44 @@
 'use strict'
 
 const test = require('tape')
-const log = require('../../../lib/utils/log/logger')
+const logger = require('../../../lib/utils/log/logger')
 const { LogBuilder, LogLevel } = require('../../../lib/utils/log/log-builder')
 const levels = LogLevel
 
 test('isDebug', (t) => {
     t.plan(4)
-    t.equal(log.isDebug(), false, 'debug null')
+    t.equal(logger.isDebug(), false, 'debug null')
 
-    const testLog = log.getLogger(new LogBuilder('test').logLevelDebug().build())
+    const testLog = logger.getLogger(new LogBuilder('test').logLevelDebug().build())
     t.equal(testLog.isDebug(), true, 'debug')
     t.equal(testLog.isInfo(), false, 'info false')
 
-    const testLog2 = log.getLogger(new LogBuilder('test').logLevelInfo().build())
+    const testLog2 = logger.getLogger(new LogBuilder('test').logLevelInfo().build())
     t.equal(testLog2.isInfo(), false, 'same name logger is not info false')
 })
 
 test('isInfo', (t) => {
     t.plan(2)
-    const testLog = log.getLogger(new LogBuilder('test1').logLevelInfo().build())
+    const testLog = logger.getLogger(new LogBuilder('test1').logLevelInfo().build())
     t.equal(testLog.isInfo(), true, 'info')
     t.equal(testLog.isDebug(), false, 'debug false')
 })
 
 test('warn log', (t) => {
     t.plan(1)
-    const testLog = log.getLogger(new LogBuilder('test2').logLevelWarn().build())
+    const testLog = logger.getLogger(new LogBuilder('test2').logLevelWarn().build())
     t.equal(testLog.loglevel.getLevel(), testLog.loglevel.levels.WARN, 'warn log level')
 })
 
 test('error log', (t) => {
     t.plan(1)
-    const testLog = log.getLogger(new LogBuilder('test3').logLevelError().build())
+    const testLog = logger.getLogger(new LogBuilder('test3').logLevelError().build())
     t.equal(testLog.loglevel.getLevel(), testLog.loglevel.levels.ERROR, 'error log level')
 })
 
 test('appenders', (t) => {
     t.plan(2)
-    const testLog = log.getLogger(new LogBuilder('test4').logLevelDebug().build())
+    const testLog = logger.getLogger(new LogBuilder('test4').logLevelDebug().build())
     t.equal(testLog.appenders.length, 0, 'appenders length')
 
     const validAppender = {
@@ -55,7 +55,7 @@ test('appenders', (t) => {
         warn: (msg) => msg,
         error: (msg) => msg
     }
-    const testLog2 = log.getLogger(new LogBuilder('test5').logLevelDebug().addAppender(validAppender).build())
+    const testLog2 = logger.getLogger(new LogBuilder('test5').logLevelDebug().addAppender(validAppender).build())
     t.equal(testLog2.appenders.length, 1, 'appenders length with valid appender')
 })
 
@@ -135,7 +135,7 @@ test('addAppender validation', (t) => {
 
 test('formatMessage', (t) => {
     t.plan(4)
-    const testLog = log.getLogger(new LogBuilder('test10').logLevelDebug().build())
+    const testLog = logger.getLogger(new LogBuilder('test10').logLevelDebug().build())
 
     const message1 = testLog.formatMessage(['hello', 'world'])
     t.equal(message1, 'hello world', 'String arguments should be joined with space')
@@ -166,7 +166,7 @@ test('appender message forwarding', (t) => {
         error: (msg) => capturedMessages.push(`ERROR: ${msg}`)
     }
 
-    const debugLevelLog = log.getLogger(
+    const debugLevelLog = logger.getLogger(
         new LogBuilder('test11')
             .logLevelDebug()
             .addAppender(mockAppender)
@@ -192,7 +192,7 @@ test('appender message forwarding', (t) => {
         error: (msg) => capturedMessages.push(`ERROR: ${msg}`)
     }
 
-    const warnLevelLog = log.getLogger(
+    const warnLevelLog = logger.getLogger(
         new LogBuilder('test11-warn')
             .logLevelWarn()
             .addAppender(warnMockAppender)
@@ -217,7 +217,7 @@ test('appender message forwarding', (t) => {
         error: (msg) => capturedMessages.push(`ERROR: ${msg}`)
     }
 
-    const silentLevelLog = log.getLogger(
+    const silentLevelLog = logger.getLogger(
         new LogBuilder('test11-silent')
             .logLevelSilent()
             .addAppender(silentMockAppender)
@@ -236,7 +236,7 @@ test('appender message forwarding', (t) => {
 test('guard clause - no appenders', (t) => {
     t.plan(4)
 
-    const testLog = log.getLogger(new LogBuilder('test12').logLevelDebug().build())
+    const testLog = logger.getLogger(new LogBuilder('test12').logLevelDebug().build())
 
     t.doesNotThrow(() => {
         testLog.debug('test message')
@@ -269,7 +269,7 @@ test('guard clause - no appenders', (t) => {
         error: () => { errorCallCount++ }
     }
 
-    const errorLevelLog = log.getLogger(
+    const errorLevelLog = logger.getLogger(
         new LogBuilder('test12-error')
             .logLevelError()
             .addAppender(mockAppender)
@@ -294,7 +294,7 @@ test('guard clause - no appenders', (t) => {
         error: () => { silentCallCount++ }
     }
 
-    const silentLevelLog = log.getLogger(
+    const silentLevelLog = logger.getLogger(
         new LogBuilder('test12-silent')
             .logLevelSilent()
             .addAppender(silentMockAppender)
@@ -333,7 +333,7 @@ test('per-appender loggingLevel configuration', (t) => {
         error: (msg) => errorAppenderMessages.push(`ERROR-APPENDER ERROR: ${msg}`)
     }
 
-    const mixedLevelLog = log.getLogger(
+    const mixedLevelLog = logger.getLogger(
         new LogBuilder('per-appender-test')
             .logLevelDebug()
             .addAppender(warnAppender)
@@ -413,7 +413,7 @@ test('PINPOINT_LOGGER_LEVELS environment variable log levels', (t) => {
     }
 
     const confWithAppender = config.getConfig()
-    log.setRootLogger(LogBuilder.createDefaultLogBuilder()
+    logger.getLogger(LogBuilder.createDefaultLogBuilder()
         .setConfig(confWithAppender)
         .addAppender(infoAppender)
         .addAppender(debugAppender)
@@ -421,7 +421,7 @@ test('PINPOINT_LOGGER_LEVELS environment variable log levels', (t) => {
         .addAppender(noLevelAppender2)
         .build())
 
-    const grpcLogger = log.getLogger(
+    const grpcLogger = logger.getLogger(
         new LogBuilder('grpc')
             .setConfig(confWithAppender)
             .addAppender(infoAppender)
@@ -431,10 +431,10 @@ test('PINPOINT_LOGGER_LEVELS environment variable log levels', (t) => {
             .build()
     )
 
-    log.debug('debug message')
-    log.info('info message')
-    log.warn('warn message')
-    log.error('error message')
+    logger.debug('debug message')
+    logger.info('info message')
+    logger.warn('warn message')
+    logger.error('error message')
 
     grpcLogger.debug('debug message')
     grpcLogger.info('info message')
@@ -481,18 +481,18 @@ test('getLogger with string parameter should return existing logger', (t) => {
 
     // Create a logger with LogBuilder first
     const logName = 'test-string-logger'
-    const originalLogger = log.getLogger(new LogBuilder(logName).logLevelDebug().build())
+    const originalLogger = logger.getLogger(new LogBuilder(logName).logLevelDebug().build())
 
     // Get logger with string parameter - should return the existing logger
-    const stringLogger = log.getLogger(logName)
+    const stringLogger = logger.getLogger(logName)
 
     t.equal(stringLogger, originalLogger, 'getLogger with string should return the same instance')
     t.equal(stringLogger.name, logName, 'Logger name should match')
 
     // Test with another logger to ensure it works for multiple loggers
     const logName2 = 'test-string-logger-2'
-    const originalLogger2 = log.getLogger(new LogBuilder(logName2).logLevelInfo().build())
-    const stringLogger2 = log.getLogger(logName2)
+    const originalLogger2 = logger.getLogger(new LogBuilder(logName2).logLevelInfo().build())
+    const stringLogger2 = logger.getLogger(logName2)
 
     t.equal(stringLogger2, originalLogger2, 'getLogger with string should return the same instance for second logger')
     t.equal(stringLogger2.name, logName2, 'Second logger name should match')
@@ -503,10 +503,10 @@ test('getLogger with string parameter for non-existing logger', (t) => {
 
     // Try to get a logger that doesn't exist with string parameter
     const nonExistentLogName = 'non-existent-logger'
-    const logger = log.getLogger(nonExistentLogName)
+    const noExistentLogger = logger.getLogger(nonExistentLogName)
 
-    t.ok(logger, 'Logger should be created even if it did not exist before')
-    t.equal(logger.name, 'default-logger', 'Logger should have default name since it was created without LogBuilder')
+    t.ok(noExistentLogger, 'Logger should be created even if it did not exist before')
+    t.equal(noExistentLogger.name, 'default-logger', 'Logger should have default name since it was created without LogBuilder')
 })
 
 test('getLogger caching behavior with string and LogBuilder', (t) => {
@@ -515,13 +515,13 @@ test('getLogger caching behavior with string and LogBuilder', (t) => {
     const logName = 'cache-test-logger'
 
     // First, get logger with string (non-existing)
-    const firstLogger = log.getLogger(logName)
+    const firstLogger = logger.getLogger(logName)
 
     // Then, get logger with LogBuilder with same name
-    const secondLogger = log.getLogger(new LogBuilder(logName).logLevelWarn().build())
+    const secondLogger = logger.getLogger(new LogBuilder(logName).logLevelWarn().build())
 
     // Then, get logger with string again
-    const thirdLogger = log.getLogger(logName)
+    const thirdLogger = logger.getLogger(logName)
 
     // All should be the same instance due to caching
     t.notEqual(firstLogger, secondLogger, 'Logger is different instances when no created with LogBuilder first')

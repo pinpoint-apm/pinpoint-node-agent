@@ -4,6 +4,8 @@
  * Apache License v2.0
  */
 
+import type { Config } from '../../config';
+
 export declare class LogLevel {
     static readonly TRACE: 0;
     static readonly DEBUG: 1;
@@ -35,7 +37,8 @@ export declare class LogBuilder {
     logLevelError(): LogBuilder;
     logLevelSilent(): LogBuilder;
     addAppender(appender: Appender): LogBuilder;
-    setConfig(config: { [key: string]: any }): LogBuilder;
+    setConfig(config: Config): LogBuilder;
+    getName(): string;
 }
 
 export declare class Log {
@@ -63,8 +66,7 @@ export declare class Logger implements Logging {
     isDebug(): boolean;
     isInfo(): boolean;
 
-    getLogger(log: Log): Logger;
-    setRootLogger(log: Log): void;
+    getLogger(log?: Log | string): Logger;
 }
 
 export declare class ChildLogger implements Logging {

@@ -66,7 +66,7 @@ export declare class Logger implements Logging {
     isDebug(): boolean;
     isInfo(): boolean;
 
-    getLogger(log?: Log | string): Logger;
+    getLogger(log?: Log | string): Logging;
 }
 
 export declare class ChildLogger implements Logging {

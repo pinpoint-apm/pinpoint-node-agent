@@ -59,6 +59,41 @@ test('appenders', (t) => {
     t.equal(testLog2.appenders.length, 1, 'appenders length with valid appender')
 })
 
+test('no config logs clone appenders array', (t) => {
+    t.plan(3)
+
+    const builder = new LogBuilder('no-config-appenders')
+    const firstAppender = {
+        name: 'first-appender',
+        loggingLevel: levels.DEBUG,
+        debug: (msg) => msg,
+        info: (msg) => msg,
+        warn: (msg) => msg,
+        error: (msg) => msg
+    }
+
+    builder.addAppender(firstAppender)
+
+    const initialLog = builder.build()
+
+    t.equal(initialLog.getAppenders().length, 1, 'no config log should include existing appenders')
+
+    const secondAppender = {
+        name: 'second-appender',
+        loggingLevel: levels.DEBUG,
+        debug: (msg) => msg,
+        info: (msg) => msg,
+        warn: (msg) => msg,
+        error: (msg) => msg
+    }
+
+    builder.addAppender(secondAppender)
+    const refreshedLog = builder.build()
+
+    t.equal(initialLog.getAppenders().length, 1, 'modifying builder appenders should not affect existing no config log')
+    t.equal(refreshedLog.getAppenders().length, 2, 'subsequent builds should reflect new appenders')
+})
+
 test('addAppender validation', (t) => {
     t.plan(8)
 

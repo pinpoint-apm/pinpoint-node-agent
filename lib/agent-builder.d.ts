@@ -5,6 +5,7 @@
  */
 
 import { Config } from './config';
+import type { Logging } from './utils/log/types';
 import AgentInfo = require('./data/dto/agent-info');
 
 interface TraceObject {
@@ -44,6 +45,7 @@ declare class AgentBuilder {
 
   setConfig(config: Config): AgentBuilder;
   setDataSender(dataSender: DataSender): AgentBuilder;
+  setLogger(logger: Logging): AgentBuilder;
   addService(service: () => void): AgentBuilder;
   disableStatsScheduler(): AgentBuilder;
   disablePingScheduler(): AgentBuilder;

@@ -2,15 +2,19 @@
 
 name: CI
 
-# Controls when the action will run.
 on: [push, pull_request]
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+env:
+  TARGET_COVERAGE_NODE_VERSION: '20'
+
 jobs:
-  # This workflow contains a single job called "build"
-  test:
-    # The type of runner that the job will run on
+  report-coverage:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      checks: write
     strategy:
       matrix:
         node_version:
@@ -28,30 +32,26 @@ jobs:
       - run: npm install
       - run: npm test
       # - name: Lint
+      #   if: matrix.node_version == env.TARGET_COVERAGE_NODE_VERSION
       #   run: npm run lint
       # - name: Upload checkstyle report
+      #   if: matrix.node_version == env.TARGET_COVERAGE_NODE_VERSION
       #   uses: jwgmeligmeyling/checkstyle-github-action@master
       #   with:
       #     path: '**/checkstyle-result.xml'
       - name: Coverage
+        if: matrix.node_version == env.TARGET_COVERAGE_NODE_VERSION
         run: npm run coverage
-      # Required for generating html artifact, can be skipped if not generating html artifact
-      # - name: Report coverage
-      #   uses: hrishikesh-kadam/setup-lcov@v1
-      # - name: Upload coverage report
-      #   uses: kefasjw/lcov-pull-request-report@v1
-      #   with:
-      #     # Lcov file location. For example, coverage/lcov.info
-      #     lcov-file: coverage/lcov.info
-
-      #     # Github token required for getting list of changed files and posting comments
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      # ... Generate LCOV files or download it from a different job
-      # - name: Setup LCOV
-      #   uses: hrishikesh-kadam/setup-lcov@v1
-      # - name: Report coverage
-      #   uses: zgosalvez/github-actions-report-lcov@v4
-      #   with:
-      #     coverage-files: coverage/lcov.info
-      #     github-token: ${{ secrets.ACTIONS_TOKEN }}
-      #     update-comment: true
+      - name: Setup LCOV
+        if: matrix.node_version == env.TARGET_COVERAGE_NODE_VERSION
+        uses: hrishikesh-kadam/setup-lcov@v1
+        with:
+          ref: v1.16
+      - name: Report code coverag
+        if: matrix.node_version == env.TARGET_COVERAGE_NODE_VERSION
+        uses: zgosalvez/github-actions-report-lcov@v4
+        with:
+          coverage-files: coverage/lcov.info
+          artifact-name: code-coverage-report
+          github-token: ${{ secrets.REPO_TOKEN }}
+          update-comment: true

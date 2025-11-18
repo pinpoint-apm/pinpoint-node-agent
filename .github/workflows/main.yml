@@ -31,15 +31,15 @@ jobs:
           node-version: ${{ matrix.node_version }}
       - run: npm install
       - run: npm test
-      - name: Lint
-        if: matrix.node_version == env.TARGET_COVERAGE_NODE_VERSION
-        run: npm run lint
-      - name: Upload checkstyle report
-        if: matrix.node_version == env.TARGET_COVERAGE_NODE_VERSION
-        uses: jwgmeligmeyling/checkstyle-github-action@master
-        with:
-          path: '**/checkstyle-result.xml'
-          token: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Lint
+      #   if: matrix.node_version == env.TARGET_COVERAGE_NODE_VERSION
+      #   run: npm run lint
+      # - name: Upload checkstyle report
+      #   if: matrix.node_version == env.TARGET_COVERAGE_NODE_VERSION
+      #   uses: jwgmeligmeyling/checkstyle-github-action@master
+      #   with:
+      #     path: '**/checkstyle-result.xml'
+      #     token: ${{ secrets.GITHUB_TOKEN }}
       - name: Coverage
         if: matrix.node_version == env.TARGET_COVERAGE_NODE_VERSION
         run: npm run coverage

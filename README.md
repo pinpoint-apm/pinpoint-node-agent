@@ -140,8 +140,7 @@ If you use [Performance tester for sampling rate](/demo/performance-tester), you
 
 ## No support the JVM agent features
 The Pinpoint Node agent does not support the following the JVM agent features. We plan to provide more detailed app information like the JVM agent.
-* Active Request
-* Some inspector information(Transactions Per Second, Active Request ...)
+* Some inspector information
 
 ## Contributing
 

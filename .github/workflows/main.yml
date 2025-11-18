@@ -39,7 +39,7 @@ jobs:
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
           path: '**/checkstyle-result.xml'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.REPO_TOKEN }}
       - name: Coverage
         if: matrix.node_version == env.TARGET_COVERAGE_NODE_VERSION
         run: npm run coverage

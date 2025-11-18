@@ -27,68 +27,75 @@ test('ExceptionBuilder Test - snapshot-like multiline', (t) => {
     t.equal(actual.errorMessage, 'error case', `Error message is ${actual.errorMessage}`)
     t.equal(actual.frameStack.length, 10, `Frame stack length is ${actual.frameStack.length}`)
 
-    t.deepEqual(actual.frameStack[0], {
+    let actualFrame = actual.frameStack[0]
+    t.deepEqual({ location: actualFrame.fileName, lineNumber: actualFrame.lineNumber }, {
         location: '/Users/workspace/pinpoint/pinpoint-node-agent/test/instrumentation/module/express.test.js',
-        fileName: 'express.test.js',
         lineNumber: 110,
     }, 'at /Users/workspace/pinpoint/pinpoint-node-agent/test/instrumentation/module/express.test.js:110:11')
-    t.deepEqual(actual.frameStack[1], {
+
+    actualFrame = actual.frameStack[1]
+    t.deepEqual({ type: actualFrame.className, location: actualFrame.fileName, lineNumber: actualFrame.lineNumber, functionName: actualFrame.methodName }, {
         location: '/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/layer.js',
-        fileName: 'layer.js',
         lineNumber: 95,
         type: 'Layer',
-        functionName: 'handle',
-        methodName: 'handle_request'
+        functionName: 'handle [as handle_request]',
     }, 'at Layer.handle [as handle_request] (/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/layer.js:95:5)')
-    t.deepEqual(actual.frameStack[2], {
+
+    actualFrame = actual.frameStack[2]
+    t.deepEqual({ location: actualFrame.fileName, lineNumber: actualFrame.lineNumber, functionName: actualFrame.methodName }, {
         location: '/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/route.js',
-        fileName: 'route.js',
         lineNumber: 149,
         functionName: 'next'
     }, 'at next (/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/route.js:149:13)')
-    t.deepEqual(actual.frameStack[3], {
+
+    actualFrame = actual.frameStack[3]
+    t.deepEqual({ type: actualFrame.className, location: actualFrame.fileName, lineNumber: actualFrame.lineNumber, functionName: actualFrame.methodName }, {
         location: '/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/route.js',
-        fileName: 'route.js',
         lineNumber: 119,
         type: 'Route',
         functionName: 'dispatch'
     }, 'at Route.dispatch (/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/route.js:119:3)')
-    t.deepEqual(actual.frameStack[4], {
+
+    actualFrame = actual.frameStack[4]
+    t.deepEqual({ type: actualFrame.className, location: actualFrame.fileName, lineNumber: actualFrame.lineNumber, functionName: actualFrame.methodName }, {
         location: '/Users/workspace/pinpoint/pinpoint-node-agent/lib/instrumentation/interceptor-runner.js',
-        fileName: 'interceptor-runner.js',
         lineNumber: 59,
         type: 'InterceptorRunner',
         functionName: 'run'
     }, 'at InterceptorRunner.run (/Users/workspace/pinpoint/pinpoint-node-agent/lib/instrumentation/interceptor-runner.js:59:38)')
-    t.deepEqual(actual.frameStack[5], {
+
+    actualFrame = actual.frameStack[5]
+    t.deepEqual({ location: actualFrame.fileName, lineNumber: actualFrame.lineNumber, functionName: actualFrame.methodName }, {
         location: '/Users/workspace/pinpoint/pinpoint-node-agent/lib/instrumentation/module/express/express-layer-interceptor.js',
-        fileName: 'express-layer-interceptor.js',
         lineNumber: 41,
         functionName: 'wrapped'
     }, 'at wrapped (/Users/workspace/pinpoint/pinpoint-node-agent/lib/instrumentation/module/express/express-layer-interceptor.js:41:87)')
-    t.deepEqual(actual.frameStack[6], {
+
+    actualFrame = actual.frameStack[6]
+    t.deepEqual({ type: actualFrame.className, location: actualFrame.fileName, lineNumber: actualFrame.lineNumber, functionName: actualFrame.methodName }, {
         location: '/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/layer.js',
-        fileName: 'layer.js',
         lineNumber: 95,
         type: 'Layer',
-        functionName: 'handle',
-        methodName: 'handle_request'
+        functionName: 'handle [as handle_request]',
     }, 'at Layer.handle [as handle_request] (/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/layer.js:95:5)')
-    t.deepEqual(actual.frameStack[7], {
+
+    actualFrame = actual.frameStack[7]
+    t.deepEqual({ location: actualFrame.fileName, lineNumber: actualFrame.lineNumber}, {
         location: '/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/index.js',
-        fileName: 'index.js',
         lineNumber: 284,
     }, 'at /Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/index.js:284:15')
-    t.deepEqual(actual.frameStack[8], {
+
+    actualFrame = actual.frameStack[8]
+    t.deepEqual({ type: actualFrame.className, location: actualFrame.fileName, lineNumber: actualFrame.lineNumber, functionName: actualFrame.methodName }, {
         location: '/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/index.js',
-        fileName: 'index.js',
         lineNumber: 346,
         functionName: 'process_params',
         type: 'Function',
     }, 'at Function.process_params (/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/index.js:346:12)')
-    t.deepEqual(actual.frameStack[9], {
+
+    actualFrame = actual.frameStack[9]
+    t.deepEqual({ location: actualFrame.fileName, lineNumber: actualFrame.lineNumber, functionName: actualFrame.methodName }, {
         location: '/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/index.js',
-        fileName: 'index.js',
         lineNumber: 280,
         functionName: 'next'
     }, 'at next (/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/index.js:280:10)')

@@ -20,6 +20,7 @@ class GrpcDataSenderBuilder {
             sendStringMetaInfo: false,
             sendSqlMetaInfo: false,
             sendSqlUidMetaData: false,
+            sendExceptionMetaData: false,
             sendSpan: false,
             sendSpanChunk: false,
             sendStat: false,
@@ -46,6 +47,11 @@ class GrpcDataSenderBuilder {
 
     enableSqlUidMetaData() {
         this.enableMethods.sendSqlUidMetaData = true
+        return this
+    }
+
+    enableExceptionMetaData() {
+        this.enableMethods.sendExceptionMetaData = true
         return this
     }
 

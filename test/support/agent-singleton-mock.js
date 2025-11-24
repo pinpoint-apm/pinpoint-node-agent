@@ -75,7 +75,8 @@ function portProperties(conf) {
         return Object.assign(conf, { collector: collectorConf })
     }
     const portNumber = conf
-    const collectorConf = Object.assign(require('../pinpoint-config-test').collector, { 'span-port': portNumber, 'stat-port': portNumber, 'tcp-port': portNumber })
+    const baseCollector = require('../pinpoint-config-test').collector
+    const collectorConf = Object.assign({}, baseCollector, { 'span-port': portNumber, 'stat-port': portNumber, 'tcp-port': portNumber })
     return Object.assign({ collector: collectorConf })
 }
 
@@ -134,7 +135,6 @@ class MockAgent {
         this.traceContext.dataSender = dataSender
         this.dataSender.close()
         this.dataSender = dataSender
-        // this.initializeDataSender(dataSender)
         stringMetaService.init(dataSender)
         apiMetaService.init(dataSender)
         sqlMetadataService.setDataSender(dataSender)

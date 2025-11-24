@@ -48,6 +48,9 @@ class MockGrpcDataSender extends GrpcDataSender {
       requestSqlUidMetaData: function (pSqlUidMetaData) {
         self.actualSqlUidMetaData = pSqlUidMetaData
       },
+      requestExceptionMetaData: function (pExceptionMetaData) {
+        self.actualExceptionMetaData = pExceptionMetaData
+      },
       close: function () {
       }
     }

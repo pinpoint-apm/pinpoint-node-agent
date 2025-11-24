@@ -99,5 +99,4 @@ test('ExceptionBuilder Test - snapshot-like multiline', (t) => {
         lineNumber: 280,
         functionName: 'next'
     }, 'at next (/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/index.js:280:10)')
-
 })

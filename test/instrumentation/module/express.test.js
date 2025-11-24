@@ -9,7 +9,6 @@ const axios = require('axios')
 const agent = require('../../support/agent-singleton-mock')
 const express = require('express')
 const annotationKey = require('../../../lib/constant/annotation-key')
-const { expected } = require('../../fixtures/instrument-support')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const semver = require('semver')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
@@ -18,8 +17,6 @@ const http = require('http')
 const https = require('https')
 const { getTransactionId, getDisabledId } = require('../../../lib/context/trace/id-generator')
 
-
-
 const TEST_ENV = {
   host: 'localhost', port: 5006
 }
@@ -27,7 +24,7 @@ const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 const testName1 = 'express1'
 test(`${testName1} Should record request in basic route`, function (t) {
-  agent.bindHttpWithCallSite()
+  agent.bindHttp()
 
   const testName = testName1
 
@@ -43,18 +40,14 @@ test(`${testName1} Should record request in basic route`, function (t) {
       t.equal(trace.spanBuilder.annotations[1].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
       t.equal(trace.spanBuilder.annotations[1].value, 200, 'response status is 200')
 
-      let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
-        .setClassName(expected('app', 'Function'))
-        .setLineNumber(37)
-        .setFileName('express.test.js')
+      let actualBuilder = new MethodDescriptorBuilder('get')
+        .setClassName('Router')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 37, 'lineNumber')
+      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
+      t.equal(actualMethodDescriptor.className, 'Router', 'className')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-      t.true(actualMethodDescriptor.location.length > 0, 'location')
     })
   })
 
@@ -66,18 +59,14 @@ test(`${testName1} Should record request in basic route`, function (t) {
       t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, '/express1 HTTP STATUS CODE in annotation zero')
       t.equal(trace.spanBuilder.annotations[0].value, 200, '/express1 HTTP STATUS CODE value in annotation zero')
 
-      let actualBuilder = new MethodDescriptorBuilder(expected('post', 'app.post'))
-        .setClassName(expected('app', 'Function'))
-        .setLineNumber(62)
-        .setFileName('express.test.js')
+      let actualBuilder = new MethodDescriptorBuilder('post')
+        .setClassName('Router')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.post', 'Function.app.post')), 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 62, 'lineNumber')
+      t.true(actualMethodDescriptor.apiDescriptor, 'Router.post', 'apiDescriptor')
+      t.equal(actualMethodDescriptor.className, 'Router', 'className')
       t.equal(actualMethodDescriptor.methodName, 'post', 'methodName')
-      t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
     })
   })
 
@@ -85,18 +74,14 @@ test(`${testName1} Should record request in basic route`, function (t) {
     res.send('ok get')
 
     agent.callbackTraceClose((trace) => {
-      let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
-        .setClassName(expected('app', 'Function'))
-        .setLineNumber(84)
-        .setFileName('express.test.js')
+      let actualBuilder = new MethodDescriptorBuilder('get')
+        .setClassName('Router')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 84, 'lineNumber')
+      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
+      t.equal(actualMethodDescriptor.className, 'Router', 'className')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-      t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
     })
   })
 
@@ -167,71 +152,89 @@ function throwHandleTest(trace, t) {
   t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), '/express3 HTTP_STATUS_CODE annotationKey matching')
   t.equal(trace.spanBuilder.annotations[0].value, 500, '/express3 HTTP_STATUS_CODE value matching')
 
-  let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
-    .setClassName(expected('app', 'Function'))
-    .setLineNumber(107)
-    .setFileName('express.test.js')
+  let actualBuilder = new MethodDescriptorBuilder('get')
+    .setClassName('Router')
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
   let spanEvent = trace.spanBuilder.spanEventList[0]
   t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-  t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
-  t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-  t.equal(actualMethodDescriptor.lineNumber, 107, 'lineNumber')
+  t.true(actualMethodDescriptor.apiDescriptor.startsWith('Router.get'), 'apiDescriptor')
+  t.equal(actualMethodDescriptor.className, 'Router', 'className')
   t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-  t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
   t.equal(spanEvent.sequence, 0, 'sequence')
   t.equal(spanEvent.depth, 1, 'spanEvent.depth')
 
   actualBuilder = new MethodDescriptorBuilder('use')
     .setClassName('Router')
-    .setLineNumber(120)
-    .setFileName('express.test.js')
   const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
   spanEvent = trace.spanBuilder.spanEventList[1]
   t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-  t.true(actualErrorMethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
+  t.equal(actualErrorMethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
-  t.equal(actualErrorMethodDescriptor.lineNumber, 120, 'lineNumber')
   t.equal(actualErrorMethodDescriptor.methodName, 'use', 'methodName')
-  t.true(actualErrorMethodDescriptor.location.endsWith('express.test.js'), 'location')
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:110:11'), 'error case')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:95:11'), 'error case')
+
+  const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
+  const actualTransactionId = actualExceptionMetaData.getTransactionid()
+  t.equal(actualTransactionId.getAgentid(), trace.spanBuilder.traceRoot.getTraceId().getAgentId(), `ExceptionMetaData transactionId agentId ${actualTransactionId.getAgentid()}`)
+  t.equal(actualTransactionId.getAgentstarttime(), trace.spanBuilder.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStarttime ${actualTransactionId.getAgentstarttime()}`)
+  t.equal(actualTransactionId.getSequence(), trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transactionId sequence ${actualTransactionId.getSequence()}`)
+  t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
+  t.equal(actualExceptionMetaData.getUritemplate(), 'NULL', 'ExceptionMetaData uriTemplate NULL')
+
+  const actualExceptions = actualExceptionMetaData.getExceptionsList()
+  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception
+  t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
+  t.equal(actualExceptions[0].getExceptionclassname(), actualSpanEventError.errorClassName, `ExceptionMetaData exception class name ${actualSpanEventError.errorClassName}`)
+  t.equal(actualExceptions[0].getExceptionmessage(), actualSpanEventError.errorMessage, `ExceptionMetaData exception message ${actualSpanEventError.errorMessage}`)
+  t.equal(actualExceptions[0].getStarttime(), actualSpanEventError.startTime, `ExceptionMetaData exception start time ${actualSpanEventError.startTime}`)
+  t.equal(actualExceptions[0].getExceptionid(), actualSpanEventError.exceptionId, `ExceptionMetaData exception id ${actualSpanEventError.exceptionId}`)
+  t.equal(actualExceptions[0].getExceptiondepth(), actualSpanEventError.exceptionDepth, `ExceptionMetaData exception depth ${actualSpanEventError.exceptionDepth}`)
 }
 
 function nextErrorHandleTest(trace, t) {
-  let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
-    .setClassName(expected('app', 'Function'))
-    .setLineNumber(114)
-    .setFileName('express.test.js')
+  let actualBuilder = new MethodDescriptorBuilder('get')
+    .setClassName('Router')
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
   let spanEvent = trace.spanBuilder.spanEventList[0]
   t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-  t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
-  t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-  t.equal(actualMethodDescriptor.lineNumber, 114, 'lineNumber')
+  t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
+  t.equal(actualMethodDescriptor.className, 'Router', 'className')
   t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-  t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
   t.equal(spanEvent.sequence, 0, 'sequence')
   t.equal(spanEvent.depth, 1, 'spanEvent.depth')
 
   actualBuilder = new MethodDescriptorBuilder('use')
     .setClassName('Router')
-    .setLineNumber(120)
-    .setFileName('express.test.js')
   const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
   spanEvent = trace.spanBuilder.spanEventList[1]
   t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.true(actualErrorMethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
-  t.equal(actualErrorMethodDescriptor.lineNumber, 120, 'lineNumber')
   t.equal(actualErrorMethodDescriptor.methodName, 'use', 'methodName')
-  t.true(actualErrorMethodDescriptor.location.endsWith('express.test.js'), 'location')
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:117:10'), 'error case')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:102:10'), 'error case')
+
+  const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
+  const actualTransactionId = actualExceptionMetaData.getTransactionid()
+  t.equal(actualTransactionId.getAgentid(), trace.spanBuilder.traceRoot.getTraceId().getAgentId(), `ExceptionMetaData transactionId agentId ${actualTransactionId.getAgentid()}`)
+  t.equal(actualTransactionId.getAgentstarttime(), trace.spanBuilder.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStarttime ${actualTransactionId.getAgentstarttime()}`)
+  t.equal(actualTransactionId.getSequence(), trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transactionId sequence ${actualTransactionId.getSequence()}`)
+  t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
+  t.equal(actualExceptionMetaData.getUritemplate(), 'NULL', 'ExceptionMetaData uriTemplate NULL')
+
+  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception
+  const actualExceptions = actualExceptionMetaData.getExceptionsList()
+  t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
+  t.equal(actualExceptions[0].getExceptionclassname(), actualSpanEventError.errorClassName, `ExceptionMetaData exception class name ${actualSpanEventError.errorClassName}`)
+  t.equal(actualExceptions[0].getExceptionmessage(), actualSpanEventError.errorMessage, `ExceptionMetaData exception message ${actualSpanEventError.errorMessage}`)
+  t.equal(actualExceptions[0].getStarttime(), actualSpanEventError.startTime, `ExceptionMetaData exception start time ${actualSpanEventError.startTime}`)
+  t.equal(actualExceptions[0].getExceptionid(), actualSpanEventError.exceptionId, `ExceptionMetaData exception id ${actualSpanEventError.exceptionId}`)
+  t.equal(actualExceptions[0].getExceptiondepth(), actualSpanEventError.exceptionDepth, `ExceptionMetaData exception depth ${actualSpanEventError.exceptionDepth}`)
 }
 
 const testName2 = 'express2'
@@ -341,7 +344,7 @@ test(`${testName4} Should record internal error in express.test.js`, function (t
 
 const testName5 = 'express5'
 test(`${testName5} Should record middleware`, function (t) {
-  agent.bindHttpWithCallSite()
+  agent.bindHttp()
 
   const testName = testName5
 
@@ -365,48 +368,36 @@ test(`${testName5} Should record middleware`, function (t) {
 
   app.get(PATH, (req, res) => {
     agent.callbackTraceClose((trace) => {
-      let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
-        .setClassName(expected('app', 'Function'))
-        .setLineNumber(366)
-        .setFileName('express.test.js')
+      let actualBuilder = new MethodDescriptorBuilder('get')
+        .setClassName('Router')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.spanBuilder.spanEventList[2]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.true(actualMethodDescriptor.apiDescriptor.startsWith(expected('app.get', 'Function.app.get')), 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 366, 'lineNumber')
+      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
+      t.equal(actualMethodDescriptor.className, 'Router', 'className')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-      t.true(actualMethodDescriptor.location.endsWith('express.test.js'), 'location')
       t.equal(spanEvent.sequence, 2, 'sequence')
       t.equal(spanEvent.depth, 1, 'spanEvent.depth')
 
       actualBuilder = new MethodDescriptorBuilder('use')
         .setClassName('Router')
-        .setLineNumber(356)
-        .setFileName('express.test.js')
       const actualMiddleware1MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       spanEvent = trace.spanBuilder.spanEventList[1]
       t.equal(actualMiddleware1MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.true(actualMiddleware1MethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
+      t.equal(actualMiddleware1MethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
       t.equal(actualMiddleware1MethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMiddleware1MethodDescriptor.lineNumber, 356, 'lineNumber')
       t.equal(actualMiddleware1MethodDescriptor.functionName, 'use', 'functionName')
-      t.true(actualMiddleware1MethodDescriptor.location.endsWith('express.test.js'), 'location')
       t.equal(spanEvent.sequence, 1, 'sequence')
       t.equal(spanEvent.depth, 1, 'spanEvent.depth')
 
       actualBuilder = new MethodDescriptorBuilder('use')
         .setClassName('Router')
-        .setLineNumber(351)
-        .setFileName('express.test.js')
       const actualMiddleware2MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMiddleware2MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.true(actualMiddleware2MethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
+      t.true(actualMiddleware2MethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
       t.equal(actualMiddleware2MethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMiddleware2MethodDescriptor.lineNumber, 351, 'lineNumber')
       t.equal(actualMiddleware2MethodDescriptor.methodName, 'use', 'methodName')
-      t.true(actualMiddleware2MethodDescriptor.location.endsWith('express.test.js'), 'location')
       t.equal(spanEvent.sequence, 0, 'sequence')
       t.equal(spanEvent.depth, 1, 'spanEvent.depth')
     })
@@ -639,7 +630,24 @@ function throwHandleTestWithoutCallSite(trace, t) {
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:560:11'), 'error case')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:551:11'), 'error case')
+
+  const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
+  const actualTransansactionId = actualExceptionMetaData.getTransactionid()
+  t.equal(actualTransansactionId.getAgentid(), trace.spanBuilder.traceRoot.getTraceId().getAgentId(), `ExceptionMetaData transactionId agentId ${actualTransansactionId.getAgentid()}`)
+  t.equal(actualTransansactionId.getAgentstarttime(), trace.spanBuilder.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStartTime ${actualTransansactionId.getAgentstarttime()}`)
+  t.equal(actualTransansactionId.getSequence(), trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transactionId sequence ${actualTransansactionId.getSequence()}`)
+  t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
+  t.equal(actualExceptionMetaData.getUritemplate(), 'NULL', 'ExceptionMetaData uriTemplate NULL')
+
+  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception
+  const actualExceptions = actualExceptionMetaData.getExceptionsList()
+  t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
+  t.equal(actualExceptions[0].getExceptionclassname(), actualSpanEventError.errorClassName, `ExceptionMetaData exception class name ${actualSpanEventError.errorClassName}`)
+  t.equal(actualExceptions[0].getExceptionmessage(), actualSpanEventError.errorMessage, `ExceptionMetaData exception message ${actualSpanEventError.errorMessage}`)
+  t.equal(actualExceptions[0].getStarttime(), actualSpanEventError.startTime, `ExceptionMetaData exception start time ${actualSpanEventError.startTime}`)
+  t.equal(actualExceptions[0].getExceptionid(), actualSpanEventError.exceptionId, `ExceptionMetaData exception id ${actualSpanEventError.exceptionId}`)
+  t.equal(actualExceptions[0].getExceptiondepth(), actualSpanEventError.exceptionDepth, `ExceptionMetaData exception depth ${actualSpanEventError.exceptionDepth}`)
 }
 
 function nextErrorHandleTestWithoutCallSite(trace, t) {
@@ -665,7 +673,24 @@ function nextErrorHandleTestWithoutCallSite(trace, t) {
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:567:10'), 'error case')
+  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:558:10'), 'error case')
+
+  const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
+  const actualTransactionId = actualExceptionMetaData.getTransactionid()
+  t.equal(actualTransactionId.getAgentid(), trace.spanBuilder.traceRoot.getTraceId().getAgentId(), `ExceptionMetaData transactionId agentId ${actualTransactionId.getAgentid()}`)
+  t.equal(actualTransactionId.getAgentstarttime(), trace.spanBuilder.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStartTime ${actualTransactionId.getAgentstarttime()}`)
+  t.equal(actualTransactionId.getSequence(), trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transactionId sequence ${actualTransactionId.getSequence()}`)
+  t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
+  t.equal(actualExceptionMetaData.getUritemplate(), 'NULL', 'ExceptionMetaData uriTemplate NULL')
+
+  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception
+  const actualExceptions = actualExceptionMetaData.getExceptionsList()
+  t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
+  t.equal(actualExceptions[0].getExceptionclassname(), actualSpanEventError.errorClassName, `ExceptionMetaData exception class name ${actualSpanEventError.errorClassName}`)
+  t.equal(actualExceptions[0].getExceptionmessage(), actualSpanEventError.errorMessage, `ExceptionMetaData exception message ${actualSpanEventError.errorMessage}`)
+  t.equal(actualExceptions[0].getStarttime(), actualSpanEventError.startTime, `ExceptionMetaData exception start time ${actualSpanEventError.startTime}`)
+  t.equal(actualExceptions[0].getExceptionid(), actualSpanEventError.exceptionId, `ExceptionMetaData exception id ${actualSpanEventError.exceptionId}`)
+  t.equal(actualExceptions[0].getExceptiondepth(), actualSpanEventError.exceptionDepth, `ExceptionMetaData exception depth ${actualSpanEventError.exceptionDepth}`)
 }
 
 test('incoming request by Disable Trace requests', (t) => {

@@ -17,6 +17,7 @@ const http = require('http')
 const ServiceType = require('../../../lib/context/service-type')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const annotationKey = require('../../../lib/constant/annotation-key')
+const spanMessages = require('../../../lib/data/v1/Span_pb')
 
 // https://github.com/nodejs/undici
 // The testcontainer calls require('undici') in http-wait-strategy.js
@@ -90,7 +91,7 @@ test('shimming require(undici) cause by require-in-the-middle package', function
                             const annotation = spanEvent.annotations[index]
                             t.equal(pAnnotation.getKey(), annotation.key, `Outgoing request Span event annotation key is ${annotation.key}`)
                             const pAnnotationValue = pAnnotation.getValue()
-                            t.equal(pAnnotationValue.getStringvalue(), annotation.value, `Outgoing request Span event annotation value is ${annotation.value}`)
+                            t.equal(pAnnotationValue.getLongvalue(), annotation.value, `Outgoing request Span event annotation value is ${annotation.value}`)
                         })
                     })
                 } else if (spanCount === 2) {
@@ -157,7 +158,7 @@ test('shimming require(undici) cause by require-in-the-middle package', function
                     t.equal(actualPSpan.getServicetype(), ServiceType.node.code, 'service type is node')
 
                     const actualAcceptEvent = actualPSpan.getAcceptevent()
-                    t.equal(actualAcceptEvent.getRpc(), '/test', 'rpc is /outgoing')
+                    t.equal(actualAcceptEvent.getRpc(), '/test', 'rpc is /test')
                     t.equal(actualAcceptEvent.getEndpoint(), 'localhost:5006', 'endpoint is localhost:5006')
                     t.equal(actualAcceptEvent.getRemoteaddr(), actualTestSpan.remoteAddress, `remote address is ${actualTestSpan.remoteAddress}`)
 
@@ -192,12 +193,44 @@ test('shimming require(undici) cause by require-in-the-middle package', function
                         })
                     })
 
-                    t.end()
+                    // t.end()
                 } else {
                     t.fail('span count is over 3')
                 }
             })
         },
+    })
+    collectorServer.addService(services.MetadataService, {
+        requestExceptionMetaData: (call, callback) => {
+            const result = new spanMessages.PResult()
+            callback(null, result)
+
+            const exceptionMetaData = call.request
+            t.equal(exceptionMetaData.getTransactionid().getAgentid(), actualFetchAPISpan.traceRoot.getAgentId(), `ExceptionMetaData agent id is ${actualFetchAPISpan.traceRoot.getAgentId()}`)
+            t.equal(exceptionMetaData.getTransactionid().getAgentstarttime(), actualFetchAPISpan.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData agent start time is ${actualFetchAPISpan.traceRoot.getTraceId().getAgentStartTime()}`)
+            t.equal(exceptionMetaData.getTransactionid().getSequence(), actualFetchAPISpan.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transaction id is ${actualFetchAPISpan.traceRoot.getTraceId().getTransactionId()}`)
+            t.equal(exceptionMetaData.getSpanid(), actualFetchAPISpan.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData span id is ${actualFetchAPISpan.traceRoot.getTraceId().getSpanId()}`)
+            t.equal(exceptionMetaData.getUritemplate(), 'NULL', 'ExceptionMetaData uri template is NULL')
+
+            const exceptionsList = exceptionMetaData.getExceptionsList()
+            t.equal(exceptionsList.length, 1, 'ExceptionMetaData exceptions length is 1')
+            const actualException = exceptionsList[0]
+            const spanEventException = actualFetchAPISpan.spanEventList[1].exception
+            t.equal(actualException.getExceptionclassname(), spanEventException.errorClassName, `ExceptionMetaData exception class name is ${spanEventException.errorClassName}`)
+            t.equal(actualException.getExceptionmessage(), spanEventException.errorMessage, `ExceptionMetaData exception message is ${spanEventException.errorMessage}`)
+            t.equal(actualException.getExceptiondepth(), spanEventException.exceptionDepth, `ExceptionMetaData exception depth is ${spanEventException.exceptionDepth}`)
+            t.equal(actualException.getExceptionid(), spanEventException.exceptionId, `ExceptionMetaData exception id is ${spanEventException.exceptionId}`)
+            const stackTraceElements = actualException.getStacktraceelementList()
+            const spanEventFrameStack = spanEventException.frameStack
+            stackTraceElements.forEach((pStackTraceElement, index) => {
+                const frameStack = spanEventFrameStack[index]
+                t.equal(pStackTraceElement.getClassname(), frameStack.className, `ExceptionMetaData stack trace element class name is ${frameStack.className}`)
+                t.equal(pStackTraceElement.getFilename(), frameStack.fileName, `ExceptionMetaData stack trace element file name is ${frameStack.fileName}`)
+                t.equal(pStackTraceElement.getLinenumber(), frameStack.lineNumber, `ExceptionMetaData stack trace element line number is ${frameStack.lineNumber}`)
+                t.equal(pStackTraceElement.getMethodname(), frameStack.methodName, `ExceptionMetaData stack trace element method name is ${frameStack.methodName}`)
+            })
+            t.end()
+        }
     })
 
     let dataSender
@@ -205,6 +238,7 @@ test('shimming require(undici) cause by require-in-the-middle package', function
         dataSender = new GrpcDataSenderBuilder(port)
             .enableSpan()
             .enableSpanChunk()
+            .enableExceptionMetaData()
             .build()
         agent.bindHttp(dataSender)
 

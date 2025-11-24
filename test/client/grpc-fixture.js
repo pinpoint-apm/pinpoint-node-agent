@@ -75,6 +75,7 @@ class DataSourceCallCountable extends GrpcDataSender {
             sendStringMetaInfo: false,
             sendSqlMetaInfo: false,
             sendSqlUidMetaData: false,
+            sendExceptionMetaData: false,
             sendSpan: false,
             sendSpanChunk: false,
             sendStat: false,
@@ -92,7 +93,7 @@ class DataSourceCallCountable extends GrpcDataSender {
     }
 
     initializeMetadataClients() {
-        if (this.config.sendApiMetaInfo || this.config.sendStringMetaInfo || this.config.sendSqlMetaInfo || this.config.sendSqlUidMetaData) {
+        if (this.config.sendApiMetaInfo || this.config.sendStringMetaInfo || this.config.sendSqlMetaInfo || this.config.sendSqlUidMetaData || this.config.sendExceptionMetaData) {
             super.initializeMetadataClients()
         }
     }
@@ -159,6 +160,13 @@ class DataSourceCallCountable extends GrpcDataSender {
         increaseCallCount()
         if (this.config.sendSqlUidMetaData) {
             super.sendSqlUidMetaData(sqlMetaData, callback)
+        }
+    }
+
+    sendExceptionMetaData(exceptionMetaData) {
+        increaseCallCount()
+        if (this.config.sendExceptionMetaData) {
+            super.sendExceptionMetaData(exceptionMetaData)
         }
     }
 
@@ -240,7 +248,8 @@ class MetaInfoOnlyDataSource extends DataSourceCallCountable {
             sendApiMetaInfo: true,
             sendStringMetaInfo: true,
             sendSqlMetaInfo: true,
-            sendSqlUidMetaData: true
+            sendSqlUidMetaData: true,
+            sendExceptionMetaData: true,
         })
         super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
     }

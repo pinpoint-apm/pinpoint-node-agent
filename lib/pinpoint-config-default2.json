@@ -1,0 +1,32 @@
+{
+    "applicationType": 1400,
+    "collector": {
+        "ip": "localhost",
+        "spanPort": 9993,
+        "statPort": 9992,
+        "tcpPort": 9991,
+        "deadlineMinutes": 10
+    },
+    "sampling": {
+        "rate": 10
+    },
+    "plugins": {
+        "http": {
+            "errorStatusCodes": "5xx,401,403"
+        },
+        "express": true,
+        "koa": true,
+        "mongodb": true,
+        "redis": true,
+        "ioredis": true,
+        "mysql": true,
+        "postgresql": true
+    },
+    "features": {
+        "activeThreadCount": true,
+        "dataSending": true,
+        "statsMonitoring": true,
+        "traceLocationAndFilenameOfCallSite": false,
+        "container": false
+    }
+}

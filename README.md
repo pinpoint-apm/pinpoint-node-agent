@@ -91,6 +91,27 @@ Based on the [pinpoint-config-default.json](/lib/pinpoint-config-default.json) f
 
 The PINPOINT_AGENT_ID, PINPOINT_AGENT_NAME and PINPOINT_APPLICATION_NAME pattern are `[a-zA-Z0-9\\._\\-]+`.
 
+### 4. User configuration file (`pinpoint-config.json`) — since v1.4.0
+From [#404](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/404) onward, the agent loads `pinpoint-config.json` automatically with the following priority:
+
+1. The directory that contains your entry script (`require.main.filename`), e.g. the folder where `app.js` or `server.js` lives.
+2. The current working directory returned by `process.cwd()` (the folder from which you executed `node` or `pm2`).
+
+If neither location contains the file, the agent simply uses the built-in defaults.
+
+> **Tip:** When using `node -r pinpoint-node-agent` or tools that bootstrap the agent before your app starts, `require.main` can be temporarily undefined. In that case, the second location (`process.cwd()`) must contain `pinpoint-config.json` or you can set configuration values via environment variables.
+
+Example layout:
+
+```
+my-service/
+├─ package.json
+├─ server.js         # entry point (require.main)
+└─ pinpoint-config.json
+```
+
+Running the app from a different folder? Make sure either the entry directory or the directory you execute from includes `pinpoint-config.json`.
+
 
 ### ⚠️ v0.8.7 or v1.0 higher Breaking Changes
 - **AgentId no longer required**: The `AgentId` field is now optional. If an `AgentId` is not provided, it will be automatically generated. This change may affect systems or scripts that previously relied on manually setting the `AgentId`.

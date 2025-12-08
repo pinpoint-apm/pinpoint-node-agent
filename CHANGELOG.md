@@ -1,6 +1,20 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [1.4.0] - 2025-12-18
+### Changed
+- [[#404](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/404)] Improved `pinpoint-config.json` discovery. The agent now searches the directory of the application entry point (`require.main.filename`) first and then falls back to the current working directory (`process.cwd()`). This makes `node -r pinpoint-node-agent` and PM2/Next.js boot scripts predictable without extra flags.
+
+  **Example:**
+  ```bash
+  my-service/
+  ├─ package.json
+  ├─ server.js             # entry script -> searched first
+  └─ pinpoint-config.json  # picked up automatically in v1.4.0+
+  ```
+
+  When running from another folder, place `pinpoint-config.json` in the execution directory or provide settings via environment variables.
+
 
 ## [1.3.0] - 2025-11-03
 ### Added

@@ -27,6 +27,15 @@
         "dataSending": true,
         "statsMonitoring": true,
         "traceLocationAndFilenameOfCallSite": false,
-        "container": false
+        "container": false,
+        "sqlStats": false,
+        "logLevels": {
+            "default-logger": "WARN",
+            "grpcLogger": "SILENT"
+        },
+        "traceExclusionUrl": {
+            "patterns": "",
+            "cacheSize": 100
+        }
     }
 }

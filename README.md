@@ -113,16 +113,10 @@ my-service/
 Running the app from a different folder? Make sure either the entry directory or the directory you execute from includes `pinpoint-config.json`.
 
 
-### ⚠️ v0.8.7 or v1.0 higher Breaking Changes
-- **AgentId no longer required**: The `AgentId` field is now optional. If an `AgentId` is not provided, it will be automatically generated. This change may affect systems or scripts that previously relied on manually setting the `AgentId`.
-- **Agent Name Added**: The `Agent Name` field is now a new optional configuration and can be set as a user-defined value with a maximum length of 255 characters. Developers can optionally use the pod name or any other identifier as the Agent Name. Ensure that your configuration aligns with this new behavior.
-
-  <img width="611" alt="Image" src="https://github.com/user-attachments/assets/8022baa4-8b38-4553-9c12-88de17bc8f22" />
-
 name | default | description
 -----|---------|------------
-PINPOINT_AGENT_ID |  | The maximum length is 24. If you don't set an Agent ID, it will be set to a random hex value.
-PINPOINT_AGENT_NAME |  | The maximum length is 255. Agent Name is optional value. Agent names should be set up so that they make sense to humans. After you set the Agent Name, it appears in the Inspector.
+PINPOINT_AGENT_ID |  | Optional env var (≤24 chars). When left unset, the agent generates a random hex value that still respects the `[a-zA-Z0-9._-]+` pattern.
+PINPOINT_AGENT_NAME |  | Optional env var (≤255 chars). Use meaningful labels that will be shown in the Inspector UI.<br><img width="611" alt="Agent Name in Inspector" src="https://github.com/user-attachments/assets/8022baa4-8b38-4553-9c12-88de17bc8f22" />
 PINPOINT_APPLICATION_NAME | | meaningful name of the app. an application name can have multiple PINPOINT_AGENT_ID. The maximum length is 24. a required variable.
 PINPOINT_COLLECTOR_IP | localhost | The address that the Pinpoint collector. ex) 192.168.0.1
 PINPOINT_SAMPLING_RATE | 10 | Sample rate of incoming HTTP or HTTPS request. The value is calculated as 1/value.
@@ -135,7 +129,7 @@ PINPOINT_TRACE_LOCATION_AND_FILENAME_OF_CALL_SITE | false | CallSite line number
 PINPOINT_HTTP_STATUS_CODE_ERRORS | 5xx,401,403 | Comma-separated list of HTTP status codes that should be treated as errors. When a response matches one of these codes, the agent will record the request as an error in Pinpoint. You can customize this list to include any status codes relevant to your application's error.
 
 ### Agent ID
-The agent ID is used as the identifier per the server or node. You need to set the hostname or node identifier(The maximum length is 24) on the server.
+`PINPOINT_AGENT_ID` should uniquely identify each server or node (≤24 chars). A common convention is to reuse the hostname or another node identifier.
 ```
 PINPOINT_AGENT_ID=${HOSTNAME} pm2 start ~/service/bin/pm2_start.json​
 ```

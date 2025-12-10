@@ -5,9 +5,9 @@
  */
 
 const test = require('tape')
-const { captureNamedGroup } = require('../fixture')
+const { ExceptionBuilder } = require('../../lib/context/trace/exception-builder')
 
-const actualCallStack = `Error
+const actualCallStack = `Error: express case
 at patchLayer (/Users/test/workspace/pinpoint/pinpoint-node-agent/lib/instrumentation/module/express.js:83:65)
 at Function.route (/Users/test/workspace/pinpoint/pinpoint-node-agent/lib/instrumentation/module/express.js:73:9)
 at Function.app.<computed> [as get] (/Users/test/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/application.js:481:30)
@@ -21,66 +21,12 @@ at Test.bound [as run] (/Users/test/workspace/pinpoint/pinpoint-node-agent/node_
 at Immediate.next [as _onImmediate] (/Users/test/workspace/pinpoint/pinpoint-node-agent/node_modules/tape/lib/results.js:83:19)
 at processImmediate (internal/timers.js:456:21)`
 
-test('express makeMethodDescriptorBuilder', (t) => {
-    let actual = captureNamedGroup('at new functionName (internal/modules/cjs/loader.js:699:10)')
-    t.equal(actual.type, undefined, 'className')
-    t.equal(actual.fileName, 'loader.js', 'fileName')
-    t.equal(actual.functionName, 'FunctionName')
-    t.equal(actual.lineNumber, 699, 'lineNumber')
-    t.equal(actual.location, 'internal/modules/cjs/loader.js')
+const loaderStack = `Error: loader
+at new functionName (internal/modules/cjs/loader.js:699:10)
+at Object.Module._extensions..js (internal/modules/cjs/loader.js:699:10)
+at async functionName (internal/modules/cjs/loader.js:699:10)`
 
-    // let actualMethodDescriptor = MethodDescriptorBuilder.make(undefined, actual).build()
-    // t.equal(actualMethodDescriptor.getApiDescriptor(), 'FunctionName()')
-
-    actual = captureNamedGroup('at Object.Module._extensions..js (internal/modules/cjs/loader.js:699:10)')
-    t.equal(actual.type, 'Object', 'className')
-    t.equal(actual.fileName, 'loader.js', 'fileName')
-    t.equal(actual.functionName, 'Module._extensions..js')
-    t.equal(actual.lineNumber, 699, 'lineNumber')
-    t.equal(actual.location, 'internal/modules/cjs/loader.js')
-
-    // actualMethodDescriptor = MethodDescriptorBuilder.make(undefined, actual).build()
-    // t.equal(actualMethodDescriptor.getApiDescriptor(), 'Object.Module._extensions..js()')
-
-    actual = captureNamedGroup('at async functionName (internal/modules/cjs/loader.js:699:10)')
-    t.equal(actual.type, undefined, 'className')
-    t.equal(actual.fileName, 'loader.js', 'fileName')
-    t.equal(actual.functionName, 'FunctionName')
-    t.equal(actual.lineNumber, 699, 'lineNumber')
-    t.equal(actual.location, 'internal/modules/cjs/loader.js')
-
-    // actualMethodDescriptor = MethodDescriptorBuilder.make(undefined, actual).build()
-    // t.equal(actualMethodDescriptor.getApiDescriptor(), 'FunctionName()')
-
-    const stacks = actualCallStack.split(/\r?\n/)
-    actual = captureNamedGroup(stacks[3]) //at Function.app.<computed> [as get] (/Users/test/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/application.js:481:30)
-    t.equal(actual.type, 'Function', 'className')
-    t.equal(actual.fileName, 'application.js', 'fileName')
-    t.equal(actual.functionName, 'app.<computed>', 'functionName')
-    t.equal(actual.lineNumber, 481, 'lineNumber')
-    t.true(actual.location.endsWith('express/lib/application.js'), 'location')
-    t.equal(actual.methodName, 'get', 'methodName')
-
-    t.end()
-})
-
-test('express makeMethodDescriptorBuilder exception case', (t) => {
-    const stacks = actualCallStack.split(/\r?\n/)
-    let actual = captureNamedGroup(stacks[5]) //at new Promise (<anonymous>)
-    t.equal(actual.type, undefined, 'className')
-    t.equal(actual.fileName, '<anonymous>', 'fileName')
-    t.equal(actual.functionName, 'Promise')
-    t.equal(actual.lineNumber, undefined, 'lineNumber')
-    t.equal(actual.location, '<anonymous>', 'location')
-    t.equal(actual.functionName, 'Promise', 'fullname')
-
-    // let actualMethodDescriptor = MethodDescriptorBuilder.make(undefined, actual).build()
-    // t.equal(actualMethodDescriptor.getLineNumber(), undefined, 'lineNumber actualMethodDescriptor')
-    // t.equal(actualMethodDescriptor.getLocation(), '<anonymous>', 'location actualMethodDescriptor')
-    t.end()
-})
-
-const actualKoaCallStack = `Error
+const actualKoaCallStack = `Error: koa case
 at Router.register (/Users/test/workspace/pinpoint/pinpoint-node-agent/lib/instrumentation/module/koa-router.js:44:55)
 at Router.<computed> [as get] (/Users/test/workspace/pinpoint/pinpoint-node-agent/node_modules/koa-router/lib/router.js:202:10)
 at Test.<anonymous> (/Users/test/workspace/pinpoint/pinpoint-node-agent/test/instrumentation/module/koa.test.js:31:10)
@@ -91,15 +37,80 @@ at Immediate.next [as _onImmediate] (/Users/test/workspace/pinpoint/pinpoint-nod
 at processImmediate (internal/timers.js:464:21)
 at process.callbackTrampoline (internal/async_hooks.js:130:17)`
 
-test('koa makeMethodDescriptorBuilder', (t) => {
-    const stacks = actualKoaCallStack.split(/\r?\n/)
-    let actual = captureNamedGroup(stacks[2]) //at Router.<computed> [as get] (/Users/test/workspace/pinpoint/pinpoint-node-agent/node_modules/koa-router/lib/router.js:202:10)
-    t.equal(actual.type, 'Router', 'className')
-    t.equal(actual.fileName, 'router.js', 'fileName')
-    t.equal(actual.functionName, '<computed>', 'functionName')
-    t.equal(actual.lineNumber, 202, 'lineNumber')
-    t.true(actual.location.endsWith('koa-router/lib/router.js'), 'location')
-    t.equal(actual.methodName, 'get', 'methodName')
+const buildException = (stack) => {
+    const err = new Error()
+    const [firstLine, ...rest] = stack.split(/\r?\n/)
+    err.message = firstLine.replace(/^Error:?\s*/, '')
+    err.stack = [firstLine, ...rest].join('\n')
+    return new ExceptionBuilder(err).build()
+}
+
+test('express makeMethodDescriptorBuilder with ExceptionBuilder', (t) => {
+    const exception = buildException(loaderStack)
+
+    t.equal(exception.errorClassName, 'Error')
+    t.equal(exception.errorMessage, 'loader')
+    t.equal(exception.frameStack.length, 3)
+
+    let frame = exception.frameStack[0]
+    t.equal(frame.className, '', 'className new')
+    t.true(frame.fileName.endsWith('internal/modules/cjs/loader.js'), 'fileName new')
+    t.equal(frame.methodName, 'FunctionName')
+    t.equal(frame.lineNumber, 699)
+
+    frame = exception.frameStack[1]
+    t.equal(frame.className, 'Object', 'className object')
+    t.true(frame.fileName.endsWith('internal/modules/cjs/loader.js'), 'fileName object')
+    t.equal(frame.methodName, 'Module._extensions..js')
+    t.equal(frame.lineNumber, 699)
+
+    frame = exception.frameStack[2]
+    t.equal(frame.className, '', 'className async')
+    t.true(frame.fileName.endsWith('internal/modules/cjs/loader.js'), 'fileName async')
+    t.equal(frame.methodName, 'FunctionName')
+    t.equal(frame.lineNumber, 699)
+
+    const expressException = buildException(actualCallStack)
+    t.equal(expressException.errorClassName, 'Error')
+    t.equal(expressException.errorMessage, 'express case')
+    t.equal(expressException.frameStack.length, 12)
+
+    const expressFrame = expressException.frameStack[2]
+    t.equal(expressFrame.className, 'Function')
+    t.true(expressFrame.fileName.endsWith('express/lib/application.js'))
+    t.equal(expressFrame.methodName, 'app.<computed> [as get]')
+    t.equal(expressFrame.lineNumber, 481)
+
+    t.end()
+})
+
+test('express makeMethodDescriptorBuilder exception case with ExceptionBuilder', (t) => {
+    const exception = buildException(actualCallStack)
+    const promiseFrame = exception.frameStack[4]
+
+    t.equal(exception.errorClassName, 'Error')
+    t.equal(exception.errorMessage, 'express case')
+    t.equal(exception.frameStack.length, 12)
+
+    t.equal(promiseFrame.className, '', 'className promise')
+    t.equal(promiseFrame.fileName, '<anonymous>')
+    t.equal(promiseFrame.methodName, 'Promise')
+    t.equal(promiseFrame.lineNumber, 0)
+
+    t.end()
+})
+
+test('koa makeMethodDescriptorBuilder with ExceptionBuilder', (t) => {
+    const exception = buildException(actualKoaCallStack)
+    t.equal(exception.errorClassName, 'Error')
+    t.equal(exception.errorMessage, 'koa case')
+    t.equal(exception.frameStack.length, 9)
+    const koaFrame = exception.frameStack[1]
+
+    t.equal(koaFrame.className, 'Router', 'className koa')
+    t.true(koaFrame.fileName.endsWith('koa-router/lib/router.js'), 'fileName koa')
+    t.equal(koaFrame.methodName, '<computed> [as get]')
+    t.equal(koaFrame.lineNumber, 202)
 
     t.end()
 })

@@ -5,6 +5,14 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 ### Changed
 - [[#406](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/406)] Improved `pinpoint-config.json` discovery. The agent now searches the directory of the application entry point (`require.main.filename`) first and then falls back to the current working directory (`process.cwd()`). This makes `node -r pinpoint-node-agent` and PM2/Next.js boot scripts predictable without extra flags.
 
+- [[#404](https://github.com/pinpoint-apm/pinpoint-node-agent/pull/405)] Config is now built via `ConfigBuilder` and applied with `setConfig` (minimal usage):
+
+  ```javascript
+  const { ConfigBuilder, setConfig } = require('pinpoint-node-agent/lib/config')
+  const config = new ConfigBuilder().build()
+  setConfig(config)
+  ```
+
   **Example:**
   ```bash
   my-service/
@@ -40,7 +48,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 
   const grpcLogger = log.getLogger(
     new LogBuilder('grpc')
-      .setConfig(config.getConfig())
+      .setConfig(config)
       .addAppender(debugAppender)
       .build()
   )

@@ -1,4 +1,6 @@
 {
+    "agentId": "node.test.app",
+    "applicationName": "test.application.name",
     "applicationType": 1400,
     "collector": {
         "ip": "localhost",

@@ -5,19 +5,16 @@
  */
 
 const test = require('tape')
-const { clear, getConfig, readConfigJson, readRootConfigFile, getMainModulePath } = require('../lib/config')
-const { HttpStatusCodeErrorsBuilder, getHttpStatusCodeErrors, clearHttpStatusCodeErrors } = require('../lib/instrumentation/http/http-status-code-errors-builder')
-const log = require('../lib/utils/log/logger')
+const { ConfigBuilder } = require('../lib/config-builder')
+const path = require('path')
 
 test('Agent ID required field', function (t) {
   t.plan(1)
 
-  clear()
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME
 
-  const conf = getConfig()
-
+  const conf = new ConfigBuilder().build()
   t.true(conf.agentId.length == 16)
 })
 
@@ -26,63 +23,53 @@ test('Should be configured with environment variable', function (t) {
 
   const agentId = 'id-from-env'
   process.env.PINPOINT_AGENT_ID = agentId
-  clear()
-  const conf = getConfig()
 
+  const conf = new ConfigBuilder().build()
   t.equal(agentId, conf.agentId)
+
+  delete process.env.PINPOINT_AGENT_ID
 })
 
 test('Should be configured with argument', function (t) {
   t.plan(1)
 
   process.env.PINPOINT_AGENT_ID = 'id-from-env'
-  clear()
-  const conf = getConfig({
-    'agent-id': 'id-from-argument'
-  }, false)
 
-  t.equal('id-from-argument', conf.agentId)
+  const conf = new ConfigBuilder({ 'agentId': 'id-from-argument' }).build()
+  t.equal(conf.agentId, 'id-from-argument')
+
+  delete process.env.PINPOINT_AGENT_ID
 })
 
 test('Should be read from config file', function (t) {
   t.plan(1)
 
-  const testConfig = require('./pinpoint-config-test')
-  const result = readConfigJson(testConfig)
-  log.debug(result)
-  t.ok(result)
+  delete process.env.PINPOINT_COLLECTOR_IP
+
+  const testConfig = require('./pinpoint-config-test2.json')
+  const conf = new ConfigBuilder().setDefaultJson(testConfig).build()
+  t.deepEqual(conf, testConfig)
 })
 
 test('deadline config', (t) => {
   t.plan(1)
 
-  const json = require('../lib/pinpoint-config-default')
-  const result = readConfigJson(json)
-  t.equal(result.streamDeadlineMinutesClientSide, 10)
+  const json = require('../lib/pinpoint-config-default2.json')
+  const conf = new ConfigBuilder().setDefaultJson(json).build()
+  t.equal(conf.collector.deadlineMinutes, 10)
 })
 
-test('main module path', (t) => {
-  clear()
-  const conf = readRootConfigFile()
-  t.deepEqual(conf, {}, 'configuration is null object')
-  let actual = getMainModulePath(require)
+test('ConfigBuilder pathForRequireFunction Learning Test', (t) => {
+  let actual = {}.main
+  t.true(actual === undefined, '{}.main return value is undefined')
 
-  actual = getMainModulePath({})
-  t.true(actual === undefined, 'getMainModulePath({}) return value is undefined')
-
-  actual = getMainModulePath()
-  t.true(actual === undefined, 'getMainModulePath() return value is undefined')
-
-  actual = getMainModulePath(null)
-  t.true(actual === undefined, 'getMainModulePath(null) return value is undefined')
-
-  actual = getMainModulePath({ main: {} })
+  actual = { main: {} }.main.filename
   t.true(actual === undefined, 'getMainModulePath({ main: {} }) return value is undefined')
 
-  actual = getMainModulePath({ main: { filename: '/test' } })
+  actual = path.dirname({ main: { filename: '/test' } }.main.filename)
   t.equal(actual, '/', 'getMainModulePath({ main: { filename: \' / test\' } }) return value is /')
 
-  actual = getMainModulePath({ main: { filename: '/test/test1' } })
+  actual = path.dirname({ main: { filename: '/test/test1' } }.main.filename)
   t.equal(actual, '/test', 'getMainModulePath({ main: { filename: \' / test\' } }) return value is /')
 
   t.end()
@@ -97,140 +84,120 @@ test('main module path', (t) => {
 //   public static final int AGENT_ID_MAX_LEN = 24;
 // }
 test('Agent ID length check', (t) => {
-  clear()
   process.env['PINPOINT_AGENT_ID'] = 'agentId'
   process.env['PINPOINT_APPLICATION_NAME'] = 'appication-name'
   process.env['PINPOINT_AGENT_NAME'] = 'agent-name'
-
-  let given = getConfig()
+  let given = new ConfigBuilder().build()
   t.true(given.enable, 'configuration agentId, Name, ApplicationName enable agent id')
   t.equal(given.agentName, 'agent-name', 'agent name is agent name')
-
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME
+  delete process.env.PINPOINT_AGENT_NAME
 
-  clear()
   process.env['PINPOINT_AGENT_ID'] = 'agentIdagentIdagentIdage'
   process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
-
-  given = getConfig()
+  given = new ConfigBuilder().build()
   t.true(given.enable, 'maxlength agentID and application Name')
-
+  t.equal(given.messages, undefined, 'no error message')
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME
 
-  clear()
   process.env['PINPOINT_AGENT_ID'] = 'agentIdagentIdagentIdageE'
   process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
-
-  given = getConfig()
+  given = new ConfigBuilder().build()
   t.false(given.enable, 'maxlength agentID error')
-
+  t.equal(given.messages.errors[0], 'Agent ID is too long (max 24 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME
 
-  clear()
   process.env['PINPOINT_AGENT_ID'] = 'agentIdagentIdagentIdage'
   process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappicationE'
-
-  given = getConfig()
+  given = new ConfigBuilder().build()
   t.false(given.enable, 'maxlength application Name error')
-
+  t.equal(given.messages.errors[0], 'Application Name is too long (max 24 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME
 
-  clear()
   process.env['PINPOINT_AGENT_ID'] = '~'
   process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
-
-  given = getConfig()
+  given = new ConfigBuilder().build()
   t.false(given.enable, 'invalide agent ID')
-
+  t.equal(given.messages.errors[0], 'Agent ID has invalid characters; allowed [a-zA-Z0-9._-]. Value: ~. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME
 
-  clear()
   process.env['PINPOINT_AGENT_ID'] = 'agentIdagentIdagentIdage'
   process.env['PINPOINT_APPLICATION_NAME'] = '~'
-
-  given = getConfig()
+  given = new ConfigBuilder().build()
   t.false(given.enable, 'invalide application name')
-
+  t.equal(given.messages.errors[0], 'Application Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: ~. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_AGENT_NAME
   delete process.env.PINPOINT_APPLICATION_NAME
 
-  clear()
   process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
-
-  given = getConfig()
+  given = new ConfigBuilder().build()
   t.true(given.enable, 'agent ID nullable test')
   t.equal(given.applicationName, 'appicationnameappication', 'application name is appicationnameappication')
   t.equal(given.agentId.length, 16, 'random generated agent ID length is 16')
-
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_AGENT_NAME
   delete process.env.PINPOINT_APPLICATION_NAME
 
-  clear()
-  given = getConfig()
+  given = new ConfigBuilder().build()
   t.false(given.enable, 'Application Name must be set')
   t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
   t.false(given.agentName, 'Agent Name is optional value and only set from developer')
   t.equal(given.applicationName, undefined, 'Application Name is required and only set from developer')
-
+  t.equal(given.messages.errors[0], 'Application Name is required. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_AGENT_NAME
   delete process.env.PINPOINT_APPLICATION_NAME
 
-  clear()
   process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
   process.env['PINPOINT_AGENT_NAME'] = 'agent name'
-  given = getConfig()
+  given = new ConfigBuilder().build()
   t.false(given.enable, 'Application Name must be set')
   t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
   t.equal(given.agentName, 'agent name', 'Agent Name is optional value and only set from developer')
   t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
-
+  t.equal(given.messages.errors[0], 'Agent Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: agent name. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_AGENT_NAME
   delete process.env.PINPOINT_APPLICATION_NAME
 
-  clear()
   process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
   process.env['PINPOINT_AGENT_NAME'] = 'agent?name'
-  given = getConfig()
+  given = new ConfigBuilder().build()
   t.false(given.enable, 'Application Name must be set')
   t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
   t.equal(given.agentName, 'agent?name', 'Agent Name is optional value and only set from developer')
   t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
-
+  t.equal(given.messages.errors[0], 'Agent Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: agent?name. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_AGENT_NAME
   delete process.env.PINPOINT_APPLICATION_NAME
 
-  clear()
   process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
   process.env['PINPOINT_AGENT_NAME'] = 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagen'
-  given = getConfig()
+  given = new ConfigBuilder().build()
   t.false(given.enable, 'Application Name must be set')
   t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
   t.equal(given.agentName, 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagen', 'Agent Name is optional value and only set from developer')
   t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
-
+  t.equal(given.messages.errors[0], 'Agent Name is too long (max 255 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_AGENT_NAME
   delete process.env.PINPOINT_APPLICATION_NAME
 
-  clear()
   process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
   process.env['PINPOINT_AGENT_NAME'] = 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameage'
-  given = getConfig()
+  given = new ConfigBuilder().build()
   t.true(given.enable, 'Application Name must be set')
   t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
   t.equal(given.agentName, 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameage', 'Agent Name is optional value and only set from developer')
   t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
-
+  t.equal(given.messages, undefined, 'no error message')
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_AGENT_NAME
   delete process.env.PINPOINT_APPLICATION_NAME
@@ -238,54 +205,66 @@ test('Agent ID length check', (t) => {
   t.end()
 })
 
-test('callSite config', (t) => {
-  clear()
+test('Agent Name validation', (t) => {
+  t.plan(6)
 
-  let given = getConfig()
-  t.false(given.traceLocationAndFileNameOfCallSite, 'default value is false')
+  // too long (256 chars)
+  process.env.PINPOINT_AGENT_ID = 'agent-valid'
+  process.env.PINPOINT_APPLICATION_NAME = 'application-valid'
+  process.env.PINPOINT_AGENT_NAME = 'a'.repeat(256)
+  let given = new ConfigBuilder().build()
+  t.false(given.enable, 'agent name over 255 disables agent')
+  t.equal(given.messages.errors[0], 'Agent Name is too long (max 255 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
 
-  clear()
-  process.env['PINPOINT_TRACE_LOCATION_AND_FILENAME_OF_CALL_SITE'] = ''
-  given = getConfig()
-  t.false(given.traceLocationAndFileNameOfCallSite, 'default value is true validation')
+  // invalid characters
+  process.env.PINPOINT_AGENT_NAME = 'agent?name'
+  given = new ConfigBuilder().build()
+  t.false(given.enable, 'agent name with invalid chars disables agent')
+  t.equal(given.messages.errors[0], 'Agent Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: agent?name. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
 
-  clear()
-  process.env['PINPOINT_TRACE_LOCATION_AND_FILENAME_OF_CALL_SITE'] = 'false'
-  given = getConfig()
-  t.false(given.traceLocationAndFileNameOfCallSite, 'false value is false')
+  // empty allowed (optional)
+  process.env.PINPOINT_AGENT_NAME = ''
+  given = new ConfigBuilder().build()
+  t.true(given.enable, 'empty agent name is allowed')
+  t.equal(given.agentName, undefined, 'empty agent name not set')
 
-  clear()
-  process.env['PINPOINT_TRACE_LOCATION_AND_FILENAME_OF_CALL_SITE'] = 'true'
-  given = getConfig()
-  t.true(given.traceLocationAndFileNameOfCallSite, 'true value is true')
-  delete process.env.PINPOINT_TRACE_LOCATION_AND_FILENAME_OF_CALL_SITE
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+  delete process.env.PINPOINT_AGENT_NAME
+})
 
-  clear()
-  process.env['PINPOINT_PROFILER_SQL_STAT'] = 'true'
-  given = getConfig()
-  t.true(given.profilerSqlStat, 'profilerSqlStat is true')
-  delete process.env.PINPOINT_PROFILER_SQL_STAT
+test('Agent ID and Application Name multiple errors', (t) => {
+  process.env.PINPOINT_AGENT_ID = 'agentIdagentIdagentIdageE' // 25 chars -> too long
+  process.env.PINPOINT_APPLICATION_NAME = 'appicationnameappication?' // invalid char
+
+  const given = new ConfigBuilder().build()
+  t.false(given.enable, 'config disabled when multiple id/app errors')
+  t.ok(given.messages?.errors?.length >= 2, 'aggregates multiple errors')
+  t.equal(given.messages.errors[0], 'Agent ID is too long (max 24 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
+  t.equal(given.messages.errors[1], 'Application Name is too long (max 24 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
+  t.equal(given.messages.errors[2], 'Application Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: appicationnameappication?. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
+
+  delete process.env.PINPOINT_AGENT_ID
+  delete process.env.PINPOINT_APPLICATION_NAME
+
   t.end()
 })
 
 test('sampling Rate', (t) => {
-  clear()
-  let conf = require('../lib/config').getConfig()
-  t.equal(conf.sampleRate, 10, 'default sampling rate is 10')
+  let conf = new ConfigBuilder().build()
+  t.equal(conf.sampling.rate, 10, 'default sampling rate is 10')
 
-  clear()
-  conf = require('../lib/config').getConfig({ 'sampling': { 'rate': 20} })
-  t.equal(conf.sampleRate, 20, 'sampling rate is 20')
+  conf = new ConfigBuilder({ 'sampling': { 'rate': 20} }).build()
+  t.equal(conf.sampling.rate, 20, 'sampling rate is 20')
 
   t.end()
 })
 
 test('HTTP Status Code Errors', (t) => {
-  clear()
-  let conf = require('../lib/config').getConfig()
-  t.equal(conf.httpStatusCodeErrors, '5xx,401,403', 'default http status code errors is 5xx,401,403')
+  let conf = new ConfigBuilder().build()
+  t.equal(conf.plugins.http.errorStatusCodes, '5xx,401,403', 'default http status code errors is 5xx,401,403')
 
-  const errors = new HttpStatusCodeErrorsBuilder(conf.httpStatusCodeErrors).build()
+  const errors = conf.getHttpStatusCodeErrors()
   t.equal(errors.isErrorCode(500), true, '500 is error code')
   t.equal(errors.isErrorCode(200), false, '200 is not error code')
   t.equal(errors.isErrorCode(401), true, '401 is error code')
@@ -294,34 +273,25 @@ test('HTTP Status Code Errors', (t) => {
 })
 
 test('HTTP Status Code Errors with config changes', (t) => {
-  clear()
-  clearHttpStatusCodeErrors()
-
-  let httpErrors = getHttpStatusCodeErrors()
+  let httpErrors = new ConfigBuilder().build().getHttpStatusCodeErrors()
   t.equal(httpErrors.isErrorCode(500), true, 'default: 500 is error code')
   t.equal(httpErrors.isErrorCode(401), true, 'default: 401 is error code')
   t.equal(httpErrors.isErrorCode(403), true, 'default: 403 is error code')
   t.equal(httpErrors.isErrorCode(404), false, 'default: 404 is not error code')
 
-  clear()
-  clearHttpStatusCodeErrors()
   process.env['PINPOINT_HTTP_STATUS_CODE_ERRORS'] = '404,500'
 
-  httpErrors = getHttpStatusCodeErrors()
+  httpErrors = new ConfigBuilder().build().getHttpStatusCodeErrors()
   t.equal(httpErrors.isErrorCode(500), true, 'env config: 500 is error code')
   t.equal(httpErrors.isErrorCode(404), true, 'env config: 404 is error code')
   t.equal(httpErrors.isErrorCode(401), false, 'env config: 401 is not error code')
   t.equal(httpErrors.isErrorCode(403), false, 'env config: 403 is not error code')
-
-  clear()
-  clearHttpStatusCodeErrors()
   delete process.env.PINPOINT_HTTP_STATUS_CODE_ERRORS
 
-  const customConfig = { 'http-status-code': { 'errors': '400,401,403,404' } }
-  const conf = getConfig(customConfig)
-  t.equal(conf.httpStatusCodeErrors, '400,401,403,404', 'json config: httpStatusCodeErrors value')
+  const conf = new ConfigBuilder({ 'plugins': { 'http': { 'errorStatusCodes': '400,401,403,404' } } }).build()
+  t.equal(conf.plugins.http.errorStatusCodes, '400,401,403,404', 'json config: httpStatusCodeErrors value')
 
-  httpErrors = getHttpStatusCodeErrors()
+  httpErrors = conf.getHttpStatusCodeErrors()
   t.equal(httpErrors.isErrorCode(400), true, 'json config: 400 is error code')
   t.equal(httpErrors.isErrorCode(401), true, 'json config: 401 is error code')
   t.equal(httpErrors.isErrorCode(403), true, 'json config: 403 is error code')
@@ -329,29 +299,23 @@ test('HTTP Status Code Errors with config changes', (t) => {
   t.equal(httpErrors.isErrorCode(500), false, 'json config: 500 is not error code')
 
   delete process.env.PINPOINT_HTTP_STATUS_CODE_ERRORS
-  clear()
-  clearHttpStatusCodeErrors()
   t.end()
 })
 
 test('Logger levels', (t) => {
-  clear()
-  const conf = require('../lib/config').getConfig()
-  t.deepEqual(conf.loggerLevels, {'default-logger': 'WARN', grpcLogger: 'SILENT'}, 'default logger levels is warn and grpcLogger is silent')
+  const conf = new ConfigBuilder().build()
+  t.deepEqual(conf.features.logLevels, {'default-logger': 'WARN', grpcLogger: 'SILENT'}, 'default logger levels is warn and grpcLogger is silent')
 
-  clear()
   process.env['PINPOINT_LOGGER_LEVELS'] = 'grpc=INFO,sql=WARN,http=INFO'
-  const confWithEnv = require('../lib/config').getConfig()
-  t.deepEqual(confWithEnv.loggerLevels, {'grpc': 'INFO', 'sql': 'WARN', 'http': 'INFO'}, 'logger levels from env is grpc=INFO,sql=WARN,http=INFO')
+  const confWithEnv = new ConfigBuilder().build()
+  t.deepEqual(confWithEnv.features.logLevels, {'default-logger': 'WARN', grpcLogger: 'SILENT', 'grpc': 'INFO', 'sql': 'WARN', 'http': 'INFO'}, 'logger levels from env is grpc=INFO,sql=WARN,http=INFO')
 
-  clear()
   process.env['PINPOINT_LOGGER_LEVELS'] = '.nemo=DEBUG'
-  const confWithAppender = require('../lib/config').getConfig()
-  t.deepEqual(confWithAppender.loggerLevels, {'.nemo': 'DEBUG'}, 'logger levels from env is .nemo=DEBUG')
+  const confWithAppender = new ConfigBuilder().build()
+  t.deepEqual(confWithAppender.features.logLevels, {'default-logger': 'WARN', grpcLogger: 'SILENT', '.nemo': 'DEBUG'}, 'logger levels from env is .nemo=DEBUG')
 
-  clear()
   process.env['PINPOINT_LOGGER_LEVELS'] = 'grpc=DEBUG,sql=ERROR,http=TRACE'
-  const confWithEnvDebug = require('../lib/config').getConfig()
-  t.deepEqual(confWithEnvDebug.loggerLevels, {'grpc': 'DEBUG', 'sql': 'ERROR', 'http': 'TRACE'}, 'logger levels from env is grpc=DEBUG,sql=ERROR,http=TRACE')
+  const confWithEnvDebug = new ConfigBuilder().build()
+  t.deepEqual(confWithEnvDebug.features.logLevels, {'default-logger': 'WARN', grpcLogger: 'SILENT', 'grpc': 'DEBUG', 'sql': 'ERROR', 'http': 'TRACE'}, 'logger levels from env is grpc=DEBUG,sql=ERROR,http=TRACE')
   t.end()
 })

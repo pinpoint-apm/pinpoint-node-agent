@@ -30,15 +30,10 @@ const getAgentInfo = () => ({
   agentStartTime: Date.now(),
 })
 
-const captureNamedGroup = (callSite) => {
-  return Object.assign({}, namedGroupLocationFileName([callSite], 0)
-                          , namedGroupTypeMethod([callSite], 0))
-}
 
 module.exports = {
   config,
   getTransactionId,
   getTraceId,
   getAgentInfo,
-  captureNamedGroup,
 }

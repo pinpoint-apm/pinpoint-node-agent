@@ -94,10 +94,10 @@ const dataSender = (conf, agentInfoOrGrpcDataSender, grpcDataSender) => {
       enabledDataSending: true,
     }, grpcDataSender)
   }
-  if (conf?.collectorSpanPort > 0) {
+  if (conf?.collector.spanPort > 0) {
     return new MockDataSender({
       enabledDataSending: true,
-    }, new GrpcDataSender(conf.collectorIp, conf.collectorSpanPort, conf.collectorStatPort, conf.collectorTcpPort, agentInfoOrGrpcDataSender, conf))
+    }, new GrpcDataSender(conf.collector.ip, conf.collector.spanPort, conf.collector.statPort, conf.collector.tcpPort, agentInfoOrGrpcDataSender, conf))
   }
   return new MockDataSender({
     enabledDataSending: true,

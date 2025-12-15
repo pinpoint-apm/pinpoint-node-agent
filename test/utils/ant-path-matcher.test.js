@@ -5,12 +5,14 @@
  */
 
 const test = require('tape')
+const agent = require('../support/agent-singleton-mock')
 const AntPathMatcher = require('../../lib/utils/ant-path-matcher')
 const axios = require('axios')
 const express = require('express')
 const http = require('http')
 const https = require('https')
-const agent = require('../support/agent-singleton-mock')
+const { features } = require('process')
+const { ConfigBuilder } = require('../../lib/config-builder')
 let pathMatcher = new AntPathMatcher()
 
 // https://github.com/spring-projects/spring-framework/blob/master/spring-core/src/test/java/org/springframework/util/AntPathMatcherTests.java
@@ -121,25 +123,29 @@ test('matchWithNullPath', (t) => {
 })
 
 test('config object exclusion URL', (t) => {
-    let config = require('../pinpoint-config-test')
+    let config = require('../pinpoint-config-test2.json')
     Object.assign(config, {
-        "trace-exclusion-url": {
-            "pattern": ["/test.jpg"]
+        "features": {
+            "traceExclusionUrl": {
+                "patterns": ["/test.jpg"]
+            }
         }
     })
     agent.bindHttp(config)
-    t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test.jpg"])
-    delete config["trace-exclusion-url"]
+    t.deepEqual(agent.config.features.traceExclusionUrl.patterns, ["/test.jpg"])
+    delete config["features"]["traceExclusionUrl"]
 
-    config = require('../pinpoint-config-test')
+    config = require('../pinpoint-config-test2.json')
     Object.assign(config, {
-        "trace-exclusion-url": {
-            "pattern": ["/??/a", "/*bla/test"]
+        "features": {
+            "traceExclusionUrl": {
+                "patterns": ["/??/a", "/*bla/test"]
+            }
         }
     })
     agent.bindHttp(config)
-    t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/??/a", "/*bla/test"])
-    delete config["trace-exclusion-url"]
+    t.deepEqual(agent.config.features.traceExclusionUrl.patterns, ["/??/a", "/*bla/test"])
+    delete config["features"]["traceExclusionUrl"]
 
     t.end()
 })
@@ -148,13 +154,15 @@ test('config object exclusion URL', (t) => {
 test('config object exclusion URL with cache size', (t) => {
     let config = require('../pinpoint-config-test')
     Object.assign(config, {
-        "trace-exclusion-url": {
-            "pattern": ["/test.jpg"]
+        "features": {
+            "traceExclusionUrl": {
+                "patterns": ["/test.jpg"]
+            }
         }
     })
     agent.bindHttp(config)
-    t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test.jpg"])
-    delete config["trace-exclusion-url"]
+    t.deepEqual(agent.config.features.traceExclusionUrl.patterns, ["/test.jpg"])
+    delete config["features"]["traceExclusionUrl"]
 
     t.end()
 })
@@ -162,15 +170,14 @@ test('config object exclusion URL with cache size', (t) => {
 test('config env exclusion URL', (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/test"
     agent.bindHttp()
-    t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test"])
+    t.deepEqual(agent.config.features.traceExclusionUrl.patterns, ["/test"])
 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/test, test"
     agent.bindHttp()
-    t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test", "test"])
-
+    t.deepEqual(agent.config.features.traceExclusionUrl.patterns, ["/test", "test"])
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/test, test,tes?"
     agent.bindHttp()
-    t.deepEqual(agent.config.traceExclusionUrlPatterns, ["/test", "test", "tes?"])
+    t.deepEqual(agent.config.features.traceExclusionUrl.patterns, ["/test", "test", "tes?"])
 
     t.end()
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
@@ -339,7 +346,7 @@ test('when pattern match with cache size on ENV environment, sampling test with 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
     agent.bindHttp()
     await outgoingRequest(t, "/test", false, (t) => {
-        t.true(typeof agent.config.traceExclusionUrlCacheSize === 'undefined', 'traceExclusionUrlCacheSize ENV undefined case')
+        t.true(agent.config.features.traceExclusionUrl.cacheSize === 100, `traceExclusionUrlCacheSize default value 100 ENV In undefined case`)
     })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 
@@ -347,8 +354,8 @@ test('when pattern match with cache size on ENV environment, sampling test with 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
     agent.bindHttp()
     await outgoingRequest(t, "/test", false, (t) => {
-        t.true(typeof agent.config.traceExclusionUrlCacheSize !== 'undefined', 'traceExclusionUrlCacheSize ENV case')
-        t.equal(agent.config.traceExclusionUrlCacheSize, 100, 'traceExclusionUrlCacheSize default 100')
+        t.true(typeof agent.config.features.traceExclusionUrl.cacheSize !== 'undefined', 'traceExclusionUrlCacheSize ENV case')
+        t.equal(agent.config.features.traceExclusionUrl.cacheSize, 100, 'traceExclusionUrlCacheSize default 100')
     })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
@@ -356,15 +363,15 @@ test('when pattern match with cache size on ENV environment, sampling test with 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
     agent.bindHttp()
     await outgoingRequest(t, "/test", true, (t) => {
-        t.true(typeof agent.config.traceExclusionUrlPatterns === 'undefined', 'when only set traceExclusionUrlCacheSize ENV, agent.config.traceExclusionUrlPatterns undefined case')
-        t.true(typeof agent.config.traceExclusionUrlCacheSize === 'undefined', 'when only set traceExclusionUrlCacheSize ENV, agent.config.traceExclusionUrlCacheSize undefined case')
+        t.true(typeof agent.config.features.traceExclusionUrl.patterns === 'undefined', 'when only set traceExclusionUrlCacheSize ENV, agent.config.traceExclusionUrlPatterns undefined case')
+        t.true(typeof agent.config.features.traceExclusionUrl.cacheSize === 'undefined', 'when only set traceExclusionUrlCacheSize ENV, agent.config.traceExclusionUrlCacheSize undefined case')
     })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/test?"
     agent.bindHttp()
     await outgoingRequest(t, "/test", true, (t) => {
-        t.true(typeof agent.config.traceExclusionUrlCacheSize === 'undefined', 'when sampling is true, traceExclusionUrlCacheSize ENV undefined case')
+        t.true(agent.config.features.traceExclusionUrl.cacheSize === 100, 'traceExclusionUrlCacheSize ENV undefined case and patterns set, default 100 cache size')
     })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 
@@ -372,8 +379,8 @@ test('when pattern match with cache size on ENV environment, sampling test with 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
     agent.bindHttp()
     await outgoingRequest(t, "/test", true, (t) => {
-        t.true(typeof agent.config.traceExclusionUrlCacheSize !== 'undefined', 'when sampling is true, traceExclusionUrlCacheSize ENV case')
-        t.equal(agent.config.traceExclusionUrlCacheSize, 100, 'when sampling is true, traceExclusionUrlCacheSize default 100')
+        t.true(typeof agent.config.features.traceExclusionUrl.cacheSize !== 'undefined', 'when sampling is true, traceExclusionUrlCacheSize ENV case')
+        t.equal(agent.config.features.traceExclusionUrl.cacheSize, 100, 'when sampling is true, traceExclusionUrlCacheSize default 100')
     })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
@@ -382,79 +389,89 @@ test('when pattern match with cache size on ENV environment, sampling test with 
 })
 
 test('when pattern match with cache size form JSON, sampling test with cache hit', async (t) => {
-    let config = require('../pinpoint-config-test')
+    let config = require('../pinpoint-config-test2.json')
     Object.assign(config, {
-        "trace-exclusion-url": {
-            "pattern": ["/heath_check?/**", "/tes?"]
+        "features": {
+            "traceExclusionUrl": {
+                "patterns": ["/heath_check?/**", "/tes?"]
+            }
         }
     })
     agent.bindHttp(config)
     await outgoingRequest(t, "/test", false, (t) => {
-        t.true(typeof agent.config.traceExclusionUrlCacheSize === 'undefined', 'traceExclusionUrlCacheSize ENV undefined case')
+        t.true(agent.config.features.traceExclusionUrl.cacheSize === 100, 'traceExclusionUrlCacheSize ENV undefined case')
     })
-    delete config["trace-exclusion-url"]
 
-    config = require('../pinpoint-config-test')
+    config = require('../pinpoint-config-test2.json')
     Object.assign(config, {
-        "trace-exclusion-url": {
-            "pattern": ["/heath_check?/**", "/tes?"],
-            "cache-size": 0
+        "features": {
+            "traceExclusionUrl": {
+                "patterns": ["/heath_check?/**", "/tes?"],
+                "cacheSize": 0
+            }
         }
     })
     agent.bindHttp(config)
     await outgoingRequest(t, "/test", false, (t) => {
-        t.true(typeof agent.config.traceExclusionUrlCacheSize !== 'undefined', 'traceExclusionUrlCacheSize ENV case')
-        t.equal(agent.config.traceExclusionUrlCacheSize, 100, 'traceExclusionUrlCacheSize default 100')
+        t.true(typeof agent.config.features.traceExclusionUrl.cacheSize !== 'undefined', 'traceExclusionUrlCacheSize ENV case')
+        t.equal(agent.config.features.traceExclusionUrl.cacheSize, 100, 'traceExclusionUrlCacheSize default 100')
     })
-    delete config["trace-exclusion-url"]
 
-    config = require('../pinpoint-config-test')
+    config = require('../pinpoint-config-test2.json')
     Object.assign(config, {
-        "trace-exclusion-url": {
-            "cache-size": 0
+        "features": {
+            "traceExclusionUrl": {
+                "cacheSize": 0
+            }
         }
     })
     agent.bindHttp(config)
     await outgoingRequest(t, "/test", true, (t) => {
-        t.true(typeof agent.config.traceExclusionUrlPatterns === 'undefined', 'when only set traceExclusionUrlCacheSize ENV, agent.config.traceExclusionUrlPatterns undefined case')
-        t.true(typeof agent.config.traceExclusionUrlCacheSize === 'undefined', 'when only set traceExclusionUrlCacheSize ENV, agent.config.traceExclusionUrlCacheSize undefined case')
+        t.true(typeof agent.config.features.traceExclusionUrl.patterns === 'undefined', 'when only set traceExclusionUrlCacheSize ENV, agent.config.features.traceExclusionUrl.patterns undefined case')
+        t.true(typeof agent.config.features.traceExclusionUrl.cacheSize === 'undefined', 'when only set traceExclusionUrlCacheSize ENV, agent.config.features.traceExclusionUrl.cacheSize undefined case')
     })
-    delete config["trace-exclusion-url"]
 
-    config = require('../pinpoint-config-test')
+    config = require('../pinpoint-config-test2.json')
     Object.assign(config, {
-        "trace-exclusion-url": {
-            "pattern": ["/heath_check?/**", "/test?"],
+        "features": {
+            "traceExclusionUrl": {
+                "patterns": ["/heath_check?/**", "/test?"]
+            }
         }
     })
     agent.bindHttp(config)
     await outgoingRequest(t, "/test", true, (t) => {
-        t.true(typeof agent.config.traceExclusionUrlCacheSize === 'undefined', 'when sampling is true, traceExclusionUrlCacheSize ENV undefined case')
+        t.true(agent.config.features.traceExclusionUrl.cacheSize === 100, 'when sampling is true, traceExclusionUrlCacheSize ENV undefined case')
     })
-    delete config["trace-exclusion-url"]
 
-    config = require('../pinpoint-config-test')
+    config = require('../pinpoint-config-test2.json')
     Object.assign(config, {
         "trace-exclusion-url": {
-            "pattern": ["/heath_check?/**", "/test?"],
-            "cache-size": 0
+            "traceExclusionUrl": {
+                "patterns": ["/heath_check?/**", "/test?"],
+                "cacheSize": 0
+            }
         }
     })
     agent.bindHttp(config)
     await outgoingRequest(t, "/test", true, (t) => {
-        t.true(typeof agent.config.traceExclusionUrlCacheSize !== 'undefined', 'when sampling is true, traceExclusionUrlCacheSize ENV case')
-        t.equal(agent.config.traceExclusionUrlCacheSize, 100, 'when sampling is true, traceExclusionUrlCacheSize default 100')
+        t.true(typeof agent.config.features.traceExclusionUrl.cacheSize !== 'undefined', 'when sampling is true, traceExclusionUrlCacheSize ENV case')
+        t.equal(agent.config.features.traceExclusionUrl.cacheSize, 100, 'when sampling is true, traceExclusionUrlCacheSize default 100')
     })
-    delete config["trace-exclusion-url"]
 
     t.end()
 })
 
 test('path matcher cache', (t) => {
-    let cachedPathMatcher = new AntPathMatcher({
-        traceExclusionUrlPatterns: ["/test", "/test/**"],
-        traceExclusionUrlCacheSize: 3
-    })
+    let config = new ConfigBuilder({
+        features: {
+            traceExclusionUrl: {
+                patterns: ["/test", "/test/**"],
+                cacheSize: 3
+            }
+        }
+    }).build()
+    let cachedPathMatcher = new AntPathMatcher(config)
     cachedPathMatcher.matchPath("/test")
     cachedPathMatcher.matchPath()
     cachedPathMatcher.matchPath(null)
@@ -469,10 +486,15 @@ test('path matcher cache', (t) => {
         index++
     }
 
-    cachedPathMatcher = new AntPathMatcher({
-        traceExclusionUrlPatterns: ["/test", "/test/**"],
-        traceExclusionUrlCacheSize: 3
-    })
+    config = new ConfigBuilder({
+        features: {
+            traceExclusionUrl: {
+                patterns: ["/test", "/test/**"],
+                cacheSize: 3
+            }
+        }
+    }).build()
+    cachedPathMatcher = new AntPathMatcher(config)
     cachedPathMatcher.matchPath("/teste/")
     cachedPathMatcher.matchPath("/test/1")
     cachedPathMatcher.matchPath("/test/12")
@@ -495,10 +517,15 @@ test('path matcher cache', (t) => {
         index++
     }
 
-    cachedPathMatcher = new AntPathMatcher({
-        traceExclusionUrlPatterns: ["/test", "/test/**"],
-        traceExclusionUrlCacheSize: 3
-    })
+    config = new ConfigBuilder({
+        features: {
+            traceExclusionUrl: {
+                patterns: ["/test", "/test/**"],
+                cacheSize: 3
+            }
+        }
+    }).build()
+    cachedPathMatcher = new AntPathMatcher(config)
     cachedPathMatcher.matchPath("/teste/")
     cachedPathMatcher.matchPath("/test/1")
     cachedPathMatcher.matchPath("/test/12")
@@ -522,68 +549,41 @@ test('path matcher cache', (t) => {
         index++
     }
 
-    cachedPathMatcher = new AntPathMatcher({
-        traceExclusionUrlPatterns: ["/test", "/test/**"],
-        traceExclusionUrlCacheSize: 3
-    })
+    config = new ConfigBuilder({
+        features: {
+            traceExclusionUrl: {
+                patterns: ["/test", "/test/**"],
+                cacheSize: 3
+            }
+        }
+    }).build()
+    cachedPathMatcher = new AntPathMatcher(config)
     cachedPathMatcher.matchPath("/teste/")
     cachedPathMatcher.matchPath("/test/1")
     cachedPathMatcher.matchPath("/test/12")
     cachedPathMatcher.matchPath("/teste/")
     cachedPathMatcher.matchPath("/testa/")
 
-    iterator = cachedPathMatcher.pathMatchedCache[Symbol.iterator]()
-    index = 0
-    for (const item of iterator) {
-        if (index == 0) {
-            t.equal(item[0], '/test/12', `${item[0]} path key matcher`)
-            t.equal(item[1], true, `${item[1]} path value matcher`)
-        }
-        if (index == 1) {
-            t.equal(item[0], '/teste/', `${item[0]} path key matcher`)
-            t.equal(item[1], false, `${item[1]} path value matcher`)
-        }
-        if (index == 2) {
-            t.equal(item[0], '/testa/', `${item[0]} path key matcher`)
-            t.equal(item[1], false, `${item[1]} path value matcher`)
-        }
-        index++
-    }
-    t.equal(cachedPathMatcher.pathMatchedCache.size, 3, `cache size: ${cachedPathMatcher.pathMatchedCache.size}`)
+    let caches = Array.from(cachedPathMatcher.pathMatchedCache)
+    t.equal(caches.length, 4, `cache size: ${caches.length}`)
+    t.equal(caches[0][0], '/test/1', `${caches[0][0]} path key matcher`)
+    t.equal(caches[0][1], true, `caches[0][0] ${caches[0][1]} path value matcher`)
+    t.equal(caches[1][0], '/test/12', `${caches[1][0]} path key matcher`)
+    t.equal(caches[1][1], true, `caches[1][0] ${caches[1][1]} path value matcher`)
+    t.equal(caches[2][0], '/teste/', `${caches[2][0]} path key matcher`)
+    t.equal(caches[2][1], false, `caches[2][0] ${caches[2][1]} path value matcher`)
+    t.equal(caches[3][0], '/testa/', `${caches[3][0]} path key matcher`)
+    t.equal(caches[3][1], false, `caches[3][0] ${caches[3][1]} path value matcher`)
 
-    cachedPathMatcher = new AntPathMatcher({
-        traceExclusionUrlPatterns: ["/test", "/test/**"],
-        traceExclusionUrlCacheSize: 3
-    })
-    cachedPathMatcher.matchPath("/teste/")
-    cachedPathMatcher.matchPath("/test/1")
-    cachedPathMatcher.matchPath("/test/12")
-    cachedPathMatcher.matchPath("/teste/")
-    cachedPathMatcher.matchPath("/testa/")
-    cachedPathMatcher.matchPath("/test/12")
-
-    iterator = cachedPathMatcher.pathMatchedCache[Symbol.iterator]()
-    index = 0
-    for (const item of iterator) {
-        if (index == 0) {
-            t.equal(item[0], '/teste/', `${item[0]} path key matcher`)
-            t.equal(item[1], false, `${item[1]} path value matcher`)
+    config = new ConfigBuilder({
+        features: {
+            traceExclusionUrl: {
+                patterns: ["/test", "/test/**"],
+                cacheSize: 3
+            }
         }
-        if (index == 1) {
-            t.equal(item[0], '/testa/', `${item[0]} path key matcher`)
-            t.equal(item[1], false, `${item[1]} path value matcher`)
-        }
-        if (index == 2) {
-            t.equal(item[0], '/test/12', `${item[0]} path key matcher`)
-            t.equal(item[1], true, `${item[1]} path value matcher`)
-        }
-        index++
-    }
-    t.equal(cachedPathMatcher.pathMatchedCache.size, 3, `cache size: ${cachedPathMatcher.pathMatchedCache.size}`)
-
-    cachedPathMatcher = new AntPathMatcher({
-        traceExclusionUrlPatterns: ["/test", "/test/**"],
-    })
+    }).build()
+    cachedPathMatcher = new AntPathMatcher(config)
     cachedPathMatcher.matchPath("/teste/")
     cachedPathMatcher.matchPath("/test/1")
     cachedPathMatcher.matchPath("/test/12")
@@ -591,6 +591,33 @@ test('path matcher cache', (t) => {
     cachedPathMatcher.matchPath("/testa/")
     cachedPathMatcher.matchPath("/test/12")
 
-    t.true(typeof cachedPathMatcher.pathMatchedCache === 'undefined', 'cache is diabled')
+    caches = Array.from(cachedPathMatcher.pathMatchedCache)
+    t.equal(caches.length, 4, `cache size: ${caches.length}`)
+    t.equal(caches[0][0], '/test/1', `${caches[0][0]} path key matcher`)
+    t.equal(caches[0][1], true, `caches[0][0] ${caches[0][1]} path value matcher`)
+    t.equal(caches[1][0], '/teste/', `${caches[1][0]} path key matcher`)
+    t.equal(caches[1][1], false, `caches[1][0] ${caches[1][1]} path value matcher`)
+    t.equal(caches[2][0], '/testa/', `${caches[2][0]} path key matcher`)
+    t.equal(caches[2][1], false, `caches[2][0] ${caches[2][1]} path value matcher`)
+    t.equal(caches[3][0], '/test/12', `${caches[3][0]} path key matcher`)
+    t.equal(caches[3][1], true, `caches[3][0] ${caches[3][1]} path value matcher`)
+
+    config = new ConfigBuilder({
+        features: {
+            traceExclusionUrl: {
+                patterns: ["/test", "/test/**"],
+                cacheSize: 0
+            }
+        }
+    }).build()
+    cachedPathMatcher = new AntPathMatcher(config)
+    cachedPathMatcher.matchPath("/teste/")
+    cachedPathMatcher.matchPath("/test/1")
+    cachedPathMatcher.matchPath("/test/12")
+    cachedPathMatcher.matchPath("/teste/")
+    cachedPathMatcher.matchPath("/testa/")
+    cachedPathMatcher.matchPath("/test/12")
+
+    t.true(cachedPathMatcher.pathMatchedCache.size === 4, 'when cache size 0, ConfigurationBuilder change to default 100 size')
     t.end()
 })

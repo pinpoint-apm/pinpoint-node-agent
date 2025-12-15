@@ -23,6 +23,7 @@ const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const { AgentBuilder } = require('../../lib/agent-builder')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const { getConfig, clear } = require('../../lib/config')
+const { ConfigBuilder } = require('../../lib/config-builder')
 
 let traces = []
 const resetTraces = () => {
@@ -103,12 +104,12 @@ class MockAgent {
         }
         json = portProperties(json)
         if (!json) {
-            json = require('../pinpoint-config-test')
+            json = require('../pinpoint-config-test2.json')
         } else {
-            json = Object.assign({}, require('../pinpoint-config-test.json'), json)
+            json = Object.assign({}, require('../pinpoint-config-test2.json'), json)
         }
         clear()
-        const config = require('../../lib/config').getConfig(json)
+        const config = new ConfigBuilder(json).build()
         this.config = config
 
         this.agentInfo = AgentInfo.make(config)

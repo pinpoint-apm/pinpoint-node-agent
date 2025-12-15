@@ -58,7 +58,7 @@ function outgoingRequest(t, sampling) {
       t.equal(actualTrace.getTraceId().toStringDelimiterFormatted(), headers['pinpoint-traceid'], `traceId Header equals ${actualTrace.getTraceId().toStringDelimiterFormatted()}`)
       t.equal(actualTrace.getTraceId().getSpanId(), headers['pinpoint-pspanid'], `spanId Header equals ${actualTrace.getTraceId().getSpanId()}`)
       t.equal(agent.config.applicationName, headers['pinpoint-pappname'], `applicationName Header equals ${agent.config.applicationName}`)
-      t.equal(agent.config.serviceType, Number(headers['pinpoint-papptype']), `serviceType Header equals ${agent.config.serviceType}`)
+      t.equal(agent.config.applicationType, Number(headers['pinpoint-papptype']), `serviceType Header equals ${agent.config.applicationType}`)
       t.equal(actualTrace.getTraceId().getFlags(), headers['pinpoint-flags'], `flags Header equals ${actualTrace.getTraceId().getFlags()}`)
     } else {
       // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);

@@ -11,7 +11,7 @@
     },
     "sampling": {
         "enable": true,
-        "rate": 10
+        "rate": 1
     },
     "enable": true,
     "plugins": {
@@ -30,7 +30,6 @@
         "activeThreadCount": true,
         "dataSending": true,
         "statsMonitoring": true,
-        "traceLocationAndFilenameOfCallSite": false,
         "container": false,
         "sqlStats": false,
         "logLevels": {
@@ -38,7 +37,6 @@
             "grpcLogger": "SILENT"
         },
         "traceExclusionUrl": {
-            "patterns": "",
             "cacheSize": 100
         }
     }

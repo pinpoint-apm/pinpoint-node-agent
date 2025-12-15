@@ -110,7 +110,7 @@ test(`nested mysql async query with express`, async (t) => {
     process.env['PINPOINT_PROFILER_SQL_STAT'] = 'true'
 
     collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), async (err, port) => {
-        agent.bindHttpWithCallSite(port)
+        agent.bindHttp(port)
         resetSpanOrSpanChunks()
         const source = path.resolve(fixtures, 'mysql.sql')
         const container = await new MySqlContainer()
@@ -154,23 +154,19 @@ test(`nested mysql async query with express`, async (t) => {
             })
 
             agent.callbackTraceClose(async (trace) => {
-                let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
-                    .setClassName(expected('app', 'Function'))
-                    .setLineNumber(129)
-                    .setFileName('nested-async-trace.test.js')
+                let actualBuilder = new MethodDescriptorBuilder('get')
+                    .setClassName('Router')
                 let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 let actualSpanEvent = trace.repository.dataSender.mockSpan.spanEventList.find(spanEvent => spanEvent.sequence === 0)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
-                t.equal(actualMethodDescriptor.apiDescriptor, expected('app.get', 'Function.app.get'), 'apiDescriptor is equal')
-                t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className is equal')
+                t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor is equal')
+                t.equal(actualMethodDescriptor.className, 'Router', 'className is equal')
                 t.equal(actualMethodDescriptor.methodName, 'get', 'methodName is equal')
                 t.equal(actualSpanEvent.sequence, 0, 'sequence is 0')
                 t.equal(actualSpanEvent.depth, 1, 'depth is 0')
                 t.equal(actualSpanEvent.serviceType, expressServiceType.getCode(), 'serviceType is express')
 
                 actualBuilder = new MethodDescriptorBuilder('createConnection')
-                    .setLineNumber(130)
-                    .setFileName('nested-async-trace.test.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = trace.repository.dataSender.mockSpan.spanEventList.find(spanEvent => spanEvent.sequence === 1)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
@@ -182,8 +178,6 @@ test(`nested mysql async query with express`, async (t) => {
 
                 actualBuilder = new MethodDescriptorBuilder('connect')
                     .setClassName('Connection')
-                    .setLineNumber(139)
-                    .setFileName('nested-async-trace.test.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = trace.repository.dataSender.mockSpan.spanEventList.find(spanEvent => spanEvent.sequence === 2)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
@@ -204,8 +198,6 @@ test(`nested mysql async query with express`, async (t) => {
 
                 actualBuilder = new MethodDescriptorBuilder('query')
                     .setClassName('Connection')
-                    .setLineNumber(145)
-                    .setFileName('nested-async-trace.test.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 3)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
@@ -226,8 +218,6 @@ test(`nested mysql async query with express`, async (t) => {
 
                 actualBuilder = new MethodDescriptorBuilder('query')
                     .setClassName('Connection')
-                    .setLineNumber(151)
-                    .setFileName('nested-async-trace.test.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = actualSpanChunk.spanEventList[1]
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
@@ -379,23 +369,19 @@ test(`nested mysql2 async query with express`, async (t) => {
             agent.callbackTraceClose(async (trace) => {
                 t.equal(trace.spanBuilder.serviceType, ServiceType.node.getCode(), 'Span serviceType is node')
                 t.true(trace.spanBuilder.remoteAddress === '127.0.0.1' || trace.spanBuilder.remoteAddress === '::1', `remoteAddress is ${trace.spanBuilder.remoteAddress}`)
-                let actualBuilder = new MethodDescriptorBuilder(expected('get', 'app.get'))
-                    .setClassName(expected('app', 'Function'))
-                    .setLineNumber(337)
-                    .setFileName('nested-async-trace.test.js')
+                let actualBuilder = new MethodDescriptorBuilder('get')
+                    .setClassName('Router')
                 let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 let actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 0)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
-                t.equal(actualMethodDescriptor.apiDescriptor, expected('app.get', 'Function.app.get'), 'apiDescriptor is equal')
-                t.equal(actualMethodDescriptor.className, expected('app', 'Function'), 'className is equal')
+                t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor is equal')
+                t.equal(actualMethodDescriptor.className, 'Router', 'className is equal')
                 t.equal(actualMethodDescriptor.methodName, 'get', 'methodName is equal')
                 t.equal(actualSpanEvent.sequence, 0, 'sequence is 0')
                 t.equal(actualSpanEvent.depth, 1, 'depth is 0')
                 t.equal(actualSpanEvent.serviceType, expressServiceType.getCode(), 'serviceType is express')
 
                 actualBuilder = new MethodDescriptorBuilder('createConnection')
-                    .setLineNumber(338)
-                    .setFileName('nested-async-trace.test.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 1)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
@@ -407,8 +393,6 @@ test(`nested mysql2 async query with express`, async (t) => {
 
                 actualBuilder = new MethodDescriptorBuilder('query')
                     .setClassName('Connection')
-                    .setLineNumber(348)
-                    .setFileName('nested-async-trace.test.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 2)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
@@ -429,8 +413,6 @@ test(`nested mysql2 async query with express`, async (t) => {
 
                 actualBuilder = new MethodDescriptorBuilder('query')
                     .setClassName('Connection')
-                    .setLineNumber(354)
-                    .setFileName('nested-async-trace.test.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = actualSpanChunk.spanEventList[1]
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
@@ -451,8 +433,6 @@ test(`nested mysql2 async query with express`, async (t) => {
 
                 actualBuilder = new MethodDescriptorBuilder('query')
                     .setClassName('Connection')
-                    .setLineNumber(103)
-                    .setFileName('promise.js')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 3)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')

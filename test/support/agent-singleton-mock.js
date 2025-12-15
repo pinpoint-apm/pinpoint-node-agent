@@ -12,7 +12,6 @@ const activeTrace = require('../../lib/metric/active-trace')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const sqlMetadataService = require('../../lib/instrumentation/sql/sql-metadata-service')
 const SimpleCache = require('../../lib/utils/simple-cache')
-const sampler = require('../../lib/sampler/sampler')
 const TraceSampler = require('../../lib/context/trace/trace-sampler')
 const transactionIdGenerator = require('../../lib/context/sequence-generators').transactionIdGenerator
 const closedTraceWrapped = Symbol('closedTraceWrapped')
@@ -72,21 +71,20 @@ function portProperties(conf) {
         if (conf.collector) {
             return conf
         }
-        const collectorConf = { 'ip': '127.0.0.1', 'span-port': -1, 'stat-port': -1, 'tcp-port': -1 }
+        const collectorConf = { 'ip': '127.0.0.1', 'spanPort': -1, 'statPort': -1, 'tcpPort': -1 }
         return Object.assign(conf, { collector: collectorConf })
     }
     const portNumber = conf
-    const baseCollector = require('../pinpoint-config-test').collector
-    const collectorConf = Object.assign({}, baseCollector, { 'span-port': portNumber, 'stat-port': portNumber, 'tcp-port': portNumber })
+    const baseCollector = require('../pinpoint-config-test2.json').collector
+    const collectorConf = Object.assign({}, baseCollector, { 'spanPort': portNumber, 'statPort': portNumber, 'tcpPort': portNumber })
     return Object.assign({ collector: collectorConf })
 }
 
-let json = require('../pinpoint-config-test.json')
-json.collector['span-port'] = -1
-json.collector['stat-port'] = -1
-json.collector['tcp-port'] = -1
-json = Object.assign({}, require('../pinpoint-config-test'), json)
-const config = getConfig(json)
+const config = new ConfigBuilder({ collector: {
+    spanPort: -1,
+    statPort: -1,
+    tcpPort: -1
+}}).build()
 const agentInfo = AgentInfo.make(config)
 const agentBuilder = new AgentBuilder(agentInfo)
     .setConfig(config)
@@ -115,10 +113,6 @@ class MockAgent {
         this.agentInfo = AgentInfo.make(config)
 
         sqlMetadataService.cache = new SimpleCache(1024)
-        this.traceContext.isSampling = sampler.getIsSampling(config.sampling, config.sampleRate)
-        if (sampler.getSamplingCountGenerator()) {
-            sampler.getSamplingCountGenerator().reset()
-        }
         activeRequestRepository.activeTraceCache.cache.clear()
         transactionIdGenerator.reset()
 

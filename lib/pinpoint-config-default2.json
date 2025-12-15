@@ -1,5 +1,5 @@
 {
-    "applicationType": 1400,
+    "applicationServiceType": 1400,
     "collector": {
         "ip": "localhost",
         "spanPort": 9993,

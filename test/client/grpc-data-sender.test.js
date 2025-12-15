@@ -319,7 +319,7 @@ test('sendSpan', (t) => {
     const spanBuilder = new SpanBuilder(traceRoot)
     const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
     const repository = new SpanRepository(spanChunkBuilder, dataSender, agent.agentInfo)
-    const trace = new Trace(spanBuilder, repository)
+    const trace = new Trace(spanBuilder, repository, agent.config)
     trace.spanRecorder.recordApi(defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor)
     trace.spanRecorder.recordServiceType(serviceType.node)
     trace.spanRecorder.recordRpc('/')

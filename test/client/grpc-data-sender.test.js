@@ -81,7 +81,7 @@ test('Should send span', function (t) {
     traceRoot.getShared().maskErrorCode(1)
     const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
     const repository = new SpanRepository(spanChunkBuilder, dataSender, agent.agentInfo)
-    const trace = new Trace(spanBuilder, repository)
+    const trace = new Trace(spanBuilder, repository, agent.config)
 
     const spanEventRecorder = trace.traceBlockBegin()
     spanEventRecorder.spanEventBuilder.setSequence(10)

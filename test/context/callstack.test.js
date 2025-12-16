@@ -49,7 +49,7 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 test(`fix express call stack depth`, async (t) => {
-    agent.bindHttpWithCallSite()
+    agent.bindHttp()
 
     const app = new express()
     const path = `/`
@@ -77,8 +77,6 @@ test(`fix express call stack depth`, async (t) => {
 
         let actualBuilder = new MethodDescriptorBuilder('use')
             .setClassName('Router')
-            .setLineNumber(57)
-            .setFileName('callstack.test.js')
         let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
         let actualSpanEvent = agent.getTrace(0).repository.dataSender.mockSpan.spanEventList[0]
         t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'use(jsonParser) apiId')
@@ -88,8 +86,6 @@ test(`fix express call stack depth`, async (t) => {
 
         actualBuilder = new MethodDescriptorBuilder('use')
             .setClassName('Router')
-            .setLineNumber(58)
-            .setFileName('callstack.test.js')
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
         actualSpanEvent = agent.getTrace(0).repository.dataSender.mockSpan.spanEventList[1]
         t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'use(urlencodedParser) apiId')
@@ -97,17 +93,8 @@ test(`fix express call stack depth`, async (t) => {
         t.equal(actualSpanEvent.depth, 1, 'use(urlencodedParser) depth')
         t.equal(actualSpanEvent.serviceType, ServiceTypeCode.express, 'use(urlencodedParser) serviceType')
 
-        if (semver.satisfies(process.versions.node, '>=17.0')) {
-            actualBuilder = new MethodDescriptorBuilder('get')
-                .setClassName('proto')
-                .setLineNumber(63)
-                .setFileName('callstack.test.js')
-        } else {
-            actualBuilder = new MethodDescriptorBuilder('get')
-                .setClassName('Function.proto')
-                .setLineNumber(63)
-                .setFileName('callstack.test.js')
-        }
+        actualBuilder = new MethodDescriptorBuilder('get')
+            .setClassName('Router')
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
         actualSpanEvent = agent.getTrace(0).repository.dataSender.mockSpan.spanEventList[2]
         t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'get(/) apiId')

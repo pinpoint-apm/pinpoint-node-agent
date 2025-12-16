@@ -11,15 +11,15 @@ const agent = require('../support/agent-singleton-mock')
 const StreamDeadlineOptionsBuilder = require('../../lib/client/stream-deadline-options-builder')
 
 test('stream deadline options from config without exceptions', function (t) {
-    agent.bindHttp({ 'stream-deadline-minutes': null })
+    agent.bindHttp({ 'collector': null })
     let dut = new StreamDeadlineOptionsBuilder(agent.config)
-    t.equal(dut.deadlineSeconds, 0, 'If stream deadline seconds JSON is null, Node.js runtime is returned as 0')
+    t.equal(dut.deadlineSeconds, 600, 'If stream deadline seconds JSON is null, Node.js runtime is returned as 0')
 
-    agent.bindHttp({ 'stream-deadline-minutes': undefined })
+    agent.bindHttp({ 'collector': undefined })
     dut = new StreamDeadlineOptionsBuilder(agent.config)
     t.equal(dut.deadlineSeconds, 600, 'If stream deadline seconds JSON is undefined, returns default 600 seconds')
 
-    agent.bindHttp({ 'stream-deadline-minutes': { 'client-side': 1 }})
+    agent.bindHttp({ 'collector': { 'deadlineMinutes': 1 }})
     dut = new StreamDeadlineOptionsBuilder(agent.config)
     t.equal(dut.deadlineSeconds, 60, 'If stream deadline seconds JSON is 1, returns 60 seconds')
 

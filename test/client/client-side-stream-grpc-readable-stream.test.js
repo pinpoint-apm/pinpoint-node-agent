@@ -12,9 +12,7 @@ const { beforeSpecificOne, SpanOnlyFunctionalTestableDataSource, spanWithId } = 
 const agent = require('../support/agent-singleton-mock')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
-const {
-    setInterval,
-} = require('node:timers/promises')
+const { setInterval } = require('node:timers/promises')
 const shimmer = require('@pinpoint-apm/shimmer')
 
 test('span stream retry connection Tests', async function (t) {
@@ -202,7 +200,7 @@ test('client side stream deadline exceeded Tests', function (t) {
     const deadlines = []
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         dataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
-        t.equal(dataSender.clientSideStreamDeadlineOptionsBuilder.deadlineSeconds, agent.config.streamDeadlineMinutesClientSide * 60, `clientSideStreamDeadlineOptionsBuilder.deadlineSeconds should be ${agent.config.streamDeadlineMinutesClientSide * 60}`)
+        t.equal(dataSender.clientSideStreamDeadlineOptionsBuilder.deadlineSeconds, agent.config.collector.deadlineMinutes * 60, `clientSideStreamDeadlineOptionsBuilder.deadlineSeconds should be ${agent.config.streamDeadlineMinutesClientSide * 60}`)
 
         dataSender.clientSideStreamDeadlineOptionsBuilder.setSeconds(1)
         dataSender.initializeSpanStream()

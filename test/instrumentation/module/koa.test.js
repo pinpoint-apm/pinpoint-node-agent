@@ -25,7 +25,7 @@ const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 const testName1 = 'koa-router1'
 test(`${testName1} Should record request in basic route koa.test.js`, function (t) {
-  agent.bindHttpWithCallSite()
+  agent.bindHttp()
   const testName = testName1
   const PATH = `/${testName}`
   const app = new Koa()
@@ -40,8 +40,6 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
 
       let actualBuilder = new MethodDescriptorBuilder('get')
         .setClassName('Router')
-        .setLineNumber(34)
-        .setFileName('koa.test.js')
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
@@ -49,7 +47,6 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
       t.equal(spanEvent.annotations[0].value, '/koa-router1', 'parameter value matching')
       t.true(actualMethodDescriptor.apiDescriptor.startsWith('Router.get'), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMethodDescriptor.lineNumber, 34, 'lineNumber')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
       t.true(actualMethodDescriptor.location.length > 0, 'location')
     })

@@ -21,7 +21,7 @@ const activeRequestRepository = require('../../lib/metric/active-request-reposit
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const { AgentBuilder } = require('../../lib/agent-builder')
 const AgentInfo = require('../../lib/data/dto/agent-info')
-const { getConfig, clear } = require('../../lib/config')
+const { clear, setConfig } = require('../../lib/config')
 const { ConfigBuilder } = require('../../lib/config-builder')
 
 let traces = []
@@ -109,6 +109,7 @@ class MockAgent {
         clear()
         const config = new ConfigBuilder(json).build()
         this.config = config
+        setConfig(config)
 
         this.agentInfo = AgentInfo.make(config)
 

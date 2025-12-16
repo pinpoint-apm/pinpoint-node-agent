@@ -126,7 +126,7 @@ test('client side streaming with deadline', function (t) {
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 test('sendAgentInfo deadline and metadata', (t) => {
-    agent.bindHttp({ 'agent-name': 'testAgentName' })
+    agent.bindHttp({ 'agentName': 'testAgentName' })
     const server = new grpc.Server()
     let agentInfo = 0
     server.addService(services.AgentService, {

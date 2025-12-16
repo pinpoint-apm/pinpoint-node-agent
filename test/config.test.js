@@ -45,8 +45,12 @@ test('Should be read from config file', function (t) {
   t.plan(1)
 
   delete process.env.PINPOINT_COLLECTOR_IP
+  delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERNS
+  delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+  delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
 
   const testConfig = require('./pinpoint-config-test2.json')
+  testConfig.sampling.rate = 10
   const conf = new ConfigBuilder().setDefaultJson(testConfig).build()
   t.deepEqual(conf, testConfig)
 })

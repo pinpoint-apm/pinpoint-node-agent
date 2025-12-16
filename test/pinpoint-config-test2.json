@@ -35,9 +35,6 @@
         "logLevels": {
             "default-logger": "WARN",
             "grpcLogger": "SILENT"
-        },
-        "traceExclusionUrl": {
-            "cacheSize": 100
         }
     }
 }

@@ -18,7 +18,9 @@ const annotationKey = require('../../../lib/constant/annotation-key')
 
 test('mysql uid query', async (t) => {
     agent.bindHttp({
-        'profiler-sql-stat': true
+        "features": {
+            "sqlStats": true
+        }
     })
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()

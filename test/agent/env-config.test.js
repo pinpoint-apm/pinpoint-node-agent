@@ -92,7 +92,7 @@ test('should return the false value when the env value is boolean type', functio
     process.env['PINPOINT_CONTAINER'] = "false"
 
     const given = getConfig()
-    t.equal(given.sampling, false, 'given PINPOINT_SAMPLING env, should equal config')
+    t.equal(given.sampling.enable, false, 'given PINPOINT_SAMPLING env, should equal config')
     t.equal(given.enable, false, 'given PINPOINT_ENABLE env, should equal config')
     if (!isRunGithubAction()) {
         t.equal(given.container, false, 'given PINPOINT_CONTAINER env, should equal config')

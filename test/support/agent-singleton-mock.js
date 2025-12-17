@@ -80,11 +80,13 @@ function portProperties(conf) {
     return Object.assign({ collector: collectorConf })
 }
 
-const config = new ConfigBuilder({ collector: {
-    spanPort: -1,
-    statPort: -1,
-    tcpPort: -1
-}}).build()
+const config = new ConfigBuilder({
+    collector: {
+        spanPort: -1,
+        statPort: -1,
+        tcpPort: -1
+    }
+}).build()
 const agentInfo = AgentInfo.make(config)
 const agentBuilder = new AgentBuilder(agentInfo)
     .setConfig(config)

@@ -428,7 +428,7 @@ test('sendSqlUidMetaData retry', (t) => {
     process.env['PINPOINT_PROFILER_SQL_STAT'] = 'true'
     sqlMetadataService.cache.cache.clear()
     const conf = getConfig()
-    t.true(conf.profilerSqlStat, 'profiler SQL Stat is false')
+    t.true(conf.hasSqlStats(), 'profiler SQL Stat is false')
 
     const server = new grpc.Server()
     server.addService(services.MetadataService, {

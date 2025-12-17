@@ -8,7 +8,6 @@
 
 const dataSenderMock = require('./data-sender-mock')
 const shimmer = require('@pinpoint-apm/shimmer')
-const activeTrace = require('../../lib/metric/active-trace')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const sqlMetadataService = require('../../lib/instrumentation/sql/sql-metadata-service')
 const SimpleCache = require('../../lib/utils/simple-cache')
@@ -120,11 +119,6 @@ class MockAgent {
         transactionIdGenerator.reset()
 
         localStorage.disable()
-
-        const activeTraces = activeTrace.getAllTraces()
-        activeTraces.forEach((value) => {
-            activeTrace.remove(value)
-        })
 
         this.traceContext.traceSampler = new TraceSampler(this.agentInfo, config)
         this.traceContext.config = config

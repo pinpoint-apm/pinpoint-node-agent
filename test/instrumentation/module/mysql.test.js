@@ -24,7 +24,7 @@ const express = require('express')
 const axios = require('axios')
 const http = require('http')
 test(`getConnection query hooking`, async (t) => {
-    agent.bindHttpWithCallSite()
+    agent.bindHttp()
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
@@ -66,8 +66,6 @@ test(`getConnection query hooking`, async (t) => {
             await container.stop()
 
             let actualBuilder = new MethodDescriptorBuilder('createConnection')
-                .setLineNumber(43)
-                .setFileName('mysql.test.js')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             const createConnectionSpanEvent = trace.spanBuilder.spanEventList[0]
             t.equal(createConnectionSpanEvent.endPoint, 'localhost', 'the createConnection SpanEvent endPoint')
@@ -76,8 +74,6 @@ test(`getConnection query hooking`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('connect')
                 .setClassName('Connection')
-                .setLineNumber(52)
-                .setFileName('mysql.test.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             const connectionSpanEvent = trace.spanBuilder.spanEventList[1]
             t.equal(connectionSpanEvent.depth, 1, 'connection spanEvent depth')
@@ -86,8 +82,6 @@ test(`getConnection query hooking`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
-                .setLineNumber(58)
-                .setFileName('mysql.test.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             const querySpanEvent = trace.spanBuilder.spanEventList[2]
             t.equal(querySpanEvent.depth, 1, 'query spanEvent depth')
@@ -100,7 +94,7 @@ test(`getConnection query hooking`, async (t) => {
 })
 
 test(`connection with query`, async (t) => {
-    agent.bindHttpWithCallSite()
+    agent.bindHttp()
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
@@ -163,8 +157,6 @@ test(`connection with query`, async (t) => {
 
         agent.callbackTraceClose((trace) => {
             let actualBuilder = new MethodDescriptorBuilder('createConnection')
-                .setLineNumber(119)
-                .setFileName('mysql.test.js')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             const createConnectionSpanEvent = trace.spanBuilder.spanEventList[0]
             t.equal(createConnectionSpanEvent.endPoint, 'localhost', 'the createConnection SpanEvent endPoint')
@@ -173,8 +165,6 @@ test(`connection with query`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('connect')
                 .setClassName('Connection')
-                .setLineNumber(128)
-                .setFileName('mysql.test.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             const connectionSpanEvent = trace.spanBuilder.spanEventList[1]
             t.equal(connectionSpanEvent.depth, 1, 'connection spanEvent depth')
@@ -183,8 +173,6 @@ test(`connection with query`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
-                .setLineNumber(135)
-                .setFileName('mysql.test.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             let querySpanEvent = trace.spanBuilder.spanEventList[2]
             t.equal(querySpanEvent.endPoint, 'localhost', 'the createConnection SpanEvent endPoint')
@@ -199,8 +187,6 @@ test(`connection with query`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
-                .setLineNumber(139)
-                .setFileName('mysql.test.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             querySpanEvent = trace.spanBuilder.spanEventList[3]
             t.equal(querySpanEvent.endPoint, 'localhost', 'the createConnection SpanEvent endPoint')
@@ -215,8 +201,6 @@ test(`connection with query`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
-                .setLineNumber(143)
-                .setFileName('mysql.test.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             querySpanEvent = trace.spanBuilder.spanEventList[4]
             t.equal(querySpanEvent.endPoint, 'localhost', 'the createConnection SpanEvent endPoint')
@@ -233,8 +217,6 @@ test(`connection with query`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
-                .setLineNumber(146)
-                .setFileName('mysql.test.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             querySpanEvent = trace.spanBuilder.spanEventList[5]
             t.equal(querySpanEvent.endPoint, 'localhost', 'the createConnection SpanEvent endPoint')
@@ -255,7 +237,7 @@ test(`connection with query`, async (t) => {
 })
 
 test(`Connection Pool with query`, async (t) => {
-    agent.bindHttpWithCallSite()
+    agent.bindHttp()
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
@@ -315,8 +297,6 @@ test(`Connection Pool with query`, async (t) => {
 
         agent.callbackTraceClose((trace) => {
             let actualBuilder = new MethodDescriptorBuilder('createPool')
-                .setLineNumber(274)
-                .setFileName('mysql.test.js')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             let actualSpanEvent = trace.spanBuilder.spanEventList[0]
             t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId')
@@ -328,8 +308,6 @@ test(`Connection Pool with query`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('getConnection')
                 .setClassName('Pool')
-                .setLineNumber(285)
-                .setFileName('mysql.test.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             actualSpanEvent = trace.spanBuilder.spanEventList[1]
             t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'Pool.getConnection spanEvent apiId')
@@ -349,8 +327,6 @@ test(`Connection Pool with query`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('PoolConnection')
-                .setLineNumber(287)
-                .setFileName('mysql.test.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             actualSpanEvent = actualSpanChunk.spanEventList[1]
             t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'PoolConnection.query spanEvent apiId on pool.query')
@@ -362,8 +338,6 @@ test(`Connection Pool with query`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('PoolConnection')
-                .setLineNumber(301)
-                .setFileName('mysql.test.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             actualSpanEvent = trace.spanBuilder.spanEventList[2]
             t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'Pool.getConnection spanEvent apiId on pool.query')
@@ -387,7 +361,7 @@ test(`Connection Pool with query`, async (t) => {
 })
 
 test(`Cluster with query`, async (t) => {
-    agent.bindHttpWithCallSite()
+    agent.bindHttp()
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
@@ -452,8 +426,6 @@ test(`Cluster with query`, async (t) => {
 
         agent.callbackTraceClose((trace) => {
             let actualBuilder = new MethodDescriptorBuilder('createPoolCluster')
-                .setLineNumber(406)
-                .setFileName('mysql.test.js')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             let actualSpanEvent = trace.spanBuilder.spanEventList[0]
             t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId')
@@ -462,8 +434,6 @@ test(`Cluster with query`, async (t) => {
             t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'createPoolCluster spanEvent serviceType')
 
             actualBuilder = new MethodDescriptorBuilder('of')
-                .setLineNumber(142)
-                .setFileName('PoolCluster.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             actualSpanEvent = trace.spanBuilder.spanEventList[1]
             t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'PoolCluster.of spanEvent apiId in poolCluster.getConnection')
@@ -473,8 +443,6 @@ test(`Cluster with query`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('getConnection')
                 .setClassName('Pool')
-                .setLineNumber(145)
-                .setFileName('PoolCluster.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             actualSpanEvent = trace.spanBuilder.spanEventList[2]
             t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'Pool.getConnection spanEvent apiId in poolCluster.getConnection')
@@ -494,8 +462,6 @@ test(`Cluster with query`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('PoolConnection')
-                .setLineNumber(437)
-                .setFileName('mysql.test.js')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             actualSpanEvent = actualSpanChunk.spanEventList[1]
             t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'PoolConnection.query spanEvent apiId in poolCluster.getConnection')

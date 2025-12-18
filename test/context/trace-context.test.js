@@ -8,7 +8,6 @@ const test = require('tape')
 
 const ServiceType = require('../../lib/context/service-type')
 const TraceContext = require('../../lib/context/trace-context')
-const dataSenderMock = require('../support/data-sender-mock')
 const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const agent = require('../support/agent-singleton-mock')
@@ -16,8 +15,9 @@ const TraceIdBuilder = require('../../lib/context/trace/trace-id-builder')
 
 test('Should create continued trace and add span info', function (t) {
   t.plan(2)
+  agent.bindHttp()
 
-  const traceContext = new TraceContext(agent.agentInfo, dataSenderMock(), agent.config)
+  const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config)
   const traceId = new TraceIdBuilder(agent.agentInfo.getAgentId(), agent.agentInfo.getAgentStartTime(), '9').build()
   const trace = traceContext.continueTraceObject2(traceId)
   localStorage.run(trace, () => {
@@ -33,9 +33,10 @@ test('Should create continued trace and add span info', function (t) {
 
 test('Should begin/end trace block asynchronously', async function (t) {
   t.plan(4)
+  agent.bindHttp()
 
   // start trace and write span info
-  const traceContext = new TraceContext(agent.agentInfo, dataSenderMock(), agent.config)
+  const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config)
   const startedTrace = traceContext.newTraceObject2('/')
 
   localStorage.run(startedTrace, () => {
@@ -64,7 +65,8 @@ test('Should begin/end trace block asynchronously', async function (t) {
 
 test('Should complete trace ', async function (t) {
   t.plan(1)
-  const traceContext = new TraceContext(agent.agentInfo, dataSenderMock(), agent.config)
+  agent.bindHttp()
+  const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config)
   const trace = traceContext.newTraceObject2('/')
 
   await new Promise(resolve => setTimeout(resolve, 501))

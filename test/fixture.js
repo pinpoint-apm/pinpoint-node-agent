@@ -7,10 +7,9 @@
 const TransactionId = require('../lib/context/transaction-id')
 const TraceId = require('../lib/context/trace-id')
 const SpanId = require('../lib/context/span-id')
-const testConfig= require('./pinpoint-config-test')
-require('../lib/config').clear()
-const config = require('../lib/config').getConfig(testConfig)
-const { namedGroupLocationFileName, namedGroupTypeMethod } = require('../lib/instrumentation/call-stack')
+const testConfig = require('./pinpoint-config-test2.json')
+const { ConfigBuilder } = require('../lib/config-builder')
+const config = new ConfigBuilder(testConfig).build()
 
 const getTransactionId = () => {
   const agentId = config.agentId

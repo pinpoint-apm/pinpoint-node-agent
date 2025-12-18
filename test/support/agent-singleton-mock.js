@@ -80,12 +80,14 @@ function portProperties(conf) {
 }
 
 const config = new ConfigBuilder({
-    collector: {
-        spanPort: -1,
-        statPort: -1,
-        tcpPort: -1
-    }
-}).build()
+        collector: {
+            spanPort: -1,
+            statPort: -1,
+            tcpPort: -1
+        }
+    })
+    .setDefaultJson(require('../pinpoint-config-test2.json'))
+    .build()
 const agentInfo = AgentInfo.make(config)
 const agentBuilder = new AgentBuilder(agentInfo)
     .setConfig(config)

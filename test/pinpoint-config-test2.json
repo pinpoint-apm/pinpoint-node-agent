@@ -29,7 +29,7 @@
     "features": {
         "activeThreadCount": true,
         "dataSending": true,
-        "statsMonitoring": true,
+        "statsMonitoring": false,
         "container": false,
         "sqlStats": false,
         "logLevels": {

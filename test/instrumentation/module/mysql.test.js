@@ -23,6 +23,8 @@ const { asyncSpanChunkMySQLMatcher } = require('../../fixtures/instrument-suppor
 const express = require('express')
 const axios = require('axios')
 const http = require('http')
+const DisableTrace = require('../../../lib/context/disable-trace')
+
 test(`getConnection query hooking`, async (t) => {
     agent.bindHttp()
     const source = path.resolve(fixtures, 'mysql.sql')
@@ -623,6 +625,7 @@ test('Fix wrong transactionId', (t) => {
     let apiCallCount = 0
     app.get('/api', function (req, res) {
         agent.callbackTraceClose((trace) => {
+            t.true(!(trace instanceof DisableTrace), 'trace is not DisableTrace')
             t.equal(req.headers['pinpoint-traceid'].split('^')[2], trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `req.headers['pinpoint-traceid'] ${req.headers['pinpoint-traceid'].split('^')[2]}`)
             t.equal(trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), actualTraces[apiCallCount].spanBuilder.traceRoot.getTransactionId(), `traceRoot.transactionId index ${apiCallCount} is ${trace.spanBuilder.traceRoot.getTraceId().getTransactionId()}`)
 

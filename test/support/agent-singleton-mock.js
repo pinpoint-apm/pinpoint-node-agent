@@ -95,7 +95,7 @@ const agentBuilder = new AgentBuilder(agentInfo)
 const agent = agentBuilder.build()
 
 class MockAgent {
-    bindHttp(json) {
+    bindHttp(json = { collector: { spanPort: -1, statPort: -1, tcpPort: -1 } }) {
         let grpcDataSender
         if (json instanceof GrpcDataSender) {
             grpcDataSender = json

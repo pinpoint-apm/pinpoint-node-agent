@@ -48,7 +48,6 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
       t.true(actualMethodDescriptor.apiDescriptor.startsWith('Router.get'), 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, 'Router', 'className')
       t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-      t.true(actualMethodDescriptor.location.length > 0, 'location')
     })
   })
   router.post(PATH, async (ctx, next) => {

@@ -85,23 +85,15 @@ class MockDataSender extends DataSender {
 
 const dataSender = (conf, agentInfoOrGrpcDataSender, grpcDataSender) => {
   if (typeof agentInfoOrGrpcDataSender?.sendAgentInfo === 'function') {
-    return new MockDataSender({
-      enabledDataSending: true,
-    }, agentInfoOrGrpcDataSender)
+    return new MockDataSender(conf, agentInfoOrGrpcDataSender)
   }
   if (grpcDataSender) {
-    return new MockDataSender({
-      enabledDataSending: true,
-    }, grpcDataSender)
+    return new MockDataSender(conf, grpcDataSender)
   }
   if (conf?.collector.spanPort > 0) {
-    return new MockDataSender({
-      enabledDataSending: true,
-    }, new GrpcDataSender(conf.collector.ip, conf.collector.spanPort, conf.collector.statPort, conf.collector.tcpPort, agentInfoOrGrpcDataSender, conf))
+    return new MockDataSender(conf, new GrpcDataSender(conf.collector.ip, conf.collector.spanPort, conf.collector.statPort, conf.collector.tcpPort, agentInfoOrGrpcDataSender, conf))
   }
-  return new MockDataSender({
-    enabledDataSending: true,
-  }, new MockGrpcDataSender('', 0, 0, 0, {
+  return new MockDataSender(conf, new MockGrpcDataSender('', 0, 0, 0, {
     agentId: 'agent',
     applicationName: 'applicationName',
     agentStartTime: 1234344

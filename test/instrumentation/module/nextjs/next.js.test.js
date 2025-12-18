@@ -86,7 +86,8 @@ test('Next.JS Production Server start', (suite) => {
                     DB_PORT: container.getPort(3306),
                     DB_USER: container.getUsername(),
                     DB_PASSWORD: container.getUserPassword(),
-                    NEXT_TELEMETRY_DISABLED: '1'
+                    NEXT_TELEMETRY_DISABLED: '1',
+                    PINPOINT_APPLICATION_NAME: 'next.js.test.js',
                 }),
             }
         )

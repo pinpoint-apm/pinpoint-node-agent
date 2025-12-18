@@ -5,7 +5,7 @@
  */
 
 const test = require('tape')
-const { getConfig, clear, isContainerEnvironment } = require('../../lib/config')
+const { isContainerEnvironment } = require('../../lib/config')
 const { ConfigBuilder } = require('../../lib/config-builder')
 
 function isRunGithubAction() {
@@ -76,13 +76,12 @@ test('should return the true value when the env value is boolean type', function
     const given = givenDefaultIdAndName()
     t.equal(given.sampling.enable, true, 'given PINPOINT_SAMPLING env, should equal config')
     t.equal(given.enable, false, 'given PINPOINT_ENABLE env, should equal config')
-    t.equal(given.features.container, true, 'given PINPOINT_CONTAINER env, should equal config')
+    t.equal(given.isContainerEnvironment(), true, 'given PINPOINT_CONTAINER env, should equal config')
 
     delete process.env.PINPOINT_SAMPLING
     delete process.env.PINPOINT_ENABLE
     delete process.env.PINPOINT_CONTAINER
 
-    clear()
     t.end()
 })
 
@@ -91,11 +90,11 @@ test('should return the false value when the env value is boolean type', functio
     process.env['PINPOINT_ENABLE'] = "false"
     process.env['PINPOINT_CONTAINER'] = "false"
 
-    const given = getConfig()
+    const given = new ConfigBuilder().build()
     t.equal(given.sampling.enable, false, 'given PINPOINT_SAMPLING env, should equal config')
     t.equal(given.enable, false, 'given PINPOINT_ENABLE env, should equal config')
     if (!isRunGithubAction()) {
-        t.equal(given.container, false, 'given PINPOINT_CONTAINER env, should equal config')
+        t.equal(given.isContainerEnvironment(), false, 'given PINPOINT_CONTAINER env, should equal config')
     }
 
     delete process.env.PINPOINT_SAMPLING
@@ -128,7 +127,7 @@ test('should not exist in the process.env property when you do not set an enviro
     t.equal(given.sampling.enable, true, 'No set PINPOINT_SAMPLING env, should equal default config')
     t.equal(given.enable, false, 'No set PINPOINT_ENABLE env, should equal default config')
     if (!isRunGithubAction()) {
-        t.equal(given.features.container, false, 'No set PINPOINT_CONTAINER env, should equal default config')
+        t.equal(given.isContainerEnvironment(), false, 'No set PINPOINT_CONTAINER env, should equal default config')
     }
 
     t.equal(given.applicationServiceType, 1400, 'No set PINPOINT_SERVICE_TYPE env, should equal default config')
@@ -150,17 +149,15 @@ test(`detect container`, (t) => {
     const given = new ConfigBuilder().build()
 
     t.plan(1)
-    t.equal(given.features.container, true, 'container detect')
+    t.equal(given.isContainerEnvironment(), true, 'container detect')
 
     delete process.env.KUBERNETES_SERVICE_HOST
 })
 
 test(`detect container2`, (t) => {
-    clear()
-
     if (!isRunGithubAction()) {
-        const given = getConfig()
-        t.equal(given.container, false, 'container detect')
+        const given = new ConfigBuilder().build()
+        t.equal(given.isContainerEnvironment(), false, 'container detect')
     }
 
     delete process.env.KUBERNETES_SERVICE_HOST

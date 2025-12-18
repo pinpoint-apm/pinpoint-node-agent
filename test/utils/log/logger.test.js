@@ -9,6 +9,7 @@
 const test = require('tape')
 const logger = require('../../../lib/utils/log/logger')
 const { LogBuilder, LogLevel } = require('../../../lib/utils/log/log-builder')
+const { ConfigBuilder } = require('../../../lib/config-builder')
 const levels = LogLevel
 
 test('isDebug', (t) => {
@@ -405,8 +406,6 @@ test('per-appender loggingLevel configuration', (t) => {
 
 test('PINPOINT_LOGGER_LEVELS environment variable log levels', (t) => {
     t.plan(30)
-    const config = require('../../../lib/config')
-    config.clear()
     process.env['PINPOINT_LOGGER_LEVELS'] = 'default-logger=WARN,.debug-appender=DEBUG,grpc.info-appender=DEBUG,.noLevelAppender=INFO,grpc=INFO'
 
     const infoAppenderMessages = []
@@ -447,7 +446,7 @@ test('PINPOINT_LOGGER_LEVELS environment variable log levels', (t) => {
         error: (msg) => debugAppenderMessages.push(`DEBUG-APPENDER ERROR: ${msg}`)
     }
 
-    const confWithAppender = config.getConfig()
+    const confWithAppender = new ConfigBuilder().build()
     logger.getLogger(LogBuilder.createDefaultLogBuilder()
         .setConfig(confWithAppender)
         .addAppender(infoAppender)

@@ -7,7 +7,6 @@
 'use strict'
 
 const agent = require('../support/agent-singleton-mock')
-const { clear, getConfig } = require('../../lib/config')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const SpanBuilder = require('../../lib/context/span-builder')
 const RemoteTraceRootBuilder = require('../../lib/context/remote-trace-root-builder')
@@ -21,7 +20,6 @@ let callMetadata = []
 function beforeSpecificOne(port, one, serviceConfig) {
     callCount = 0
     afterCount = 0
-    clear()
     callRequests = []
     callMetadata = []
     let actualConfig = new ConfigBuilder({

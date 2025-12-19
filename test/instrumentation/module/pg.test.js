@@ -152,7 +152,6 @@ test(`Client multiple queries with parameters`, async (t) => {
             let updateQuerySpanEvent = querySpanEvents[2]
             t.ok(updateQuerySpanEvent.apiId > 0, 'UPDATE query apiId should be positive')
 
-            actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('UPDATE member SET name = $1 WHERE id = $2')
             actualQueryAnnotation = updateQuerySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.value.stringValue2, 'updated_name,c', 'UPDATE annotation bind values')
 

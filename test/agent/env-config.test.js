@@ -6,6 +6,7 @@
 
 const test = require('tape')
 const { ConfigBuilder } = require('../../lib/config-builder')
+const AgentInfo = require('../../lib/data/dto/agent-info')
 
 function isRunGithubAction() {
     return new ConfigBuilder().build().isContainerEnvironment() && process.env['GITHUB_ACTIONS'] === 'true'
@@ -160,5 +161,31 @@ test(`detect container2`, (t) => {
     }
 
     delete process.env.KUBERNETES_SERVICE_HOST
+    t.end()
+})
+
+test('AgentInfo copies container flag when detected via Kubernetes env', (t) => {
+    process.env['KUBERNETES_SERVICE_HOST'] = 'aaa'
+
+    const config = new ConfigBuilder().build()
+    const agentInfo = new AgentInfo(config, '12345')
+
+    t.equal(agentInfo.container, true, 'AgentInfo.container should reflect container detection')
+
+    delete process.env.KUBERNETES_SERVICE_HOST
+    t.end()
+})
+
+test('AgentInfo keeps container false when not in container (non-GitHub Actions)', (t) => {
+    if (isRunGithubAction()) {
+        return t.end()
+    }
+
+    delete process.env.KUBERNETES_SERVICE_HOST
+
+    const config = new ConfigBuilder().build()
+    const agentInfo = new AgentInfo(config, '12345')
+
+    t.equal(agentInfo.container, false, 'AgentInfo.container should stay false when not in container')
     t.end()
 })

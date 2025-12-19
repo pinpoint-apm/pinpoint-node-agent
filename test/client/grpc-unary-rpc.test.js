@@ -43,11 +43,11 @@ const service = (call, callback) => {
 }
 
 function agentInfo() {
-    return Object.assign(new AgentInfo({
+    const config = new ConfigBuilder({
         agentId: '12121212',
         applicationName: 'applicationName',
-        agentStartTime: Date.now()
-    }), {
+    }).build()
+    return Object.assign(AgentInfo.make(config), {
         ip: '1'
     })
 }

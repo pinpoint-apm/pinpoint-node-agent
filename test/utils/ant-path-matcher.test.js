@@ -617,6 +617,6 @@ test('path matcher cache', (t) => {
     cachedPathMatcher.matchPath("/testa/")
     cachedPathMatcher.matchPath("/test/12")
 
-    t.true(cachedPathMatcher.pathMatchedCache.size === 4, 'when cache size 0, ConfigurationBuilder change to default 100 size')
+    t.true(cachedPathMatcher.pathMatchedCache.size === 4, 'cacheSize: 0 is normalized to 100, so caching stays enabled')
     t.end()
 })

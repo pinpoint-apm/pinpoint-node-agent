@@ -122,7 +122,7 @@ test('matchWithNullPath', (t) => {
 })
 
 test('config object exclusion URL', (t) => {
-    let config = require('../pinpoint-config-test2.json')
+    let config = require('../pinpoint-config-test.json')
     config = Object.assign({}, config, {
         "features": {
             "traceExclusionUrl": {
@@ -134,7 +134,7 @@ test('config object exclusion URL', (t) => {
     t.deepEqual(agent.config.features.traceExclusionUrl.patterns, ["/test.jpg"])
     delete config["features"]["traceExclusionUrl"]
 
-    config = require('../pinpoint-config-test2.json')
+    config = require('../pinpoint-config-test.json')
     config = Object.assign({}, config, {
         "features": {
             "traceExclusionUrl": {
@@ -151,7 +151,7 @@ test('config object exclusion URL', (t) => {
 
 // for acronyms camel case:  https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-1.1/141e06ef(v=vs.71)?redirectedfrom=MSDN
 test('config object exclusion URL with cache size', (t) => {
-    let config = new ConfigBuilder(require('../pinpoint-config-test2.json')).build()
+    let config = new ConfigBuilder(require('../pinpoint-config-test.json')).build()
     config = Object.assign({}, config, {
         "features": {
             "traceExclusionUrl": {
@@ -388,7 +388,7 @@ test('when pattern match with cache size on ENV environment, sampling test with 
 })
 
 test('when pattern match with cache size form JSON, sampling test with cache hit', async (t) => {
-    let config = require('../pinpoint-config-test2.json')
+    let config = require('../pinpoint-config-test.json')
     config = Object.assign({}, config, {
         "features": {
             "traceExclusionUrl": {
@@ -401,7 +401,7 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
         t.true(agent.config.features.traceExclusionUrl.cacheSize === 100, 'config.features.traceExclusionUrl.cacheSize ENV undefined case')
     })
 
-    config = require('../pinpoint-config-test2.json')
+    config = require('../pinpoint-config-test.json')
     config = Object.assign({}, config, {
         "features": {
             "traceExclusionUrl": {
@@ -416,7 +416,7 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
         t.equal(agent.config.features.traceExclusionUrl.cacheSize, 100, 'config.features.traceExclusionUrl.cacheSize default 100')
     })
 
-    config = require('../pinpoint-config-test2.json')
+    config = require('../pinpoint-config-test.json')
     config = Object.assign({}, config, {
         "features": {
             "traceExclusionUrl": {
@@ -430,7 +430,7 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
         t.true(typeof agent.config.features.traceExclusionUrl.cacheSize === 'undefined', 'when only set config.features.traceExclusionUrl.cacheSize ENV, agent.config.features.traceExclusionUrl.cacheSize undefined case')
     })
 
-    config = require('../pinpoint-config-test2.json')
+    config = require('../pinpoint-config-test.json')
     config = Object.assign({}, config, {
         "features": {
             "traceExclusionUrl": {
@@ -443,7 +443,7 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
         t.true(agent.config.features.traceExclusionUrl.cacheSize === 100, 'when sampling is true, config.features.traceExclusionUrl.cacheSize ENV undefined case')
     })
 
-    config = require('../pinpoint-config-test2.json')
+    config = require('../pinpoint-config-test.json')
     config = Object.assign({}, config, {
         "features": {
             "traceExclusionUrl": {

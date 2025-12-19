@@ -14,13 +14,12 @@ const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
-const { setConfig  } = require('../../lib/config')
 const SqlMetaData = require('../../lib/client/sql-meta-data')
-const sqlMetadataService = require('../../lib/instrumentation/sql/sql-metadata-service')
 const SqlUidMetaData = require('../../lib/client/sql-uid-meta-data')
 const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, DataSourceCallCountable } = require('./grpc-fixture')
 const InterceptingCall = grpc.InterceptingCall
 const { ConfigBuilder } = require('../../lib/config-builder')
+const { SqlMetadataService } = require('../../lib/instrumentation/sql/sql-metadata-service')
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 const service = (call, callback) => {
@@ -386,7 +385,6 @@ test('sendStringMetaInfo retry', (t) => {
 })
 
 test('sendSqlMetaData retry', (t) => {
-    sqlMetadataService.cache.cache.clear()
     const server = new grpc.Server()
     server.addService(services.MetadataService, {
         requestSqlMetaData: service
@@ -395,6 +393,7 @@ test('sendSqlMetaData retry', (t) => {
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         fixtureMetadata = []
         dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+        const sqlMetadataService = new SqlMetadataService(dataSender, dataSender.config)
         const callRequests = getCallRequests()
 
         const parsingResult = sqlMetadataService.cacheSql('SELECT DATABASE() as res')
@@ -426,10 +425,8 @@ test('sendSqlMetaData retry', (t) => {
 
 test('sendSqlUidMetaData retry', (t) => {
     process.env['PINPOINT_PROFILER_SQL_STAT'] = 'true'
-    sqlMetadataService.cache.cache.clear()
     const conf = new ConfigBuilder().build()
     t.true(conf.hasSqlStats(), 'profiler SQL Stat is false')
-    setConfig(conf)
 
     const server = new grpc.Server()
     server.addService(services.MetadataService, {
@@ -439,6 +436,7 @@ test('sendSqlUidMetaData retry', (t) => {
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         fixtureMetadata = []
         dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+        const sqlMetadataService = new SqlMetadataService(dataSender, dataSender.config)
         const callRequests = getCallRequests()
         const callMetadata = getMetadata()
 

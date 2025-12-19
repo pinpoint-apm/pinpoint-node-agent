@@ -10,7 +10,6 @@ const express = require('express')
 const axios = require('axios')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const apiMetaService = require('../../../lib/context/api-meta-service')
-const { expected } = require('../../fixtures/instrument-support')
 const mysql = require('mysql')
 const path = require('path')
 const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')
@@ -26,7 +25,6 @@ const services = require('../../../lib/data/v1/Service_grpc_pb')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
 const log = require('../../../lib/utils/log/logger')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
-const sqlMetadataService = require('../../../lib/instrumentation/sql/sql-metadata-service')
 
 let callbackPresultReturnUnaryService
 const pResultReturnUnaryService = (call, callback) => {
@@ -478,7 +476,7 @@ test(`nested mysql2 async query with express`, async (t) => {
                 const index = sendedApiMetaInfos.findIndex(item => item === apiDescriptor)
                 sendedApiMetaInfos.splice(index, 1)
             } else {
-                const parsingResult = [...sqlMetadataService.cache.cache.entries()]
+                const parsingResult = [...agent.traceContext.sqlMetadataService.cache.cache.entries()]
                     .map(([, value]) => value)
                     .find(parsingResult => parsingResult.sqlMetaDataValue().sqlId === call.request.getSqlid())
                 t.equal(call.request.getSqlid(), parsingResult.sqlMetaDataValue().sqlId, `sqlId is ${call.request.getSqlid()}`)

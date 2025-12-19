@@ -13,7 +13,6 @@ const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')
 const mysql = require('mysql')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const apiMetaService = require('../../../lib/context/api-meta-service')
-const sqlMetadataService = require('../../../lib/instrumentation/sql/sql-metadata-service')
 const annotationKey = require('../../../lib/constant/annotation-key')
 
 test('mysql uid query', async (t) => {
@@ -84,7 +83,7 @@ test('mysql uid query', async (t) => {
             t.equal(querySpanEvent.sequence, 2, 'query sequence is 2 in mysql uid functional test')
             t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, 'query apiId is same in mysql uid functional test')
 
-            let actualParsingResult = sqlMetadataService.cacheSql('SELECT * FROM member')
+            let actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('SELECT * FROM member')
             let actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_UID.getCode(), 'query annotation key is sql in mysql uid functional test')
             t.equal(actualParsingResult.result.sql.normalizedSql, 'SELECT * FROM member', 'query normalizedSql is SELECT * FROM member in mysql uid functional test')

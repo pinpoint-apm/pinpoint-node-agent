@@ -10,7 +10,6 @@ const path = require('path')
 const agent = require('../../support/agent-singleton-mock')
 const { Client, Pool } = require('pg')
 const apiMetaService = require('../../../lib/context/api-meta-service')
-const sqlMetadataService = require('../../../lib/instrumentation/sql/sql-metadata-service')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const pgExecuteQueryServiceType = require('../../../lib/instrumentation/module/pg/pg-execute-query-service-type')
@@ -70,7 +69,7 @@ test(`Client create and query hooking`, async (t) => {
             t.equal(querySpanEvent.destinationId, 'test', 'createClient destinationId')
             t.equal(querySpanEvent.serviceType, pgExecuteQueryServiceType.getCode(), 'createClient serviceType')
 
-            let actualParsingResult = sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = $1')
+            let actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = $1')
             let actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'query annotation key')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'query annotation value')
@@ -143,7 +142,7 @@ test(`Client multiple queries with parameters`, async (t) => {
             let insertQuerySpanEvent = querySpanEvents[1]
             t.ok(insertQuerySpanEvent.apiId > 0, 'INSERT query apiId should be positive')
 
-            let actualParsingResult = sqlMetadataService.cacheSql('INSERT INTO member (id, name, email) VALUES ($1, $2, $3)')
+            let actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('INSERT INTO member (id, name, email) VALUES ($1, $2, $3)')
             let actualQueryAnnotation = insertQuerySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'INSERT annotation key')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'INSERT annotation sqlId')
@@ -153,7 +152,7 @@ test(`Client multiple queries with parameters`, async (t) => {
             let updateQuerySpanEvent = querySpanEvents[2]
             t.ok(updateQuerySpanEvent.apiId > 0, 'UPDATE query apiId should be positive')
 
-            actualParsingResult = sqlMetadataService.cacheSql('UPDATE member SET name = $1 WHERE id = $2')
+            actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('UPDATE member SET name = $1 WHERE id = $2')
             actualQueryAnnotation = updateQuerySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.value.stringValue2, 'updated_name,c', 'UPDATE annotation bind values')
 

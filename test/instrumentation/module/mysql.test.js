@@ -11,7 +11,6 @@ const agent = require('../../support/agent-singleton-mock')
 const mysql = require('mysql')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
-const sqlMetadataService = require('../../../lib/instrumentation/sql/sql-metadata-service')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const mysqlExecuteQueryServiceType = require('../../../lib/instrumentation/module/mysql/mysql-execute-query-service-type')
@@ -181,7 +180,7 @@ test(`connection with query`, async (t) => {
             t.equal(querySpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
             t.equal(actualMethodDescriptor.apiId, querySpanEvent.apiId, 'apiId')
 
-            let actualParsingResult = sqlMetadataService.cacheSql('SELECT DATABASE() as res')
+            let actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('SELECT DATABASE() as res')
             let actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'the query annotation key')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'the query annotation value')
@@ -195,7 +194,7 @@ test(`connection with query`, async (t) => {
             t.equal(querySpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
             t.equal(actualMethodDescriptor.apiId, querySpanEvent.apiId, 'apiId')
 
-            actualParsingResult = sqlMetadataService.cacheSql('SHOW TABLES')
+            actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('SHOW TABLES')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'the query annotation key')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'the query annotation value')
@@ -209,7 +208,7 @@ test(`connection with query`, async (t) => {
             t.equal(querySpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
             t.equal(actualMethodDescriptor.apiId, querySpanEvent.apiId, 'apiId')
 
-            actualParsingResult = sqlMetadataService.cacheSql('SELECT * FROM `member` WHERE id = ?')
+            actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('SELECT * FROM `member` WHERE id = ?')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'the query annotation key')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'the query annotation value')
@@ -225,7 +224,7 @@ test(`connection with query`, async (t) => {
             t.equal(querySpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
             t.equal(actualMethodDescriptor.apiId, querySpanEvent.apiId, 'apiId')
 
-            actualParsingResult = sqlMetadataService.cacheSql('INSERT INTO `member` (id, name, joined) VALUES (?, ?, ?)')
+            actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('INSERT INTO `member` (id, name, joined) VALUES (?, ?, ?)')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'the query annotation key')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'the query annotation value')

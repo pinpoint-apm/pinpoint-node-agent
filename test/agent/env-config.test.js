@@ -5,11 +5,10 @@
  */
 
 const test = require('tape')
-const { isContainerEnvironment } = require('../../lib/config')
 const { ConfigBuilder } = require('../../lib/config-builder')
 
 function isRunGithubAction() {
-    return isContainerEnvironment
+    return new ConfigBuilder().build().isContainerEnvironment() && process.env['GITHUB_ACTIONS'] === 'true'
 }
 
 

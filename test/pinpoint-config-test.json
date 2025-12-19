@@ -1,41 +1,40 @@
 {
-  "agent-id": "node.test.app",
-  "application-name": "test.application.name",
-  "application-type": 1400,
-  "collector": {
-    "ip": "127.0.0.1",
-    "span-port": 9993,
-    "stat-port": 9992,
-    "tcp-port": 9991
-  },
-  "sampling": {
+    "agentId": "node.test.app",
+    "applicationName": "test.application.name",
+    "applicationServiceType": 1400,
+    "collector": {
+        "ip": "localhost",
+        "spanPort": 9993,
+        "statPort": 9992,
+        "tcpPort": 9991,
+        "deadlineMinutes": 10
+    },
+    "sampling": {
+        "enable": true,
+        "rate": 1
+    },
     "enable": true,
-    "rate": 1
-  },
-  "http-status-code": {
-    "errors": "5xx,401,403"
-  },
-  "logger-levels": {
-    "default-logger": "WARN",
-    "grpcLogger": "SILENT"
-  },
-  "enable": true,
-  "enabled-data-sending": true,
-  "enabled-stats-monitor-sending": false,
-  "enabled-active-thread-count": false,
-  "express": {
-    "enable": true
-  },
-  "koa": {
-    "enable": true
-  },
-  "mongo": {
-    "enable": true
-  },
-  "redis": {
-    "enable": true
-  },
-  "stream-deadline-minutes": {
-    "client-side": 10
-  }
+    "plugins": {
+        "http": {
+            "errorStatusCodes": "5xx,401,403"
+        },
+        "express": true,
+        "koa": true,
+        "mongodb": true,
+        "redis": true,
+        "ioredis": true,
+        "mysql": true,
+        "postgresql": true
+    },
+    "features": {
+        "activeThreadCount": true,
+        "dataSending": true,
+        "statsMonitoring": false,
+        "container": false,
+        "sqlStats": false,
+        "logLevels": {
+            "default-logger": "WARN",
+            "grpcLogger": "SILENT"
+        }
+    }
 }

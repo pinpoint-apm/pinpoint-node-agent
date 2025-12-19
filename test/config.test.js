@@ -49,7 +49,7 @@ test('Should be read from config file', function (t) {
   delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
   delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
 
-  const expected = Object.assign({}, require('./pinpoint-config-test2.json'), { sampling: { rate: 10 } })
+  const expected = Object.assign({}, require('./pinpoint-config-test.json'), { sampling: { rate: 10 } })
   const actual = new ConfigBuilder().setDefaultJson(expected).build()
   t.deepEqual(actual, expected)
 })
@@ -57,7 +57,7 @@ test('Should be read from config file', function (t) {
 test('deadline config', (t) => {
   t.plan(1)
 
-  const json = require('../lib/pinpoint-config-default2.json')
+  const json = require('../lib/pinpoint-config-default.json')
   const conf = new ConfigBuilder().setDefaultJson(json).build()
   t.equal(conf.collector.deadlineMinutes, 10)
 })

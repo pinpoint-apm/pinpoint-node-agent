@@ -7,7 +7,7 @@
 const TransactionId = require('../lib/context/transaction-id')
 const TraceId = require('../lib/context/trace-id')
 const SpanId = require('../lib/context/span-id')
-const testConfig = require('./pinpoint-config-test2.json')
+const testConfig = require('./pinpoint-config-test.json')
 const { ConfigBuilder } = require('../lib/config-builder')
 const config = new ConfigBuilder(testConfig).build()
 

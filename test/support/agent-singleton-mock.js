@@ -72,7 +72,7 @@ function portProperties(conf) {
         return Object.assign(conf, { collector: collectorConf })
     }
     const portNumber = conf
-    const baseCollector = require('../pinpoint-config-test2.json').collector
+    const baseCollector = require('../pinpoint-config-test.json').collector
     const collectorConf = Object.assign({}, baseCollector, { 'spanPort': portNumber, 'statPort': portNumber, 'tcpPort': portNumber })
     return Object.assign({ collector: collectorConf })
 }
@@ -84,7 +84,7 @@ const config = new ConfigBuilder({
             tcpPort: -1
         }
     })
-    .setDefaultJson(require('../pinpoint-config-test2.json'))
+    .setDefaultJson(require('../pinpoint-config-test.json'))
     .build()
 const agentInfo = AgentInfo.make(config)
 const agentBuilder = new AgentBuilder(agentInfo)
@@ -103,9 +103,9 @@ class MockAgent {
         }
         json = portProperties(json)
         if (!json) {
-            json = require('../pinpoint-config-test2.json')
+            json = require('../pinpoint-config-test.json')
         } else {
-            json = Object.assign({}, require('../pinpoint-config-test2.json'), json)
+            json = Object.assign({}, require('../pinpoint-config-test.json'), json)
         }
         const config = new ConfigBuilder(json).build()
         this.config = config

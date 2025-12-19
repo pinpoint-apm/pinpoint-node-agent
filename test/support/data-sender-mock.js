@@ -14,6 +14,7 @@ const MockGrpcDataSender = require('../client/mock-grpc-data-sender')
 const SqlMetaData = require('../../lib/client/sql-meta-data')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const SqlUidMetaData = require('../../lib/client/sql-uid-meta-data')
+const { ConfigBuilder } = require('../../lib/config-builder')
 
 class MockDataSender extends DataSender {
   constructor(config, dataSender) {
@@ -93,11 +94,13 @@ const dataSender = (conf, agentInfoOrGrpcDataSender, grpcDataSender) => {
   if (conf?.collector.spanPort > 0) {
     return new MockDataSender(conf, new GrpcDataSender(conf.collector.ip, conf.collector.spanPort, conf.collector.statPort, conf.collector.tcpPort, agentInfoOrGrpcDataSender, conf))
   }
-  return new MockDataSender(conf, new MockGrpcDataSender('', 0, 0, 0, {
+  const config = new ConfigBuilder({
     agentId: 'agent',
     applicationName: 'applicationName',
     agentStartTime: 1234344
-  }))
+  }).build()
+  const agentInfo = AgentInfo.make(config)
+  return new MockDataSender(conf, new MockGrpcDataSender('', 0, 0, 0, agentInfo, config))
 }
 
 module.exports = dataSender

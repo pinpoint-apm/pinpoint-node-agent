@@ -149,7 +149,7 @@ test('sendAgentInfo deadline and metadata', (t) => {
         }
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
+        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo(), agent.config)
 
         const agentInfo = Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
             hostname: 'hostname',
@@ -210,7 +210,7 @@ test('sendAgentInfo deadline and no agent name metadata', (t) => {
         }
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
+        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo(), agent.config)
 
         grpcDataSender.sendAgentInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
             hostname: 'hostname',
@@ -269,7 +269,7 @@ test('sendApiMetaInfo deadline', (t) => {
         requestApiMetaData: requestApiMetaData
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
+        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo(), agent.config)
 
         grpcDataSender.sendApiMetaInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
             hostname: 'hostname',
@@ -325,7 +325,7 @@ test('sendStringMetaInfo deadline', (t) => {
         requestStringMetaData: requestStringMetaData
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo())
+        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo(), agent.config)
         grpcDataSender.sendStringMetaInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
             hostname: 'hostname',
             "serviceType": 1400,

@@ -21,9 +21,9 @@
       "require": "./lib/agent-builder.js"
     },
     "./config": {
-      "types": "./lib/config.d.ts",
-      "import": "./lib/config.js",
-      "require": "./lib/config.js"
+      "types": "./lib/config-builder.d.ts",
+      "import": "./lib/config-builder.js",
+      "require": "./lib/config-builder.js"
     },
     "./agent-info": {
       "types": "./lib/data/dto/agent-info.d.ts",

@@ -4,7 +4,7 @@
  * Apache License v2.0
  */
 
-import { Config } from './config';
+import { Config } from './config-builder';
 import type { Logging } from './utils/log/types';
 import AgentInfo = require('./data/dto/agent-info');
 

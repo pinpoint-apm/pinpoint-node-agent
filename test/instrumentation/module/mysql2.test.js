@@ -12,7 +12,6 @@ const mysql = require('mysql2')
 const mysqlp = require('mysql2/promise')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const apiMetaService = require('../../../lib/context/api-meta-service')
-const sqlMetadataService = require('../../../lib/instrumentation/sql/sql-metadata-service')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const mysqlServiceType = require('../../../lib/instrumentation/module/mysql/mysql-service-type')
 const mysqlExecuteQueryServiceType = require('../../../lib/instrumentation/module/mysql/mysql-execute-query-service-type')
@@ -88,7 +87,7 @@ test(`getConnection query hooking`, async (t) => {
             t.equal(querySpanEvent.endPoint, 'localhost', 'endPoint in query spanEvent')
             t.equal(querySpanEvent.destinationId, 'test', 'destinationId in query spanEvent')
 
-            let actualParsingResult = sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = ?')
+            let actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = ?')
             let actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'intValue in query annotation')
@@ -104,7 +103,7 @@ test(`getConnection query hooking`, async (t) => {
             t.equal(querySpanEvent.endPoint, 'localhost', 'endPoint in query spanEvent')
             t.equal(querySpanEvent.destinationId, 'test', 'destinationId in query spanEvent')
 
-            actualParsingResult = sqlMetadataService.cacheSql('INSERT INTO member (id, name, joined) VALUES (?, ?, ?)')
+            actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('INSERT INTO member (id, name, joined) VALUES (?, ?, ?)')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'intValue in query annotation')
@@ -120,7 +119,7 @@ test(`getConnection query hooking`, async (t) => {
             t.equal(querySpanEvent.endPoint, 'localhost', 'endPoint in query spanEvent')
             t.equal(querySpanEvent.destinationId, 'test', 'destinationId in query spanEvent')
 
-            actualParsingResult = sqlMetadataService.cacheSql('UPDATE member SET name = ? WHERE id = ?')
+            actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('UPDATE member SET name = ? WHERE id = ?')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'intValue in query annotation')
@@ -136,7 +135,7 @@ test(`getConnection query hooking`, async (t) => {
             t.equal(querySpanEvent.endPoint, 'localhost', 'endPoint in query spanEvent')
             t.equal(querySpanEvent.destinationId, 'test', 'destinationId in query spanEvent')
 
-            actualParsingResult = sqlMetadataService.cacheSql('DELETE FROM member WHERE id = ?')
+            actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('DELETE FROM member WHERE id = ?')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'intValue in query annotation')
@@ -201,7 +200,7 @@ test(`getConnection promise query hooking`, async (t) => {
             t.equal(querySpanEvent.endPoint, 'localhost', 'endPoint in query spanEvent')
             t.equal(querySpanEvent.destinationId, 'test', 'destinationId in query spanEvent')
 
-            let actualParsingResult = sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = ?')
+            let actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = ?')
             let actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'intValue in query annotation')

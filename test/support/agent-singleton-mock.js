@@ -9,8 +9,7 @@
 const dataSenderMock = require('./data-sender-mock')
 const shimmer = require('@pinpoint-apm/shimmer')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
-const sqlMetadataService = require('../../lib/instrumentation/sql/sql-metadata-service')
-const SimpleCache = require('../../lib/utils/simple-cache')
+const { SqlMetadataService } = require('../../lib/instrumentation/sql/sql-metadata-service')
 const TraceSampler = require('../../lib/context/trace/trace-sampler')
 const transactionIdGenerator = require('../../lib/context/sequence-generators').transactionIdGenerator
 const closedTraceWrapped = Symbol('closedTraceWrapped')
@@ -20,7 +19,6 @@ const activeRequestRepository = require('../../lib/metric/active-request-reposit
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const { AgentBuilder } = require('../../lib/agent-builder')
 const AgentInfo = require('../../lib/data/dto/agent-info')
-const { setConfig } = require('../../lib/config')
 const { ConfigBuilder } = require('../../lib/config-builder')
 
 let traces = []
@@ -111,11 +109,9 @@ class MockAgent {
         }
         const config = new ConfigBuilder(json).build()
         this.config = config
-        setConfig(config)
 
         this.agentInfo = AgentInfo.make(config)
 
-        sqlMetadataService.cache = new SimpleCache(1024)
         activeRequestRepository.activeTraceCache.cache.clear()
         transactionIdGenerator.reset()
 
@@ -126,11 +122,11 @@ class MockAgent {
 
         const dataSender = dataSenderMock(this.config, this.agentInfo, grpcDataSender)
         this.traceContext.dataSender = dataSender
+        this.traceContext.sqlMetadataService = new SqlMetadataService(dataSender, config)
         this.dataSender.close()
         this.dataSender = dataSender
         stringMetaService.init(dataSender)
         apiMetaService.init(dataSender)
-        sqlMetadataService.setDataSender(dataSender)
 
         resetTraces()
         const findSpanEvents = function () {
@@ -208,7 +204,7 @@ class MockAgent {
         })
 
         resetSqlMetaData()
-        shimmer.wrap(sqlMetadataService, 'send', function (origin) {
+        shimmer.wrap(this.traceContext.sqlMetadataService, 'send', function (origin) {
             return function () {
                 const returned = origin.apply(this, arguments)
                 getSqlMetadata().push(arguments[0])

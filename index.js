@@ -8,14 +8,11 @@
 
 const { AgentBuilder } = require('./lib/agent-builder')
 const AgentInfo = require('./lib/data/dto/agent-info')
-const { setConfig } = require('./lib/config')
 const { ConfigBuilder } = require('./lib/config-builder')
 const { LogBuilder } = require('./lib/utils/log/log-builder')
 const logger = require('./lib/utils/log/logger')
 
 const config = new ConfigBuilder().build()
-setConfig(config)
-
 const agentInfo = AgentInfo.make(config)
 const defaultLogger = logger.getLogger(LogBuilder.createDefaultLogBuilder().setConfig(config).build())
 const agent = new AgentBuilder(agentInfo)

@@ -1,6 +1,9 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [1.3.1] - 2025-12-30
+### Fixed
+- [[#412](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/412)] Ensure `grpcLogger` honors `logger-levels.grpcLogger = SILENT` so `Deadline exceeded` errors are not emitted to console when silence is configured
 
 ## [1.3.0] - 2025-11-03
 ### Added

@@ -511,6 +511,55 @@ test('PINPOINT_LOGGER_LEVELS environment variable log levels', (t) => {
     t.ok(noLevelAppenderMessages2[4].includes('NO-LEVEL-APPENDER2 ERROR: error message'), 'NO-LEVEL appender 2 should receive error message from grpc logger')
 })
 
+test('grpcLogger should respect SILENT from default config', (t) => {
+    t.plan(2)
+
+    const config = require('../../../lib/config')
+    config.clear()
+    delete process.env.PINPOINT_LOGGER_LEVELS
+    const conf = config.getConfig()
+    t.teardown(() => {
+        delete process.env.PINPOINT_LOGGER_LEVELS
+        config.clear()
+    })
+
+    const grpcLog = logger.getLogger(
+        LogBuilder.createGrpcLogBuilder()
+            .setConfig(conf)
+            .build()
+    )
+
+    t.equal(
+        grpcLog.loglevel.getLevel(),
+        grpcLog.loglevel.levels.SILENT,
+        'grpcLogger level should be SILENT when logger-levels.grpcLogger=SILENT'
+    )
+
+    let appendCallCount = 0
+    const capturingAppender = {
+        name: 'grpc-silent-assert',
+        loggingLevel: levels.SILENT,
+        debug: () => { appendCallCount++ },
+        info: () => { appendCallCount++ },
+        warn: () => { appendCallCount++ },
+        error: () => { appendCallCount++ }
+    }
+
+    const grpcLogWithAppender = logger.getLogger(
+        LogBuilder.createGrpcLogBuilder()
+            .setConfig(conf)
+            .addAppender(capturingAppender)
+            .build()
+    )
+
+    grpcLogWithAppender.error('should not appear')
+    grpcLogWithAppender.warn('should not appear')
+    grpcLogWithAppender.info('should not appear')
+    grpcLogWithAppender.debug('should not appear')
+
+    t.equal(appendCallCount, 0, 'SILENT appender on SILENT grpcLogger should not dispatch')
+})
+
 test('getLogger with string parameter should return existing logger', (t) => {
     t.plan(4)
 

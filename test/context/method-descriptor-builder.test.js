@@ -9,7 +9,7 @@ const { makeCloneBuilder } = require('../../lib/instrumentation/call-stack')
 const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
 test('express callSite', (t) => {
     let stack = 'at Function.app.<computed> [as get] (/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/application.js:481:30)'
-    const expected = MethodDescriptorBuilder.makeRuntimeDetectionMethodDescriptorBuilder()
+    const expected = new MethodDescriptorBuilder().enableRuntimeDetection()
                         .setFileNameIndex(0)
                         .setMethodIndex(0)
     let actual = makeCloneBuilder([stack], expected)

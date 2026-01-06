@@ -45,7 +45,7 @@ const buildException = (stack) => {
     return new ExceptionBuilder(err).build()
 }
 
-test('express makeMethodDescriptorBuilder with ExceptionBuilder', (t) => {
+test('express stack: ensure computed method names and file/line are preserved in frames', (t) => {
     const exception = buildException(loaderStack)
 
     t.equal(exception.errorClassName, 'Error')
@@ -84,7 +84,7 @@ test('express makeMethodDescriptorBuilder with ExceptionBuilder', (t) => {
     t.end()
 })
 
-test('express makeMethodDescriptorBuilder exception case with ExceptionBuilder', (t) => {
+test('express stack with promise frame: ensure anonymous Promise frame is parsed', (t) => {
     const exception = buildException(actualCallStack)
     const promiseFrame = exception.frameStack[4]
 
@@ -100,7 +100,7 @@ test('express makeMethodDescriptorBuilder exception case with ExceptionBuilder',
     t.end()
 })
 
-test('koa makeMethodDescriptorBuilder with ExceptionBuilder', (t) => {
+test('koa stack: ensure computed method names and file/line are preserved in frames', (t) => {
     const exception = buildException(actualKoaCallStack)
     t.equal(exception.errorClassName, 'Error')
     t.equal(exception.errorMessage, 'koa case')

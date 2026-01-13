@@ -32,6 +32,10 @@
         "statsMonitoring": false,
         "container": false,
         "sqlStats": false,
+        "uriStats": {
+            "httpMethod": true,
+            "capacity": 1000
+        },
         "logLevels": {
             "default-logger": "WARN",
             "grpcLogger": "SILENT"

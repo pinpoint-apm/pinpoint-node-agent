@@ -263,6 +263,26 @@ test('sampling Rate', (t) => {
   t.end()
 })
 
+test('uri config is preserved', (t) => {
+  t.plan(2)
+
+  const defaultJson = Object.assign({}, require('../lib/pinpoint-config-default.json'), {
+    agentId: 'agent-from-test',
+    applicationName: 'app-from-test',
+    // keep existing service type from default json
+    features: Object.assign({}, require('../lib/pinpoint-config-default.json').features, {
+      uriStats: {
+        httpMethod: true,
+        capacity: 500
+      }
+    })
+  })
+
+  const conf = new ConfigBuilder().setDefaultJson(defaultJson).build()
+  t.equal(conf.features.uriStats.capacity, 500, 'uriStats capacity should be preserved')
+  t.equal(conf.features.uriStats.httpMethod, true, 'uriStats httpMethod flag should be preserved')
+})
+
 test('HTTP Status Code Errors', (t) => {
   let conf = new ConfigBuilder().build()
   t.equal(conf.plugins.http.errorStatusCodes, '5xx,401,403', 'default http status code errors is 5xx,401,403')

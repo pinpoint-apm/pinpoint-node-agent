@@ -283,6 +283,44 @@ test('uri config is preserved', (t) => {
   t.equal(conf.features.uriStats.httpMethod, true, 'uriStats httpMethod flag should be preserved')
 })
 
+test('uriStats is null when Uri environment variables are not set', (t) => {
+  t.plan(1)
+
+  delete process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD
+  delete process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY
+
+  const conf = new ConfigBuilder().build()
+  t.equal(conf.features.uriStats, undefined, 'uriStats should be undefined when environment variables are not set')
+})
+
+test('uriStats preserves httpMethod only when capacity not set', (t) => {
+  t.plan(3)
+
+  process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD = 'true'
+  delete process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY
+
+  const conf = new ConfigBuilder().build()
+  t.equal(conf.features.uriStats.httpMethod, true, 'uriStats httpMethod should respect env value')
+  t.equal(conf.features.uriStats.capacity, undefined, 'uriStats capacity remains undefined when not set')
+  t.equal(conf.isUriStatsEnabled(), true, 'isUriStatsEnabled should be true when httpMethod is set')
+
+  delete process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD
+})
+
+test('uriStats preserves capacity only when httpMethod not set', (t) => {
+  t.plan(3)
+
+  process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY = '321'
+  delete process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD
+
+  const conf = new ConfigBuilder().build()
+  t.equal(conf.features.uriStats.capacity, 321, 'uriStats capacity should respect env value')
+  t.equal(conf.features.uriStats.httpMethod, undefined, 'uriStats httpMethod remains undefined when not set')
+  t.equal(conf.isUriStatsEnabled(), true, 'isUriStatsEnabled should be true when capacity is set')
+
+  delete process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY
+})
+
 test('HTTP Status Code Errors', (t) => {
   let conf = new ConfigBuilder().build()
   t.equal(conf.plugins.http.errorStatusCodes, '5xx,401,403', 'default http status code errors is 5xx,401,403')

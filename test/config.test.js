@@ -324,7 +324,7 @@ test('uriStats preserves capacity only when httpMethod not set', (t) => {
 })
 
 test('uriStats capacity defaults to 1000 when env capacity is invalid', (t) => {
-  t.plan(3)
+  t.plan(4)
 
   process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD = 'true'
   process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY = 'abc'
@@ -332,6 +332,7 @@ test('uriStats capacity defaults to 1000 when env capacity is invalid', (t) => {
   const conf = new ConfigBuilder().build()
   t.equal(conf.features.uriStats.capacity, 1000, 'invalid capacity should be sanitized to default 1000')
   t.equal(conf.getUriStatsCapacity(), 1000, 'getUriStatsCapacity returns 1000 when capacity is invalid')
+  t.equal(conf.features.uriStats.httpMethod, true, 'httpMethod flag should be preserved when capacity is sanitized')
   t.equal(conf.isUriStatsEnabled(), true, 'uriStats stays enabled when httpMethod is set')
 
   delete process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD

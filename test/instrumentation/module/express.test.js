@@ -846,3 +846,98 @@ test('incoming request by Disable Trace requests', (t) => {
     server.close()
   })
 })
+
+test('express should record handler registered with pattern route', (t) => {
+  t.plan(8)
+
+  agent.bindHttp()
+  const app = new express()
+  const PATH = '/users/:userId/books/:bookId'
+
+  app.get(PATH, (req, res) => {
+    const { userId, bookId } = req.params
+    res.send('ok pattern')
+
+    agent.callbackTraceClose((trace) => {
+      t.equal(trace.spanBuilder.rpc, `/users/${userId}/books/${bookId}`, 'rpc should capture concrete request path')
+      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code annotation key')
+      t.equal(trace.spanBuilder.annotations[0].value, 200, 'HTTP status code is 200')
+      t.equal(trace.spanBuilder.uriTemplate, PATH, 'uriTemplate should capture pattern route')
+      t.equal(trace.spanBuilder.httpMethod, 'GET', 'httpMethod is GET')
+
+      const md = apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('get').setClassName('Router'))
+      const spanEvent = trace.spanBuilder.spanEventList[0]
+      t.equal(md.apiDescriptor, 'Router.get', 'method descriptor uses Router.get')
+      t.equal(md.apiId, spanEvent.apiId, 'apiId matches span event')
+
+      server.close()
+    })
+  })
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    const result = await axios.get(getServerUrl('/users/42/books/abc'))
+    t.equal(result.status, 200, 'pattern route responds 200')
+  })
+})
+
+test('express should skip uri stats when isUriStatsEnabled is false', (t) => {
+  t.plan(4)
+
+  agent.bindHttp({
+    "features": {
+      "uriStats": undefined
+    }
+  })
+
+  const app = new express()
+  const PATH = '/uri-stats-disabled/:orderId'
+
+  let server
+  app.get(PATH, (req, res) => {
+    res.send('ok uri off')
+    agent.callbackTraceClose((trace) => {
+      t.notOk(trace.spanBuilder.uriTemplate, 'uriTemplate should not be recorded when uri stats disabled')
+      t.notOk(trace.spanBuilder.httpMethod, 'httpMethod should not be recorded when uri stats disabled')
+      server.close()
+    })
+  })
+
+  server = app.listen(TEST_ENV.port, async () => {
+    const result = await axios.get(getServerUrl('/uri-stats-disabled/123'))
+    t.equal(result.status, 200, 'request responds 200')
+    t.equal(result.data, 'ok uri off', 'response data is ok uri off')
+  })
+})
+
+test('express should keep uriTemplate but skip httpMethod when isUriStatsHttpMethodEnabled is false', (t) => {
+  t.plan(5)
+
+  agent.bindHttp({
+    "features": {
+      "uriStats": {
+        "httpMethod": false
+      }
+    }
+  })
+
+  const app = new express()
+  const PATH = '/uri-stats-method-disabled/:orderId'
+
+  let server
+  app.get(PATH, (req, res) => {
+    res.send('ok uri method off')
+    agent.callbackTraceClose((trace) => {
+      t.equal(trace.spanBuilder.uriTemplate, PATH, 'uriTemplate recorded when uri stats enabled')
+      t.notOk(trace.spanBuilder.httpMethod, 'httpMethod not recorded when httpMethod flag disabled')
+      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'status code annotation exists')
+      server.close()
+    })
+  })
+
+  server = app.listen(TEST_ENV.port, async () => {
+    const result = await axios.get(getServerUrl('/uri-stats-method-disabled/999'))
+    t.equal(result.status, 200, 'request responds 200')
+    t.equal(result.data, 'ok uri method off', 'response data is ok uri method off')
+  })
+})
+

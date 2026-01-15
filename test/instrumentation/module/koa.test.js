@@ -116,3 +116,128 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
   })
 })
 
+
+test('koa should record handler registered with pattern route', (t) => {
+  t.plan(3)
+
+  agent.bindHttp({
+    features: { uriStats: { httpMethod: true } }
+  })
+
+  const PATH = '/orders/:orderId/items/:itemId'
+  const app = new Koa()
+  const router = new Router()
+
+  router.get(PATH, async (ctx) => {
+    ctx.body = 'ok pattern'
+
+    agent.callbackTraceClose((trace) => {
+      t.equal(trace.spanBuilder.uriTemplate, PATH, 'uriTemplate recorded for pattern route')
+      t.equal(trace.spanBuilder.httpMethod, 'GET', 'httpMethod recorded when flag enabled')
+    })
+  })
+
+  app.use(router.routes()).use(router.allowedMethods())
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    const result = await axios.get(getServerUrl('/orders/10/items/xyz'), {
+      timeout: 3000,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
+    t.equal(result.status, 200, 'pattern route responds 200')
+    server.close()
+  })
+})
+
+test('koa should skip uri stats when isUriStatsEnabled is false', (t) => {
+  t.plan(4)
+
+  agent.bindHttp({
+    features: { uriStats: undefined }
+  })
+
+  const PATH = '/uri-stats-disabled/:orderId'
+  const app = new Koa()
+  const router = new Router()
+
+  router.get(PATH, async (ctx) => {
+    ctx.body = 'ok uri off'
+
+    agent.callbackTraceClose((trace) => {
+      t.notOk(trace.spanBuilder.uriTemplate, 'uriTemplate not recorded when uri stats disabled')
+      t.notOk(trace.spanBuilder.httpMethod, 'httpMethod not recorded when uri stats disabled')
+      server.close()
+    })
+  })
+
+  app.use(router.routes()).use(router.allowedMethods())
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    const result = await axios.get(getServerUrl('/uri-stats-disabled/123'))
+    t.equal(result.status, 200, 'request responds 200')
+    t.equal(result.data, 'ok uri off', 'response data ok uri off')
+  })
+})
+
+test('koa should keep uriTemplate but skip httpMethod when isUriStatsHttpMethodEnabled is false', (t) => {
+  t.plan(5)
+
+  agent.bindHttp({
+    collector: { spanPort: -1, statPort: -1, tcpPort: -1 },
+    features: { uriStats: { httpMethod: false } }
+  })
+
+  const PATH = '/uri-stats-method-disabled/:orderId'
+  const app = new Koa()
+  const router = new Router()
+
+  router.get(PATH, async (ctx) => {
+    ctx.body = 'ok uri method off'
+
+    agent.callbackTraceClose((trace) => {
+      t.equal(trace.spanBuilder.uriTemplate, PATH, 'uriTemplate recorded when uri stats enabled')
+      t.notOk(trace.spanBuilder.httpMethod, 'httpMethod not recorded when flag disabled')
+      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'status code annotation exists')
+      server.close()
+    })
+  })
+
+  app.use(router.routes()).use(router.allowedMethods())
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    const result = await axios.get(getServerUrl('/uri-stats-method-disabled/999'))
+    t.equal(result.status, 200, 'request responds 200')
+    t.equal(result.data, 'ok uri method off', 'response data ok uri method off')
+  })
+})
+
+test('koa should record uriTemplate and httpMethod in router', (t) => {
+  t.plan(3)
+
+  agent.bindHttp({
+    collector: { spanPort: -1, statPort: -1, tcpPort: -1 },
+    features: { uriStats: { httpMethod: true } }
+  })
+
+  const PATH = '/books/:bookId/pages/:pageId'
+  const app = new Koa()
+  const router = new Router()
+
+  router.get(PATH, async (ctx) => {
+    ctx.body = 'ok pattern'
+
+    agent.callbackTraceClose((trace) => {
+      t.equal(trace.spanBuilder.uriTemplate, PATH, 'records uriTemplate')
+      t.equal(trace.spanBuilder.httpMethod, 'GET', 'records httpMethod')
+    })
+  })
+
+  app.use(router.routes()).use(router.allowedMethods())
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    const result = await axios.get(getServerUrl('/books/123/pages/9'))
+    t.equal(result.status, 200, 'pattern route responds 200')
+    server.close()
+  })
+})

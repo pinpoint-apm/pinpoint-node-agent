@@ -846,3 +846,34 @@ test('incoming request by Disable Trace requests', (t) => {
     server.close()
   })
 })
+
+test('express should record handler registered with pattern route (end of file)', (t) => {
+  t.plan(6)
+
+  agent.bindHttp()
+  const app = new express()
+  const PATH = '/users/:userId/books/:bookId'
+
+  app.get(PATH, (req, res) => {
+    const { userId, bookId } = req.params
+    res.send('ok pattern')
+
+    agent.callbackTraceClose((trace) => {
+      t.equal(trace.spanBuilder.rpc, `/users/${userId}/books/${bookId}`, 'rpc should capture concrete request path')
+      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code annotation key')
+      t.equal(trace.spanBuilder.annotations[0].value, 200, 'HTTP status code is 200')
+
+      const md = apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('get').setClassName('Router'))
+      const spanEvent = trace.spanBuilder.spanEventList[0]
+      t.equal(md.apiDescriptor, 'Router.get', 'method descriptor uses Router.get')
+      t.equal(md.apiId, spanEvent.apiId, 'apiId matches span event')
+
+      server.close()
+    })
+  })
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    const result = await axios.get(getServerUrl('/users/42/books/abc'))
+    t.equal(result.status, 200, 'pattern route responds 200')
+  })
+})

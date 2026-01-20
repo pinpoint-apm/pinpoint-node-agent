@@ -12,8 +12,17 @@ const fixtures = path.resolve(__dirname, '..', '..', '..', 'fixtures', 'db')
 const { MySqlContainer } = require('@testcontainers/mysql')
 const testAppDir = path.join(__dirname, 'nextjs-app-router')
 const fs = require('fs')
+const grpc = require('@grpc/grpc-js')
+const services = require('../../../../lib/data/v1/Service_grpc_pb')
+const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
+const SpanProto = require('../../../../lib/data/v1/Span_pb')
+const StatProto = require('../../../../lib/data/v1/Stat_pb')
+const CmdProto = require('../../../../lib/data/v1/Cmd_pb')
 
 let container
+let spanCollector
+let spanCollectorPort
+let receivedSpans = []
 test('setup', async (t) => {
     const source = path.resolve(fixtures, 'mysql.sql')
     container = await new MySqlContainer()
@@ -29,6 +38,85 @@ test('setup', async (t) => {
         .start()
     t.pass('setup complete')
     t.end()
+})
+
+test('setup: start span collector', (t) => {
+    spanCollector = new grpc.Server()
+    spanCollector.addService(services.SpanService, {
+        sendSpan: function (call, callback) {
+            call.on('data', (spanMessage) => {
+                const span = spanMessage.getSpan()
+                if (span) {
+                    receivedSpans.push(span)
+                }
+            })
+            call.on('end', () => {
+                callback?.(null, new Empty())
+            })
+        }
+    })
+
+    const okResult = new SpanProto.PResult()
+    okResult.setResult?.(0)
+
+    spanCollector.addService(services.AgentService, {
+        requestAgentInfo: (call, callback) => {
+            callback?.(null, okResult)
+        },
+        pingSession: (call) => {
+            call.on('data', (ping) => {
+                if (ping instanceof StatProto.PPing) {
+                    call.write(ping)
+                }
+            })
+            call.on('end', () => call.end())
+        }
+    })
+
+    spanCollector.addService(services.MetadataService, {
+        requestSqlMetaData: (call, callback) => callback?.(null, okResult),
+        requestSqlUidMetaData: (call, callback) => callback?.(null, okResult),
+        requestApiMetaData: (call, callback) => callback?.(null, okResult),
+        requestStringMetaData: (call, callback) => callback?.(null, okResult),
+        requestExceptionMetaData: (call, callback) => callback?.(null, okResult),
+    })
+
+    spanCollector.addService(services.ProfilerCommandServiceService, {
+        handleCommand: (call) => {
+            call.on('data', (msg) => {
+                if (msg instanceof CmdProto.PCmdMessage) {
+                    const res = new CmdProto.PCmdRequest()
+                    res.setRequestid?.(msg.getRequestid?.())
+                    call.write(res)
+                }
+            })
+            call.on('end', () => call.end())
+        },
+        handleCommandV2: (call) => {
+            call.on('data', (msg) => {
+                if (msg instanceof CmdProto.PCmdMessage) {
+                    const res = new CmdProto.PCmdRequest()
+                    res.setRequestid?.(msg.getRequestid?.())
+                    call.write(res)
+                }
+            })
+            call.on('end', () => call.end())
+        },
+        commandEcho: (call, callback) => callback?.(null, new Empty()),
+        commandStreamActiveThreadCount: (call, callback) => callback?.(null, new Empty()),
+        commandActiveThreadDump: (call, callback) => callback?.(null, new Empty()),
+        commandActiveThreadLightDump: (call, callback) => callback?.(null, new Empty()),
+    })
+
+    spanCollector.bindAsync('127.0.0.1:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+        if (err) {
+            t.fail(err.message)
+            return
+        }
+        spanCollectorPort = port
+        t.pass(`span collector listening on ${port}`)
+        t.end()
+    })
 })
 
 // ref: https://github.com/elastic/apm-agent-nodejs/blob/main/test/instrumentation/modules/next/next.test.js
@@ -88,6 +176,10 @@ test('Next.JS Production Server start', (suite) => {
                     DB_PASSWORD: container.getUserPassword(),
                     NEXT_TELEMETRY_DISABLED: '1',
                     PINPOINT_APPLICATION_NAME: 'next.js.test.js',
+                    PINPOINT_COLLECTOR_IP: '127.0.0.1',
+                    PINPOINT_COLLECTOR_SPAN_PORT: String(spanCollectorPort),
+                    PINPOINT_COLLECTOR_STAT_PORT: String(spanCollectorPort),
+                    PINPOINT_COLLECTOR_TCP_PORT: String(spanCollectorPort),
                 }),
             }
         )
@@ -116,9 +208,14 @@ test('Next.JS Production Server start', (suite) => {
 })
 
 test('fetch http://127.0.0.1:3000/', async (t) => {
+    receivedSpans = []
     try {
         const res = await fetch('http://127.0.0.1:3000/')
         t.equal(res.status, 200, '/ responds with 200')
+
+        const span = await waitForSpan((span) => span.getAcceptevent()?.getRpc() === '/')
+        t.ok(span, 'received span from Next.js request')
+        t.equal(span.getAcceptevent().getRpc(), '/', 'rpc should be root path')
     } catch (err) {
         t.fail(err.message)
     }
@@ -128,6 +225,9 @@ test('fetch http://127.0.0.1:3000/', async (t) => {
 test('teardown', async (t) => {
     if (nextServerProcess) {
         nextServerProcess.kill()
+    }
+    if (spanCollector) {
+        spanCollector.forceShutdown()
     }
     await container.stop()
     t.pass('teardown complete')
@@ -149,6 +249,23 @@ function waitForNextServerReady(nextServerProcess, callback) {
             clearTimeout(timeout)
             callback?.()
         }
+    })
+}
+
+function waitForSpan(predicate, timeoutMs = 5000) {
+    const started = Date.now()
+    return new Promise((resolve, reject) => {
+        const check = () => {
+            const match = receivedSpans.find(predicate)
+            if (match) {
+                return resolve(match)
+            }
+            if (Date.now() - started > timeoutMs) {
+                return reject(new Error('Timed out waiting for span'))
+            }
+            setTimeout(check, 50)
+        }
+        check()
     })
 }
 

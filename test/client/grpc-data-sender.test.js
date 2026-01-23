@@ -325,6 +325,7 @@ test('sendSpan', (t) => {
     trace.spanRecorder.recordRpc('/')
     trace.spanRecorder.recordEndPoint('localhost:3000')
     trace.spanRecorder.recordRemoteAddress('::1')
+    spanBuilder.setApplicationServiceType(agent.agentInfo.getApplicationServiceType())
 
     let spanEventRecorder = trace.traceBlockBegin()
     spanEventRecorder.spanEventBuilder.startTime = spanBuilder.startTime + 3

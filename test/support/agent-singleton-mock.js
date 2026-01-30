@@ -20,6 +20,7 @@ const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const { AgentBuilder } = require('../../lib/agent-builder')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const { ConfigBuilder } = require('../../lib/config-builder')
+const { initializeStats } = require('../../lib/context/uri-stats')
 
 let traces = []
 const resetTraces = () => {
@@ -92,6 +93,9 @@ const agentBuilder = new AgentBuilder(agentInfo)
     .setDataSender(dataSenderMock(config, agentInfo))
     .disablePingScheduler()
     .disableStatsScheduler()
+    .addService(() => {
+        initializeStats(config)
+    })
 const agent = agentBuilder.build()
 
 class MockAgent {

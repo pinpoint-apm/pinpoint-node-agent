@@ -105,6 +105,46 @@ test('UriStatsRepository should limit capacity', (t) => {
     t.end()
 })
 
+test('UriStatsRepository should correctly check for snapshot completed queue and snapshot bucket using URI pattern', (t) => {
+    const config = { isUriStatsEnabled: () => true }
+    // 30s interval
+    const repository = new UriStatsRepository(10, 30000, config)
+    DateNow.setOffset(0)
+
+    const uriPattern = '/api/users/:id'
+    const now = DateNow.now()
+
+    // Bucket 0 ( < 100ms )
+    repository.store(new UriStatsInfo(uriPattern, true, now, now + 50))
+    // Bucket 1 ( 100ms ~ 300ms )
+    repository.store(new UriStatsInfo(uriPattern, true, now, now + 150))
+    // Bucket 7 ( > 8000ms )
+    repository.store(new UriStatsInfo(uriPattern, true, now, now + 9000))
+
+    // Advance time to force rotation (31 seconds)
+    DateNow.setOffset(31000)
+
+    // Store data for next snapshot to trigger flush
+    const later = DateNow.now()
+    repository.store(new UriStatsInfo(uriPattern, true, later, later + 50))
+
+    // Check Queue
+    t.equal(repository.completedSnapshotQueue.length, 1, 'Queue should have 1 snapshot')
+
+    // Poll and Check Map & Buckets
+    const completedSnapshot = repository.poll()
+    t.ok(completedSnapshot, 'Should retrieve snapshot')
+
+    const entry = completedSnapshot.dataMap.get(uriPattern)
+    t.ok(entry, 'Should have entry for URI pattern')
+    t.equal(entry.totalHistogram.count, 3, 'Total count 3')
+    t.equal(entry.totalHistogram.buckets[0], 1, 'Bucket 0 count 1')
+    t.equal(entry.totalHistogram.buckets[1], 1, 'Bucket 1 count 1')
+    t.equal(entry.totalHistogram.buckets[7], 1, 'Bucket 7 count 1')
+
+    t.end()
+})
+
 test.onFinish(() => {
     DateNow.setOffset(0)
 })

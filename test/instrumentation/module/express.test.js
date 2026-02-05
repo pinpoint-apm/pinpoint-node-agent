@@ -941,3 +941,113 @@ test('express should keep uriTemplate but skip httpMethod when isUriStatsHttpMet
   })
 })
 
+test('Should aggregate URI stats in UriStatsRepository', function (t) {
+  agent.bindHttp()
+
+  const { getUriStatsRepository } = require('../../../lib/metric/uri-stats')
+  const { UriStatsRepository } = require('../../../lib/metric/uri-stats-repository')
+  const DateNow = require('../../../lib/support/date-now')
+
+  const PATH = '/integration/uri-stats'
+  const app = new express()
+
+  app.get(PATH, (req, res) => {
+    res.send('ok stats')
+
+    agent.callbackTraceClose((trace) => {
+      const repository = getUriStatsRepository()
+
+      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+
+      const now = DateNow.now()
+      const timeWindow = 30000
+      const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+
+      const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+      t.ok(snapshot, 'Snapshot exists')
+
+      if (snapshot) {
+        const expectedKey = `GET ${PATH}`
+        const entry = snapshot.dataMap.get(expectedKey)
+
+        t.ok(entry, `Entry for ${expectedKey} exists`)
+        if (entry) {
+          t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
+        }
+      }
+
+      server.close()
+      t.end()
+    })
+  })
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    try {
+        await axios.get(getServerUrl(PATH))
+    } catch(e) {
+        t.fail(e)
+        server.close()
+        t.end()
+    }
+  })
+})
+
+test('Should aggregate URI stats without HTTP method when disabled in config', function (t) {
+  agent.bindHttp({
+    features: {
+      uriStats: {
+        httpMethod: false,
+        capacity: 1000
+      }
+    }
+  })
+
+  const { getUriStatsRepository } = require('../../../lib/metric/uri-stats')
+  const { UriStatsRepository } = require('../../../lib/metric/uri-stats-repository')
+  const DateNow = require('../../../lib/support/date-now')
+
+  const PATH = '/integration/uri-stats/no-method'
+  const app = new express()
+
+  app.get(PATH, (req, res) => {
+    res.send('ok stats no method')
+
+    agent.callbackTraceClose((trace) => {
+      const repository = getUriStatsRepository()
+
+      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+
+      const now = DateNow.now()
+      const timeWindow = 30000
+      const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+
+      const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+      t.ok(snapshot, 'Snapshot exists')
+
+      // When httpMethod is disabled, the key should be just the PATH
+      const expectedKey = PATH
+      const entry = snapshot.dataMap.get(expectedKey)
+
+      t.ok(entry, `Entry for ${expectedKey} exists`)
+      if (entry) {
+        t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
+      }
+
+      server.close()
+      t.end()
+    })
+  })
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    try {
+        await axios.get(getServerUrl(PATH))
+    } catch(e) {
+        t.fail(e)
+        server.close()
+        t.end()
+    }
+  })
+})
+
+
+

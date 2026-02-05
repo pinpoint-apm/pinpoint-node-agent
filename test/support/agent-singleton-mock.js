@@ -20,7 +20,7 @@ const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const { AgentBuilder } = require('../../lib/agent-builder')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const { ConfigBuilder } = require('../../lib/config-builder')
-const { initializeStats } = require('../../lib/context/uri-stats')
+const { initializeStats } = require('../../lib/metric/uri-stats')
 
 let traces = []
 const resetTraces = () => {
@@ -113,6 +113,7 @@ class MockAgent {
         }
         const config = new ConfigBuilder(json).build()
         this.config = config
+        initializeStats(config)
 
         this.agentInfo = AgentInfo.make(config)
 

@@ -29,6 +29,8 @@ const http = require('http')
 const spanMessages = require('../../lib/data/v1/Span_pb')
 const activeRequestRepository = require('../../lib/metric/active-request-repository')
 const AgentStatsMonitor = require('../../lib/metric/agent-stats-monitor')
+const { UriStatsSnapshot } = require('../../lib/metric/uri-stats-snapshot')
+const { UriStatsInfo } = require('../../lib/metric/uri-stats-info-builder')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -611,5 +613,68 @@ test('CommandStreamActiveThreadCount', (t) => {
     clearInterval(interval)
     dataSender.close()
     server.forceShutdown()
+  })
+})
+
+test('sendStat with UriStatsSnapshot', (t) => {
+  const collectorServer = new grpc.Server()
+  let assertAgentStat
+
+  collectorServer.addService(services.StatService, {
+    sendAgentStat: (call) => {
+      call.on('data', (data) => {
+        assertAgentStat?.(data)
+      })
+    }
+  })
+
+  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+    const grpcDataSender = beforeSpecificOne(port, StatOnlyFunctionalTestableDataSource)
+    const baseTimestamp = Date.now()
+    const snapshot = new UriStatsSnapshot(baseTimestamp, 10)
+    snapshot.add(new UriStatsInfo('/foo', true, 0, 50))
+    snapshot.add(new UriStatsInfo('/foo', true, 0, 400))
+    snapshot.add(new UriStatsInfo('/foo', false, 0, 900))
+    snapshot.add(new UriStatsInfo('/bar', true, 0, 50))
+
+    assertAgentStat = (data) => {
+      t.ok(data, 'Should receive data')
+      const agentUriStat = data.getAgenturistat()
+      t.ok(agentUriStat, 'Should have agentUriStat')
+      t.equal(agentUriStat.getBucketversion(), 0, 'Bucket version should be 0')
+
+      const eachList = agentUriStat.getEachuristatList()
+      const byUri = Object.fromEntries(eachList.map(each => [each.getUri(), each]))
+
+      const foo = byUri['/foo']
+      t.ok(foo, 'foo entry exists')
+      t.equal(foo.getTimestamp(), baseTimestamp, 'foo timestamp')
+      const fooTotal = foo.getTotalhistogram()
+      t.equal(fooTotal.getTotal(), 1350, 'foo total sum')
+      t.equal(fooTotal.getMax(), 900, 'foo total max')
+      t.deepEqual(fooTotal.getHistogramList(), [1, 0, 1, 1, 0, 0, 0, 0], 'foo total buckets')
+      const fooFailed = foo.getFailedhistogram()
+      t.equal(fooFailed.getTotal(), 900, 'foo failed sum')
+      t.equal(fooFailed.getMax(), 900, 'foo failed max')
+      t.deepEqual(fooFailed.getHistogramList(), [0, 0, 0, 1, 0, 0, 0, 0], 'foo failed buckets')
+
+      const bar = byUri['/bar']
+      t.ok(bar, 'bar entry exists')
+      t.equal(bar.getTimestamp(), baseTimestamp, 'bar timestamp')
+      const barTotal = bar.getTotalhistogram()
+      t.equal(barTotal.getTotal(), 50, 'bar total sum')
+      t.equal(barTotal.getMax(), 50, 'bar total max')
+      t.deepEqual(barTotal.getHistogramList(), [1, 0, 0, 0, 0, 0, 0, 0], 'bar total buckets')
+      const barFailed = bar.getFailedhistogram()
+      t.equal(barFailed.getTotal(), 0, 'bar failed sum')
+      t.equal(barFailed.getMax(), 0, 'bar failed max')
+      t.deepEqual(barFailed.getHistogramList(), [0, 0, 0, 0, 0, 0, 0, 0], 'bar failed buckets')
+
+      grpcDataSender.close()
+      collectorServer.forceShutdown()
+      t.end()
+    }
+
+    grpcDataSender.sendStat(snapshot)
   })
 })

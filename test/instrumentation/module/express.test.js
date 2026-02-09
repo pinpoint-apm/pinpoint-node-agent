@@ -16,6 +16,15 @@ const DisableTrace = require('../../../lib/context/disable-trace')
 const http = require('http')
 const https = require('https')
 const { getTransactionId, getDisabledId } = require('../../../lib/context/trace/id-generator')
+const grpc = require('@grpc/grpc-js')
+const services = require('../../../lib/data/v1/Service_grpc_pb')
+const { beforeSpecificOne, StatOnlyFunctionalTestableDataSource, DataSourceCallCountable } = require('../../../test/client/grpc-fixture')
+const { UriStatsSnapshot } = require('../../../lib/metric/uri-stats-snapshot')
+const { UriStatsInfo } = require('../../../lib/metric/uri-stats-info-builder')
+const { ConfigBuilder } = require('../../../lib/config-builder')
+const { getUriStatsRepository } = require('../../../lib/metric/uri-stats')
+const { UriStatsMonitor } = require('../../../lib/metric/uri-stats-monitor')
+const Scheduler = require('../../../lib/utils/scheduler')
 
 const TEST_ENV = {
   host: 'localhost', port: 5006
@@ -152,6 +161,8 @@ function throwHandleTest(trace, t) {
   t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), '/express3 HTTP_STATUS_CODE annotationKey matching')
   t.equal(trace.spanBuilder.annotations[0].value, 500, '/express3 HTTP_STATUS_CODE value matching')
 
+  t.equal(trace.spanBuilder.traceRoot.getShared().getErrorCode(), 1, 'traceRoot errorCode should be 1')
+
   let actualBuilder = new MethodDescriptorBuilder('get')
     .setClassName('Router')
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -174,7 +185,7 @@ function throwHandleTest(trace, t) {
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:95:11'), 'error case')
+  t.true(/express\.test\.js:\d+:\d+$/.test(spanEvent.exceptionInfo.stringValue), 'error case')
 
   const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
   const actualTransactionId = actualExceptionMetaData.getTransactionid()
@@ -195,6 +206,8 @@ function throwHandleTest(trace, t) {
 }
 
 function nextErrorHandleTest(trace, t) {
+  t.equal(trace.spanBuilder.traceRoot.getShared().getErrorCode(), 1, 'traceRoot errorCode should be 1')
+
   let actualBuilder = new MethodDescriptorBuilder('get')
     .setClassName('Router')
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -217,7 +230,7 @@ function nextErrorHandleTest(trace, t) {
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:102:10'), 'error case')
+  t.true(/express\.test\.js:\d+:\d+$/.test(spanEvent.exceptionInfo.stringValue), 'error case')
 
   const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
   const actualTransactionId = actualExceptionMetaData.getTransactionid()
@@ -630,7 +643,7 @@ function throwHandleTestWithoutCallSite(trace, t) {
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:551:11'), 'error case')
+  t.true(/express\.test\.js:\d+:\d+$/.test(spanEvent.exceptionInfo.stringValue), 'error case')
 
   const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
   const actualTransansactionId = actualExceptionMetaData.getTransactionid()
@@ -673,7 +686,7 @@ function nextErrorHandleTestWithoutCallSite(trace, t) {
   t.equal(spanEvent.sequence, 1, 'sequence')
   t.equal(spanEvent.depth, 2, 'spanEvent.depth')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(spanEvent.exceptionInfo.stringValue.endsWith('express.test.js:558:10'), 'error case')
+  t.true(/express\.test\.js:\d+:\d+$/.test(spanEvent.exceptionInfo.stringValue), 'error case')
 
   const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
   const actualTransactionId = actualExceptionMetaData.getTransactionid()
@@ -983,11 +996,11 @@ test('Should aggregate URI stats in UriStatsRepository', function (t) {
 
   const server = app.listen(TEST_ENV.port, async () => {
     try {
-        await axios.get(getServerUrl(PATH))
-    } catch(e) {
-        t.fail(e)
-        server.close()
-        t.end()
+      await axios.get(getServerUrl(PATH))
+    } catch (e) {
+      t.fail(e)
+      server.close()
+      t.end()
     }
   })
 })
@@ -1040,14 +1053,285 @@ test('Should aggregate URI stats without HTTP method when disabled in config', f
 
   const server = app.listen(TEST_ENV.port, async () => {
     try {
-        await axios.get(getServerUrl(PATH))
-    } catch(e) {
-        t.fail(e)
-        server.close()
-        t.end()
+      await axios.get(getServerUrl(PATH))
+    } catch (e) {
+      t.fail(e)
+      server.close()
+      t.end()
     }
   })
 })
 
+test('sendStat with UriStatsSnapshot', (t) => {
+  const collectorServer = new grpc.Server()
+  let assertAgentStat
 
+  collectorServer.addService(services.StatService, {
+    sendAgentStat: (call) => {
+      call.on('data', (data) => {
+        assertAgentStat?.(data)
+      })
+    }
+  })
 
+  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+    const grpcDataSender = beforeSpecificOne(port, StatOnlyFunctionalTestableDataSource)
+    const baseTimestamp = Date.now()
+    const snapshot = new UriStatsSnapshot(baseTimestamp, 10)
+    snapshot.add(new UriStatsInfo('/foo', true, 0, 50))
+    snapshot.add(new UriStatsInfo('/foo', true, 0, 400))
+    snapshot.add(new UriStatsInfo('/foo', false, 0, 900))
+    snapshot.add(new UriStatsInfo('/bar', true, 0, 50))
+
+    assertAgentStat = (data) => {
+      t.ok(data, 'Should receive data')
+      const agentUriStat = data.getAgenturistat()
+      t.ok(agentUriStat, 'Should have agentUriStat')
+      t.equal(agentUriStat.getBucketversion(), 0, 'Bucket version should be 0')
+
+      const eachList = agentUriStat.getEachuristatList()
+      const byUri = Object.fromEntries(eachList.map(each => [each.getUri(), each]))
+
+      const foo = byUri['/foo']
+      t.ok(foo, 'foo entry exists')
+      t.equal(foo.getTimestamp(), baseTimestamp, 'foo timestamp')
+      const fooTotal = foo.getTotalhistogram()
+      t.equal(fooTotal.getTotal(), 1350, 'foo total sum')
+      t.equal(fooTotal.getMax(), 900, 'foo total max')
+      t.deepEqual(fooTotal.getHistogramList(), [1, 0, 1, 1, 0, 0, 0, 0], 'foo total buckets')
+      const fooFailed = foo.getFailedhistogram()
+      t.equal(fooFailed.getTotal(), 900, 'foo failed sum')
+      t.equal(fooFailed.getMax(), 900, 'foo failed max')
+      t.deepEqual(fooFailed.getHistogramList(), [0, 0, 0, 1, 0, 0, 0, 0], 'foo failed buckets')
+
+      const bar = byUri['/bar']
+      t.ok(bar, 'bar entry exists')
+      t.deepEqual(bar.getTotalhistogram().getHistogramList(), [1, 0, 0, 0, 0, 0, 0, 0], 'bar total buckets')
+
+      collectorServer.forceShutdown()
+      grpcDataSender.close()
+      t.end()
+    }
+
+    grpcDataSender.sendStat(snapshot)
+  })
+})
+
+class SpanAndStatDataSource extends DataSourceCallCountable {
+  constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+    config = Object.assign({}, config, {
+      sendSpan: true,
+      sendSpanChunk: true,
+      sendStat: true,
+    })
+    config = new ConfigBuilder(config).build()
+    super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+  }
+
+  send(data) {
+    if (data && typeof data.isUriStatsSnapshot === 'function' && data.isUriStatsSnapshot()) {
+      this.sendStat(data)
+    }
+  }
+}
+
+test('Functional Test: SendSpan with success and failure', (t) => {
+  const collectorServer = new grpc.Server()
+  const receivedSpans = []
+  const receivedStats = []
+
+  collectorServer.addService(services.SpanService, {
+    sendSpan: (call) => {
+      call.on('data', (spanMessage) => {
+        receivedSpans.push(spanMessage)
+      })
+      call.on('end', () => {
+        call.end()
+      })
+    }
+  })
+
+  collectorServer.addService(services.StatService, {
+    sendAgentStat: (call) => {
+      call.on('data', (statMessage) => {
+        receivedStats.push(statMessage)
+      })
+      call.on('end', () => {
+        call.end()
+      })
+    }
+  })
+
+  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+    const grpcDataSender = beforeSpecificOne(port, SpanAndStatDataSource)
+    agent.bindHttp(grpcDataSender)
+
+    const app = new express()
+    const successPath = '/functional/success'
+    const failPath = '/functional/fail'
+
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
+    app.get(successPath, async function (req, res) {
+      if (req.query.delay) {
+        await sleep(parseInt(req.query.delay))
+      }
+      res.send('ok')
+    })
+    app.get(failPath, async function (req, res, next) {
+      try {
+        if (req.query.delay) {
+          await sleep(parseInt(req.query.delay))
+        }
+        throw new Error('functional test error')
+      } catch (e) {
+        next(e)
+      }
+    })
+    app.use(function (err, req, res, next) {
+      res.status(500).send('error')
+    })
+
+    const server = app.listen(0, async () => {
+      const serverPort = server.address().port
+
+      // 1. Send requests with various latencies to test histogram buckets
+      // Bucket 0: < 100ms
+      await axios.get('http://localhost:' + serverPort + successPath)
+
+      // Bucket 1: < 300ms (100ms ~ 300ms)
+      await axios.get('http://localhost:' + serverPort + successPath + '?delay=150')
+
+      // Bucket 2: < 500ms (300ms ~ 500ms)
+      await axios.get('http://localhost:' + serverPort + successPath + '?delay=350')
+
+      // Bucket 3: < 1000ms (500ms ~ 1000ms)
+      await axios.get('http://localhost:' + serverPort + successPath + '?delay=600')
+
+      // Bucket 4: < 3000ms (1000ms ~ 3000ms)
+      await axios.get('http://localhost:' + serverPort + successPath + '?delay=1100')
+
+      // Fail requests
+      try {
+        await axios.get('http://localhost:' + serverPort + failPath) // Bucket 0
+      } catch (e) { }
+
+      try {
+        // Bucket 1 for failure
+        await axios.get('http://localhost:' + serverPort + failPath + '?delay=150')
+      } catch (e) { }
+
+      const repository = getUriStatsRepository()
+      repository.timeWindow = 1000
+      const monitor = new UriStatsMonitor(grpcDataSender, repository)
+      monitor.scheduler = new Scheduler(1000)
+      monitor.start()
+
+      // Wait for spans (Total delay ~2.3s + overhead)
+      setTimeout(() => {
+        t.equal(receivedSpans.length, 7, 'Should receive 7 spans')
+
+        const successSpanMsg = receivedSpans.find(msg => msg.getSpan().getAcceptevent().getRpc() === successPath)
+        const failSpanMsg = receivedSpans.find(msg => msg.getSpan().getAcceptevent().getRpc() === failPath)
+
+        t.ok(successSpanMsg, 'Success span found')
+        if (successSpanMsg) {
+          const span = successSpanMsg.getSpan()
+          t.equal(span.getErr(), 0, 'Success span should have err=0')
+        }
+
+        t.ok(failSpanMsg, 'Fail span found')
+        if (failSpanMsg) {
+          const span = failSpanMsg.getSpan()
+          t.equal(span.getErr(), 1, 'Fail span should have err=1')
+
+          const spanEvents = span.getSpaneventList()
+          const eventWithException = spanEvents.find(e => {
+            const info = e.getExceptioninfo()
+            return info && info.getStringvalue && info.getStringvalue()
+          })
+          t.ok(eventWithException, 'Should find span event with exception info')
+
+          if (eventWithException) {
+            const title = eventWithException.getExceptioninfo().getStringvalue().getValue()
+            t.true(title.startsWith('Error: functional test error'), 'Fail span event should have exception info')
+          }
+        }
+
+        t.ok(receivedStats.length > 0, 'Should receive stats')
+        if (receivedStats.length > 0) {
+          const mergedStats = {}
+
+          receivedStats.forEach(statMsg => {
+            const agentUriStat = statMsg.getAgenturistat()
+            if (agentUriStat) {
+              const eachList = agentUriStat.getEachuristatList()
+              if (eachList) {
+                eachList.forEach(each => {
+                  const uri = each.getUri()
+                  if (!mergedStats[uri]) {
+                    mergedStats[uri] = {
+                      totalBuckets: new Array(8).fill(0),
+                      failedBuckets: new Array(8).fill(0)
+                    }
+                  }
+
+                  const totalHistList = each.getTotalhistogram().getHistogramList()
+                  totalHistList.forEach((count, idx) => mergedStats[uri].totalBuckets[idx] += count)
+
+                  const failedHistList = each.getFailedhistogram().getHistogramList()
+                  failedHistList.forEach((count, idx) => mergedStats[uri].failedBuckets[idx] += count)
+                })
+              }
+            }
+          })
+
+          const successUriKey = `GET ${successPath}`
+          const successStat = mergedStats[successUriKey]
+
+          t.ok(successStat, `Stats found for ${successPath}`)
+          if (successStat) {
+            const totalBuckets = successStat.totalBuckets
+            const totalCount = totalBuckets.reduce((acc, val) => acc + val, 0)
+            t.equal(totalCount, 5, 'Total count should be 5 for success')
+
+            t.equal(totalBuckets[0], 1, 'Bucket 0 (<100ms) should have 1 count')
+            t.equal(totalBuckets[1], 1, 'Bucket 1 (<300ms) should have 1 count')
+            t.equal(totalBuckets[2], 1, 'Bucket 2 (<500ms) should have 1 count')
+            t.equal(totalBuckets[3], 1, 'Bucket 3 (<1000ms) should have 1 count')
+            t.equal(totalBuckets[4], 1, 'Bucket 4 (<3000ms) should have 1 count')
+
+            const failedBuckets = successStat.failedBuckets
+            const failedCount = failedBuckets.reduce((acc, val) => acc + val, 0)
+            t.equal(failedCount, 0, 'Failed count should be 0 for success')
+          }
+
+          const failUriKey = `GET ${failPath}`
+          const failStat = mergedStats[failUriKey]
+
+          t.ok(failStat, `Stats found for ${failPath}`)
+          if (failStat) {
+            const totalBuckets = failStat.totalBuckets
+            const totalCount = totalBuckets.reduce((acc, val) => acc + val, 0)
+            t.equal(totalCount, 2, 'Total count should be 2 for fail')
+
+            t.equal(totalBuckets[0], 1, 'Bucket 0 (<100ms) should have 1 count')
+            t.equal(totalBuckets[1], 1, 'Bucket 1 (<300ms) should have 1 count')
+
+            const failedBuckets = failStat.failedBuckets
+            const failedCount = failedBuckets.reduce((acc, val) => acc + val, 0)
+            t.equal(failedCount, 2, 'Failed count should be 2 for fail')
+            t.equal(failedBuckets[0], 1, 'Failed Bucket 0 (<100ms) should have 1 count')
+            t.equal(failedBuckets[1], 1, 'Failed Bucket 1 (<300ms) should have 1 count')
+          }
+        }
+        monitor.stop()
+
+        server.close()
+        collectorServer.forceShutdown()
+        grpcDataSender.close()
+        t.end()
+      }, 5000)
+    })
+  })
+})

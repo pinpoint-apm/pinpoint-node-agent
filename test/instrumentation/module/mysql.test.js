@@ -480,7 +480,7 @@ let container
 test('setup', async (t) => {
     const source = path.resolve(fixtures, 'mysql.sql')
     container = await new MySqlContainer()
-        .withCommand('--default-authentication-plugin=mysql_native_password')
+        .withCommand(['--default-authentication-plugin=mysql_native_password'])
         .withEnvironment({
             'MYSQL_DATABASE': 'test',
             'TZ': 'Asia/Seoul',

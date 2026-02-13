@@ -23,10 +23,11 @@ let container
 let spanCollector
 let spanCollectorPort
 let receivedSpans = []
+let receivedStats = []
 test('setup', async (t) => {
     const source = path.resolve(fixtures, 'mysql.sql')
     container = await new MySqlContainer()
-        .withCommand('--default-authentication-plugin=mysql_native_password')
+        .withCommand(['--default-authentication-plugin=mysql_native_password'])
         .withEnvironment({
             'MYSQL_DATABASE': 'test',
             'TZ': 'Asia/Seoul',
@@ -79,6 +80,15 @@ test('setup: start span collector', (t) => {
         requestApiMetaData: (call, callback) => callback?.(null, okResult),
         requestStringMetaData: (call, callback) => callback?.(null, okResult),
         requestExceptionMetaData: (call, callback) => callback?.(null, okResult),
+    })
+
+    spanCollector.addService(services.StatService, {
+        sendAgentStat: function (call, callback) {
+            call.on('data', (statMessage) => {
+                receivedStats.push(statMessage)
+            })
+            call.on('end', () => callback(null, new Empty()))
+        }
     })
 
     spanCollector.addService(services.ProfilerCommandServiceService, {
@@ -209,6 +219,7 @@ test('Next.JS Production Server start', (suite) => {
 
 test('fetch http://127.0.0.1:3000/', async (t) => {
     receivedSpans = []
+    receivedStats = []
     try {
         const res = await fetch('http://127.0.0.1:3000/')
         t.equal(res.status, 200, '/ responds with 200')
@@ -216,6 +227,23 @@ test('fetch http://127.0.0.1:3000/', async (t) => {
         const span = await waitForSpan((span) => span.getAcceptevent()?.getRpc() === '/')
         t.ok(span, 'received span from Next.js request')
         t.equal(span.getAcceptevent().getRpc(), '/', 'rpc should be root path')
+
+        await new Promise(resolve => setTimeout(resolve, 6000))
+
+        const uriStats = receivedStats.flatMap(stat => {
+            const agentUriStat = stat.getAgenturistat ? stat.getAgenturistat() : null
+            if (agentUriStat) {
+                return agentUriStat.getEachuristatList().map(each => each.getUri())
+            }
+            return []
+        })
+
+        t.comment(`Received URI Stats count: ${uriStats.length}`)
+        if (uriStats.length > 0) {
+            t.fail(`Uri stats should not be recorded for Next.js (found: ${uriStats})`)
+        } else {
+            t.pass('Uri stats was not recorded as expected')
+        }
     } catch (err) {
         t.fail(err.message)
     }

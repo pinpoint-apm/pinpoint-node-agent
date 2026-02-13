@@ -25,7 +25,7 @@ test(`getConnection query hooking`, async (t) => {
     agent.bindHttp()
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()
-        .withCommand('--default-authentication-plugin=mysql_native_password')
+        .withCommand(['--default-authentication-plugin=mysql_native_password'])
         .withEnvironment({
             'MYSQL_DATABASE': 'test',
             'TZ': 'Asia/Seoul',
@@ -157,7 +157,7 @@ test(`getConnection promise query hooking`, async (t) => {
     agent.bindHttp()
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()
-        .withCommand('--default-authentication-plugin=mysql_native_password')
+        .withCommand(['--default-authentication-plugin=mysql_native_password'])
         .withEnvironment({
             'MYSQL_DATABASE': 'test',
             'TZ': 'Asia/Seoul',
@@ -225,7 +225,7 @@ test(`Connection Pool with query hooking`, async (t) => {
     agent.bindHttp()
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()
-        .withCommand('--default-authentication-plugin=mysql_native_password')
+        .withCommand(['--default-authentication-plugin=mysql_native_password'])
         .withEnvironment({
             'MYSQL_DATABASE': 'test',
             'TZ': 'Asia/Seoul',
@@ -303,7 +303,7 @@ test(`Cluster with query`, async (t) => {
     agent.bindHttp()
     const source = path.resolve(fixtures, 'mysql.sql')
     const container = await new MySqlContainer()
-        .withCommand('--default-authentication-plugin=mysql_native_password')
+        .withCommand(['--default-authentication-plugin=mysql_native_password'])
         .withEnvironment({
             'MYSQL_DATABASE': 'test',
             'TZ': 'Asia/Seoul',

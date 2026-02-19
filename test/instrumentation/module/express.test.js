@@ -24,7 +24,6 @@ const { UriStatsInfo } = require('../../../lib/metric/uri-stats-info-builder')
 const { ConfigBuilder } = require('../../../lib/config-builder')
 const { getUriStatsRepository } = require('../../../lib/metric/uri-stats')
 const { UriStatsMonitor } = require('../../../lib/metric/uri-stats-monitor')
-const Scheduler = require('../../../lib/utils/scheduler')
 
 const TEST_ENV = {
   host: 'localhost', port: 5006
@@ -1224,10 +1223,8 @@ test('Functional Test: SendSpan with success and failure', (t) => {
       const repository = getUriStatsRepository()
       repository.timeWindow = 1000
       const monitor = new UriStatsMonitor(grpcDataSender, repository)
-      monitor.scheduler = new Scheduler(1000)
       monitor.start()
 
-      // Wait for spans (Total delay ~2.3s + overhead)
       setTimeout(() => {
         t.equal(receivedSpans.length, 7, 'Should receive 7 spans')
 
@@ -1333,5 +1330,48 @@ test('Functional Test: SendSpan with success and failure', (t) => {
         t.end()
       }, 5000)
     })
+  })
+})
+
+test('Express: Should record request with custom uri template when configured', function (t) {
+  agent.bindHttp()
+
+  const app = new express()
+  const PATH = '/custom-uri-merge-test'
+
+  // Dynamic config update
+  const config = agent.getTraceContext().getConfig()
+  if (!config.features) config.features = {}
+  if (!config.features.uriStats) config.features.uriStats = {}
+
+  const originalSetting = config.features.uriStats.useUserInput
+  config.features.uriStats.useUserInput = true
+
+  app.get(PATH, async (req, res) => {
+    // Simulate user input for uri template
+    req['pinpoint.metric.uri-template'] = '/user/input/uri/merged'
+    res.send('ok get merged')
+
+    agent.callbackTraceClose((trace) => {
+      t.equal(trace.spanBuilder.getUriTemplate(), '/user/input/uri/merged', 'Uri template match from merged test')
+      // Restore config as cleanup
+      config.features.uriStats.useUserInput = originalSetting
+      t.end()
+    })
+  })
+
+  // Start server on a different port to avoid conflict
+  const port = TEST_ENV.port + 1
+  const getServerUrl = (path) => `http://${TEST_ENV.host}:${port}${path}`
+
+  const server = app.listen(port, async () => {
+    try {
+      await axios.get(getServerUrl(PATH))
+    } catch (error) {
+      t.fail(error.message)
+      t.end()
+    } finally {
+      server.close()
+    }
   })
 })

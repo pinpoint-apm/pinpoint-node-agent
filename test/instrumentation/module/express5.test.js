@@ -38,7 +38,7 @@ const express5Hook = new Hook(['express5'], (exports, name, basedir) => {
 let express5 = require('express5')
 
 const TEST_ENV = {
-  host: 'localhost', port: 5007
+  host: '127.0.0.1', port: 0
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
@@ -115,6 +115,7 @@ test(`${testName1} Should record request in Express 5 basic route`, function (t)
   })
 
   const server = app.listen(TEST_ENV.port, async function () {
+    TEST_ENV.port = server.address().port
     try {
       // GET request test
       const result1 = await axios.get(getServerUrl(PATH) + '?api=test&test1=express5')
@@ -130,8 +131,12 @@ test(`${testName1} Should record request in Express 5 basic route`, function (t)
       try {
         await axios.get(getServerUrl('/express5-error'))
       } catch (error) {
-        t.equal(error.response.status, 500, 'Error handling works')
-        t.equal(error.response.data, 'Express 5 error handled!', 'Error response data')
+        if (error.response) {
+            t.equal(error.response.status, 500, 'Error handling works')
+            t.equal(error.response.data, 'Express 5 error handled!', 'Error response data')
+        } else {
+            throw error
+        }
       }
 
     } catch (error) {
@@ -158,9 +163,10 @@ test('Express 5 Router functionality', (t) => {
 
   app.use('/api', router)
 
-  const server = app.listen(5008, async () => {
+  const server = app.listen(0, async () => {
+    const port = server.address().port
     try {
-      const result = await axios.get('http://localhost:5008/api/test')
+      const result = await axios.get(`http://localhost:${port}/api/test`)
       t.equal(result.status, 200, 'Router request successful')
       t.equal(result.data.message, 'Express 5 Router works', 'Router response data')
       t.equal(result.data.version, '5.x', 'Router version data')

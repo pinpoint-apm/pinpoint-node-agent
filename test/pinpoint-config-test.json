@@ -34,7 +34,8 @@
         "sqlStats": false,
         "uriStats": {
             "httpMethod": true,
-            "capacity": 1000
+            "capacity": 1000,
+            "useUserInput": true
         },
         "logLevels": {
             "default-logger": "WARN",

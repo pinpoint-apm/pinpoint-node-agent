@@ -398,3 +398,15 @@ test('Logger levels', (t) => {
   t.deepEqual(confWithEnvDebug.features.logLevels, {'default-logger': 'WARN', grpcLogger: 'SILENT', 'grpc': 'DEBUG', 'sql': 'ERROR', 'http': 'TRACE'}, 'logger levels from env is grpc=DEBUG,sql=ERROR,http=TRACE')
   t.end()
 })
+
+test('uriStats useUserInput configuration', (t) => {
+  t.plan(2)
+
+  process.env.PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT = 'true'
+  const conf = new ConfigBuilder().build()
+  t.equal(conf.isUriStatsUseUserInput(), true, 'useUserInput should be true when set via env')
+
+  delete process.env.PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT
+  const confDefault = new ConfigBuilder().build()
+  t.equal(confDefault.isUriStatsUseUserInput(), false, 'useUserInput should be false by default')
+})

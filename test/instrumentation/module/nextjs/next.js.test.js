@@ -18,6 +18,7 @@ const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const SpanProto = require('../../../../lib/data/v1/Span_pb')
 const StatProto = require('../../../../lib/data/v1/Stat_pb')
 const CmdProto = require('../../../../lib/data/v1/Cmd_pb')
+const AnnotationKey = require('../../../../lib/constant/annotation-key')
 
 let container
 let spanCollector
@@ -178,6 +179,7 @@ test('Next.JS Production Server start', (suite) => {
             {
                 cwd: testAppDir,
                 env: Object.assign({}, process.env, {
+                    PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT: 'true',
                     NODE_OPTIONS: '-r ../../../../../index.js',
                     NODE_ENV: 'production',
                     DB_HOST: container.getHost(),
@@ -190,6 +192,8 @@ test('Next.JS Production Server start', (suite) => {
                     PINPOINT_COLLECTOR_SPAN_PORT: String(spanCollectorPort),
                     PINPOINT_COLLECTOR_STAT_PORT: String(spanCollectorPort),
                     PINPOINT_COLLECTOR_TCP_PORT: String(spanCollectorPort),
+                    PINPOINT_SAMPLING_RATE: '1',
+                    PINPOINT_FEATURES_URI_STATS_TIME_WINDOW: '1000'
                 }),
             }
         )
@@ -228,7 +232,7 @@ test('fetch http://127.0.0.1:3000/', async (t) => {
         t.ok(span, 'received span from Next.js request')
         t.equal(span.getAcceptevent().getRpc(), '/', 'rpc should be root path')
 
-        await new Promise(resolve => setTimeout(resolve, 6000))
+        await new Promise(resolve => setTimeout(resolve, 3000))
 
         const uriStats = receivedStats.flatMap(stat => {
             const agentUriStat = stat.getAgenturistat ? stat.getAgenturistat() : null
@@ -244,6 +248,70 @@ test('fetch http://127.0.0.1:3000/', async (t) => {
         } else {
             t.pass('Uri stats was not recorded as expected')
         }
+    } catch (err) {
+        t.fail(err.message)
+    }
+    t.end()
+})
+
+test('fetch /api/custom-uri', async (t) => {
+    receivedSpans = []
+    receivedStats = []
+    try {
+        const response = await fetch('http://127.0.0.1:3000/api/custom-uri')
+        t.equal(response.status, 200, '/api/custom-uri responds with 200')
+
+        const span = await waitForSpan((s) => {
+            const rpc = s.getAcceptevent()?.getRpc()
+            return rpc && rpc.includes('/api/custom-uri')
+        }, 10000)
+
+        t.ok(span, 'received span for custom uri request')
+
+        await new Promise(resolve => setTimeout(resolve, 3000))
+
+        const uriStats = receivedStats.flatMap(stat => {
+            const agentUriStat = stat.getAgenturistat ? stat.getAgenturistat() : null
+            if (agentUriStat) {
+                return agentUriStat.getEachuristatList().map(each => each.getUri())
+            }
+            return []
+        })
+
+        t.comment(`Received URI Stats count: ${uriStats.length}`)
+        if (uriStats.length > 0) {
+            t.ok(uriStats.includes('/user/input/uri/from/pages'), 'should record /user/input/uri/from/pages in uri stats')
+        } else {
+            t.fail('Uri stats should be recorded')
+        }
+    } catch (err) {
+        t.fail(err.message)
+    }
+    t.end()
+})
+
+test('fetch /api/error-500', async (t) => {
+    receivedSpans = []
+    try {
+        const response = await fetch('http://127.0.0.1:3000/api/error-500')
+        t.equal(response.status, 500, '/api/error-500 responds with 500')
+
+        const span = await waitForSpan((s) => {
+            const rpc = s.getAcceptevent()?.getRpc()
+            return rpc && rpc.includes('/api/error-500')
+        }, 10000)
+
+        t.ok(span, 'received span for error request')
+        t.equal(span.getErr(), 1, 'span should be marked as error')
+
+        const annotations = span.getAnnotationList()
+        const statusCodeAnnotation = annotations.find(ann => ann.getKey() === AnnotationKey.HTTP_STATUS_CODE.getCode())
+
+        t.ok(statusCodeAnnotation, 'should have HTTP status code annotation')
+        if (statusCodeAnnotation) {
+            t.equal(statusCodeAnnotation.getValue().getIntvalue(), 500, 'status code annotation value should be 500')
+        }
+
     } catch (err) {
         t.fail(err.message)
     }

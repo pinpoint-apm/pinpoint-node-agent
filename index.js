@@ -11,7 +11,7 @@ const AgentInfo = require('./lib/data/dto/agent-info')
 const { ConfigBuilder } = require('./lib/config-builder')
 const { LogBuilder } = require('./lib/utils/log/log-builder')
 const logger = require('./lib/utils/log/logger')
-const { initializeStats, getUriStatsRepository } = require('./lib/metric/uri-stats')
+const { makeStatsRepository } = require('./lib/metric/uri-stats')
 const { UriStatsMonitor } = require('./lib/metric/uri-stats-monitor')
 
 const config = new ConfigBuilder().build()
@@ -21,8 +21,8 @@ const agent = new AgentBuilder(agentInfo)
                 .setConfig(config)
                 .setLogger(defaultLogger)
                 .addService((dataSender) => {
-                    initializeStats(config)
-                    const statsMonitor = new UriStatsMonitor(dataSender, getUriStatsRepository())
+                    const repository = makeStatsRepository(config)
+                    const statsMonitor = new UriStatsMonitor(dataSender, repository)
                     statsMonitor.start()
                     return {
                         shutdown: function () {

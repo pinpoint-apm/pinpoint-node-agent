@@ -132,8 +132,9 @@ test('koa should record handler registered with pattern route', (t) => {
     ctx.body = 'ok pattern'
 
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.uriTemplate, PATH, 'uriTemplate recorded for pattern route')
-      t.equal(trace.spanBuilder.httpMethod, 'GET', 'httpMethod recorded when flag enabled')
+      const traceRoot = trace.spanBuilder.getTraceRoot()
+      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate recorded for pattern route')
+      t.equal(traceRoot.getEnricher('uriStats.method'), 'GET', 'httpMethod recorded when flag enabled')
     })
   })
 
@@ -165,8 +166,9 @@ test('koa should skip uri stats when isUriStatsEnabled is false', (t) => {
     ctx.body = 'ok uri off'
 
     agent.callbackTraceClose((trace) => {
-      t.notOk(trace.spanBuilder.uriTemplate, 'uriTemplate not recorded when uri stats disabled')
-      t.notOk(trace.spanBuilder.httpMethod, 'httpMethod not recorded when uri stats disabled')
+      const traceRoot = trace.spanBuilder.getTraceRoot()
+      t.ok(traceRoot.getEnricher('uriStats.uriTemplate'), 'uriTemplate not recorded when uri stats disabled')
+      t.ok(traceRoot.getEnricher('uriStats.method'), 'httpMethod not recorded when uri stats disabled')
       server.close()
     })
   })
@@ -196,8 +198,9 @@ test('koa should keep uriTemplate but skip httpMethod when isUriStatsHttpMethodE
     ctx.body = 'ok uri method off'
 
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.uriTemplate, PATH, 'uriTemplate recorded when uri stats enabled')
-      t.notOk(trace.spanBuilder.httpMethod, 'httpMethod not recorded when flag disabled')
+      const traceRoot = trace.spanBuilder.getTraceRoot()
+      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate recorded when uri stats enabled')
+      t.equal(traceRoot.getEnricher('uriStats.method'), 'GET', 'httpMethod not recorded when flag disabled')
       t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'status code annotation exists')
       server.close()
     })
@@ -228,8 +231,9 @@ test('koa should record uriTemplate and httpMethod in router', (t) => {
     ctx.body = 'ok pattern'
 
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.uriTemplate, PATH, 'records uriTemplate')
-      t.equal(trace.spanBuilder.httpMethod, 'GET', 'records httpMethod')
+      const traceRoot = trace.spanBuilder.getTraceRoot()
+      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'records uriTemplate')
+      t.equal(traceRoot.getEnricher('uriStats.method'), 'GET', 'records httpMethod')
     })
   })
 

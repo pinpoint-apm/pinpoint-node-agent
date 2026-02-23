@@ -7,6 +7,7 @@
 const test = require('tape')
 const { ConfigBuilder } = require('../lib/config-builder')
 const path = require('path')
+const { UriStatsConfigBuilder } = require('../lib/metric/uri-stats-config-builder')
 
 test('Agent ID required field', function (t) {
   t.plan(1)
@@ -278,9 +279,9 @@ test('uri config is preserved', (t) => {
     })
   })
 
-  const conf = new ConfigBuilder().setDefaultJson(defaultJson).build()
-  t.equal(conf.features.uriStats.capacity, 500, 'uriStats capacity should be preserved')
-  t.equal(conf.features.uriStats.httpMethod, true, 'uriStats httpMethod flag should be preserved')
+  const conf = new UriStatsConfigBuilder(new ConfigBuilder().setDefaultJson(defaultJson).build()).build()
+  t.equal(conf.capacity, 500, 'uriStats capacity should be preserved')
+  t.equal(conf.httpMethod, true, 'uriStats httpMethod flag should be preserved')
 })
 
 test('uriStats is undefined when URI environment variables are not set', (t) => {
@@ -289,8 +290,8 @@ test('uriStats is undefined when URI environment variables are not set', (t) => 
   delete process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD
   delete process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY
 
-  const conf = new ConfigBuilder().build()
-  t.equal(conf.features.uriStats, undefined, 'uriStats should be undefined when environment variables are not set')
+  const conf = new UriStatsConfigBuilder(new ConfigBuilder().build()).build()
+  t.equal(conf.uriStats, undefined, 'uriStats should be undefined when environment variables are not set')
   t.equal(conf.getUriStatsCapacity(), 1000, 'getUriStatsCapacity should fall back to 1000 when uriStats is undefined')
 })
 
@@ -300,9 +301,9 @@ test('uriStats preserves httpMethod only when capacity not set', (t) => {
   process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD = 'true'
   delete process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY
 
-  const conf = new ConfigBuilder().build()
-  t.equal(conf.features.uriStats.httpMethod, true, 'uriStats httpMethod should respect env value')
-  t.equal(conf.features.uriStats.capacity, undefined, 'uriStats capacity remains undefined when not set')
+  const conf = new UriStatsConfigBuilder(new ConfigBuilder().build()).build()
+  t.equal(conf.httpMethod, true, 'uriStats httpMethod should respect env value')
+  t.equal(conf.capacity, 1000, 'uriStats capacity remains undefined when not set')
   t.equal(conf.getUriStatsCapacity(), 1000, 'getUriStatsCapacity should fall back to 1000 when capacity is undefined but uriStats exists')
   t.equal(conf.isUriStatsEnabled(), true, 'isUriStatsEnabled should be true when httpMethod is set')
 
@@ -315,9 +316,9 @@ test('uriStats preserves capacity only when httpMethod not set', (t) => {
   process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY = '321'
   delete process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD
 
-  const conf = new ConfigBuilder().build()
-  t.equal(conf.features.uriStats.capacity, 321, 'uriStats capacity should respect env value')
-  t.equal(conf.features.uriStats.httpMethod, undefined, 'uriStats httpMethod remains undefined when not set')
+  const conf = new UriStatsConfigBuilder(new ConfigBuilder().build()).build()
+  t.equal(conf.capacity, 321, 'uriStats capacity should respect env value')
+  t.equal(conf.httpMethod, undefined, 'uriStats httpMethod remains undefined when not set')
   t.equal(conf.isUriStatsEnabled(), true, 'isUriStatsEnabled should be true when capacity is set')
 
   delete process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY
@@ -329,10 +330,10 @@ test('uriStats capacity defaults to 1000 when env capacity is invalid', (t) => {
   process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD = 'true'
   process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY = 'abc'
 
-  const conf = new ConfigBuilder().build()
-  t.equal(conf.features.uriStats.capacity, 1000, 'invalid capacity should be sanitized to default 1000')
+  const conf = new UriStatsConfigBuilder(new ConfigBuilder().build()).build()
+  t.equal(conf.capacity, 1000, 'invalid capacity should be sanitized to default 1000')
   t.equal(conf.getUriStatsCapacity(), 1000, 'getUriStatsCapacity returns 1000 when capacity is invalid')
-  t.equal(conf.features.uriStats.httpMethod, true, 'httpMethod flag should be preserved when capacity is sanitized')
+  t.equal(conf.httpMethod, true, 'httpMethod flag should be preserved when capacity is sanitized')
   t.equal(conf.isUriStatsEnabled(), true, 'uriStats stays enabled when httpMethod is set')
 
   delete process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD
@@ -403,10 +404,10 @@ test('uriStats useUserInput configuration', (t) => {
   t.plan(2)
 
   process.env.PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT = 'true'
-  const conf = new ConfigBuilder().build()
+  const conf = new UriStatsConfigBuilder().build()
   t.equal(conf.isUriStatsUseUserInput(), true, 'useUserInput should be true when set via env')
 
   delete process.env.PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT
-  const confDefault = new ConfigBuilder().build()
+  const confDefault = new UriStatsConfigBuilder().build()
   t.equal(confDefault.isUriStatsUseUserInput(), false, 'useUserInput should be false by default')
 })

@@ -13,15 +13,18 @@ const { LogBuilder } = require('./lib/utils/log/log-builder')
 const logger = require('./lib/utils/log/logger')
 const { makeStatsRepository } = require('./lib/metric/uri-stats')
 const { UriStatsMonitor } = require('./lib/metric/uri-stats-monitor')
+const { UriStatsConfigBuilder } = require('./lib/metric/uri-stats-config-builder')
 
 const config = new ConfigBuilder().build()
+const uriStatsConfig = new UriStatsConfigBuilder(config).build()
+
 const agentInfo = AgentInfo.make(config)
 const defaultLogger = logger.getLogger(LogBuilder.createDefaultLogBuilder().setConfig(config).build())
 const agent = new AgentBuilder(agentInfo)
                 .setConfig(config)
                 .setLogger(defaultLogger)
                 .addService((dataSender) => {
-                    const repository = makeStatsRepository(config)
+                    const repository = makeStatsRepository(uriStatsConfig)
                     const statsMonitor = new UriStatsMonitor(dataSender, repository)
                     statsMonitor.start()
                     return {

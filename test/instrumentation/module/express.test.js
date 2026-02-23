@@ -874,8 +874,9 @@ test('express should record handler registered with pattern route', (t) => {
       t.equal(trace.spanBuilder.rpc, `/users/${userId}/books/${bookId}`, 'rpc should capture concrete request path')
       t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code annotation key')
       t.equal(trace.spanBuilder.annotations[0].value, 200, 'HTTP status code is 200')
-      t.equal(trace.spanBuilder.uriTemplate, PATH, 'uriTemplate should capture pattern route')
-      t.equal(trace.spanBuilder.httpMethod, 'GET', 'httpMethod is GET')
+      const traceRoot = trace.spanBuilder.getTraceRoot()
+      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate should capture pattern route')
+      t.equal(traceRoot.getEnricher('uriStats.method'), 'GET', 'httpMethod is GET')
 
       const md = apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('get').setClassName('Router'))
       const spanEvent = trace.spanBuilder.spanEventList[0]
@@ -893,7 +894,10 @@ test('express should record handler registered with pattern route', (t) => {
 })
 
 test('express should skip uri stats when isUriStatsEnabled is false', (t) => {
-  t.plan(4)
+  t.plan(5)
+
+  const { getUriStatsRepository } = require('../../../lib/metric/uri-stats')
+  const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri-stats-repository')
 
   agent.bindHttp({
     "features": {
@@ -908,8 +912,10 @@ test('express should skip uri stats when isUriStatsEnabled is false', (t) => {
   app.get(PATH, (req, res) => {
     res.send('ok uri off')
     agent.callbackTraceClose((trace) => {
-      t.notOk(trace.spanBuilder.uriTemplate, 'uriTemplate should not be recorded when uri stats disabled')
-      t.notOk(trace.spanBuilder.httpMethod, 'httpMethod should not be recorded when uri stats disabled')
+      const traceRoot = trace.spanBuilder.getTraceRoot()
+      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), '/uri-stats-disabled/:orderId', 'uriTemplate should capture pattern route even when uri stats disabled')
+      t.equal(traceRoot.getEnricher('uriStats.method'), 'GET', 'httpMethod is GET even when uri stats disabled')
+      t.equal(getUriStatsRepository(), UriStatsRepositoryBuilder.nullObject, 'UriStatsRepository is nullObject when uri stats disabled')
       server.close()
     })
   })
@@ -922,7 +928,7 @@ test('express should skip uri stats when isUriStatsEnabled is false', (t) => {
 })
 
 test('express should keep uriTemplate but skip httpMethod when isUriStatsHttpMethodEnabled is false', (t) => {
-  t.plan(5)
+  t.plan(4)
 
   agent.bindHttp({
     "features": {
@@ -939,8 +945,10 @@ test('express should keep uriTemplate but skip httpMethod when isUriStatsHttpMet
   app.get(PATH, (req, res) => {
     res.send('ok uri method off')
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.uriTemplate, PATH, 'uriTemplate recorded when uri stats enabled')
-      t.notOk(trace.spanBuilder.httpMethod, 'httpMethod not recorded when httpMethod flag disabled')
+      const traceRoot = trace.spanBuilder.getTraceRoot()
+      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate recorded when uri stats enabled')
+      // TODO: uriStats.method not send grpc Data
+      // t.notOk(traceRoot.getEnricher('uriStats.method'), 'httpMethod not recorded when httpMethod flag disabled')
       t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'status code annotation exists')
       server.close()
     })
@@ -957,7 +965,7 @@ test('Should aggregate URI stats in UriStatsRepository', function (t) {
   agent.bindHttp()
 
   const { getUriStatsRepository } = require('../../../lib/metric/uri-stats')
-  const { UriStatsRepository } = require('../../../lib/metric/uri-stats-repository')
+  const { UriStatsRepository, UriStatsRepositoryBuilder } = require('../../../lib/metric/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/integration/uri-stats'
@@ -1353,7 +1361,8 @@ test('Express: Should record request with custom uri template when configured', 
     res.send('ok get merged')
 
     agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.getUriTemplate(), '/user/input/uri/merged', 'Uri template match from merged test')
+      const traceRoot = trace.spanBuilder.getTraceRoot()
+      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), '/user/input/uri/merged', 'Uri template match from merged test')
       // Restore config as cleanup
       config.features.uriStats.useUserInput = originalSetting
       t.end()

@@ -32,6 +32,5 @@ export class ConfigBuilder {
 
     setDefaultJson(json: ConfigInput): this
     setUserDefinedJson(json: ConfigInput): this
-    addHandler(handler: ConfigHandler): this
     build(): Config
 }

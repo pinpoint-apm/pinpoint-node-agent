@@ -167,8 +167,8 @@ test('koa should skip uri stats when isUriStatsEnabled is false', (t) => {
 
     agent.callbackTraceClose((trace) => {
       const traceRoot = trace.spanBuilder.getTraceRoot()
-      t.ok(traceRoot.getEnricher('uriStats.uriTemplate'), 'uriTemplate not recorded when uri stats disabled')
-      t.ok(traceRoot.getEnricher('uriStats.method'), 'httpMethod not recorded when uri stats disabled')
+      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate recorded in TraceRoot when uri stats disabled')
+      t.equal(traceRoot.getEnricher('uriStats.method'), 'GET', 'httpMethod recorded in TraceRoot when uri stats disabled')
       server.close()
     })
   })
@@ -182,7 +182,7 @@ test('koa should skip uri stats when isUriStatsEnabled is false', (t) => {
   })
 })
 
-test('koa should keep uriTemplate but skip httpMethod when isUriStatsHttpMethodEnabled is false', (t) => {
+test('koa should keep uriTemplate and httpMethod in TraceRoot when isUriStatsHttpMethodEnabled is false', (t) => {
   t.plan(5)
 
   agent.bindHttp({
@@ -200,7 +200,7 @@ test('koa should keep uriTemplate but skip httpMethod when isUriStatsHttpMethodE
     agent.callbackTraceClose((trace) => {
       const traceRoot = trace.spanBuilder.getTraceRoot()
       t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate recorded when uri stats enabled')
-      t.equal(traceRoot.getEnricher('uriStats.method'), 'GET', 'httpMethod not recorded when flag disabled')
+      t.equal(traceRoot.getEnricher('uriStats.method'), 'GET', 'httpMethod recorded in TraceRoot when flag disabled')
       t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'status code annotation exists')
       server.close()
     })

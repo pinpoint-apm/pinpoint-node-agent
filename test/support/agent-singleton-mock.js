@@ -22,6 +22,7 @@ const AgentInfo = require('../../lib/data/dto/agent-info')
 const { ConfigBuilder } = require('../../lib/config-builder')
 const { makeStatsRepository } = require('../../lib/metric/uri-stats')
 const { UriStatsConfigBuilder } = require('../../lib/metric/uri-stats-config-builder')
+const { SpanRecorderEnricher } = require('../../lib/context/trace/enricher/span-recorder-enricher')
 
 let traces = []
 const resetTraces = () => {
@@ -97,6 +98,7 @@ const agentBuilder = new AgentBuilder(agentInfo)
     .addService(() => {
         makeStatsRepository(new UriStatsConfigBuilder(config).build())
     })
+    .addEnricher(new SpanRecorderEnricher(new UriStatsConfigBuilder(config).build()))
 const agent = agentBuilder.build()
 
 class MockAgent {
@@ -113,8 +115,9 @@ class MockAgent {
             json = Object.assign({}, require('../pinpoint-config-test.json'), json)
         }
         const config = new ConfigBuilder(json).build()
+        const uriStatsConfig = new UriStatsConfigBuilder(config).build()
         this.config = config
-        makeStatsRepository(new UriStatsConfigBuilder(config).build())
+        makeStatsRepository(uriStatsConfig)
 
         this.agentInfo = AgentInfo.make(config)
 
@@ -125,6 +128,8 @@ class MockAgent {
 
         this.traceContext.traceSampler = new TraceSampler(this.agentInfo, config)
         this.traceContext.config = config
+        this.traceContext.traceCompletionEnrichers = []
+        this.traceContext.spanRecorderEnricher = uriStatsConfig.isUriStatsEnabled() ? new SpanRecorderEnricher(uriStatsConfig) : null
 
         const dataSender = dataSenderMock(this.config, this.agentInfo, grpcDataSender)
         this.traceContext.dataSender = dataSender

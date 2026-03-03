@@ -1342,18 +1342,16 @@ test('Functional Test: SendSpan with success and failure', (t) => {
 })
 
 test('Express: Should record request with custom uri template when configured', function (t) {
-  agent.bindHttp()
+  agent.bindHttp({
+    features: {
+      uriStats: {
+        useUserInput: true
+      }
+    }
+  })
 
   const app = new express()
   const PATH = '/custom-uri-merge-test'
-
-  // Dynamic config update
-  const config = agent.getTraceContext().getConfig()
-  if (!config.features) config.features = {}
-  if (!config.features.uriStats) config.features.uriStats = {}
-
-  const originalSetting = config.features.uriStats.useUserInput
-  config.features.uriStats.useUserInput = true
 
   app.get(PATH, async (req, res) => {
     // Simulate user input for uri template
@@ -1363,14 +1361,50 @@ test('Express: Should record request with custom uri template when configured', 
     agent.callbackTraceClose((trace) => {
       const traceRoot = trace.spanBuilder.getTraceRoot()
       t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), '/user/input/uri/merged', 'Uri template match from merged test')
-      // Restore config as cleanup
-      config.features.uriStats.useUserInput = originalSetting
       t.end()
     })
   })
 
   // Start server on a different port to avoid conflict
   const port = TEST_ENV.port + 1
+  const getServerUrl = (path) => `http://${TEST_ENV.host}:${port}${path}`
+
+  const server = app.listen(port, async () => {
+    try {
+      await axios.get(getServerUrl(PATH))
+    } catch (error) {
+      t.fail(error.message)
+      t.end()
+    } finally {
+      server.close()
+    }
+  })
+})
+
+test('Express: Should not override uri template from user input when useUserInput is false', function (t) {
+  agent.bindHttp({
+    features: {
+      uriStats: {
+        useUserInput: false
+      }
+    }
+  })
+
+  const app = new express()
+  const PATH = '/custom-uri-no-override'
+
+  app.get(PATH, async (req, res) => {
+    req['pinpoint.metric.uri-template'] = '/user/input/should-not-override'
+    res.send('ok no override')
+
+    agent.callbackTraceClose((trace) => {
+      const traceRoot = trace.spanBuilder.getTraceRoot()
+      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'Route template should be preserved when useUserInput is false')
+      t.end()
+    })
+  })
+
+  const port = TEST_ENV.port + 2
   const getServerUrl = (path) => `http://${TEST_ENV.host}:${port}${path}`
 
   const server = app.listen(port, async () => {

@@ -284,15 +284,19 @@ test('uri config is preserved', (t) => {
   t.equal(conf.httpMethod, true, 'uriStats httpMethod flag should be preserved')
 })
 
-test('uriStats is undefined when URI environment variables are not set', (t) => {
-  t.plan(2)
+test('uriStats is disabled when URI environment variables are not set', (t) => {
+  t.plan(5)
 
   delete process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD
   delete process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY
+  delete process.env.PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT
 
   const conf = new UriStatsConfigBuilder(new ConfigBuilder().build()).build()
-  t.equal(conf.uriStats, undefined, 'uriStats should be undefined when environment variables are not set')
-  t.equal(conf.getUriStatsCapacity(), 1000, 'getUriStatsCapacity should fall back to 1000 when uriStats is undefined')
+  t.equal(conf.isUriStatsEnabled(), false, 'uriStats should be disabled when URI env vars are not set')
+  t.equal(conf.httpMethod, undefined, 'uriStats httpMethod should be undefined when not configured')
+  t.equal(conf.capacity, undefined, 'uriStats capacity should be undefined when not configured')
+  t.equal(conf.useUserInput, undefined, 'uriStats useUserInput should be undefined when not configured')
+  t.equal(conf.getUriStatsCapacity(), 1000, 'getUriStatsCapacity should fall back to 1000 when uriStats is disabled')
 })
 
 test('uriStats preserves httpMethod only when capacity not set', (t) => {

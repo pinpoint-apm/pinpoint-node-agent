@@ -31,6 +31,7 @@ const activeRequestRepository = require('../../lib/metric/active-request-reposit
 const AgentStatsMonitor = require('../../lib/metric/agent-stats-monitor')
 const { UriStatsSnapshot } = require('../../lib/metric/uri-stats-snapshot')
 const { UriStatsInfo } = require('../../lib/metric/uri-stats-info-builder')
+const SpanRecorder = require('../../lib/context/trace/span-recorder')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -83,7 +84,8 @@ test('Should send span', function (t) {
     traceRoot.getShared().maskErrorCode(1)
     const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
     const repository = new SpanRepository(spanChunkBuilder, dataSender, agent.agentInfo)
-    const trace = new Trace(spanBuilder, repository, agent.config)
+    const spanRecorder = new SpanRecorder(spanBuilder, agent.config)
+    const trace = new Trace(spanBuilder, repository, spanRecorder)
 
     const spanEventRecorder = trace.traceBlockBegin()
     spanEventRecorder.spanEventBuilder.setSequence(10)
@@ -321,7 +323,8 @@ test('sendSpan', (t) => {
     const spanBuilder = new SpanBuilder(traceRoot)
     const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
     const repository = new SpanRepository(spanChunkBuilder, dataSender, agent.agentInfo)
-    const trace = new Trace(spanBuilder, repository, agent.config)
+    const spanRecorder = new SpanRecorder(spanBuilder, agent.config)
+    const trace = new Trace(spanBuilder, repository, spanRecorder)
     trace.spanRecorder.recordApi(defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor)
     trace.spanRecorder.recordServiceType(serviceType.node)
     trace.spanRecorder.recordRpc('/')

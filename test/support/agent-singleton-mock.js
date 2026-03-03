@@ -21,6 +21,7 @@ const { AgentBuilder } = require('../../lib/agent-builder')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const { ConfigBuilder } = require('../../lib/config-builder')
 const { makeStatsRepository } = require('../../lib/metric/uri-stats')
+const { UriStatsConfigBuilder } = require('../../lib/metric/uri-stats-config-builder')
 
 let traces = []
 const resetTraces = () => {
@@ -94,7 +95,7 @@ const agentBuilder = new AgentBuilder(agentInfo)
     .disablePingScheduler()
     .disableStatsScheduler()
     .addService(() => {
-        makeStatsRepository(config)
+        makeStatsRepository(new UriStatsConfigBuilder(config).build())
     })
 const agent = agentBuilder.build()
 
@@ -113,7 +114,7 @@ class MockAgent {
         }
         const config = new ConfigBuilder(json).build()
         this.config = config
-        makeStatsRepository(config)
+        makeStatsRepository(new UriStatsConfigBuilder(config).build())
 
         this.agentInfo = AgentInfo.make(config)
 

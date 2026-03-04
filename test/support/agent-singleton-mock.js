@@ -20,9 +20,10 @@ const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const { AgentBuilder } = require('../../lib/agent-builder')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const { ConfigBuilder } = require('../../lib/config-builder')
-const { makeStatsRepository } = require('../../lib/metric/uri-stats')
+const { UriStatsRepositoryBuilder } = require('../../lib/metric/uri-stats-repository')
 const { UriStatsConfigBuilder } = require('../../lib/metric/uri-stats-config-builder')
 const { SpanRecorderEnricher } = require('../../lib/context/trace/enricher/span-recorder-enricher')
+const { TraceCompletionEnricher } = require('../../lib/context/trace/enricher/trace-completion-enricher')
 
 let traces = []
 const resetTraces = () => {
@@ -95,10 +96,8 @@ const agentBuilder = new AgentBuilder(agentInfo)
     .setDataSender(dataSenderMock(config, agentInfo))
     .disablePingScheduler()
     .disableStatsScheduler()
-    .addService(() => {
-        makeStatsRepository(new UriStatsConfigBuilder(config).build())
-    })
     .addEnricher(new SpanRecorderEnricher(new UriStatsConfigBuilder(config).build()))
+    .addEnricher(new TraceCompletionEnricher(new UriStatsRepositoryBuilder(new UriStatsConfigBuilder(config).build()).build()))
 const agent = agentBuilder.build()
 
 class MockAgent {
@@ -116,8 +115,8 @@ class MockAgent {
         }
         const config = new ConfigBuilder(json).build()
         const uriStatsConfig = new UriStatsConfigBuilder(config).build()
+        const uriStatsRepository = new UriStatsRepositoryBuilder(uriStatsConfig).build()
         this.config = config
-        makeStatsRepository(uriStatsConfig)
 
         this.agentInfo = AgentInfo.make(config)
 
@@ -128,7 +127,9 @@ class MockAgent {
 
         this.traceContext.traceSampler = new TraceSampler(this.agentInfo, config)
         this.traceContext.config = config
-        this.traceContext.traceCompletionEnrichers = []
+        this.traceContext.traceCompletionEnrichers = uriStatsConfig.isUriStatsEnabled()
+            ? [new TraceCompletionEnricher(uriStatsRepository)]
+            : []
         this.traceContext.spanRecorderEnricher = uriStatsConfig.isUriStatsEnabled() ? new SpanRecorderEnricher(uriStatsConfig) : null
 
         const dataSender = dataSenderMock(this.config, this.agentInfo, grpcDataSender)
@@ -226,10 +227,19 @@ class MockAgent {
 
     callbackTraceClose(callback) {
         const trace = this.traceContext.currentTraceObject()
-        const origin = trace.close
+        if (!trace || trace[closedTraceWrapped]) {
+            return
+        }
+
+        const originClose = trace.close
+        let callbackCalled = false
         trace.close = function () {
-            origin.apply(trace, arguments)
-            callback(trace)
+            const result = originClose.apply(trace, arguments)
+            if (!callbackCalled) {
+                callbackCalled = true
+                callback(trace)
+            }
+            return result
         }
         trace[closedTraceWrapped] = true
     }

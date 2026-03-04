@@ -12,6 +12,7 @@ const Router = require('koa-router')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
+const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri-stats-repository')
 const http = require('http')
 const https = require('https')
 
@@ -22,6 +23,13 @@ const TEST_ENV = {
 }
 
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
+
+const getUriStatsRepository = () => {
+  const traceCompletionEnricher = agent.traceContext?.traceCompletionEnrichers?.find((enricher) => {
+    return enricher && typeof enricher.onComplete === 'function' && enricher.repository
+  })
+  return traceCompletionEnricher?.repository ?? UriStatsRepositoryBuilder.nullObject
+}
 
 const testName1 = 'koa-router1'
 test(`${testName1} Should record request in basic route koa.test.js`, function (t) {
@@ -151,8 +159,8 @@ test('koa should record handler registered with pattern route', (t) => {
   })
 })
 
-test('koa should skip uri stats when isUriStatsEnabled is false', (t) => {
-  t.plan(4)
+test('koa should disable uriTemplate/httpMethod enrichment and use null repository when isUriStatsEnabled is false', (t) => {
+  t.plan(5)
 
   agent.bindHttp({
     features: { uriStats: undefined }
@@ -167,8 +175,9 @@ test('koa should skip uri stats when isUriStatsEnabled is false', (t) => {
 
     agent.callbackTraceClose((trace) => {
       const traceRoot = trace.spanBuilder.getTraceRoot()
-      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate recorded in TraceRoot when uri stats disabled')
-      t.equal(traceRoot.getEnricher('uriStats.method'), 'GET', 'httpMethod recorded in TraceRoot when uri stats disabled')
+      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), undefined, 'uriTemplate should be undefined when uriStats is disabled')
+      t.equal(traceRoot.getEnricher('uriStats.method'), undefined, 'httpMethod should be undefined when uriStats is disabled')
+      t.equal(getUriStatsRepository(), UriStatsRepositoryBuilder.nullObject, 'UriStatsRepository should be nullObject when uriStats is disabled')
       server.close()
     })
   })
@@ -178,7 +187,7 @@ test('koa should skip uri stats when isUriStatsEnabled is false', (t) => {
   const server = app.listen(TEST_ENV.port, async () => {
     const result = await axios.get(getServerUrl('/uri-stats-disabled/123'))
     t.equal(result.status, 200, 'request responds 200')
-    t.equal(result.data, 'ok uri off', 'response data ok uri off')
+    t.equal(result.data, 'ok uri off', 'response data is ok uri off')
   })
 })
 
@@ -248,49 +257,65 @@ test('koa should record uriTemplate and httpMethod in router', (t) => {
 test('Should aggregate URI stats in UriStatsRepository for Koa', function (t) {
   agent.bindHttp()
 
-  const { getUriStatsRepository } = require('../../../lib/metric/uri-stats')
   const { UriStatsRepository } = require('../../../lib/metric/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/integration/uri-stats'
   const app = new Koa()
   const router = new Router()
+  let resolveTraceClosed
+  const traceClosed = new Promise((resolve) => {
+    resolveTraceClosed = resolve
+  })
 
   router.get(PATH, async (ctx) => {
     ctx.body = 'ok stats'
 
     agent.callbackTraceClose((trace) => {
-      const repository = getUriStatsRepository()
+      setImmediate(() => {
+        const repository = getUriStatsRepository()
 
-      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+        t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
 
-      const now = DateNow.now()
-      const timeWindow = 30000
-      const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+        const now = DateNow.now()
+        const timeWindow = 30000
+        const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
 
-      const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
-      t.ok(snapshot, 'Snapshot exists')
+        const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+        t.ok(snapshot, 'Snapshot exists')
 
-      if (snapshot) {
-        // Default: METHOD URI
-        const expectedKey = `GET ${PATH}`
-        const entry = snapshot.dataMap.get(expectedKey)
+        if (snapshot) {
+          // Default: METHOD URI
+          const expectedKey = `GET ${PATH}`
+          const entry = snapshot.dataMap.get(expectedKey)
 
-        t.ok(entry, `Entry for ${expectedKey} exists`)
-        if (entry) {
-          t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
+          t.ok(entry, `Entry for ${expectedKey} exists`)
+          if (entry) {
+            t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
+          }
         }
-      }
 
-      server.close()
-      t.end()
+        resolveTraceClosed()
+      })
     })
   })
 
   app.use(router.routes()).use(router.allowedMethods())
 
   const server = app.listen(TEST_ENV.port, async () => {
-    await axios.get(getServerUrl(PATH))
+    try {
+      await axios.get(getServerUrl(PATH), {
+        timeout: 3000,
+        httpAgent: new http.Agent({ keepAlive: false }),
+        httpsAgent: new https.Agent({ keepAlive: false }),
+      })
+      await traceClosed
+    } catch (e) {
+      t.fail(e)
+    } finally {
+      server.close()
+      t.end()
+    }
   })
 })
 
@@ -304,48 +329,64 @@ test('Should aggregate URI stats without HTTP method when disabled in config for
     }
   })
 
-  const { getUriStatsRepository } = require('../../../lib/metric/uri-stats')
   const { UriStatsRepository } = require('../../../lib/metric/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/integration/uri-stats/no-method'
   const app = new Koa()
   const router = new Router()
+  let resolveTraceClosed
+  const traceClosed = new Promise((resolve) => {
+    resolveTraceClosed = resolve
+  })
 
   router.get(PATH, async (ctx) => {
     ctx.body = 'ok stats no method'
 
     agent.callbackTraceClose((trace) => {
-      const repository = getUriStatsRepository()
+      setImmediate(() => {
+        const repository = getUriStatsRepository()
 
-      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+        t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
 
-      const now = DateNow.now()
-      const timeWindow = 30000
-      const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+        const now = DateNow.now()
+        const timeWindow = 30000
+        const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
 
-      const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
-      t.ok(snapshot, 'Snapshot exists')
+        const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+        t.ok(snapshot, 'Snapshot exists')
 
-      if (snapshot) {
-        // Disabled: URI
-        const expectedKey = PATH
-        const entry = snapshot.dataMap.get(expectedKey)
+        if (snapshot) {
+          // Disabled: URI
+          const expectedKey = PATH
+          const entry = snapshot.dataMap.get(expectedKey)
 
-        t.ok(entry, `Entry for ${expectedKey} exists`)
-        if (entry) {
-          t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
+          t.ok(entry, `Entry for ${expectedKey} exists`)
+          if (entry) {
+            t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
+          }
         }
-      }
 
-      server.close()
-      t.end()
+        resolveTraceClosed()
+      })
     })
   })
 
   app.use(router.routes()).use(router.allowedMethods())
 
   const server = app.listen(TEST_ENV.port, async () => {
-    await axios.get(getServerUrl(PATH))
+    try {
+      await axios.get(getServerUrl(PATH), {
+        timeout: 3000,
+        httpAgent: new http.Agent({ keepAlive: false }),
+        httpsAgent: new https.Agent({ keepAlive: false }),
+      })
+      await traceClosed
+    } catch (e) {
+      t.fail(e)
+    } finally {
+      server.close()
+      t.end()
+    }
   })
 })

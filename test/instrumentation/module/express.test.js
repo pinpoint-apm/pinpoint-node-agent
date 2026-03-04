@@ -22,13 +22,20 @@ const { beforeSpecificOne, StatOnlyFunctionalTestableDataSource, DataSourceCallC
 const { UriStatsSnapshot } = require('../../../lib/metric/uri-stats-snapshot')
 const { UriStatsInfo } = require('../../../lib/metric/uri-stats-info-builder')
 const { ConfigBuilder } = require('../../../lib/config-builder')
-const { getUriStatsRepository } = require('../../../lib/metric/uri-stats')
+const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri-stats-repository')
 const { UriStatsMonitor } = require('../../../lib/metric/uri-stats-monitor')
 
 const TEST_ENV = {
   host: 'localhost', port: 5006
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
+
+const getUriStatsRepository = () => {
+  const traceCompletionEnricher = agent.traceContext?.traceCompletionEnrichers?.find((enricher) => {
+    return enricher && typeof enricher.onComplete === 'function' && enricher.repository
+  })
+  return traceCompletionEnricher?.repository ?? UriStatsRepositoryBuilder.nullObject
+}
 
 const testName1 = 'express1'
 test(`${testName1} Should record request in basic route`, function (t) {
@@ -893,11 +900,8 @@ test('express should record handler registered with pattern route', (t) => {
   })
 })
 
-test('express should skip uri stats when isUriStatsEnabled is false', (t) => {
+test('express should disable uriTemplate/httpMethod enrichment and use null repository when isUriStatsEnabled is false', (t) => {
   t.plan(5)
-
-  const { getUriStatsRepository } = require('../../../lib/metric/uri-stats')
-  const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri-stats-repository')
 
   agent.bindHttp({
     "features": {
@@ -913,9 +917,9 @@ test('express should skip uri stats when isUriStatsEnabled is false', (t) => {
     res.send('ok uri off')
     agent.callbackTraceClose((trace) => {
       const traceRoot = trace.spanBuilder.getTraceRoot()
-      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), '/uri-stats-disabled/:orderId', 'uriTemplate should capture pattern route even when uri stats disabled')
-      t.equal(traceRoot.getEnricher('uriStats.method'), 'GET', 'httpMethod is GET even when uri stats disabled')
-      t.equal(getUriStatsRepository(), UriStatsRepositoryBuilder.nullObject, 'UriStatsRepository is nullObject when uri stats disabled')
+      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), undefined, 'uriTemplate should be undefined when uriStats is disabled')
+      t.equal(traceRoot.getEnricher('uriStats.method'), undefined, 'httpMethod should be undefined when uriStats is disabled')
+      t.equal(getUriStatsRepository(), UriStatsRepositoryBuilder.nullObject, 'UriStatsRepository should be nullObject when uriStats is disabled')
       server.close()
     })
   })
@@ -964,48 +968,57 @@ test('express should keep uriTemplate but skip httpMethod when isUriStatsHttpMet
 test('Should aggregate URI stats in UriStatsRepository', function (t) {
   agent.bindHttp()
 
-  const { getUriStatsRepository } = require('../../../lib/metric/uri-stats')
-  const { UriStatsRepository, UriStatsRepositoryBuilder } = require('../../../lib/metric/uri-stats-repository')
+  const { UriStatsRepository } = require('../../../lib/metric/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/integration/uri-stats'
   const app = new express()
+  let resolveTraceClosed
+  const traceClosed = new Promise((resolve) => {
+    resolveTraceClosed = resolve
+  })
 
   app.get(PATH, (req, res) => {
     res.send('ok stats')
 
     agent.callbackTraceClose((trace) => {
-      const repository = getUriStatsRepository()
+      setImmediate(() => {
+        const repository = getUriStatsRepository()
 
-      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+        t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
 
-      const now = DateNow.now()
-      const timeWindow = 30000
-      const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+        const now = DateNow.now()
+        const timeWindow = 30000
+        const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
 
-      const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
-      t.ok(snapshot, 'Snapshot exists')
+        const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+        t.ok(snapshot, 'Snapshot exists')
 
-      if (snapshot) {
-        const expectedKey = `GET ${PATH}`
-        const entry = snapshot.dataMap.get(expectedKey)
+        if (snapshot) {
+          const expectedKey = `GET ${PATH}`
+          const entry = snapshot.dataMap.get(expectedKey)
 
-        t.ok(entry, `Entry for ${expectedKey} exists`)
-        if (entry) {
-          t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
+          t.ok(entry, `Entry for ${expectedKey} exists`)
+          if (entry) {
+            t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
+          }
         }
-      }
-
-      server.close()
-      t.end()
+        resolveTraceClosed()
+      })
     })
   })
 
   const server = app.listen(TEST_ENV.port, async () => {
     try {
-      await axios.get(getServerUrl(PATH))
+      await axios.get(getServerUrl(PATH), {
+        timeout: 3000,
+        httpAgent: new http.Agent({ keepAlive: false }),
+        httpsAgent: new https.Agent({ keepAlive: false }),
+      })
+      await traceClosed
     } catch (e) {
       t.fail(e)
+    } finally {
       server.close()
       t.end()
     }
@@ -1022,47 +1035,56 @@ test('Should aggregate URI stats without HTTP method when disabled in config', f
     }
   })
 
-  const { getUriStatsRepository } = require('../../../lib/metric/uri-stats')
   const { UriStatsRepository } = require('../../../lib/metric/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/integration/uri-stats/no-method'
   const app = new express()
+  let resolveTraceClosed
+  const traceClosed = new Promise((resolve) => {
+    resolveTraceClosed = resolve
+  })
 
   app.get(PATH, (req, res) => {
     res.send('ok stats no method')
 
     agent.callbackTraceClose((trace) => {
-      const repository = getUriStatsRepository()
+      setImmediate(() => {
+        const repository = getUriStatsRepository()
 
-      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+        t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
 
-      const now = DateNow.now()
-      const timeWindow = 30000
-      const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+        const now = DateNow.now()
+        const timeWindow = 30000
+        const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
 
-      const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
-      t.ok(snapshot, 'Snapshot exists')
+        const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+        t.ok(snapshot, 'Snapshot exists')
 
-      // When httpMethod is disabled, the key should be just the PATH
-      const expectedKey = PATH
-      const entry = snapshot.dataMap.get(expectedKey)
+        // When httpMethod is disabled, the key should be just the PATH
+        const expectedKey = PATH
+        const entry = snapshot.dataMap.get(expectedKey)
 
-      t.ok(entry, `Entry for ${expectedKey} exists`)
-      if (entry) {
-        t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
-      }
-
-      server.close()
-      t.end()
+        t.ok(entry, `Entry for ${expectedKey} exists`)
+        if (entry) {
+          t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
+        }
+        resolveTraceClosed()
+      })
     })
   })
 
   const server = app.listen(TEST_ENV.port, async () => {
     try {
-      await axios.get(getServerUrl(PATH))
+      await axios.get(getServerUrl(PATH), {
+        timeout: 3000,
+        httpAgent: new http.Agent({ keepAlive: false }),
+        httpsAgent: new https.Agent({ keepAlive: false }),
+      })
+      await traceClosed
     } catch (e) {
       t.fail(e)
+    } finally {
       server.close()
       t.end()
     }

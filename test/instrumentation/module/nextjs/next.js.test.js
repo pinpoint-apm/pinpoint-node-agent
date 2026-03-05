@@ -290,6 +290,36 @@ test('fetch /api/custom-uri', async (t) => {
     t.end()
 })
 
+test('fetch /api/custom-uri with pinpoint-sampled=s0 should still record uri stats', async (t) => {
+    receivedSpans = []
+    receivedStats = []
+    try {
+        const response = await fetch('http://127.0.0.1:3000/api/custom-uri', {
+            headers: {
+                'pinpoint-sampled': 's0'
+            }
+        })
+        t.equal(response.status, 200, '/api/custom-uri responds with 200 when sampled is disabled from incoming header')
+
+        await new Promise(resolve => setTimeout(resolve, 3000))
+
+        const uriStats = receivedStats.flatMap(stat => {
+            const agentUriStat = stat.getAgenturistat ? stat.getAgenturistat() : null
+            if (agentUriStat) {
+                return agentUriStat.getEachuristatList().map(each => each.getUri())
+            }
+            return []
+        })
+
+        t.comment(`Received URI Stats count (disable trace): ${uriStats.length}`)
+        t.ok(uriStats.length > 0, 'uri stats should be recorded for DisableTrace request')
+        t.ok(uriStats.includes('/user/input/uri/from/pages'), 'DisableTrace should record /user/input/uri/from/pages in uri stats')
+    } catch (err) {
+        t.fail(err.message)
+    }
+    t.end()
+})
+
 test('fetch /api/error-500', async (t) => {
     receivedSpans = []
     try {

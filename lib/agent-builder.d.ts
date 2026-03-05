@@ -13,7 +13,7 @@ interface TraceObject {
 }
 
 interface TraceContext {
-  newTraceObject2(): TraceObject;
+  newTraceObject(): TraceObject;
   currentTraceObject(): TraceObject | null;
   completeTraceObject(trace: TraceObject): void;
 }

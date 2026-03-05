@@ -19,7 +19,7 @@ test('Should create continued trace and add span info', function (t) {
 
   const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config)
   const traceId = new TraceIdBuilder(agent.agentInfo.getAgentId(), agent.agentInfo.getAgentStartTime(), '9').build()
-  const trace = traceContext.continueTraceObject2(traceId)
+  const trace = traceContext.continueTraceObject(traceId)
   localStorage.run(trace, () => {
     t.equal(traceContext.currentTraceObject().getTraceId(), traceId, `traceId is ${traceId}`)
 
@@ -37,7 +37,7 @@ test('Should begin/end trace block asynchronously', async function (t) {
 
   // start trace and write span info
   const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config)
-  const startedTrace = traceContext.newTraceObject2('/')
+  const startedTrace = traceContext.newTraceObject('/')
 
   localStorage.run(startedTrace, () => {
     const spanRecorder = startedTrace.spanRecorder
@@ -67,7 +67,7 @@ test('Should complete trace ', async function (t) {
   t.plan(1)
   agent.bindHttp()
   const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config)
-  const trace = traceContext.newTraceObject2('/')
+  const trace = traceContext.newTraceObject('/')
 
   await new Promise(resolve => setTimeout(resolve, 501))
 

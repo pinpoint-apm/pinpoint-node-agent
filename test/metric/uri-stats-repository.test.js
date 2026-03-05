@@ -1,6 +1,6 @@
 const test = require('tape')
-const { UriStatsRepository } = require('../../lib/metric/uri-stats-repository')
-const { UriStatsInfo } = require('../../lib/metric/uri-stats-info-builder')
+const { UriStatsRepository } = require('../../lib/metric/uri/uri-stats-repository')
+const { UriStatsInfo } = require('../../lib/metric/uri/uri-stats-info-builder')
 const DateNow = require('../../lib/support/date-now')
 
 test('UriStatsRepository should store and rotate snapshots using DateNow', (t) => {

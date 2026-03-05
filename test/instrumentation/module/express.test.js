@@ -19,11 +19,11 @@ const { getTransactionId, getDisabledId } = require('../../../lib/context/trace/
 const grpc = require('@grpc/grpc-js')
 const services = require('../../../lib/data/v1/Service_grpc_pb')
 const { beforeSpecificOne, StatOnlyFunctionalTestableDataSource, DataSourceCallCountable } = require('../../../test/client/grpc-fixture')
-const { UriStatsSnapshot } = require('../../../lib/metric/uri-stats-snapshot')
-const { UriStatsInfo } = require('../../../lib/metric/uri-stats-info-builder')
+const { UriStatsSnapshot } = require('../../../lib/metric/uri/uri-stats-snapshot')
+const { UriStatsInfo } = require('../../../lib/metric/uri/uri-stats-info-builder')
 const { ConfigBuilder } = require('../../../lib/config-builder')
-const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri-stats-repository')
-const { UriStatsMonitor } = require('../../../lib/metric/uri-stats-monitor')
+const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
+const { UriStatsMonitor } = require('../../../lib/metric/uri/uri-stats-monitor')
 
 const TEST_ENV = {
   host: 'localhost', port: 5006
@@ -968,7 +968,7 @@ test('express should keep uriTemplate but skip httpMethod when isUriStatsHttpMet
 test('Should aggregate URI stats in UriStatsRepository', function (t) {
   agent.bindHttp()
 
-  const { UriStatsRepository } = require('../../../lib/metric/uri-stats-repository')
+  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/integration/uri-stats'
@@ -1035,7 +1035,7 @@ test('Should aggregate URI stats without HTTP method when disabled in config', f
     }
   })
 
-  const { UriStatsRepository } = require('../../../lib/metric/uri-stats-repository')
+  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/integration/uri-stats/no-method'

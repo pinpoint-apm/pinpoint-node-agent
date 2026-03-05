@@ -29,8 +29,8 @@ const http = require('http')
 const spanMessages = require('../../lib/data/v1/Span_pb')
 const activeRequestRepository = require('../../lib/metric/active-request-repository')
 const AgentStatsMonitor = require('../../lib/metric/agent-stats-monitor')
-const { UriStatsSnapshot } = require('../../lib/metric/uri-stats-snapshot')
-const { UriStatsInfo } = require('../../lib/metric/uri-stats-info-builder')
+const { UriStatsSnapshot } = require('../../lib/metric/uri/uri-stats-snapshot')
+const { UriStatsInfo } = require('../../lib/metric/uri/uri-stats-info-builder')
 const SpanRecorder = require('../../lib/context/trace/span-recorder')
 
 const TEST_ENV = {

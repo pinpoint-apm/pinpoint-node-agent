@@ -20,10 +20,10 @@ const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const { AgentBuilder } = require('../../lib/agent-builder')
 const AgentInfo = require('../../lib/data/dto/agent-info')
 const { ConfigBuilder } = require('../../lib/config-builder')
-const { UriStatsRepositoryBuilder } = require('../../lib/metric/uri-stats-repository')
-const { UriStatsConfigBuilder } = require('../../lib/metric/uri-stats-config-builder')
-const { SpanRecorderEnricher } = require('../../lib/context/trace/enricher/span-recorder-enricher')
-const { TraceCompletionEnricher } = require('../../lib/context/trace/enricher/trace-completion-enricher')
+const { UriStatsRepositoryBuilder } = require('../../lib/metric/uri/uri-stats-repository')
+const { UriStatsConfigBuilder } = require('../../lib/metric/uri/uri-stats-config-builder')
+const { SpanRecorderEnricher } = require('../../lib/metric/uri/span-recorder-enricher')
+const { TraceCompletionEnricher } = require('../../lib/metric/uri/trace-completion-enricher')
 
 let traces = []
 const resetTraces = () => {

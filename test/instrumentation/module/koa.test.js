@@ -12,7 +12,7 @@ const Router = require('koa-router')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
-const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri-stats-repository')
+const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
 const http = require('http')
 const https = require('https')
 
@@ -191,7 +191,7 @@ test('koa should disable uriTemplate/httpMethod enrichment and use null reposito
   })
 })
 
-test('koa should keep uriTemplate and httpMethod in TraceRoot when isUriStatsHttpMethodEnabled is false', (t) => {
+test('koa should keep uriTemplate and omit httpMethod in TraceRoot when isUriStatsHttpMethodEnabled is false', (t) => {
   t.plan(5)
 
   agent.bindHttp({
@@ -209,7 +209,7 @@ test('koa should keep uriTemplate and httpMethod in TraceRoot when isUriStatsHtt
     agent.callbackTraceClose((trace) => {
       const traceRoot = trace.spanBuilder.getTraceRoot()
       t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate recorded when uri stats enabled')
-      t.equal(traceRoot.getEnricher('uriStats.method'), 'GET', 'httpMethod recorded in TraceRoot when flag disabled')
+      t.equal(traceRoot.getEnricher('uriStats.method'), undefined, 'httpMethod should be undefined in TraceRoot when flag disabled')
       t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'status code annotation exists')
       server.close()
     })
@@ -257,7 +257,7 @@ test('koa should record uriTemplate and httpMethod in router', (t) => {
 test('Should aggregate URI stats in UriStatsRepository for Koa', function (t) {
   agent.bindHttp()
 
-  const { UriStatsRepository } = require('../../../lib/metric/uri-stats-repository')
+  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/integration/uri-stats'
@@ -329,7 +329,7 @@ test('Should aggregate URI stats without HTTP method when disabled in config for
     }
   })
 
-  const { UriStatsRepository } = require('../../../lib/metric/uri-stats-repository')
+  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/integration/uri-stats/no-method'

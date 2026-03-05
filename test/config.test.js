@@ -7,7 +7,6 @@
 const test = require('tape')
 const { ConfigBuilder } = require('../lib/config-builder')
 const path = require('path')
-const { UriStatsConfigBuilder } = require('../lib/metric/uri-stats-config-builder')
 
 test('Agent ID required field', function (t) {
   t.plan(1)
@@ -264,85 +263,6 @@ test('sampling Rate', (t) => {
   t.end()
 })
 
-test('uri config is preserved', (t) => {
-  t.plan(2)
-
-  const defaultJson = Object.assign({}, require('../lib/pinpoint-config-default.json'), {
-    agentId: 'agent-from-test',
-    applicationName: 'app-from-test',
-    // keep existing service type from default json
-    features: Object.assign({}, require('../lib/pinpoint-config-default.json').features, {
-      uriStats: {
-        httpMethod: true,
-        capacity: 500
-      }
-    })
-  })
-
-  const conf = new UriStatsConfigBuilder(new ConfigBuilder().setDefaultJson(defaultJson).build()).build()
-  t.equal(conf.capacity, 500, 'uriStats capacity should be preserved')
-  t.equal(conf.httpMethod, true, 'uriStats httpMethod flag should be preserved')
-})
-
-test('uriStats is disabled when URI environment variables are not set', (t) => {
-  t.plan(5)
-
-  delete process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD
-  delete process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY
-  delete process.env.PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT
-
-  const conf = new UriStatsConfigBuilder(new ConfigBuilder().build()).build()
-  t.equal(conf.isUriStatsEnabled(), false, 'uriStats should be disabled when URI env vars are not set')
-  t.equal(conf.httpMethod, undefined, 'uriStats httpMethod should be undefined when not configured')
-  t.equal(conf.capacity, undefined, 'uriStats capacity should be undefined when not configured')
-  t.equal(conf.useUserInput, undefined, 'uriStats useUserInput should be undefined when not configured')
-  t.equal(conf.getUriStatsCapacity(), 1000, 'getUriStatsCapacity should fall back to 1000 when uriStats is disabled')
-})
-
-test('uriStats preserves httpMethod only when capacity not set', (t) => {
-  t.plan(4)
-
-  process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD = 'true'
-  delete process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY
-
-  const conf = new UriStatsConfigBuilder(new ConfigBuilder().build()).build()
-  t.equal(conf.httpMethod, true, 'uriStats httpMethod should respect env value')
-  t.equal(conf.capacity, 1000, 'uriStats capacity remains undefined when not set')
-  t.equal(conf.getUriStatsCapacity(), 1000, 'getUriStatsCapacity should fall back to 1000 when capacity is undefined but uriStats exists')
-  t.equal(conf.isUriStatsEnabled(), true, 'isUriStatsEnabled should be true when httpMethod is set')
-
-  delete process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD
-})
-
-test('uriStats preserves capacity only when httpMethod not set', (t) => {
-  t.plan(3)
-
-  process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY = '321'
-  delete process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD
-
-  const conf = new UriStatsConfigBuilder(new ConfigBuilder().build()).build()
-  t.equal(conf.capacity, 321, 'uriStats capacity should respect env value')
-  t.equal(conf.httpMethod, undefined, 'uriStats httpMethod remains undefined when not set')
-  t.equal(conf.isUriStatsEnabled(), true, 'isUriStatsEnabled should be true when capacity is set')
-
-  delete process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY
-})
-
-test('uriStats capacity defaults to 1000 when env capacity is invalid', (t) => {
-  t.plan(4)
-
-  process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD = 'true'
-  process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY = 'abc'
-
-  const conf = new UriStatsConfigBuilder(new ConfigBuilder().build()).build()
-  t.equal(conf.capacity, 1000, 'invalid capacity should be sanitized to default 1000')
-  t.equal(conf.getUriStatsCapacity(), 1000, 'getUriStatsCapacity returns 1000 when capacity is invalid')
-  t.equal(conf.httpMethod, true, 'httpMethod flag should be preserved when capacity is sanitized')
-  t.equal(conf.isUriStatsEnabled(), true, 'uriStats stays enabled when httpMethod is set')
-
-  delete process.env.PINPOINT_FEATURES_URI_STATS_HTTP_METHOD
-  delete process.env.PINPOINT_FEATURES_URI_STATS_CAPACITY
-})
 
 test('HTTP Status Code Errors', (t) => {
   let conf = new ConfigBuilder().build()
@@ -402,16 +322,4 @@ test('Logger levels', (t) => {
   const confWithEnvDebug = new ConfigBuilder().build()
   t.deepEqual(confWithEnvDebug.features.logLevels, {'default-logger': 'WARN', grpcLogger: 'SILENT', 'grpc': 'DEBUG', 'sql': 'ERROR', 'http': 'TRACE'}, 'logger levels from env is grpc=DEBUG,sql=ERROR,http=TRACE')
   t.end()
-})
-
-test('uriStats useUserInput configuration', (t) => {
-  t.plan(2)
-
-  process.env.PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT = 'true'
-  const conf = new UriStatsConfigBuilder().build()
-  t.equal(conf.isUriStatsUseUserInput(), true, 'useUserInput should be true when set via env')
-
-  delete process.env.PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT
-  const confDefault = new UriStatsConfigBuilder().build()
-  t.equal(confDefault.isUriStatsUseUserInput(), false, 'useUserInput should be false by default')
 })

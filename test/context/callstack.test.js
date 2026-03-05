@@ -22,7 +22,7 @@ test(`span and spanEvent call stack`, async (t) => {
 
     t.plan(11)
     const traceContext = agent.getTraceContext()
-    const trace = traceContext.newTraceObject2()
+    const trace = traceContext.newTraceObject()
     localStorage.run(trace, () => {
         t.equal(trace.callStack.length ?? trace.callStack.stack.length, 0, 'callstack is 0')
         t.equal(traceContext.currentTraceObject(), trace, 'current trace is current asyncId trace object')

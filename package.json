@@ -29,6 +29,11 @@
       "types": "./lib/data/dto/agent-info.d.ts",
       "import": "./lib/data/dto/agent-info.js",
       "require": "./lib/data/dto/agent-info.js"
+    },
+    "./uri-stats": {
+      "types": "./lib/metric/uri/index.d.ts",
+      "import": "./lib/metric/uri/index.js",
+      "require": "./lib/metric/uri/index.js"
     }
   },
   "scripts": {

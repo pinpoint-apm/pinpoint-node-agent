@@ -18,25 +18,25 @@ const { UriStatsRepositoryBuilder } = require('./lib/metric/uri/uri-stats-reposi
 const { TraceCompletionEnricher } = require('./lib/metric/uri/trace-completion-enricher')
 
 const config = new ConfigBuilder().build()
-const uriStatsConfig = new UriStatsConfigBuilder(config).build()
-const uriStatsRepository = new UriStatsRepositoryBuilder(uriStatsConfig).build()
 
 const agentInfo = AgentInfo.make(config)
 const defaultLogger = logger.getLogger(LogBuilder.createDefaultLogBuilder().setConfig(config).build())
 const agentBuilder = new AgentBuilder(agentInfo)
-                .setConfig(config)
-                .setLogger(defaultLogger)
+    .setConfig(config)
+    .setLogger(defaultLogger)
 
+const uriStatsConfig = new UriStatsConfigBuilder(config).build()
 if (uriStatsConfig.isUriStatsEnabled()) {
+    const uriStatsRepository = new UriStatsRepositoryBuilder(uriStatsConfig).build()
     agentBuilder.addService((dataSender) => {
-                    const statsMonitor = new UriStatsMonitor(dataSender, uriStatsRepository)
-                    statsMonitor.start()
-                    return {
-                        shutdown: function () {
-                            statsMonitor.stop()
-                        }
-                    }
-                })
+        const statsMonitor = new UriStatsMonitor(dataSender, uriStatsRepository)
+        statsMonitor.start()
+        return {
+            shutdown: function () {
+                statsMonitor.stop()
+            }
+        }
+    })
     agentBuilder.addEnricher(new SpanRecorderEnricher(uriStatsConfig))
     agentBuilder.addEnricher(new TraceCompletionEnricher(uriStatsRepository))
 }

@@ -932,7 +932,7 @@ test('express should disable uriTemplate/httpMethod enrichment and use null repo
 })
 
 test('express should keep uriTemplate but skip httpMethod when isUriStatsHttpMethodEnabled is false', (t) => {
-  t.plan(4)
+  t.plan(5)
 
   agent.bindHttp({
     "features": {
@@ -951,8 +951,7 @@ test('express should keep uriTemplate but skip httpMethod when isUriStatsHttpMet
     agent.callbackTraceClose((trace) => {
       const traceRoot = trace.spanBuilder.getTraceRoot()
       t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate recorded when uri stats enabled')
-      // TODO: uriStats.method not send grpc Data
-      // t.notOk(traceRoot.getEnricher('uriStats.method'), 'httpMethod not recorded when httpMethod flag disabled')
+      t.equal(traceRoot.getEnricher('uriStats.method'), undefined, 'httpMethod not recorded when httpMethod flag disabled')
       t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'status code annotation exists')
       server.close()
     })

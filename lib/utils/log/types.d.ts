@@ -4,7 +4,7 @@
  * Apache License v2.0
  */
 
-import type { Config } from '../../config';
+import type { Config } from '../../config-builder';
 
 export declare class LogLevel {
     static readonly TRACE: 0;

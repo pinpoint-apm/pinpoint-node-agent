@@ -1,7 +1,25 @@
 const test = require('tape')
-const { UriStatsRepository } = require('../../lib/metric/uri/uri-stats-repository')
+const { UriStatsRepository, UriStatsRepositoryBuilder } = require('../../lib/metric/uri/uri-stats-repository')
 const { UriStatsInfo } = require('../../lib/metric/uri/uri-stats-info-builder')
+const { UriStatsMonitor } = require('../../lib/metric/uri/uri-stats-monitor')
 const DateNow = require('../../lib/support/date-now')
+
+test('UriStatsRepositoryBuilder nullObject should expose getTimeWindow for monitor compatibility', (t) => {
+    t.plan(3)
+
+    const disabledConfig = { isUriStatsEnabled: () => false }
+    const repository = new UriStatsRepositoryBuilder(disabledConfig).build()
+
+    t.equal(typeof repository.getTimeWindow, 'function', 'nullObject should expose getTimeWindow')
+    t.equal(repository.getTimeWindow(), 30000, 'nullObject getTimeWindow should return default time window')
+
+    try {
+        const monitor = new UriStatsMonitor({ send() {} }, repository)
+        t.equal(typeof monitor.start, 'function', 'UriStatsMonitor should be creatable with nullObject repository')
+    } catch (e) {
+        t.fail(e)
+    }
+})
 
 test('UriStatsRepository should store and rotate snapshots using DateNow', (t) => {
     // config mock

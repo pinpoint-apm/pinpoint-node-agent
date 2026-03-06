@@ -120,12 +120,11 @@ PINPOINT_AGENT_NAME |  | Optional env var (≤255 chars). Use meaningful labels 
 PINPOINT_APPLICATION_NAME | | meaningful name of the app. an application name can have multiple PINPOINT_AGENT_ID. The maximum length is 24. a required variable.
 PINPOINT_COLLECTOR_IP | localhost | The address that the Pinpoint collector. ex) 192.168.0.1
 PINPOINT_SAMPLING_RATE | 10 | Sample rate of incoming HTTP or HTTPS request. The value is calculated as 1/value.
+PINPOINT_LOGGER_LEVELS |  | Comma-separated logger level overrides. Example: `default-logger=INFO,grpcLogger=SILENT`.
 PINPOINT_ENABLE | true | If you set it to false, the agent will not work.
 PINPOINT_CONTAINER | false | Whether to use docker or kubernetes. If the PINPOINT_CONTAINER environment variable is not set, the agent analyzes the'/.dockerenv' and'/proc/self/cgroup' files to determine whether to use the Docker container. If the KUBERNETES_SERVICE_HOST environment variable exists, it is determined that it is the kubernetes environment and changes it to the true value.
 PINPOINT_TRACE_EXCLUSION_URL_PATTERNS |  | comma-separated string. ex) `/health_check,/admin/**` or [Unit tests](https://github.com/pinpoint-apm/pinpoint-node-agent/blob/01fcbdefe5a0ffba9c957bee0da3fb7397638182/test/utils/ant-path-matcher.test.js#L332). `PINPOINT_TRACE_EXCLUSION_URL_PATTERNS` replaces `PINPOINT_TRACE_EXCLUSION_URL_PATTERN`. For backward compatibility, the old name(`PINPOINT_TRACE_EXCLUSION_URL_PATTERN`) is still recognized and applied the same way. If both are set, the plural form (`PINPOINT_TRACE_EXCLUSION_URL_PATTERNS`) takes precedence.
 PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE | | If the app is designed so that the pathname of the URL is fixed, if the cache size is set, the pathname of the frequently used URL does not match with patterns. In case of using query for pathname like `/user/1000`, cache is unnecessarily. [Unit tests](https://github.com/pinpoint-apm/pinpoint-node-agent/blob/01fcbdefe5a0ffba9c957bee0da3fb7397638182/test/utils/ant-path-matcher.test.js#L447)
-PINPOINT_PROFILER_SQL_STAT | false | SQL uid
-PINPOINT_TRACE_LOCATION_AND_FILENAME_OF_CALL_SITE | false | CallSite line number and filename
 PINPOINT_HTTP_STATUS_CODE_ERRORS | 5xx,401,403 | Comma-separated list of HTTP status codes that should be treated as errors. When a response matches one of these codes, the agent will record the request as an error in Pinpoint. You can customize this list to include any status codes relevant to your application's error.
 
 ### Agent ID
@@ -136,7 +135,7 @@ PINPOINT_AGENT_ID=${HOSTNAME} pm2 start ~/service/bin/pm2_start.json​
 
 
 ## Supported Modules
-* Express 4
+* Express 4 and 5
 * Koa(koa-router >=5.2.0 <8)
 * HTTP, HTTPS
 * Redis, ioredis(>=2.0.0 <5.0.0)

@@ -29,7 +29,11 @@
         "dataSending": true,
         "statsMonitoring": true,
         "container": false,
-        "sqlStats": false,
+        "uriStats": {
+            "httpMethod": false,
+            "capacity": 1000,
+            "useUserInput": true
+        },
         "logLevels": {
             "default-logger": "WARN",
             "grpcLogger": "SILENT"

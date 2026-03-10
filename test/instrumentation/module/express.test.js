@@ -1130,7 +1130,7 @@ test('Should aggregate URI stats for DisableTrace in Express', function (t) {
         const expectedKey = PATH
         const entry = snapshot.dataMap.get(expectedKey)
 
-        t.ok(entry, `Entry for ${expectedKey} exists`) 
+        t.ok(entry, `Entry for ${expectedKey} exists`)
         if (entry) {
           t.equal(entry.totalHistogram.count, 1, 'DisableTrace request counted in histogram')
         }

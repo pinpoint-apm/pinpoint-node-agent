@@ -2,14 +2,6 @@ import type { Config } from '../../config-builder'
 import type { DataSender } from '../../types'
 
 export interface UriStatsConfig {
-    enabled?: boolean
-    httpMethod?: boolean
-    capacity?: number
-    timeWindow?: number
-    useUserInput?: boolean
-
-    isUriStatsExplicitlyEnabled(): boolean
-    isUriStatsExplicitlyDisabled(): boolean
     getUriStatsCapacity(): number
     isUriStatsHttpMethodEnabled(): boolean
     isUriStatsUseUserInput(): boolean

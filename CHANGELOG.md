@@ -2,6 +2,19 @@
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
 ## [1.4.0] - 2025-12-18
+### Added
+- [[#398](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/398)] Exception Stats
+- [[#403](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/403)] URI Stats
+  - `PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT` support: when enabled, you can set a custom URI template on the request. See [README](https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables).
+
+  **Example:**
+  ```javascript
+  const handler = function(req, res) {
+    req['pinpoint.metric.uri-template'] = '/user/input/uri/from/pages'
+    res.status(200).json({ name: 'custom-uri' })
+  }
+  ```
+
 ### Changed
 - [[#406](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/406)] Improved `pinpoint-config.json` discovery. The agent now searches the directory of the application entry point (`require.main.filename`) first and then falls back to the current working directory (`process.cwd()`). This makes `node -r pinpoint-node-agent` and PM2/Next.js boot scripts predictable without extra flags.
 

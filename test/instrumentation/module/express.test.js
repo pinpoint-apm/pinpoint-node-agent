@@ -18,6 +18,8 @@ const https = require('https')
 const { getTransactionId, getDisabledId } = require('../../../lib/context/trace/id-generator')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../../lib/data/v1/Service_grpc_pb')
+const spanMessages = require('../../../lib/data/v1/Span_pb')
+const GrpcDataSenderBuilder = require('../../client/grpc-data-sender-builder')
 const { beforeSpecificOne, StatOnlyFunctionalTestableDataSource, DataSourceCallCountable } = require('../../../test/client/grpc-fixture')
 const { UriStatsSnapshot } = require('../../../lib/metric/uri/uri-stats-snapshot')
 const { UriStatsInfo } = require('../../../lib/metric/uri/uri-stats-info-builder')
@@ -117,6 +119,15 @@ test(`${testName1} Should record request in basic route`, function (t) {
     next(new Error('error case'))
   })
 
+  const exceptionUnhandledSymbol = Symbol('exceptionUnhandled')
+  app.get('/exception/unhandled', function (req, res, next) {
+    errorOrder++
+    pathSymbol = exceptionUnhandledSymbol
+    const error = new Error('Pinpoint unhandled exception test route')
+    error.status = 500
+    next(error)
+  })
+
   app.use(function (err, req, res, next) {
     if (pathSymbol == express3Symbol) {
       t.equal(errorOrder, 1, 'express3 error order')
@@ -124,12 +135,17 @@ test(`${testName1} Should record request in basic route`, function (t) {
     if (pathSymbol === express4Symbol) {
       t.equal(errorOrder, 2, 'express4 error order')
     }
+    if (pathSymbol === exceptionUnhandledSymbol) {
+      t.equal(errorOrder, 3, 'exception/unhandled error order')
+    }
 
     agent.callbackTraceClose((trace) => {
       if (errorOrder == 1) {
         throwHandleTest(trace, t)
       } else if (errorOrder == 2) {
         nextErrorHandleTest(trace, t)
+      } else if (errorOrder == 3) {
+        unhandledExceptionStatsFrameTest(trace, t)
       }
     })
 
@@ -156,6 +172,12 @@ test(`${testName1} Should record request in basic route`, function (t) {
       await axios.get(getServerUrl('/express4'))
     } catch (error) {
       t.equal(error.response.status, 500, 'axios.get(getServerUrl(/express4))')
+    }
+
+    try {
+      await axios.get(getServerUrl('/exception/unhandled'))
+    } catch (error) {
+      t.equal(error.response.status, 500, 'axios.get(getServerUrl(/exception/unhandled))')
     }
 
     t.end()
@@ -254,6 +276,77 @@ function nextErrorHandleTest(trace, t) {
   t.equal(actualExceptions[0].getStarttime(), actualSpanEventError.startTime, `ExceptionMetaData exception start time ${actualSpanEventError.startTime}`)
   t.equal(actualExceptions[0].getExceptionid(), actualSpanEventError.exceptionId, `ExceptionMetaData exception id ${actualSpanEventError.exceptionId}`)
   t.equal(actualExceptions[0].getExceptiondepth(), actualSpanEventError.exceptionDepth, `ExceptionMetaData exception depth ${actualSpanEventError.exceptionDepth}`)
+}
+
+function unhandledExceptionStatsFrameTest(trace, t) {
+  const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
+  t.ok(actualExceptionMetaData, 'ExceptionMetaData should be sent')
+
+  const actualExceptions = actualExceptionMetaData.getExceptionsList()
+  t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
+
+  const actualException = actualExceptions[0]
+  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception
+
+  t.equal(actualException.getExceptionmessage(), actualSpanEventError.errorMessage, 'ExceptionMetaData exception message should match span event error message')
+  t.equal(actualException.getExceptionid(), actualSpanEventError.exceptionId, 'ExceptionMetaData exception id should match span event exception id')
+
+  const stackTraceElements = actualException.getStacktraceelementList()
+  const frameStack = actualSpanEventError.frameStack
+
+  t.ok(stackTraceElements.length > 0, 'ExceptionMetaData stacktraceelementList should not be empty')
+  t.equal(stackTraceElements.length, frameStack.length, 'ExceptionMetaData stacktraceelementList length should match span event frameStack length')
+
+  const toStackTraceLine = (className, methodName, fileName, lineNumber) => {
+    const typePrefix = className ? `${className}.` : ''
+    const method = methodName || '<anonymous>'
+    const file = fileName || 'unknown'
+    const line = Number.isInteger(lineNumber) ? lineNumber : 0
+    return `${typePrefix}${method} (${file}:${line})`
+  }
+
+  const expectedStackTracePrefix = [
+    '<anonymous> (<workspace>/test/instrumentation/module/express.test.js:<line>)',
+    'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
+    'next (<workspace>/node_modules/express/lib/router/route.js:<line>)',
+    'Route.dispatch (<workspace>/node_modules/express/lib/router/route.js:<line>)',
+    'InterceptorRunner.run (<workspace>/lib/instrumentation/interceptor-runner.js:<line>)',
+    'wrapped (<workspace>/lib/instrumentation/module/express/express-layer-interceptor.js:<line>)',
+    'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
+    '<anonymous> (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+    'Function.process_params (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+    'next (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+  ].join('\n')
+
+  const actualStackTrace = stackTraceElements
+    .map((pStackTraceElement) => toStackTraceLine(
+      pStackTraceElement.getClassname(),
+      pStackTraceElement.getMethodname(),
+      pStackTraceElement.getFilename(),
+      pStackTraceElement.getLinenumber()
+    ))
+    .join('\n')
+
+  const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const workspacePath = process.cwd().replace(/\\/g, '/')
+  const normalizeStackTrace = (stackTrace) => {
+    return stackTrace
+      .replace(/\\/g, '/')
+      .replace(new RegExp(escapeRegExp(workspacePath), 'g'), '<workspace>')
+      .replace(/express\.test\.js:\d+/g, 'express.test.js:<line>')
+      .replace(/interceptor-runner\.js:\d+/g, 'interceptor-runner.js:<line>')
+      .replace(/express-layer-interceptor\.js:\d+/g, 'express-layer-interceptor.js:<line>')
+        .replace(/(node_modules\/express\/lib\/router\/[a-zA-Z0-9_-]+\.js):\d+/g, '$1:<line>')
+  }
+
+  const normalizedActualLines = normalizeStackTrace(actualStackTrace).split('\n')
+  const normalizedExpectedPrefixLines = normalizeStackTrace(expectedStackTracePrefix).split('\n')
+
+  t.deepEqual(
+    normalizedActualLines.slice(0, normalizedExpectedPrefixLines.length),
+    normalizedExpectedPrefixLines,
+    'ExceptionMetaData stack trace should match stable prefix frames as multiline string'
+  )
 }
 
 const testName2 = 'express2'
@@ -1208,6 +1301,137 @@ test('sendStat with UriStatsSnapshot', (t) => {
     }
 
     grpcDataSender.sendStat(snapshot)
+  })
+})
+
+test('Functional Test: requestExceptionMetaData should deliver converted exception stack for /exception/unhandled', (t) => {
+  const collectorServer = new grpc.Server()
+  let dataSender
+  let metadataReceived
+  const metadataReceivedPromise = new Promise((resolve, reject) => {
+    metadataReceived = { resolve, reject }
+  })
+
+  collectorServer.addService(services.MetadataService, {
+    requestExceptionMetaData: (call, callback) => {
+      callback(null, new spanMessages.PResult())
+
+      try {
+        const exceptionMetaData = call.request
+        t.ok(exceptionMetaData, 'ExceptionMetaData should be delivered to collector')
+        t.ok(exceptionMetaData.getTransactionid(), 'transactionId should exist')
+        t.ok(exceptionMetaData.getSpanid(), 'spanId should exist')
+        t.equal(exceptionMetaData.getUritemplate(), 'NULL', 'uriTemplate should be NULL by default')
+
+        const exceptions = exceptionMetaData.getExceptionsList()
+        t.equal(exceptions.length, 1, 'exceptions length should be 1')
+
+        const exception = exceptions[0]
+        t.equal(exception.getExceptionclassname(), 'Error', 'exception class should be Error')
+        t.equal(exception.getExceptionmessage(), 'Pinpoint unhandled exception test route', 'exception message should match')
+        t.ok(exception.getExceptionid() > 0, 'exception id should be greater than 0')
+        t.equal(exception.getExceptiondepth(), 1, 'exception depth should be 1')
+
+        const stackTraceElements = exception.getStacktraceelementList()
+        t.ok(stackTraceElements.length > 0, 'stackTraceElements should not be empty')
+
+        const actualStackTrace = stackTraceElements
+          .map((pStackTraceElement) => {
+            const className = pStackTraceElement.getClassname() || ''
+            const methodName = pStackTraceElement.getMethodname() || '<anonymous>'
+            const fileName = pStackTraceElement.getFilename() || 'unknown'
+            const lineNumber = pStackTraceElement.getLinenumber()
+            const typePrefix = className ? `${className}.` : ''
+            return `${typePrefix}${methodName} (${fileName}:${lineNumber})`
+          })
+          .join('\n')
+
+        const expectedStackTracePrefix = [
+          '<anonymous> (<workspace>/test/instrumentation/module/express.test.js:<line>)',
+          'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
+          'next (<workspace>/node_modules/express/lib/router/route.js:<line>)',
+          'Route.dispatch (<workspace>/node_modules/express/lib/router/route.js:<line>)',
+          'InterceptorRunner.run (<workspace>/lib/instrumentation/interceptor-runner.js:<line>)',
+          'wrapped (<workspace>/lib/instrumentation/module/express/express-layer-interceptor.js:<line>)',
+          'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
+          '<anonymous> (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+          'Function.process_params (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+          'next (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+        ].join('\n')
+
+        const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const workspacePath = process.cwd().replace(/\\/g, '/')
+        const normalizeStackTrace = (stackTrace) => {
+          return stackTrace
+            .replace(/\\/g, '/')
+            .replace(new RegExp(escapeRegExp(workspacePath), 'g'), '<workspace>')
+            .replace(/express\.test\.js:\d+/g, 'express.test.js:<line>')
+            .replace(/interceptor-runner\.js:\d+/g, 'interceptor-runner.js:<line>')
+            .replace(/express-layer-interceptor\.js:\d+/g, 'express-layer-interceptor.js:<line>')
+            .replace(/(node_modules\/express\/lib\/router\/[a-zA-Z0-9_-]+\.js):\d+/g, '$1:<line>')
+        }
+
+        const normalizedActualLines = normalizeStackTrace(actualStackTrace).split('\n')
+        const normalizedExpectedPrefixLines = normalizeStackTrace(expectedStackTracePrefix).split('\n')
+
+        t.ok(actualStackTrace.includes('Pinpoint unhandled exception test route') === false, 'stack trace should not include error message line')
+        t.deepEqual(
+          normalizedActualLines.slice(0, normalizedExpectedPrefixLines.length),
+          normalizedExpectedPrefixLines,
+          'gRPC delivered stack trace should match stable prefix frames as multiline string'
+        )
+
+        metadataReceived.resolve()
+      } catch (error) {
+        metadataReceived.reject(error)
+      }
+    }
+  })
+
+  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+    if (err) {
+      t.fail(err)
+      collectorServer.forceShutdown()
+      t.end()
+      return
+    }
+
+    dataSender = new GrpcDataSenderBuilder(port)
+      .enableExceptionMetaData()
+      .build()
+    agent.bindHttp(dataSender)
+
+    const app = new express()
+    app.get('/exception/unhandled', function (req, res, next) {
+      const error = new Error('Pinpoint unhandled exception test route')
+      error.status = 500
+      next(error)
+    })
+    app.use(function (err, req, res, next) {
+      res.status(500).send('Something broke!')
+    })
+
+    const server = app.listen(0, async () => {
+      try {
+        const serverPort = server.address().port
+        const response = await axios.get(`http://localhost:${serverPort}/exception/unhandled`, {
+          validateStatus: () => true,
+          httpAgent: new http.Agent({ keepAlive: false }),
+          httpsAgent: new https.Agent({ keepAlive: false }),
+        })
+
+        t.equal(response.status, 500, 'route should return 500')
+        await metadataReceivedPromise
+      } catch (error) {
+        t.fail(error?.stack || error?.message || String(error))
+      } finally {
+        server.close(() => {
+          dataSender?.close()
+          collectorServer.forceShutdown()
+          t.end()
+        })
+      }
+    })
   })
 })
 

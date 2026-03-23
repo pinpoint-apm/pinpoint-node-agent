@@ -320,8 +320,9 @@ test('fetch /api/custom-uri with pinpoint-sampled:s0 should skip span', async (t
     t.end()
 })
 
-test('fetch /api/error-500', async (t) => {
+test('fetch /api/error-500 should record span error and failure in URI stats', async (t) => {
     receivedSpans = []
+    receivedStats = []
     try {
         const response = await fetch('http://127.0.0.1:3000/api/error-500')
         t.equal(response.status, 500, '/api/error-500 responds with 500')
@@ -342,6 +343,39 @@ test('fetch /api/error-500', async (t) => {
             t.equal(statusCodeAnnotation.getValue().getIntvalue(), 500, 'status code annotation value should be 500')
         }
 
+        await new Promise(resolve => setTimeout(resolve, 3000))
+
+        const mergedStats = {}
+        receivedStats.forEach(statMsg => {
+            const agentUriStat = statMsg.getAgenturistat ? statMsg.getAgenturistat() : null
+            if (agentUriStat) {
+                agentUriStat.getEachuristatList().forEach(each => {
+                    const uri = each.getUri()
+                    if (!mergedStats[uri]) {
+                        mergedStats[uri] = {
+                            totalBuckets: new Array(8).fill(0),
+                            failedBuckets: new Array(8).fill(0)
+                        }
+                    }
+                    const totalHistList = each.getTotalhistogram().getHistogramList()
+                    totalHistList.forEach((count, idx) => mergedStats[uri].totalBuckets[idx] += count)
+
+                    const failedHistList = each.getFailedhistogram().getHistogramList()
+                    failedHistList.forEach((count, idx) => mergedStats[uri].failedBuckets[idx] += count)
+                })
+            }
+        })
+
+        const errorUri = '/user/input/uri/error-500'
+        const stat = mergedStats[errorUri]
+        t.ok(stat, `URI stats found for ${errorUri}`)
+        if (stat) {
+            const totalCount = stat.totalBuckets.reduce((acc, val) => acc + val, 0)
+            t.equal(totalCount, 1, 'Total count should be 1')
+
+            const failedCount = stat.failedBuckets.reduce((acc, val) => acc + val, 0)
+            t.equal(failedCount, 1, 'Failed count should be 1')
+        }
     } catch (err) {
         t.fail(err.message)
     }

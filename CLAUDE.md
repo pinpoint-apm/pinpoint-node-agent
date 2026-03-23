@@ -62,3 +62,11 @@ The package exposes named exports for programmatic use:
 Tests use **Tape** (not Jest/Mocha). Integration tests in `test/instrumentation/module/` use **testcontainers** to spin up real databases (MongoDB, MySQL, PostgreSQL, Redis). The `.testignore` file excludes `node_modules`.
 
 TypeScript declarations are in `index.d.ts` and per-module `.d.ts` files; generated output goes to `dist/`.
+
+## Git Rules
+
+- **One commit per PR**: Before committing, squash all changes into a single commit using `git commit` (not amend). If multiple commits exist on the branch, squash them before pushing.
+- **Commit message format**: `[#ISSUE_NUMBER] Short description` followed by a concise body explaining what and why.
+- **No Co-Authored-By lines**: Do not append `Co-Authored-By` trailers to commit messages.
+- **Testing**: New features and bug fixes must include functional tests for all supported web frameworks (Express, Koa, Next.js). Run relevant test files and confirm they pass before committing.
+- **PR descriptions**: Write in English, keep concise with bullet points, and update via `gh pr edit` when pushing changes that alter scope.

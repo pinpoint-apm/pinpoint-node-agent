@@ -416,3 +416,75 @@ test('Should aggregate URI stats for DisableTrace in Koa', function (t) {
     }
   })
 })
+
+test('Should count failure in URI stats for DisableTrace in Koa', function (t) {
+  agent.bindHttp({
+    sampling: { enable: false },
+    features: {
+      uriStats: {
+        httpMethod: false,
+        capacity: 1000
+      }
+    }
+  })
+
+  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
+  const DateNow = require('../../../lib/support/date-now')
+
+  const PATH = '/integration/uri-stats/disable-trace-failure'
+  const app = new Koa()
+  const router = new Router()
+  let resolveTraceClosed
+  const traceClosed = new Promise((resolve) => {
+    resolveTraceClosed = resolve
+  })
+
+  router.get(PATH, async (ctx) => {
+    agent.callbackTraceClose(() => {
+      setImmediate(() => {
+        const repository = getUriStatsRepository()
+
+        t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+
+        const now = DateNow.now()
+        const timeWindow = 30000
+        const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+
+        const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+        t.ok(snapshot, 'Snapshot exists')
+
+        const expectedKey = PATH
+        const entry = snapshot.dataMap.get(expectedKey)
+
+        t.ok(entry, `Entry for ${expectedKey} exists`)
+        if (entry) {
+          t.equal(entry.totalHistogram.count, 1, 'DisableTrace failure request counted in total histogram')
+          t.equal(entry.failedHistogram.count, 1, 'DisableTrace failure request counted in failed histogram')
+        }
+
+        resolveTraceClosed()
+      })
+    })
+    ctx.status = 500
+    ctx.body = 'error'
+  })
+
+  app.use(router.routes()).use(router.allowedMethods())
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    try {
+      await axios.get(getServerUrl(PATH), {
+        timeout: 3000,
+        validateStatus: () => true,
+        httpAgent: new http.Agent({ keepAlive: false }),
+        httpsAgent: new https.Agent({ keepAlive: false }),
+      })
+      await traceClosed
+    } catch (e) {
+      t.fail(e)
+    } finally {
+      server.close()
+      t.end()
+    }
+  })
+})

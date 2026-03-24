@@ -306,16 +306,16 @@ function unhandledExceptionStatsFrameTest(trace, t) {
   }
 
   const expectedStackTracePrefix = [
-    '<anonymous> (<workspace>/test/instrumentation/module/express.test.js:<line>)',
+    'express.test.js.<anonymous> (<workspace>/test/instrumentation/module/express.test.js:<line>)',
     'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
-    'next (<workspace>/node_modules/express/lib/router/route.js:<line>)',
+    'route.js.next (<workspace>/node_modules/express/lib/router/route.js:<line>)',
     'Route.dispatch (<workspace>/node_modules/express/lib/router/route.js:<line>)',
     'InterceptorRunner.run (<workspace>/lib/instrumentation/interceptor-runner.js:<line>)',
-    'wrapped (<workspace>/lib/instrumentation/module/express/express-layer-interceptor.js:<line>)',
+    'express-layer-interceptor.js.wrapped (<workspace>/lib/instrumentation/module/express/express-layer-interceptor.js:<line>)',
     'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
-    '<anonymous> (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+    'index.js.<anonymous> (<workspace>/node_modules/express/lib/router/index.js:<line>)',
     'Function.process_params (<workspace>/node_modules/express/lib/router/index.js:<line>)',
-    'next (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+    'index.js.next (<workspace>/node_modules/express/lib/router/index.js:<line>)',
   ].join('\n')
 
   const actualStackTrace = stackTraceElements
@@ -1347,16 +1347,16 @@ test('Functional Test: requestExceptionMetaData should deliver converted excepti
           .join('\n')
 
         const expectedStackTracePrefix = [
-          '<anonymous> (<workspace>/test/instrumentation/module/express.test.js:<line>)',
+          'express.test.js.<anonymous> (<workspace>/test/instrumentation/module/express.test.js:<line>)',
           'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
-          'next (<workspace>/node_modules/express/lib/router/route.js:<line>)',
+          'route.js.next (<workspace>/node_modules/express/lib/router/route.js:<line>)',
           'Route.dispatch (<workspace>/node_modules/express/lib/router/route.js:<line>)',
           'InterceptorRunner.run (<workspace>/lib/instrumentation/interceptor-runner.js:<line>)',
-          'wrapped (<workspace>/lib/instrumentation/module/express/express-layer-interceptor.js:<line>)',
+          'express-layer-interceptor.js.wrapped (<workspace>/lib/instrumentation/module/express/express-layer-interceptor.js:<line>)',
           'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
-          '<anonymous> (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+          'index.js.<anonymous> (<workspace>/node_modules/express/lib/router/index.js:<line>)',
           'Function.process_params (<workspace>/node_modules/express/lib/router/index.js:<line>)',
-          'next (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+          'index.js.next (<workspace>/node_modules/express/lib/router/index.js:<line>)',
         ].join('\n')
 
         const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

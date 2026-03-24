@@ -100,3 +100,30 @@ test('ExceptionBuilder Test - snapshot-like multiline', (t) => {
         functionName: 'next'
     }, 'at next (/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/router/index.js:280:10)')
 })
+
+test('ExceptionBuilder should use fileName as className fallback and <anonymous> as methodName fallback', (t) => {
+    const err = new Error('fallback test')
+    err.stack = `Error: fallback test
+    at /Users/app/index.js:10:5
+    at Layer.handle [as handle_request] (/Users/app/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/app/node_modules/express/lib/router/route.js:149:13)`
+
+    const actual = new ExceptionBuilder(err).build()
+
+    // Frame without type and functionName: className=fileName, methodName='<anonymous>'
+    const frame0 = actual.frameStack[0]
+    t.equal(frame0.className, 'index.js', 'className should fallback to fileName when type is undefined')
+    t.equal(frame0.methodName, '<anonymous>', 'methodName should fallback to <anonymous> when functionName is undefined')
+
+    // Frame with type and functionName: no fallback needed
+    const frame1 = actual.frameStack[1]
+    t.equal(frame1.className, 'Layer', 'className should be type when present')
+    t.equal(frame1.methodName, 'handle [as handle_request]', 'methodName should be functionName when present')
+
+    // Frame without type but with functionName: className=fileName, methodName=functionName
+    const frame2 = actual.frameStack[2]
+    t.equal(frame2.className, 'route.js', 'className should fallback to fileName when type is undefined')
+    t.equal(frame2.methodName, 'next', 'methodName should be functionName when present')
+
+    t.end()
+})

@@ -53,7 +53,7 @@ test('express stack: ensure computed method names and file/line are preserved in
     t.equal(exception.frameStack.length, 3)
 
     let frame = exception.frameStack[0]
-    t.equal(frame.className, '', 'className new')
+    t.equal(frame.className, 'loader.js', 'className new: fallback to fileName')
     t.true(frame.fileName.endsWith('internal/modules/cjs/loader.js'), 'fileName new')
     t.equal(frame.methodName, 'FunctionName')
     t.equal(frame.lineNumber, 699)
@@ -65,7 +65,7 @@ test('express stack: ensure computed method names and file/line are preserved in
     t.equal(frame.lineNumber, 699)
 
     frame = exception.frameStack[2]
-    t.equal(frame.className, '', 'className async')
+    t.equal(frame.className, 'loader.js', 'className async: fallback to fileName')
     t.true(frame.fileName.endsWith('internal/modules/cjs/loader.js'), 'fileName async')
     t.equal(frame.methodName, 'FunctionName')
     t.equal(frame.lineNumber, 699)
@@ -92,7 +92,7 @@ test('express stack with promise frame: ensure anonymous Promise frame is parsed
     t.equal(exception.errorMessage, 'express case')
     t.equal(exception.frameStack.length, 12)
 
-    t.equal(promiseFrame.className, '', 'className promise')
+    t.equal(promiseFrame.className, '<anonymous>', 'className promise: fallback to fileName')
     t.equal(promiseFrame.fileName, '<anonymous>')
     t.equal(promiseFrame.methodName, 'Promise')
     t.equal(promiseFrame.lineNumber, 0)

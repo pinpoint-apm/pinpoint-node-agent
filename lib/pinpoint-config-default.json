@@ -34,7 +34,7 @@
             "capacity": 1000,
             "useUserInput": true
         },
-        "exceptionStats": {
+        "errorAnalysis": {
             "maxDepth": 10
         },
         "logLevels": {

@@ -2,6 +2,9 @@
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
 ## [1.4.0] - 2026-03-25
+### Fixed
+- [[#474](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/474)] Replace external `end-of-stream` dependency with Node.js built-in `stream.finished()`.
+
 ### Added
 - [[#398](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/398)] [Error Analysis](https://pinpoint-apm.gitbook.io/pinpoint/documents/error_analysis) — Collect exception stack traces and send to Pinpoint collector for error analysis. Supports `Error.cause` chain traversal (`maxDepth` default: 10). Configure via `features.errorAnalysis` in `pinpoint-config.json` or `PINPOINT_FEATURES_ERROR_ANALYSIS`, `PINPOINT_FEATURES_ERROR_ANALYSIS_MAX_DEPTH` [environment variables](https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#environment-variables).
 

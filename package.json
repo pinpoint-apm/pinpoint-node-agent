@@ -84,7 +84,6 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.10.9",
     "@pinpoint-apm/shimmer": "^1.2.2",
-    "end-of-stream": "^1.4.1",
     "google-protobuf": "^3.13.0",
     "internal-ip": "^3.0.1",
     "loglevel": "^1.9.2",

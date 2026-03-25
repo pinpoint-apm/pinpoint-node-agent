@@ -34,6 +34,9 @@
             "capacity": 1000,
             "useUserInput": true
         },
+        "exceptionStats": {
+            "maxDepth": 10
+        },
         "logLevels": {
             "default-logger": "WARN",
             "grpcLogger": "SILENT"

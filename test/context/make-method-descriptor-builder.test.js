@@ -42,7 +42,7 @@ const buildException = (stack) => {
     const [firstLine, ...rest] = stack.split(/\r?\n/)
     err.message = firstLine.replace(/^Error:?\s*/, '')
     err.stack = [firstLine, ...rest].join('\n')
-    return new ExceptionBuilder(err).build()
+    return new ExceptionBuilder(err).build()[0]
 }
 
 test('express stack: ensure computed method names and file/line are preserved in frames', (t) => {

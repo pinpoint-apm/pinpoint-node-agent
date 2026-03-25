@@ -215,7 +215,7 @@ test('shimming require(undici) cause by require-in-the-middle package', function
             const exceptionsList = exceptionMetaData.getExceptionsList()
             t.equal(exceptionsList.length, 1, 'ExceptionMetaData exceptions length is 1')
             const actualException = exceptionsList[0]
-            const spanEventException = actualFetchAPISpan.spanEventList[1].exception
+            const spanEventException = actualFetchAPISpan.spanEventList[1].exception[0]
             t.equal(actualException.getExceptionclassname(), spanEventException.errorClassName, `ExceptionMetaData exception class name is ${spanEventException.errorClassName}`)
             t.equal(actualException.getExceptionmessage(), spanEventException.errorMessage, `ExceptionMetaData exception message is ${spanEventException.errorMessage}`)
             t.equal(actualException.getExceptiondepth(), spanEventException.exceptionDepth, `ExceptionMetaData exception depth is ${spanEventException.exceptionDepth}`)
@@ -266,6 +266,70 @@ test('shimming require(undici) cause by require-in-the-middle package', function
         const server = app.listen(5006, async () => {
             const result = await axios.get('http://localhost:5006/test', { httpsAgent: new http.Agent({ keepAlive: false }) })
             t.equal(result.data, 'Internal Server Error', 'response is test')
+            server.close()
+        })
+    })
+
+    t.teardown(() => {
+        dataSender.close()
+        collectorServer.forceShutdown()
+    })
+})
+
+test('shimming undici: requestExceptionMetaData should deliver error.cause chain', function (t) {
+    const collectorServer = new grpc.Server()
+
+    collectorServer.addService(services.SpanService, {
+        sendSpan: function (call) {
+            call.on('data', function () {})
+        },
+    })
+    collectorServer.addService(services.MetadataService, {
+        requestExceptionMetaData: (call, callback) => {
+            const result = new spanMessages.PResult()
+            callback(null, result)
+
+            const exceptionMetaData = call.request
+            const exceptionsList = exceptionMetaData.getExceptionsList()
+            t.equal(exceptionsList.length, 2, 'should have 2 exceptions in cause chain')
+
+            const top = exceptionsList[0]
+            t.equal(top.getExceptionclassname(), 'Error', 'top exception class is Error')
+            t.equal(top.getExceptionmessage(), 'undici cause top', 'top exception message')
+            t.equal(top.getExceptiondepth(), 0, 'top exception depth is 0')
+
+            const cause = exceptionsList[1]
+            t.equal(cause.getExceptionclassname(), 'TypeError', 'cause class is TypeError')
+            t.equal(cause.getExceptionmessage(), 'undici cause root', 'cause message')
+            t.equal(cause.getExceptiondepth(), 1, 'cause depth is 1')
+
+            t.equal(top.getExceptionid(), cause.getExceptionid(), 'shared exceptionId')
+            t.end()
+        }
+    })
+
+    let dataSender
+    collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+        dataSender = new GrpcDataSenderBuilder(port)
+            .enableSpan()
+            .enableExceptionMetaData()
+            .build()
+        agent.bindHttp(dataSender)
+
+        const app = new express()
+        app.get('/cause-outgoing', (req, res) => {
+            const rootCause = new TypeError('undici cause root')
+            throw new Error('undici cause top', { cause: rootCause })
+        })
+        app.use(function (err, req, res, next) {
+            res.status(500).send('error')
+        })
+
+        const server = app.listen(5006, async () => {
+            await axios.get('http://localhost:5006/cause-outgoing', {
+                validateStatus: () => true,
+                httpAgent: new http.Agent({ keepAlive: false }),
+            })
             server.close()
         })
     })

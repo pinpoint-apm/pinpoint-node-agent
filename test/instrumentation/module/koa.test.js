@@ -13,6 +13,10 @@ const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
+const grpc = require('@grpc/grpc-js')
+const services = require('../../../lib/data/v1/Service_grpc_pb')
+const spanMessages = require('../../../lib/data/v1/Span_pb')
+const GrpcDataSenderBuilder = require('../../client/grpc-data-sender-builder')
 const http = require('http')
 const https = require('https')
 
@@ -543,5 +547,94 @@ test('Should count failure in URI stats for DisableTrace in Koa', function (t) {
       server.close()
       t.end()
     }
+  })
+})
+
+test('Functional Test: requestExceptionMetaData should deliver error.cause chain in Koa', (t) => {
+  const collectorServer = new grpc.Server()
+  let dataSender
+  let metadataReceived
+  const metadataReceivedPromise = new Promise((resolve, reject) => {
+    metadataReceived = { resolve, reject }
+  })
+
+  collectorServer.addService(services.SpanService, {
+    sendSpan: function (call) {
+      call.on('data', function () {})
+    },
+  })
+  collectorServer.addService(services.MetadataService, {
+    requestExceptionMetaData: (call, callback) => {
+      callback(null, new spanMessages.PResult())
+
+      try {
+        const exceptionMetaData = call.request
+        t.ok(exceptionMetaData, 'ExceptionMetaData should be delivered')
+
+        const exceptions = exceptionMetaData.getExceptionsList()
+        t.equal(exceptions.length, 2, 'should have 2 exceptions in cause chain')
+
+        const top = exceptions[0]
+        t.equal(top.getExceptionclassname(), 'Error', 'top exception class is Error')
+        t.equal(top.getExceptionmessage(), 'koa gRPC request failed', 'top exception message')
+        t.equal(top.getExceptiondepth(), 0, 'top exception depth is 0')
+
+        const cause = exceptions[1]
+        t.equal(cause.getExceptionclassname(), 'TypeError', 'cause class is TypeError')
+        t.equal(cause.getExceptionmessage(), 'koa gRPC root cause', 'cause message')
+        t.equal(cause.getExceptiondepth(), 1, 'cause depth is 1')
+
+        t.equal(top.getExceptionid(), cause.getExceptionid(), 'shared exceptionId')
+        t.ok(cause.getStacktraceelementList().length > 0, 'cause should have stack trace')
+
+        metadataReceived.resolve()
+      } catch (error) {
+        metadataReceived.reject(error)
+      }
+    }
+  })
+
+  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+    if (err) {
+      t.fail(err)
+      collectorServer.forceShutdown()
+      t.end()
+      return
+    }
+
+    dataSender = new GrpcDataSenderBuilder(port)
+      .enableExceptionMetaData()
+      .build()
+    agent.bindHttp(dataSender)
+
+    const app = new Koa()
+    const router = new Router()
+
+    router.get('/exception/cause-chain', async (ctx) => {
+      const rootCause = new TypeError('koa gRPC root cause')
+      throw new Error('koa gRPC request failed', { cause: rootCause })
+    })
+
+    app.use(router.routes()).use(router.allowedMethods())
+
+    const server = app.listen(0, async () => {
+      try {
+        const serverPort = server.address().port
+        await axios.get(`http://localhost:${serverPort}/exception/cause-chain`, {
+          validateStatus: () => true,
+          httpAgent: new http.Agent({ keepAlive: false }),
+          httpsAgent: new https.Agent({ keepAlive: false }),
+        })
+        await metadataReceivedPromise
+      } catch (error) {
+        t.fail(error?.stack || error?.message || String(error))
+      } finally {
+        server.close(() => {
+          dataSender?.close()
+          collectorServer.forceShutdown()
+          t.end()
+        })
+      }
+    })
   })
 })

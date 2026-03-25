@@ -224,7 +224,7 @@ function throwHandleTest(trace, t) {
   t.equal(actualExceptionMetaData.getUritemplate(), '/express3', 'ExceptionMetaData uriTemplate /express3')
 
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
-  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception
+  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception[0]
   t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
   t.equal(actualExceptions[0].getExceptionclassname(), actualSpanEventError.errorClassName, `ExceptionMetaData exception class name ${actualSpanEventError.errorClassName}`)
   t.equal(actualExceptions[0].getExceptionmessage(), actualSpanEventError.errorMessage, `ExceptionMetaData exception message ${actualSpanEventError.errorMessage}`)
@@ -268,7 +268,7 @@ function nextErrorHandleTest(trace, t) {
   t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
   t.equal(actualExceptionMetaData.getUritemplate(), '/express4', 'ExceptionMetaData uriTemplate /express4')
 
-  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception
+  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception[0]
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
   t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
   t.equal(actualExceptions[0].getExceptionclassname(), actualSpanEventError.errorClassName, `ExceptionMetaData exception class name ${actualSpanEventError.errorClassName}`)
@@ -286,7 +286,7 @@ function unhandledExceptionStatsFrameTest(trace, t) {
   t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
 
   const actualException = actualExceptions[0]
-  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception
+  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception[0]
 
   t.equal(actualException.getExceptionmessage(), actualSpanEventError.errorMessage, 'ExceptionMetaData exception message should match span event error message')
   t.equal(actualException.getExceptionid(), actualSpanEventError.exceptionId, 'ExceptionMetaData exception id should match span event exception id')
@@ -752,7 +752,7 @@ function throwHandleTestWithoutCallSite(trace, t) {
   t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
   t.equal(actualExceptionMetaData.getUritemplate(), '/express3', 'ExceptionMetaData uriTemplate /express3')
 
-  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception
+  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception[0]
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
   t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
   t.equal(actualExceptions[0].getExceptionclassname(), actualSpanEventError.errorClassName, `ExceptionMetaData exception class name ${actualSpanEventError.errorClassName}`)
@@ -795,7 +795,7 @@ function nextErrorHandleTestWithoutCallSite(trace, t) {
   t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
   t.equal(actualExceptionMetaData.getUritemplate(), '/express4', 'ExceptionMetaData uriTemplate /express4')
 
-  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception
+  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception[0]
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
   t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
   t.equal(actualExceptions[0].getExceptionclassname(), actualSpanEventError.errorClassName, `ExceptionMetaData exception class name ${actualSpanEventError.errorClassName}`)
@@ -1330,7 +1330,7 @@ test('Functional Test: requestExceptionMetaData should deliver converted excepti
         t.equal(exception.getExceptionclassname(), 'Error', 'exception class should be Error')
         t.equal(exception.getExceptionmessage(), 'Pinpoint unhandled exception test route', 'exception message should match')
         t.ok(exception.getExceptionid() > 0, 'exception id should be greater than 0')
-        t.equal(exception.getExceptiondepth(), 1, 'exception depth should be 1')
+        t.equal(exception.getExceptiondepth(), 0, 'exception depth should be 0')
 
         const stackTraceElements = exception.getStacktraceelementList()
         t.ok(stackTraceElements.length > 0, 'stackTraceElements should not be empty')
@@ -1415,6 +1415,93 @@ test('Functional Test: requestExceptionMetaData should deliver converted excepti
       try {
         const serverPort = server.address().port
         const response = await axios.get(`http://localhost:${serverPort}/exception/unhandled`, {
+          validateStatus: () => true,
+          httpAgent: new http.Agent({ keepAlive: false }),
+          httpsAgent: new https.Agent({ keepAlive: false }),
+        })
+
+        t.equal(response.status, 500, 'route should return 500')
+        await metadataReceivedPromise
+      } catch (error) {
+        t.fail(error?.stack || error?.message || String(error))
+      } finally {
+        server.close(() => {
+          dataSender?.close()
+          collectorServer.forceShutdown()
+          t.end()
+        })
+      }
+    })
+  })
+})
+
+test('Functional Test: requestExceptionMetaData should deliver error.cause chain', (t) => {
+  const collectorServer = new grpc.Server()
+  let dataSender
+  let metadataReceived
+  const metadataReceivedPromise = new Promise((resolve, reject) => {
+    metadataReceived = { resolve, reject }
+  })
+
+  collectorServer.addService(services.MetadataService, {
+    requestExceptionMetaData: (call, callback) => {
+      callback(null, new spanMessages.PResult())
+
+      try {
+        const exceptionMetaData = call.request
+        t.ok(exceptionMetaData, 'ExceptionMetaData should be delivered')
+
+        const exceptions = exceptionMetaData.getExceptionsList()
+        t.equal(exceptions.length, 2, 'should have 2 exceptions in cause chain')
+
+        const top = exceptions[0]
+        t.equal(top.getExceptionclassname(), 'Error', 'top exception class is Error')
+        t.equal(top.getExceptionmessage(), 'request failed', 'top exception message')
+        t.equal(top.getExceptiondepth(), 0, 'top exception depth is 0')
+
+        const cause = exceptions[1]
+        t.equal(cause.getExceptionclassname(), 'TypeError', 'cause class is TypeError')
+        t.equal(cause.getExceptionmessage(), 'root cause', 'cause message')
+        t.equal(cause.getExceptiondepth(), 1, 'cause depth is 1')
+
+        t.equal(top.getExceptionid(), cause.getExceptionid(), 'shared exceptionId')
+        t.ok(cause.getStacktraceelementList().length > 0, 'cause should have stack trace')
+
+        metadataReceived.resolve()
+      } catch (error) {
+        metadataReceived.reject(error)
+      }
+    }
+  })
+
+  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
+    if (err) {
+      t.fail(err)
+      collectorServer.forceShutdown()
+      t.end()
+      return
+    }
+
+    dataSender = new GrpcDataSenderBuilder(port)
+      .enableExceptionMetaData()
+      .build()
+    agent.bindHttp(dataSender)
+
+    const app = new express()
+    app.get('/exception/cause-chain', function (req, res, next) {
+      const rootCause = new TypeError('root cause')
+      const error = new Error('request failed', { cause: rootCause })
+      error.status = 500
+      next(error)
+    })
+    app.use(function (err, req, res, next) {
+      res.status(500).send('error')
+    })
+
+    const server = app.listen(0, async () => {
+      try {
+        const serverPort = server.address().port
+        const response = await axios.get(`http://localhost:${serverPort}/exception/cause-chain`, {
           validateStatus: () => true,
           httpAgent: new http.Agent({ keepAlive: false }),
           httpsAgent: new https.Agent({ keepAlive: false }),

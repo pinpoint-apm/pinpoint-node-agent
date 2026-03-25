@@ -210,7 +210,7 @@ test('shimming require(undici) cause by require-in-the-middle package', function
             t.equal(exceptionMetaData.getTransactionid().getAgentstarttime(), actualFetchAPISpan.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData agent start time is ${actualFetchAPISpan.traceRoot.getTraceId().getAgentStartTime()}`)
             t.equal(exceptionMetaData.getTransactionid().getSequence(), actualFetchAPISpan.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transaction id is ${actualFetchAPISpan.traceRoot.getTraceId().getTransactionId()}`)
             t.equal(exceptionMetaData.getSpanid(), actualFetchAPISpan.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData span id is ${actualFetchAPISpan.traceRoot.getTraceId().getSpanId()}`)
-            t.equal(exceptionMetaData.getUritemplate(), 'NULL', 'ExceptionMetaData uri template is NULL')
+            t.equal(exceptionMetaData.getUritemplate(), '/outgoing', 'ExceptionMetaData uri template is /outgoing')
 
             const exceptionsList = exceptionMetaData.getExceptionsList()
             t.equal(exceptionsList.length, 1, 'ExceptionMetaData exceptions length is 1')

@@ -69,5 +69,5 @@ TypeScript declarations are in `index.d.ts` and per-module `.d.ts` files; genera
 - **Commit message format**: `[#ISSUE_NUMBER] Short description` followed by a concise body explaining what and why.
 - **No Co-Authored-By lines**: Do not append `Co-Authored-By` trailers to commit messages.
 - **Testing**: New features and bug fixes must include functional tests for all supported web frameworks (Express, Koa, Next.js). Run relevant test files and confirm they pass before committing.
-- **PR descriptions**: Write in English, keep concise with bullet points, and update via `gh pr edit` when pushing changes that alter scope.
+- **All documentation in English**: Commit messages, PR descriptions, issue bodies, review comments, and any GitHub-facing content must be written in English. Keep concise with bullet points, and update PR descriptions via `gh pr edit` when pushing changes that alter scope.
 - **After PR merge**: `git fetch upstream` → `git checkout master` → `git rebase upstream/master` → `git push origin master` → delete feature branch locally and remotely.

@@ -21,3 +21,11 @@ checkstyle-result.xml
 # coverage
 .nyc_output
 .nycrc
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# git
+.gitmodules
+.testignore

@@ -221,7 +221,7 @@ function throwHandleTest(trace, t) {
   t.equal(actualTransactionId.getAgentstarttime(), trace.spanBuilder.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStarttime ${actualTransactionId.getAgentstarttime()}`)
   t.equal(actualTransactionId.getSequence(), trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transactionId sequence ${actualTransactionId.getSequence()}`)
   t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
-  t.equal(actualExceptionMetaData.getUritemplate(), 'NULL', 'ExceptionMetaData uriTemplate NULL')
+  t.equal(actualExceptionMetaData.getUritemplate(), '/express3', 'ExceptionMetaData uriTemplate /express3')
 
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
   const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception
@@ -266,7 +266,7 @@ function nextErrorHandleTest(trace, t) {
   t.equal(actualTransactionId.getAgentstarttime(), trace.spanBuilder.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStarttime ${actualTransactionId.getAgentstarttime()}`)
   t.equal(actualTransactionId.getSequence(), trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transactionId sequence ${actualTransactionId.getSequence()}`)
   t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
-  t.equal(actualExceptionMetaData.getUritemplate(), 'NULL', 'ExceptionMetaData uriTemplate NULL')
+  t.equal(actualExceptionMetaData.getUritemplate(), '/express4', 'ExceptionMetaData uriTemplate /express4')
 
   const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
@@ -750,7 +750,7 @@ function throwHandleTestWithoutCallSite(trace, t) {
   t.equal(actualTransansactionId.getAgentstarttime(), trace.spanBuilder.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStartTime ${actualTransansactionId.getAgentstarttime()}`)
   t.equal(actualTransansactionId.getSequence(), trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transactionId sequence ${actualTransansactionId.getSequence()}`)
   t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
-  t.equal(actualExceptionMetaData.getUritemplate(), 'NULL', 'ExceptionMetaData uriTemplate NULL')
+  t.equal(actualExceptionMetaData.getUritemplate(), '/express3', 'ExceptionMetaData uriTemplate /express3')
 
   const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
@@ -793,7 +793,7 @@ function nextErrorHandleTestWithoutCallSite(trace, t) {
   t.equal(actualTransactionId.getAgentstarttime(), trace.spanBuilder.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStartTime ${actualTransactionId.getAgentstarttime()}`)
   t.equal(actualTransactionId.getSequence(), trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transactionId sequence ${actualTransactionId.getSequence()}`)
   t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
-  t.equal(actualExceptionMetaData.getUritemplate(), 'NULL', 'ExceptionMetaData uriTemplate NULL')
+  t.equal(actualExceptionMetaData.getUritemplate(), '/express4', 'ExceptionMetaData uriTemplate /express4')
 
   const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
@@ -1321,7 +1321,7 @@ test('Functional Test: requestExceptionMetaData should deliver converted excepti
         t.ok(exceptionMetaData, 'ExceptionMetaData should be delivered to collector')
         t.ok(exceptionMetaData.getTransactionid(), 'transactionId should exist')
         t.ok(exceptionMetaData.getSpanid(), 'spanId should exist')
-        t.equal(exceptionMetaData.getUritemplate(), 'NULL', 'uriTemplate should be NULL by default')
+        t.equal(exceptionMetaData.getUritemplate(), '/exception/unhandled', 'uriTemplate should be route path')
 
         const exceptions = exceptionMetaData.getExceptionsList()
         t.equal(exceptions.length, 1, 'exceptions length should be 1')

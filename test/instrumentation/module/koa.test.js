@@ -417,6 +417,63 @@ test('Should aggregate URI stats for DisableTrace in Koa', function (t) {
   })
 })
 
+test('Should record ExceptionMetaData with uriTemplate when route throws in Koa', function (t) {
+  agent.bindHttp()
+
+  const PATH = '/integration/exception-meta'
+  const app = new Koa()
+  const router = new Router()
+  let resolveTraceClosed
+  const traceClosed = new Promise((resolve) => {
+    resolveTraceClosed = resolve
+  })
+
+  router.get(PATH, async (ctx) => {
+    agent.callbackTraceClose((trace) => {
+      setImmediate(() => {
+        const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
+        t.ok(actualExceptionMetaData, 'ExceptionMetaData should be sent')
+
+        if (actualExceptionMetaData) {
+          const actualTransactionId = actualExceptionMetaData.getTransactionid()
+          t.ok(actualTransactionId, 'transactionId should exist')
+          t.ok(actualExceptionMetaData.getSpanid(), 'spanId should exist')
+          t.equal(actualExceptionMetaData.getUritemplate(), PATH, 'uriTemplate should be route path')
+
+          const exceptions = actualExceptionMetaData.getExceptionsList()
+          t.equal(exceptions.length, 1, 'exceptions length should be 1')
+          if (exceptions.length > 0) {
+            t.equal(exceptions[0].getExceptionclassname(), 'Error', 'exception class should be Error')
+            t.ok(exceptions[0].getExceptionmessage().includes('koa exception test'), 'exception message should match')
+          }
+        }
+
+        resolveTraceClosed()
+      })
+    })
+    throw new Error('koa exception test')
+  })
+
+  app.use(router.routes()).use(router.allowedMethods())
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    try {
+      await axios.get(getServerUrl(PATH), {
+        timeout: 3000,
+        validateStatus: () => true,
+        httpAgent: new http.Agent({ keepAlive: false }),
+        httpsAgent: new https.Agent({ keepAlive: false }),
+      })
+      await traceClosed
+    } catch (e) {
+      t.fail(e)
+    } finally {
+      server.close()
+      t.end()
+    }
+  })
+})
+
 test('Should count failure in URI stats for DisableTrace in Koa', function (t) {
   agent.bindHttp({
     sampling: { enable: false },

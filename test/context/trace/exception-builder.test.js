@@ -22,7 +22,8 @@ error.stack = `Error: error case
 
 test('ExceptionBuilder Test - snapshot-like multiline', (t) => {
     t.plan(13)
-    const actual = new ExceptionBuilder(error).build()
+    const exceptions = new ExceptionBuilder(error).build()
+    const actual = exceptions[0]
     t.equal(actual.errorClassName, 'Error', `Error class name is ${actual.errorClassName}`)
     t.equal(actual.errorMessage, 'error case', `Error message is ${actual.errorMessage}`)
     t.equal(actual.frameStack.length, 10, `Frame stack length is ${actual.frameStack.length}`)
@@ -108,7 +109,7 @@ test('ExceptionBuilder should use fileName as className fallback and <anonymous>
     at Layer.handle [as handle_request] (/Users/app/node_modules/express/lib/router/layer.js:95:5)
     at next (/Users/app/node_modules/express/lib/router/route.js:149:13)`
 
-    const actual = new ExceptionBuilder(err).build()
+    const actual = new ExceptionBuilder(err).build()[0]
 
     // Frame without type and functionName: className=fileName, methodName='<anonymous>'
     const frame0 = actual.frameStack[0]
@@ -124,6 +125,56 @@ test('ExceptionBuilder should use fileName as className fallback and <anonymous>
     const frame2 = actual.frameStack[2]
     t.equal(frame2.className, 'route.js', 'className should fallback to fileName when type is undefined')
     t.equal(frame2.methodName, 'next', 'methodName should be functionName when present')
+
+    t.end()
+})
+
+test('ExceptionBuilder should walk error.cause chain', (t) => {
+    const rootCause = new Error('root cause')
+    rootCause.stack = 'RangeError: root cause\n    at Object.validate (/Users/app/validator.js:10:5)'
+
+    const middleError = new Error('middle error', { cause: rootCause })
+    middleError.stack = 'TypeError: middle error\n    at Object.parse (/Users/app/parser.js:20:5)'
+
+    const topError = new Error('top error', { cause: middleError })
+    topError.stack = 'Error: top error\n    at Object.handler (/Users/app/handler.js:30:5)'
+
+    const exceptions = new ExceptionBuilder(topError).build()
+
+    t.equal(exceptions.length, 3, 'should have 3 exceptions in chain')
+
+    t.equal(exceptions[0].errorClassName, 'Error', 'depth 0: Error')
+    t.equal(exceptions[0].errorMessage, 'top error', 'depth 0: top error')
+    t.equal(exceptions[0].exceptionDepth, 0, 'depth 0')
+
+    t.equal(exceptions[1].errorClassName, 'TypeError', 'depth 1: TypeError')
+    t.equal(exceptions[1].errorMessage, 'middle error', 'depth 1: middle error')
+    t.equal(exceptions[1].exceptionDepth, 1, 'depth 1')
+
+    t.equal(exceptions[2].errorClassName, 'RangeError', 'depth 2: RangeError')
+    t.equal(exceptions[2].errorMessage, 'root cause', 'depth 2: root cause')
+    t.equal(exceptions[2].exceptionDepth, 2, 'depth 2')
+
+    const sharedId = exceptions[0].exceptionId
+    t.equal(exceptions[1].exceptionId, sharedId, 'all exceptions share same exceptionId')
+    t.equal(exceptions[2].exceptionId, sharedId, 'all exceptions share same exceptionId')
+
+    t.end()
+})
+
+test('ExceptionBuilder should respect maxDepth', (t) => {
+    const cause2 = new Error('cause2')
+    cause2.stack = 'Error: cause2\n    at c (/app.js:3:1)'
+    const cause1 = new Error('cause1', { cause: cause2 })
+    cause1.stack = 'Error: cause1\n    at b (/app.js:2:1)'
+    const top = new Error('top', { cause: cause1 })
+    top.stack = 'Error: top\n    at a (/app.js:1:1)'
+
+    const exceptions = new ExceptionBuilder(top, 2).build()
+
+    t.equal(exceptions.length, 2, 'should be limited to maxDepth=2')
+    t.equal(exceptions[0].errorMessage, 'top', 'depth 0')
+    t.equal(exceptions[1].errorMessage, 'cause1', 'depth 1')
 
     t.end()
 })

@@ -138,4 +138,12 @@ router.get('/exception/unhandled', function (req, res, next) {
   next(error)
 })
 
+router.get('/exception/cause-chain', function (req, res, next) {
+  const rootCause = new TypeError('database connection refused')
+  const middle = new Error('failed to fetch user', { cause: rootCause })
+  const error = new Error('request handler failed', { cause: middle })
+  error.status = 500
+  next(error)
+})
+
 module.exports = router

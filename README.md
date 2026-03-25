@@ -87,6 +87,8 @@ PINPOINT_FEATURES_URI_STATS_HTTP_METHOD | false | Include HTTP method in URI key
 PINPOINT_FEATURES_URI_STATS_CAPACITY | 1000 | Max URI patterns per snapshot window.
 PINPOINT_FEATURES_URI_STATS_TIME_WINDOW |  | Snapshot window in ms (default: `30000`).
 PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT | true | Use user-defined URI template when available. Set a custom URI template on `req`: `req['pinpoint.metric.uri-template'] = '/my/uri'`
+PINPOINT_FEATURES_EXCEPTION_STATS | true | Set `false` to disable exception stats. When `exceptionStats` config is not set, the feature is disabled.
+PINPOINT_FEATURES_EXCEPTION_STATS_MAX_DEPTH | 10 | Max depth for `Error.cause` chain traversal.
 
 Custom URI template example:
 ```javascript

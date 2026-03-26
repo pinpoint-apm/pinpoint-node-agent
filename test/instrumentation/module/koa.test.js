@@ -421,6 +421,53 @@ test('Should aggregate URI stats for DisableTrace in Koa', function (t) {
   })
 })
 
+test('Should not collect ExceptionMetaData when errorAnalysis is disabled in Koa', function (t) {
+  agent.bindHttp({
+    features: {
+      errorAnalysis: undefined
+    }
+  })
+
+  const PATH = '/integration/exception-disabled'
+  const app = new Koa()
+  const router = new Router()
+  let resolveTraceClosed
+  const traceClosed = new Promise((resolve) => {
+    resolveTraceClosed = resolve
+  })
+
+  router.get(PATH, async (ctx) => {
+    agent.callbackTraceClose((trace) => {
+      setImmediate(() => {
+        const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
+        t.equal(actualExceptionMetaData, undefined, 'ExceptionMetaData should not be sent when errorAnalysis is disabled')
+
+        resolveTraceClosed()
+      })
+    })
+    throw new Error('koa error analysis disabled test')
+  })
+
+  app.use(router.routes()).use(router.allowedMethods())
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    try {
+      await axios.get(getServerUrl(PATH), {
+        timeout: 3000,
+        validateStatus: () => true,
+        httpAgent: new http.Agent({ keepAlive: false }),
+        httpsAgent: new https.Agent({ keepAlive: false }),
+      })
+      await traceClosed
+    } catch (e) {
+      t.fail(e)
+    } finally {
+      server.close()
+      t.end()
+    }
+  })
+})
+
 test('Should record ExceptionMetaData with uriTemplate when route throws in Koa', function (t) {
   agent.bindHttp()
 

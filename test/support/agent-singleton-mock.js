@@ -22,8 +22,10 @@ const AgentInfo = require('../../lib/data/dto/agent-info')
 const { ConfigBuilder } = require('../../lib/config-builder')
 const { UriStatsRepositoryBuilder } = require('../../lib/metric/uri/uri-stats-repository')
 const { UriStatsConfigBuilder } = require('../../lib/metric/uri/uri-stats-config-builder')
-const { SpanRecorderEnricher } = require('../../lib/metric/uri/span-recorder-enricher')
+const { SpanRecorderEnricher, enricherNullObject } = require('../../lib/metric/uri/span-recorder-enricher')
 const { TraceCompletionEnricher } = require('../../lib/metric/uri/trace-completion-enricher')
+const { ErrorAnalysisConfigBuilder } = require('../../lib/context/trace/error-analysis-config-builder')
+const { ExceptionEnricher, exceptionEnricherNullObject } = require('../../lib/context/trace/exception-enricher')
 
 let traces = []
 const resetTraces = () => {
@@ -130,7 +132,9 @@ class MockAgent {
         this.traceContext.traceCompletionEnrichers = uriStatsConfig.isUriStatsEnabled()
             ? [new TraceCompletionEnricher(uriStatsRepository)]
             : []
-        this.traceContext.spanRecorderEnricher = uriStatsConfig.isUriStatsEnabled() ? new SpanRecorderEnricher(uriStatsConfig) : null
+        this.traceContext.spanRecorderEnricher = uriStatsConfig.isUriStatsEnabled() ? new SpanRecorderEnricher(uriStatsConfig) : enricherNullObject
+        const errorAnalysisConfig = new ErrorAnalysisConfigBuilder(config).build()
+        this.traceContext.spanEventEnricher = errorAnalysisConfig.isErrorAnalysisEnabled() ? new ExceptionEnricher(errorAnalysisConfig) : exceptionEnricherNullObject
 
         const dataSender = dataSenderMock(this.config, this.agentInfo, grpcDataSender)
         this.traceContext.dataSender = dataSender

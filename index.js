@@ -16,6 +16,8 @@ const { UriStatsConfigBuilder } = require('./lib/metric/uri/uri-stats-config-bui
 const { SpanRecorderEnricher } = require('./lib/metric/uri/span-recorder-enricher')
 const { UriStatsRepositoryBuilder } = require('./lib/metric/uri/uri-stats-repository')
 const { TraceCompletionEnricher } = require('./lib/metric/uri/trace-completion-enricher')
+const { ErrorAnalysisConfigBuilder } = require('./lib/context/trace/error-analysis-config-builder')
+const { ExceptionEnricher } = require('./lib/context/trace/exception-enricher')
 
 const config = new ConfigBuilder().build()
 
@@ -39,6 +41,10 @@ if (uriStatsConfig.isUriStatsEnabled()) {
     })
     agentBuilder.addEnricher(new SpanRecorderEnricher(uriStatsConfig))
     agentBuilder.addEnricher(new TraceCompletionEnricher(uriStatsRepository))
+}
+const errorAnalysisConfig = new ErrorAnalysisConfigBuilder(config).build()
+if (errorAnalysisConfig.isErrorAnalysisEnabled()) {
+    agentBuilder.addEnricher(new ExceptionEnricher(errorAnalysisConfig))
 }
 const agent = agentBuilder.build()
 agent.start()

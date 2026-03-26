@@ -340,6 +340,44 @@ test('shimming undici: requestExceptionMetaData should deliver error.cause chain
     })
 })
 
+test('shimming undici: should not collect ExceptionMetaData when errorAnalysis is disabled', function (t) {
+    const originalEnv = process.env.PINPOINT_FEATURES_ERROR_ANALYSIS
+    process.env.PINPOINT_FEATURES_ERROR_ANALYSIS = 'false'
+
+    agent.bindHttp()
+
+    t.teardown(() => {
+        if (originalEnv === undefined) {
+            delete process.env.PINPOINT_FEATURES_ERROR_ANALYSIS
+        } else {
+            process.env.PINPOINT_FEATURES_ERROR_ANALYSIS = originalEnv
+        }
+    })
+
+    const app = new express()
+    app.get('/disabled-outgoing', (req, res) => {
+        agent.callbackTraceClose((trace) => {
+            setImmediate(() => {
+                const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
+                t.equal(actualExceptionMetaData, undefined, 'ExceptionMetaData should not be sent when errorAnalysis is disabled')
+                server.close()
+                t.end()
+            })
+        })
+        throw new Error('disabled error analysis test')
+    })
+    app.use(function (err, req, res, next) {
+        res.status(500).send('error')
+    })
+
+    const server = app.listen(5006, async () => {
+        await axios.get('http://localhost:5006/disabled-outgoing', {
+            validateStatus: () => true,
+            httpAgent: new http.Agent({ keepAlive: false }),
+        })
+    })
+})
+
 if (parseInt(process.versions.node.split('.')[0], 10) < 20) {
     test('node version 20 or higher specific test', function (t) {
         t.pass('This test runs only on Node.js version 20 or higher')

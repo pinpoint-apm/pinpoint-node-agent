@@ -993,6 +993,46 @@ test('express should record handler registered with pattern route', (t) => {
   })
 })
 
+test('express should not collect ExceptionMetaData when errorAnalysis is disabled', (t) => {
+  agent.bindHttp({
+    features: {
+      errorAnalysis: undefined
+    }
+  })
+
+  const app = new express()
+  const PATH = '/error-analysis-disabled'
+
+  app.get(PATH, (req, res, next) => {
+    agent.callbackTraceClose((trace) => {
+      setImmediate(() => {
+        const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
+        t.equal(actualExceptionMetaData, undefined, 'ExceptionMetaData should not be sent when errorAnalysis is disabled')
+
+        const spanEvent = trace.spanBuilder.spanEventList[1]
+        t.ok(spanEvent.exceptionInfo, 'exceptionInfo should still be recorded')
+        t.equal(spanEvent.exceptionInfo.intValue, 1, 'exceptionInfo intValue should be 1')
+        t.equal(spanEvent.exception, undefined, 'exception object should not be set')
+
+        server.close()
+        t.end()
+      })
+    })
+    next(new Error('error analysis disabled test'))
+  })
+  app.use(function (err, req, res, next) {
+    res.status(500).send('error')
+  })
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    await axios.get(getServerUrl(PATH), {
+      validateStatus: () => true,
+      httpAgent: new http.Agent({ keepAlive: false }),
+      httpsAgent: new https.Agent({ keepAlive: false }),
+    })
+  })
+})
+
 test('express should disable uriTemplate/httpMethod enrichment and use null repository when isUriStatsEnabled is false', (t) => {
   t.plan(5)
 

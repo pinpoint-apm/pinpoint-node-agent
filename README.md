@@ -10,7 +10,57 @@ please post them on the [Discuss issues](https://github.com/naver/pinpoint-node-
 - [Supported Modules](#supported-modules)
 - [Agent-Collector Compatibility](#agent---collector-compatibility-table)
 - [Contributing](#contributing)
+- [Migrating to v1.4](#migrating-to-v14)
 - [License](#license)
+
+## Migrating to v1.4
+
+v1.4 restructured `pinpoint-config.json` format ([before v1.4](https://github.com/pinpoint-apm/pinpoint-node-agent/blob/1.3.1/lib/pinpoint-config-default.json) → [v1.4](https://github.com/pinpoint-apm/pinpoint-node-agent/blob/1.4.0/lib/pinpoint-config-default.json)). If you have an existing `pinpoint-config.json`, update it as follows:
+
+| before v1.4 | v1.4 |
+|------|------|
+| `application-type` | `applicationServiceType` |
+| `collector.span-port` | `collector.spanPort` |
+| `collector.stat-port` | `collector.statPort` |
+| `collector.tcp-port` | `collector.tcpPort` |
+| `stream-deadline-minutes.client-side` | `collector.deadlineMinutes` |
+| `http-status-code.errors` | `plugins.http.errorStatusCodes` |
+| `express.enable` | `plugins.express` |
+| `koa.enable` | `plugins.koa` |
+| `mongo.enable` | `plugins.mongodb` |
+| `redis.enable` | `plugins.redis` |
+| `enabled-data-sending` | `features.dataSending` |
+| `enabled-stats-monitor-sending` | `features.statsMonitoring` |
+| `enabled-active-thread-count` | `features.activeThreadCount` |
+| `container` | `features.container` |
+| `logger-levels` | `features.logLevels` |
+| _(new)_ | `features.uriStats` |
+| _(new)_ | `features.errorAnalysis` |
+
+v1.4 example:
+```json
+{
+  "applicationServiceType": 1400,
+  "collector": {
+    "ip": "localhost",
+    "spanPort": 9993,
+    "statPort": 9992,
+    "tcpPort": 9991,
+    "deadlineMinutes": 10
+  },
+  "sampling": { "enable": true, "rate": 10 },
+  "plugins": {
+    "http": { "errorStatusCodes": "5xx,401,403" },
+    "express": true,
+    "koa": true
+  },
+  "features": {
+    "uriStats": { "httpMethod": false, "capacity": 1000, "useUserInput": true },
+    "errorAnalysis": { "maxDepth": 10 },
+    "logLevels": { "default-logger": "WARN", "grpcLogger": "SILENT" }
+  }
+}
+```
 
 ## Installation and Getting Started
 ### 1. Install
@@ -115,6 +165,7 @@ my-service/
 ├─ server.js
 └─ pinpoint-config.json
 ```
+
 
 ## Supported Modules
 * Express 4 and 5

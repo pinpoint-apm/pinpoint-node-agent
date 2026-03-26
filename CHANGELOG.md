@@ -8,11 +8,11 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 ### Added
 - [[#398](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/398)] [Error Analysis](https://pinpoint-apm.gitbook.io/pinpoint/documents/error_analysis) — Collect exception stack traces and send to Pinpoint collector for error analysis. Supports `Error.cause` chain traversal (`maxDepth` default: 10). Configure via `features.errorAnalysis` in `pinpoint-config.json` or `PINPOINT_FEATURES_ERROR_ANALYSIS`, `PINPOINT_FEATURES_ERROR_ANALYSIS_MAX_DEPTH` [environment variables](https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#environment-variables).
 
-    <img width="800" alt="Error Analysis" src="https://2967689678-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F-MgQ1Is59jDrgEN5nG-0-3931491796%2Fuploads%2Fgit-blob-66f5caa12ca010e28eb6c3e1bce69e98e300ea2f%2Ferror_analysis_01.png?alt=media" />
+    <img width="800" alt="Error Analysis" src="https://raw.githubusercontent.com/pinpoint-apm/pinpoint-apm.github.io/main/.gitbook/assets/error_analysis_01.png" />
 
 - [[#403](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/403)] [URI Stats](https://pinpoint-apm.gitbook.io/pinpoint/documents/uri_statistics) — Collect URI pattern statistics per request. Configure via `features.uriStats` in `pinpoint-config.json` or `PINPOINT_FEATURES_URI_STATS`, `PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT` [environment variables](https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#environment-variables).
 
-    <img width="800" alt="URI Statistics" src="https://2967689678-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F-MgQ1Is59jDrgEN5nG-0-3931491796%2Fuploads%2Fgit-blob-766216ae1ef81bd7cf547351f746d5d7ccc833b7%2Furi_statistics_01.png?alt=media" />
+    <img width="800" alt="URI Statistics" src="https://raw.githubusercontent.com/pinpoint-apm/pinpoint-apm.github.io/main/.gitbook/assets/uri_statistics_01.png" />
 
   **Custom URI template example:**
   ```javascript

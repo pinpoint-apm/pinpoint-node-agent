@@ -10,10 +10,12 @@ please post them on the [Discuss issues](https://github.com/naver/pinpoint-node-
 - [Supported Modules](#supported-modules)
 - [Agent-Collector Compatibility](#agent---collector-compatibility-table)
 - [Contributing](#contributing)
-- [Migrating to v1.4](#migrating-to-v14)
+- [Migrating `pinpoint-config.json` to v1.4](#migrating-pinpoint-configjson-to-v14)
 - [License](#license)
 
-## Migrating to v1.4
+## Migrating `pinpoint-config.json` to v1.4
+
+> **If you use environment variables, no migration is needed.**
 
 v1.4 restructured `pinpoint-config.json` format ([before v1.4](https://github.com/pinpoint-apm/pinpoint-node-agent/blob/1.3.1/lib/pinpoint-config-default.json) → [v1.4](https://github.com/pinpoint-apm/pinpoint-node-agent/blob/1.4.0/lib/pinpoint-config-default.json)). If you have an existing `pinpoint-config.json`, update it as follows:
 

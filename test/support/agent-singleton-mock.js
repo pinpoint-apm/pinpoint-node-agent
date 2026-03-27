@@ -22,7 +22,7 @@ const AgentInfo = require('../../lib/data/dto/agent-info')
 const { ConfigBuilder } = require('../../lib/config-builder')
 const { UriStatsRepositoryBuilder } = require('../../lib/metric/uri/uri-stats-repository')
 const { UriStatsConfigBuilder } = require('../../lib/metric/uri/uri-stats-config-builder')
-const { SpanRecorderEnricher, enricherNullObject } = require('../../lib/metric/uri/span-recorder-enricher')
+const { SpanRecorderFactory, UriStatsSpanRecorderFactory } = require('../../lib/metric/uri/span-recorder-factory')
 const { TraceCompletionEnricher } = require('../../lib/metric/uri/trace-completion-enricher')
 const { ErrorAnalysisConfigBuilder } = require('../../lib/context/trace/error-analysis-config-builder')
 const { ExceptionEnricher, exceptionEnricherNullObject } = require('../../lib/context/trace/exception-enricher')
@@ -94,13 +94,14 @@ const config = new ConfigBuilder({
     .setDefaultJson(require('../pinpoint-config-test.json'))
     .build()
 const agentInfo = AgentInfo.make(config)
+const initialUriStatsConfig = new UriStatsConfigBuilder(config).build()
 const agentBuilder = new AgentBuilder(agentInfo)
     .setConfig(config)
     .setDataSender(dataSenderMock(config, agentInfo))
     .disablePingScheduler()
     .disableStatsScheduler()
-    .addEnricher(new SpanRecorderEnricher(new UriStatsConfigBuilder(config).build()))
-    .addEnricher(new TraceCompletionEnricher(new UriStatsRepositoryBuilder(new UriStatsConfigBuilder(config).build()).build()))
+    .setSpanRecorderFactory(new UriStatsSpanRecorderFactory(config, initialUriStatsConfig))
+    .addEnricher(new TraceCompletionEnricher(new UriStatsRepositoryBuilder(initialUriStatsConfig).build()))
 const agent = agentBuilder.build()
 
 class MockAgent {
@@ -133,7 +134,9 @@ class MockAgent {
         this.traceContext.traceCompletionEnrichers = uriStatsConfig.isUriStatsEnabled()
             ? [new TraceCompletionEnricher(uriStatsRepository)]
             : []
-        this.traceContext.spanRecorderEnricher = uriStatsConfig.isUriStatsEnabled() ? new SpanRecorderEnricher(uriStatsConfig) : enricherNullObject
+        this.traceContext.spanRecorderFactory = uriStatsConfig.isUriStatsEnabled()
+            ? new UriStatsSpanRecorderFactory(config, uriStatsConfig)
+            : new SpanRecorderFactory(config)
         const errorAnalysisConfig = new ErrorAnalysisConfigBuilder(config).build()
         this.traceContext.spanEventEnricher = errorAnalysisConfig.isErrorAnalysisEnabled() ? new ExceptionEnricher(errorAnalysisConfig) : exceptionEnricherNullObject
 

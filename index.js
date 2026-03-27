@@ -13,7 +13,7 @@ const { LogBuilder } = require('./lib/utils/log/log-builder')
 const logger = require('./lib/utils/log/logger')
 const { UriStatsMonitor } = require('./lib/metric/uri/uri-stats-monitor')
 const { UriStatsConfigBuilder } = require('./lib/metric/uri/uri-stats-config-builder')
-const { SpanRecorderEnricher } = require('./lib/metric/uri/span-recorder-enricher')
+const { UriStatsSpanRecorderFactory } = require('./lib/metric/uri/span-recorder-factory')
 const { UriStatsRepositoryBuilder } = require('./lib/metric/uri/uri-stats-repository')
 const { TraceCompletionEnricher } = require('./lib/metric/uri/trace-completion-enricher')
 const { ErrorAnalysisConfigBuilder } = require('./lib/context/trace/error-analysis-config-builder')
@@ -29,6 +29,7 @@ const agentBuilder = new AgentBuilder(agentInfo)
 
 const uriStatsConfig = new UriStatsConfigBuilder(config).build()
 if (uriStatsConfig.isUriStatsEnabled()) {
+    agentBuilder.setSpanRecorderFactory(new UriStatsSpanRecorderFactory(config, uriStatsConfig))
     const uriStatsRepository = new UriStatsRepositoryBuilder(uriStatsConfig).build()
     agentBuilder.addService((dataSender) => {
         const statsMonitor = new UriStatsMonitor(dataSender, uriStatsRepository)
@@ -39,7 +40,6 @@ if (uriStatsConfig.isUriStatsEnabled()) {
             }
         }
     })
-    agentBuilder.addEnricher(new SpanRecorderEnricher(uriStatsConfig))
     agentBuilder.addEnricher(new TraceCompletionEnricher(uriStatsRepository))
 }
 const errorAnalysisConfig = new ErrorAnalysisConfigBuilder(config).build()

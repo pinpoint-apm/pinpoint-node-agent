@@ -26,6 +26,7 @@ const { SpanRecorderEnricher, enricherNullObject } = require('../../lib/metric/u
 const { TraceCompletionEnricher } = require('../../lib/metric/uri/trace-completion-enricher')
 const { ErrorAnalysisConfigBuilder } = require('../../lib/context/trace/error-analysis-config-builder')
 const { ExceptionEnricher, exceptionEnricherNullObject } = require('../../lib/context/trace/exception-enricher')
+const SpanEventRecorderFactory = require('../../lib/context/trace/span-event-recorder-factory')
 
 let traces = []
 const resetTraces = () => {
@@ -139,6 +140,7 @@ class MockAgent {
         const dataSender = dataSenderMock(this.config, this.agentInfo, grpcDataSender)
         this.traceContext.dataSender = dataSender
         this.traceContext.sqlMetadataService = new SqlMetadataService(dataSender, config)
+        this.traceContext.spanEventRecorderFactory = new SpanEventRecorderFactory(this.traceContext.sqlMetadataService, this.traceContext.spanEventEnricher)
         this.dataSender.close()
         this.dataSender = dataSender
         stringMetaService.init(dataSender)

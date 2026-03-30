@@ -12,7 +12,7 @@ const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/de
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const agent = require('../support/agent-singleton-mock')
 const TraceIdBuilder = require('../../lib/context/trace/trace-id-builder')
-const { SpanRecorderFactory } = require('../../lib/metric/uri/span-recorder-factory')
+const { SpanRecorderFactory } = require('../../lib/context/trace/span-recorder-factory')
 
 test('Should create continued trace and add span info', function (t) {
   t.plan(2)

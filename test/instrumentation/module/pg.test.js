@@ -69,12 +69,12 @@ test(`Client create and query hooking`, async (t) => {
             t.equal(querySpanEvent.destinationId, 'test', 'createClient destinationId')
             t.equal(querySpanEvent.serviceType, pgExecuteQueryServiceType.getCode(), 'createClient serviceType')
 
-            let actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = $1')
+            let actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = $1')
             let actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'query annotation key')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'query annotation value')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'query annotation value')
             t.equal(actualQueryAnnotation.value.stringValue2, 'a', 'query annotation bind value')
-            t.equal(actualParsingResult.result.sql.normalizedSql, 'SELECT * FROM member WHERE id = $1', 'query normalizedSql')
+            t.equal(actualParsingResult.sql.normalizedSql, 'SELECT * FROM member WHERE id = $1', 'query normalizedSql')
 
             t.end()
         })
@@ -142,10 +142,10 @@ test(`Client multiple queries with parameters`, async (t) => {
             let insertQuerySpanEvent = querySpanEvents[1]
             t.ok(insertQuerySpanEvent.apiId > 0, 'INSERT query apiId should be positive')
 
-            let actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('INSERT INTO member (id, name, email) VALUES ($1, $2, $3)')
+            let actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('INSERT INTO member (id, name, email) VALUES ($1, $2, $3)')
             let actualQueryAnnotation = insertQuerySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'INSERT annotation key')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'INSERT annotation sqlId')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'INSERT annotation sqlId')
             t.equal(actualQueryAnnotation.value.stringValue2, 'c,name3,test3@example.com', 'INSERT annotation bind values')
 
             // Verify UPDATE query

@@ -19,7 +19,6 @@ export class Config {
     getExclusionUrl(): { patterns: string[]; cacheSize?: number }
     getCollector(): { ip: string; spanPort: number; statPort: number; tcpPort: number }
     getDeadlineSeconds(): number
-    hasSqlStats(): boolean
     isSamplingEnabled(): boolean
     getLogLevels(): Record<string, string>
     isDataSendingEnabled(): boolean

@@ -73,7 +73,7 @@ TypeScript declarations are in `index.d.ts` and per-module `.d.ts` files; genera
 4. **Testing**: New features and bug fixes must include functional tests for all supported web frameworks (Express, Koa, Next.js). Run relevant test files and confirm they pass.
 5. **Review**: Stop and wait for the user to review the diff. Do not proceed until the user explicitly approves.
 6. **Commit and push**: Squash all changes into a single commit using `git commit` (not amend). Push the branch to remote.
-7. **PR**: Create a pull request via `gh pr create`.
+7. **PR**: Create a pull request via `gh pr create`. Include `Closes #ISSUE_NUMBER` in the PR body to link the issue.
 8. **After PR merge**: `git fetch upstream` → `git checkout master` → `git rebase upstream/master` → `git push origin master` → delete feature branch locally and remotely.
 
 ### Commit conventions

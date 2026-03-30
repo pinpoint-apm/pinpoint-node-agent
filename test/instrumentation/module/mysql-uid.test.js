@@ -83,10 +83,10 @@ test('mysql uid query', async (t) => {
             t.equal(querySpanEvent.sequence, 2, 'query sequence is 2 in mysql uid functional test')
             t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, 'query apiId is same in mysql uid functional test')
 
-            let actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('SELECT * FROM member')
+            let actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM member')
             let actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_UID.getCode(), 'query annotation key is sql in mysql uid functional test')
-            t.equal(actualParsingResult.result.sql.normalizedSql, 'SELECT * FROM member', 'query normalizedSql is SELECT * FROM member in mysql uid functional test')
+            t.equal(actualParsingResult.sql.normalizedSql, 'SELECT * FROM member', 'query normalizedSql is SELECT * FROM member in mysql uid functional test')
 
             let actualGrpcSpanEvent = trace.repository.dataSender.mockSpan.spanEventList[2]
             t.equal(actualQueryAnnotation.key, actualGrpcSpanEvent.annotations[0].key, 'query annotation key is same that grpc in mysql uid functional test')

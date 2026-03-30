@@ -476,7 +476,7 @@ test(`nested mysql2 async query with express`, async (t) => {
                 const index = sendedApiMetaInfos.findIndex(item => item === apiDescriptor)
                 sendedApiMetaInfos.splice(index, 1)
             } else {
-                const parsingResult = [...agent.traceContext.sqlMetadataService.cache.cache.entries()]
+                const parsingResult = [...agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cache.cache.entries()]
                     .map(([, value]) => value)
                     .find(parsingResult => parsingResult.sqlMetaDataValue().sqlId === call.request.getSqlid())
                 t.equal(call.request.getSqlid(), parsingResult.sqlMetaDataValue().sqlId, `sqlId is ${call.request.getSqlid()}`)

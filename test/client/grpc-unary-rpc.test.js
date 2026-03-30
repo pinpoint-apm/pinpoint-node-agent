@@ -20,6 +20,9 @@ const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, DataSourceCal
 const InterceptingCall = grpc.InterceptingCall
 const { ConfigBuilder } = require('../../lib/config-builder')
 const { SqlMetadataService } = require('../../lib/instrumentation/sql/sql-metadata-service')
+const { IntIdParsingResultFactory } = require('../../lib/context/trace/parsing-result-factory')
+const { UidParsingResultFactory } = require('../../lib/metric/sql/uid-parsing-result-factory')
+const { SqlStatsConfigBuilder } = require('../../lib/metric/sql/sql-stats-config-builder')
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 const service = (call, callback) => {
@@ -393,7 +396,7 @@ test('sendSqlMetaData retry', (t) => {
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         fixtureMetadata = []
         dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
-        const sqlMetadataService = new SqlMetadataService(dataSender, dataSender.config)
+        const sqlMetadataService = new SqlMetadataService(dataSender, new IntIdParsingResultFactory())
         const callRequests = getCallRequests()
 
         const parsingResult = sqlMetadataService.cacheSql('SELECT DATABASE() as res')
@@ -426,7 +429,8 @@ test('sendSqlMetaData retry', (t) => {
 test('sendSqlUidMetaData retry', (t) => {
     process.env['PINPOINT_PROFILER_SQL_STAT'] = 'true'
     const conf = new ConfigBuilder().build()
-    t.true(conf.hasSqlStats(), 'profiler SQL Stat is false')
+    const sqlStatsConfig = new SqlStatsConfigBuilder(conf).build()
+    t.true(sqlStatsConfig.isSqlStatsEnabled(), 'profiler SQL Stat is true')
 
     const server = new grpc.Server()
     server.addService(services.MetadataService, {
@@ -436,7 +440,7 @@ test('sendSqlUidMetaData retry', (t) => {
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         fixtureMetadata = []
         dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
-        const sqlMetadataService = new SqlMetadataService(dataSender, dataSender.config)
+        const sqlMetadataService = new SqlMetadataService(dataSender, new UidParsingResultFactory())
         const callRequests = getCallRequests()
         const callMetadata = getMetadata()
 

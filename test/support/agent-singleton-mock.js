@@ -10,6 +10,9 @@ const dataSenderMock = require('./data-sender-mock')
 const shimmer = require('@pinpoint-apm/shimmer')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const { SqlMetadataService } = require('../../lib/instrumentation/sql/sql-metadata-service')
+const { IntIdParsingResultFactory } = require('../../lib/context/trace/parsing-result-factory')
+const { UidParsingResultFactory } = require('../../lib/metric/sql/uid-parsing-result-factory')
+const { SqlStatsConfigBuilder } = require('../../lib/metric/sql/sql-stats-config-builder')
 const TraceSampler = require('../../lib/context/trace/trace-sampler')
 const transactionIdGenerator = require('../../lib/context/sequence-generators').transactionIdGenerator
 const closedTraceWrapped = Symbol('closedTraceWrapped')
@@ -139,12 +142,14 @@ class MockAgent {
             ? new UriStatsSpanRecorderFactory(config, uriStatsConfig)
             : new SpanRecorderFactory(config)
         const errorAnalysisConfig = new ErrorAnalysisConfigBuilder(config).build()
-        this.traceContext.spanEventEnricher = errorAnalysisConfig.isErrorAnalysisEnabled() ? new ExceptionEnricher(errorAnalysisConfig) : exceptionEnricherNullObject
+        const spanEventEnricher = errorAnalysisConfig.isErrorAnalysisEnabled() ? new ExceptionEnricher(errorAnalysisConfig) : exceptionEnricherNullObject
 
         const dataSender = dataSenderMock(this.config, this.agentInfo, grpcDataSender)
         this.traceContext.dataSender = dataSender
-        this.traceContext.sqlMetadataService = new SqlMetadataService(dataSender, config)
-        this.traceContext.spanEventRecorderFactory = new SpanEventRecorderFactory(this.traceContext.sqlMetadataService, this.traceContext.spanEventEnricher)
+        const sqlStatsConfig = new SqlStatsConfigBuilder(config).build()
+        const parsingResultFactory = sqlStatsConfig.isSqlStatsEnabled() ? new UidParsingResultFactory() : new IntIdParsingResultFactory()
+        const sqlMetadataService = new SqlMetadataService(dataSender, parsingResultFactory)
+        this.traceContext.spanEventRecorderFactory = new SpanEventRecorderFactory(sqlMetadataService, spanEventEnricher)
         this.dataSender.close()
         this.dataSender = dataSender
         stringMetaService.init(dataSender)
@@ -226,7 +231,7 @@ class MockAgent {
         })
 
         resetSqlMetaData()
-        shimmer.wrap(this.traceContext.sqlMetadataService, 'send', function (origin) {
+        shimmer.wrap(sqlMetadataService, 'send', function (origin) {
             return function () {
                 const returned = origin.apply(this, arguments)
                 getSqlMetadata().push(arguments[0])

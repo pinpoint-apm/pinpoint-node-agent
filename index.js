@@ -18,6 +18,8 @@ const { UriStatsRepositoryBuilder } = require('./lib/metric/uri/uri-stats-reposi
 const { TraceCompletionEnricher } = require('./lib/metric/uri/trace-completion-enricher')
 const { ErrorAnalysisConfigBuilder } = require('./lib/context/trace/error-analysis-config-builder')
 const { ExceptionEnricher } = require('./lib/context/trace/exception-enricher')
+const { UidParsingResultFactory } = require('./lib/metric/sql/uid-parsing-result-factory')
+const { SqlStatsConfigBuilder } = require('./lib/metric/sql/sql-stats-config-builder')
 
 const config = new ConfigBuilder().build()
 
@@ -41,6 +43,10 @@ if (uriStatsConfig.isUriStatsEnabled()) {
         }
     })
     agentBuilder.addEnricher(new TraceCompletionEnricher(uriStatsRepository))
+}
+const sqlStatsConfig = new SqlStatsConfigBuilder(config).build()
+if (sqlStatsConfig.isSqlStatsEnabled()) {
+    agentBuilder.setParsingResultFactory(new UidParsingResultFactory())
 }
 const errorAnalysisConfig = new ErrorAnalysisConfigBuilder(config).build()
 if (errorAnalysisConfig.isErrorAnalysisEnabled()) {

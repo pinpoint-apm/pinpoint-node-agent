@@ -49,6 +49,8 @@ declare class AgentBuilder {
   setLogger(logger: Logging): AgentBuilder;
   addService(service: ServiceHandler): AgentBuilder;
   addEnricher(enricher: any): AgentBuilder;
+  setSpanRecorderFactory(spanRecorderFactory: any): AgentBuilder;
+  setParsingResultFactory(parsingResultFactory: any): AgentBuilder;
   disableStatsScheduler(): AgentBuilder;
   disablePingScheduler(): AgentBuilder;
   disableServiceCommand(): AgentBuilder;

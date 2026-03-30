@@ -180,11 +180,11 @@ test(`connection with query`, async (t) => {
             t.equal(querySpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
             t.equal(actualMethodDescriptor.apiId, querySpanEvent.apiId, 'apiId')
 
-            let actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('SELECT DATABASE() as res')
+            let actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT DATABASE() as res')
             let actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'the query annotation key')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'the query annotation value')
-            t.equal(actualParsingResult.result.sql.normalizedSql, 'SELECT DATABASE() as res', 'the query annotation squl normalizedSql')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'the query annotation value')
+            t.equal(actualParsingResult.sql.normalizedSql, 'SELECT DATABASE() as res', 'the query annotation squl normalizedSql')
 
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
@@ -194,11 +194,11 @@ test(`connection with query`, async (t) => {
             t.equal(querySpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
             t.equal(actualMethodDescriptor.apiId, querySpanEvent.apiId, 'apiId')
 
-            actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('SHOW TABLES')
+            actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('SHOW TABLES')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'the query annotation key')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'the query annotation value')
-            t.equal(actualParsingResult.result.sql.normalizedSql, 'SHOW TABLES', 'the query annotation squl normalizedSql')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'the query annotation value')
+            t.equal(actualParsingResult.sql.normalizedSql, 'SHOW TABLES', 'the query annotation squl normalizedSql')
 
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
@@ -208,13 +208,13 @@ test(`connection with query`, async (t) => {
             t.equal(querySpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
             t.equal(actualMethodDescriptor.apiId, querySpanEvent.apiId, 'apiId')
 
-            actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('SELECT * FROM `member` WHERE id = ?')
+            actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM `member` WHERE id = ?')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'the query annotation key')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'the query annotation value')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'the query annotation value')
             t.equal(actualQueryAnnotation.value.stringValue1, '', 'the query annotation value stringValue1 is sql normalizedSql parsedParameters')
             t.equal(actualQueryAnnotation.value.stringValue2, 'a', 'the query annotation value stringValue2 is bind value')
-            t.equal(actualParsingResult.result.sql.normalizedSql, 'SELECT * FROM `member` WHERE id = ?', 'the query annotation sql normalizedSql')
+            t.equal(actualParsingResult.sql.normalizedSql, 'SELECT * FROM `member` WHERE id = ?', 'the query annotation sql normalizedSql')
 
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
@@ -224,13 +224,13 @@ test(`connection with query`, async (t) => {
             t.equal(querySpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
             t.equal(actualMethodDescriptor.apiId, querySpanEvent.apiId, 'apiId')
 
-            actualParsingResult = agent.traceContext.sqlMetadataService.cacheSql('INSERT INTO `member` (id, name, joined) VALUES (?, ?, ?)')
+            actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('INSERT INTO `member` (id, name, joined) VALUES (?, ?, ?)')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'the query annotation key')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.result.sqlId, 'the query annotation value')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'the query annotation value')
             t.equal(actualQueryAnnotation.value.stringValue1, '', 'the query annotation value stringValue1 is sql normalizedSql parsedParameters')
             t.equal(actualQueryAnnotation.value.stringValue2, 'c,cname,2023-08-18', 'the query annotation value stringValue2 is bind value')
-            t.equal(actualParsingResult.result.sql.normalizedSql, 'INSERT INTO `member` (id, name, joined) VALUES (?, ?, ?)', 'the query annotation sql normalizedSql')
+            t.equal(actualParsingResult.sql.normalizedSql, 'INSERT INTO `member` (id, name, joined) VALUES (?, ?, ?)', 'the query annotation sql normalizedSql')
 
             t.end()
         })

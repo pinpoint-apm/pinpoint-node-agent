@@ -42,3 +42,6 @@ checkstyle-results.xml
 
 # coverage
 .nyc_output
+
+# claude code
+**/.claude/**/*.local.json

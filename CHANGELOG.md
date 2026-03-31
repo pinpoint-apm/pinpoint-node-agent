@@ -17,11 +17,11 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 ### Added
 - [[#398](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/398)] [Error Analysis](https://pinpoint-apm.gitbook.io/pinpoint/documents/error_analysis) — Collect exception stack traces and send to Pinpoint collector for error analysis. Supports `Error.cause` chain traversal (`maxDepth` default: 10). Configure via `features.errorAnalysis` in `pinpoint-config.json` or `PINPOINT_FEATURES_ERROR_ANALYSIS`, `PINPOINT_FEATURES_ERROR_ANALYSIS_MAX_DEPTH` [environment variables](https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#environment-variables).
 
-    <img width="800" alt="Error Analysis" src="https://raw.githubusercontent.com/pinpoint-apm/pinpoint-apm.github.io/main/.gitbook/assets/error_analysis_01.png" />
+    <img width="800" alt="Error Analysis" src="https://github.com/user-attachments/assets/366786ad-8635-4cfc-8dae-4e8ba9e4a811" />
 
 - [[#403](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/403)] [URI Stats](https://pinpoint-apm.gitbook.io/pinpoint/documents/uri_statistics) — Collect URI pattern statistics per request. Configure via `features.uriStats` in `pinpoint-config.json` or `PINPOINT_FEATURES_URI_STATS`, `PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT` [environment variables](https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#environment-variables).
 
-    <img width="800" alt="URI Statistics" src="https://raw.githubusercontent.com/pinpoint-apm/pinpoint-apm.github.io/main/.gitbook/assets/uri_statistics_01.png" />
+    <img width="800" alt="URI Statistics" src="https://github.com/user-attachments/assets/7c13567d-c334-4e43-bab6-e6f18579f9cc" />
 
   **Custom URI template example:**
   ```javascript

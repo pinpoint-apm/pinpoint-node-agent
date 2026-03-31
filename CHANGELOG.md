@@ -2,6 +2,9 @@
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
 ## [1.4.1] - 2026-03-31
+### Fixed
+- [[#505](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/505)] Fix `UNKNOWN_DATABASE` shown for MySQL `pool.getConnection` → `connection.query` path
+
 ### Changed
 - [[#478](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/478)] Documented `pinpoint-config.json` format changes for migration to v1.4. See the [migration guide](https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#migrating-pinpoint-configjson-to-v14) for details.
 

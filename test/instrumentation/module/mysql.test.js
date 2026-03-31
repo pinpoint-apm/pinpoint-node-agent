@@ -315,6 +315,7 @@ test(`Connection Pool with query`, async (t) => {
             t.equal(actualSpanEvent.depth, 1, 'Pool.getConnection spanEvent depth')
             t.equal(actualSpanEvent.sequence, 1, 'Pool.getConnection spanEvent sequence')
             t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'Pool.getConnection spanEvent serviceType')
+            t.equal(actualSpanEvent.destinationId, 'test', 'Pool.getConnection spanEvent destinationId')
 
             let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualSpanEvent.asyncId)
             t.equal(actualSpanChunk.spanId, actualSpanEvent.spanId, 'spanChunk spanId')
@@ -334,6 +335,7 @@ test(`Connection Pool with query`, async (t) => {
             t.equal(actualSpanEvent.depth, 2, 'PoolConnection.query spanEvent depth on pool.query')
             t.equal(actualSpanEvent.sequence, 1, 'PoolConnection.query spanEvent sequence on pool.query')
             t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'PoolConnection.query spanEvent serviceType on pool.query')
+            t.equal(actualSpanEvent.destinationId, 'test', 'PoolConnection.query spanEvent destinationId on pool.query via getConnection')
 
             asyncSpanChunkMySQLMatcher(t, trace, actualSpanEvent)
 
@@ -345,6 +347,7 @@ test(`Connection Pool with query`, async (t) => {
             t.equal(actualSpanEvent.depth, 1, 'Pool.getConnection spanEvent depth on pool.query')
             t.equal(actualSpanEvent.sequence, 2, 'Pool.getConnection spanEvent sequence on pool.query')
             t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'PoolConnection.query spanEvent serviceType on pool.query')
+            t.equal(actualSpanEvent.destinationId, 'test', 'PoolConnection.query spanEvent destinationId on pool.query direct')
 
             actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualSpanEvent.asyncId)
             t.equal(actualSpanChunk.spanId, actualSpanEvent.spanId, 'spanChunk spanId on pool.query')
@@ -469,6 +472,7 @@ test(`Cluster with query`, async (t) => {
             t.equal(actualSpanEvent.depth, 2, 'PoolConnection.query spanEvent depth in poolCluster.getConnection')
             t.equal(actualSpanEvent.sequence, 1, 'PoolConnection.query spanEvent sequence in poolCluster.getConnection')
             t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'PoolConnection.query spanEvent serviceType in poolCluster.getConnection')
+            t.equal(actualSpanEvent.destinationId, 'test', 'PoolConnection.query spanEvent destinationId in poolCluster.getConnection')
 
             asyncSpanChunkMySQLMatcher(t, trace, actualSpanEvent)
             t.end()

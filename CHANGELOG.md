@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [1.4.1] - 2026-03-31
+### Changed
+- [[#478](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/478)] Documented `pinpoint-config.json` format changes for migration to v1.4. See the [migration guide](https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#migrating-pinpoint-configjson-to-v14) for details.
+
+### Improvements
+- [[#477](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/477)] Refactored enricher system — `AgentBuilder` now assembles all dependencies and injects into `TraceContext`
+- [[#498](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/498)] Extracted `ParsingResultFactory` to decouple SQL metadata from global config
+- [[#500](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/500)] Extracted `CompositeTraceCompletionEnricher` to encapsulate trace completion lifecycle
+
 ## [1.4.0] - 2026-03-25
 ### Fixed
 - [[#474](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/474)] Replace external `end-of-stream` dependency with Node.js built-in `stream.finished()`.

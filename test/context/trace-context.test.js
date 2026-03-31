@@ -16,12 +16,13 @@ const { SpanRecorderFactory } = require('../../lib/context/trace/span-recorder-f
 const SpanEventRecorderFactory = require('../../lib/context/trace/span-event-recorder-factory')
 const { SqlMetadataService } = require('../../lib/instrumentation/sql/sql-metadata-service')
 const { IntIdParsingResultFactory } = require('../../lib/context/trace/parsing-result-factory')
+const { CompositeTraceCompletionEnricher } = require('../../lib/context/trace/composite-trace-completion-enricher')
 
 test('Should create continued trace and add span info', function (t) {
   t.plan(2)
   agent.bindHttp()
 
-  const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config, [], new SpanRecorderFactory(agent.config), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())))
+  const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config, new CompositeTraceCompletionEnricher([]), new SpanRecorderFactory(agent.config), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())))
   const traceId = new TraceIdBuilder(agent.agentInfo.getAgentId(), agent.agentInfo.getAgentStartTime(), '9').build()
   const trace = traceContext.continueTraceObject(traceId)
   localStorage.run(trace, () => {
@@ -40,7 +41,7 @@ test('Should begin/end trace block asynchronously', async function (t) {
   agent.bindHttp()
 
   // start trace and write span info
-  const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config, [], new SpanRecorderFactory(agent.config), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())))
+  const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config, new CompositeTraceCompletionEnricher([]), new SpanRecorderFactory(agent.config), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())))
   const startedTrace = traceContext.newTraceObject('/')
 
   localStorage.run(startedTrace, () => {
@@ -70,7 +71,7 @@ test('Should begin/end trace block asynchronously', async function (t) {
 test('Should complete trace ', async function (t) {
   t.plan(1)
   agent.bindHttp()
-  const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config, [], new SpanRecorderFactory(agent.config), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())))
+  const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config, new CompositeTraceCompletionEnricher([]), new SpanRecorderFactory(agent.config), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())))
   const trace = traceContext.newTraceObject('/')
 
   await new Promise(resolve => setTimeout(resolve, 501))

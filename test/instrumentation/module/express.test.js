@@ -33,10 +33,10 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 const getUriStatsRepository = () => {
-  const traceCompletionEnricher = agent.traceContext?.traceCompletionEnrichers?.find((enricher) => {
-    return enricher && typeof enricher.onComplete === 'function' && enricher.repository
+  const enricher = agent.traceContext?.traceCompletionEnricher?.enrichers?.find((e) => {
+    return e && typeof e.onComplete === 'function' && e.repository
   })
-  return traceCompletionEnricher?.repository ?? UriStatsRepositoryBuilder.nullObject
+  return enricher?.repository ?? UriStatsRepositoryBuilder.nullObject
 }
 
 const testName1 = 'express1'

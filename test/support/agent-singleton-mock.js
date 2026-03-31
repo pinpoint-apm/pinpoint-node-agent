@@ -31,6 +31,7 @@ const { TraceCompletionEnricher } = require('../../lib/metric/uri/trace-completi
 const { ErrorAnalysisConfigBuilder } = require('../../lib/context/trace/error-analysis-config-builder')
 const { ExceptionEnricher, exceptionEnricherNullObject } = require('../../lib/context/trace/exception-enricher')
 const SpanEventRecorderFactory = require('../../lib/context/trace/span-event-recorder-factory')
+const { CompositeTraceCompletionEnricher } = require('../../lib/context/trace/composite-trace-completion-enricher')
 
 let traces = []
 const resetTraces = () => {
@@ -135,9 +136,9 @@ class MockAgent {
 
         this.traceContext.traceSampler = new TraceSampler(this.agentInfo, config)
         this.traceContext.config = config
-        this.traceContext.traceCompletionEnrichers = uriStatsConfig.isUriStatsEnabled()
-            ? [new TraceCompletionEnricher(uriStatsRepository)]
-            : []
+        this.traceContext.traceCompletionEnricher = uriStatsConfig.isUriStatsEnabled()
+            ? new CompositeTraceCompletionEnricher([new TraceCompletionEnricher(uriStatsRepository)])
+            : new CompositeTraceCompletionEnricher([])
         this.traceContext.spanRecorderFactory = uriStatsConfig.isUriStatsEnabled()
             ? new UriStatsSpanRecorderFactory(config, uriStatsConfig)
             : new SpanRecorderFactory(config)

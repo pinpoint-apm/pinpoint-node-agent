@@ -137,6 +137,7 @@ test('sendAgentInfo deadline and metadata', (t) => {
             t.equal(call.metadata.get('agentid')[0], 'node.test.app', 'call.metadata.get("agentid")[0] is node.test.app')
             t.equal(call.metadata.get('applicationname')[0], 'test.application.name', 'call.metadata.get("applicationname")[0] is test.application.name')
             t.equal(call.metadata.get('agentName')[0], 'testAgentName', 'call.metadata.get("agentName")[0] is testAgentName')
+            t.equal(call.metadata.get('servicetype')[0], '1400', 'call.metadata.get("servicetype")[0] is 1400')
 
             const result = new spanMessages.PResult()
             if (agentInfo == 1) {
@@ -198,6 +199,7 @@ test('sendAgentInfo deadline and no agent name metadata', (t) => {
             t.equal(call.metadata.get('agentid')[0], 'node.test.app', 'call.metadata.get("agentid")[0] is node.test.app')
             t.equal(call.metadata.get('applicationname')[0], 'test.application.name', 'call.metadata.get("applicationname")[0] is test.application.name')
             t.equal(call.metadata.get('agentName')[0], undefined, 'call.metadata.get("agentName")[0] is undefined')
+            t.equal(call.metadata.get('servicetype')[0], '1400', 'call.metadata.get("servicetype")[0] is 1400')
 
             const result = new spanMessages.PResult()
             if (agentInfo == 1) {

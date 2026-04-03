@@ -10,8 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      checks: write
-      pull-requests: write
     strategy:
       matrix:
         node_version:
@@ -31,28 +29,30 @@ jobs:
       - name: Lint
         if: matrix.node_version == env.TARGET_NODE_VERSION
         run: npm run lint
-      - name: Report checkstyle
+      - name: Upload checkstyle result
         if: matrix.node_version == env.TARGET_NODE_VERSION
-        continue-on-error: true
-        uses: actions/github-script@v7
+        uses: actions/upload-artifact@v4
         with:
-          script: |
-            const script = require('./.github/scripts/report-checkstyle.js')
-            await script({ github, context })
+          name: checkstyle-result
+          path: checkstyle-result.xml
+          retention-days: 1
       - name: Coverage
         if: matrix.node_version == env.TARGET_NODE_VERSION
         run: npm run coverage
-      - name: Setup LCOV
+      - name: Upload coverage result
         if: matrix.node_version == env.TARGET_NODE_VERSION
-        uses: hrishikesh-kadam/setup-lcov@v1
+        uses: actions/upload-artifact@v4
         with:
-          ref: v1.16
-      - name: Report code coverage
-        if: matrix.node_version == env.TARGET_NODE_VERSION
-        continue-on-error: true
-        uses: zgosalvez/github-actions-report-lcov@v4
+          name: coverage-report
+          path: coverage/lcov.info
+          retention-days: 1
+      - name: Save PR number
+        if: matrix.node_version == env.TARGET_NODE_VERSION && github.event_name == 'pull_request'
+        run: echo "${{ github.event.number }}" > pr-number.txt
+      - name: Upload PR number
+        if: matrix.node_version == env.TARGET_NODE_VERSION && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
         with:
-          coverage-files: coverage/lcov.info
-          artifact-name: code-coverage-report
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          update-comment: true
+          name: pr-number
+          path: pr-number.txt
+          retention-days: 1

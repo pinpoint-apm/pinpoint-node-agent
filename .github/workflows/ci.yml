@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      checks: write
+      pull-requests: write
     strategy:
       matrix:
         node_version:
@@ -26,24 +28,31 @@ jobs:
           node-version: ${{ matrix.node_version }}
       - run: npm install
       - run: npm test
-      # TODO: Re-enable after implementing PR comment via artifact (#513)
-      # - name: Lint
-      #   if: matrix.node_version == env.TARGET_NODE_VERSION
-      #   run: npm run lint
-      # - name: Upload checkstyle result
-      #   if: matrix.node_version == env.TARGET_NODE_VERSION
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: checkstyle-result
-      #     path: checkstyle-result.xml
-      #     retention-days: 1
-      # - name: Coverage
-      #   if: matrix.node_version == env.TARGET_NODE_VERSION
-      #   run: npm run coverage
-      # - name: Upload coverage result
-      #   if: matrix.node_version == env.TARGET_NODE_VERSION
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: coverage-report
-      #     path: coverage/lcov.info
-      #     retention-days: 1
+      - name: Lint
+        if: matrix.node_version == env.TARGET_NODE_VERSION
+        run: npm run lint
+      - name: Report checkstyle
+        if: matrix.node_version == env.TARGET_NODE_VERSION
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./.github/scripts/report-checkstyle.js')
+            await script({ github, context })
+      - name: Coverage
+        if: matrix.node_version == env.TARGET_NODE_VERSION
+        run: npm run coverage
+      - name: Setup LCOV
+        if: matrix.node_version == env.TARGET_NODE_VERSION
+        uses: hrishikesh-kadam/setup-lcov@v1
+        with:
+          ref: v1.16
+      - name: Report code coverage
+        if: matrix.node_version == env.TARGET_NODE_VERSION
+        continue-on-error: true
+        uses: zgosalvez/github-actions-report-lcov@v4
+        with:
+          coverage-files: coverage/lcov.info
+          artifact-name: code-coverage-report
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          update-comment: true

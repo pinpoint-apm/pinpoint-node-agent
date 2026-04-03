@@ -282,7 +282,7 @@ test('Max buffer size', (t) => {
 })
 
 test('When gRPC server shutdown and then node agent grpcStream on error fired and then reconnection gRPC call and then check errored stream going end stream', (t) => {
-    t.plan(2)
+    t.plan(3)
     let server = new grpc.Server()
     let requestId = 0
     let handleCommandCallback
@@ -290,6 +290,7 @@ test('When gRPC server shutdown and then node agent grpcStream on error fired an
         handleCommand: (call, callback) => {
             const metadata = call.metadata
             t.equal(metadata.get('agentid').toString(), 'node.test.app', 'metadata agentid')
+            t.equal(metadata.get('servicetype')[0], '1400', 'metadata servicetype is 1400')
             if (typeof handleCommandCallback === 'function') {
                 handleCommandCallback(call, callback)
             }

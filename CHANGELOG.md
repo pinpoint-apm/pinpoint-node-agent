@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [1.4.2] - 2026-04-03
+### Added
+- [[#507](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/507)] Add `servicetype` to gRPC metadata headers, matching Java agent's `Header.SERVICE_TYPE_KEY`
+
 ## [1.4.1] - 2026-03-31
 ### Fixed
 - [[#505](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/505)] Fix `UNKNOWN_DATABASE` shown for MySQL `pool.getConnection` → `connection.query` path

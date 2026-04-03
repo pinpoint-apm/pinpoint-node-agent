@@ -65,29 +65,5 @@ TypeScript declarations are in `index.d.ts` and per-module `.d.ts` files; genera
 
 ## Git Rules
 
-### Workflow
-
-1. **New task**: Create a GitHub issue first via `gh issue create` if one does not exist. Always assign a milestone to issues and PRs.
-2. **Branch**: Create a feature branch from master.
-3. **Code changes**: Implement the feature or fix.
-4. **Testing**: New features and bug fixes must include functional tests for all supported web frameworks (Express, Koa, Next.js). Run relevant test files and confirm they pass.
-5. **Review**: Stop and wait for the user to review the diff. Do not proceed until the user explicitly approves.
-6. **Commit and push**: Squash all changes into a single commit using `git commit` (not amend). Push the branch to remote.
-7. **PR**: Create a pull request via `gh pr create`. Include `Closes #ISSUE_NUMBER` in the PR body to link the issue.
-8. **After PR merge**: `git fetch upstream` → `git checkout master` → `git rebase upstream/master` → `git push origin master` → delete feature branch locally and remotely.
-
-### Release procedure
-
-1. Create a release issue (e.g., "Release 1.4.1") with a checklist: update CHANGELOG.md, bump `version` in `package.json` and `demo/express/package.json`, update version assertion in `test/agent.test.js`, memory leak test, npm publish, git tag, GitHub Release.
-2. Update CHANGELOG.md with release notes and migration guide links.
-3. Bump version in `package.json`, `demo/express/package.json`, and `test/agent.test.js`.
-4. After PR merge, run memory leak test and post results as a comment on the release issue.
-5. `npm publish` and verify on npmjs.com.
-6. `git tag <version>` → `git push upstream <version>`.
-7. Create GitHub Release from the tag with release notes from CHANGELOG.md.
-
-### Commit conventions
-
-- **Commit message format**: `[#ISSUE_NUMBER] Short description` followed by a concise body explaining what and why.
-- **No Co-Authored-By lines**: Do not append `Co-Authored-By` trailers to commit messages.
-- **All documentation in English**: Commit messages, PR descriptions, issue bodies, review comments, and any GitHub-facing content must be written in English. Keep concise with bullet points, and update PR descriptions via `gh pr edit` when pushing changes that alter scope.
+- **Testing**: New features and bug fixes must include functional tests for all supported web frameworks (Express, Koa, Next.js).
+- **Release**: Use `/release` skill for the full release procedure.

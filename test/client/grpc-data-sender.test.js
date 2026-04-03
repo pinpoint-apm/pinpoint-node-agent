@@ -149,6 +149,10 @@ test('Should send span', function (t) {
       t.equal(actual.getApplicationservicetype(), 1400, 'applicaiton service type')
       t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
 
+      const callMetadata = getMetadata()
+      t.true(callMetadata.length > 0, 'span stream metadata is collected')
+      t.equal(callMetadata[0].get('servicetype')[0], '1400', 'span stream metadata servicetype is 1400')
+
       dataSender.close()
       server.tryShutdown(() => {
         afterOne(t)
@@ -414,6 +418,7 @@ test('sendStat', (t) => {
   let assertAgentStat
   collectorServer.addService(services.StatService, {
     sendAgentStat: (call) => {
+      t.equal(call.metadata.get('servicetype')[0], '1400', 'stat stream metadata servicetype is 1400')
       call.on('data', (data) => {
         assertAgentStat?.(data)
       })

@@ -1,0 +1,48 @@
+name: CI
+
+on: [push, pull_request]
+
+env:
+  TARGET_NODE_VERSION: '22'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        node_version:
+          - 18
+          - 20
+          - 22
+
+    name: Node ${{ matrix.node_version }} on ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: setup node environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node_version }}
+      - run: npm install
+      - run: npm test
+      - name: Lint
+        if: matrix.node_version == env.TARGET_NODE_VERSION
+        run: npm run lint
+      - name: Upload checkstyle result
+        if: matrix.node_version == env.TARGET_NODE_VERSION
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkstyle-result
+          path: checkstyle-result.xml
+          retention-days: 1
+      - name: Coverage
+        if: matrix.node_version == env.TARGET_NODE_VERSION
+        run: npm run coverage
+      - name: Upload coverage result
+        if: matrix.node_version == env.TARGET_NODE_VERSION
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/lcov.info
+          retention-days: 1

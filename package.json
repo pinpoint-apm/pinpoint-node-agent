@@ -1,6 +1,6 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "type": "commonjs",
   "main": "./index.js",
   "types": "./index.d.ts",

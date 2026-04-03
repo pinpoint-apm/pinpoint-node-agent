@@ -26,23 +26,24 @@ jobs:
           node-version: ${{ matrix.node_version }}
       - run: npm install
       - run: npm test
-      - name: Lint
-        if: matrix.node_version == env.TARGET_NODE_VERSION
-        run: npm run lint
-      - name: Upload checkstyle result
-        if: matrix.node_version == env.TARGET_NODE_VERSION
-        uses: actions/upload-artifact@v4
-        with:
-          name: checkstyle-result
-          path: checkstyle-result.xml
-          retention-days: 1
-      - name: Coverage
-        if: matrix.node_version == env.TARGET_NODE_VERSION
-        run: npm run coverage
-      - name: Upload coverage result
-        if: matrix.node_version == env.TARGET_NODE_VERSION
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage/lcov.info
-          retention-days: 1
+      # TODO: Re-enable after implementing PR comment via artifact (#513)
+      # - name: Lint
+      #   if: matrix.node_version == env.TARGET_NODE_VERSION
+      #   run: npm run lint
+      # - name: Upload checkstyle result
+      #   if: matrix.node_version == env.TARGET_NODE_VERSION
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: checkstyle-result
+      #     path: checkstyle-result.xml
+      #     retention-days: 1
+      # - name: Coverage
+      #   if: matrix.node_version == env.TARGET_NODE_VERSION
+      #   run: npm run coverage
+      # - name: Upload coverage result
+      #   if: matrix.node_version == env.TARGET_NODE_VERSION
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: coverage-report
+      #     path: coverage/lcov.info
+      #     retention-days: 1

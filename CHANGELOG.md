@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [1.4.3] - 2026-06-11
+### Security
+- [[#517](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/517)] Bump `@grpc/grpc-js` to `^1.14.4` to resolve **CVE-2026-41242** in the transitive `protobufjs` dependency (`7.5.3` → `7.6.3`, via `@grpc/proto-loader@0.8.1`) ([Thanks @youngseo-choi](https://github.com/youngseo-choi))
+
 ## [1.4.2] - 2026-04-03
 ### Added
 - [[#507](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/507)] Add `servicetype` to gRPC metadata headers, matching Java agent's `Header.SERVICE_TYPE_KEY`

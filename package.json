@@ -1,6 +1,6 @@
 {
   "name": "pinpoint-node-agent",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "type": "commonjs",
   "main": "./index.js",
   "types": "./index.d.ts",
@@ -82,7 +82,7 @@
     "devops"
   ],
   "dependencies": {
-    "@grpc/grpc-js": "^1.10.9",
+    "@grpc/grpc-js": "^1.14.4",
     "@pinpoint-apm/shimmer": "^1.2.2",
     "google-protobuf": "^3.13.0",
     "internal-ip": "^3.0.1",

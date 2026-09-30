@@ -1,3 +1,9 @@
+---
+name: release
+description: Release a new pinpoint-node-agent version to npm — changelog, version bump, tag, GitHub Release. Invoke with `/release`.
+disable-model-invocation: true
+---
+
 ## Release procedure
 
 1. Create a release issue (e.g., "Release 1.4.1") with a checklist: update CHANGELOG.md, bump `version` in `package.json` and `demo/express/package.json`, update version assertion in `test/agent.test.js`, memory leak test, npm publish, git tag, GitHub Release.

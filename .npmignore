@@ -22,9 +22,12 @@ checkstyle-result.xml
 .nyc_output
 .nycrc
 
-# Claude Code
+# AI coding agents
 .claude/
+.agents/
 CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
 
 # git
 .gitmodules

@@ -123,7 +123,7 @@ Based on the [pinpoint-config-default.json](/lib/pinpoint-config-default.json) f
 
 name | default | description
 -----|---------|------------
-PINPOINT_AGENT_ID |  | Optional (≤24 chars). Auto-generated random hex if unset. Pattern: `[a-zA-Z0-9._-]+`.
+PINPOINT_AGENT_ID |  | Optional (≤24 chars). Auto-generated as a 22-char base64 UUIDv7 if unset. Pattern: `[a-zA-Z0-9._-]+`.
 PINPOINT_AGENT_NAME |  | Recommended. Shown in Inspector UI (e.g. pod name, hostname). ≤255 chars. Pattern: `[a-zA-Z0-9._-]+`.<br><img width="611" alt="Agent Name in Inspector" src="https://github.com/user-attachments/assets/8022baa4-8b38-4553-9c12-88de17bc8f22" />
 PINPOINT_APPLICATION_NAME | | **Required.** App name (≤24 chars). Multiple agents can share one name. Pattern: `[a-zA-Z0-9._-]+`.
 PINPOINT_COLLECTOR_IP | localhost | Pinpoint collector address. e.g. `192.168.0.1`

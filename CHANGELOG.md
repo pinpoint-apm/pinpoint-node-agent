@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [1.5.0] - Unreleased
+### Changed
+- [[#523](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/523)] Auto-generate the agent ID as a 22-char base64 UUIDv7 instead of a 16-char random hex string when `PINPOINT_AGENT_ID` is not set, matching the Java agent.
+
 ## [1.4.3] - 2026-06-11
 ### Security
 - [[#517](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/517)] Bump `@grpc/grpc-js` to `^1.14.4` to resolve **CVE-2026-41242** in the transitive `protobufjs` dependency (`7.5.3` → `7.6.3`, via `@grpc/proto-loader@0.8.1`) ([Thanks @youngseo-choi](https://github.com/youngseo-choi))

@@ -8,6 +8,8 @@ const test = require('tape')
 const { ConfigBuilder } = require('../lib/config-builder')
 const path = require('path')
 
+const generatedAgentIdPattern = /^[A-Za-z0-9_-]{22}$/
+
 test('Agent ID required field', function (t) {
   t.plan(1)
 
@@ -15,7 +17,7 @@ test('Agent ID required field', function (t) {
   delete process.env.PINPOINT_APPLICATION_NAME
 
   const conf = new ConfigBuilder().build()
-  t.true(conf.agentId.length == 16)
+  t.match(conf.agentId, generatedAgentIdPattern, 'agentId is generated as 22-char base64 UUIDv7')
 })
 
 test('Should be configured with environment variable', function (t) {
@@ -142,14 +144,14 @@ test('Agent ID length check', (t) => {
   given = new ConfigBuilder().build()
   t.true(given.enable, 'agent ID nullable test')
   t.equal(given.applicationName, 'appicationnameappication', 'application name is appicationnameappication')
-  t.equal(given.agentId.length, 16, 'random generated agent ID length is 16')
+  t.match(given.agentId, generatedAgentIdPattern, 'generated agent ID is 22-char base64 UUIDv7')
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_AGENT_NAME
   delete process.env.PINPOINT_APPLICATION_NAME
 
   given = new ConfigBuilder().build()
   t.false(given.enable, 'Application Name must be set')
-  t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
+  t.match(given.agentId, generatedAgentIdPattern, 'Agent ID was generated')
   t.false(given.agentName, 'Agent Name is optional value and only set from developer')
   t.equal(given.applicationName, undefined, 'Application Name is required and only set from developer')
   t.equal(given.messages.errors[0], 'Application Name is required. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
@@ -161,7 +163,7 @@ test('Agent ID length check', (t) => {
   process.env['PINPOINT_AGENT_NAME'] = 'agent name'
   given = new ConfigBuilder().build()
   t.false(given.enable, 'Application Name must be set')
-  t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
+  t.match(given.agentId, generatedAgentIdPattern, 'Agent ID was generated')
   t.equal(given.agentName, 'agent name', 'Agent Name is optional value and only set from developer')
   t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
   t.equal(given.messages.errors[0], 'Agent Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: agent name. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
@@ -173,7 +175,7 @@ test('Agent ID length check', (t) => {
   process.env['PINPOINT_AGENT_NAME'] = 'agent?name'
   given = new ConfigBuilder().build()
   t.false(given.enable, 'Application Name must be set')
-  t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
+  t.match(given.agentId, generatedAgentIdPattern, 'Agent ID was generated')
   t.equal(given.agentName, 'agent?name', 'Agent Name is optional value and only set from developer')
   t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
   t.equal(given.messages.errors[0], 'Agent Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: agent?name. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
@@ -185,7 +187,7 @@ test('Agent ID length check', (t) => {
   process.env['PINPOINT_AGENT_NAME'] = 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagen'
   given = new ConfigBuilder().build()
   t.false(given.enable, 'Application Name must be set')
-  t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
+  t.match(given.agentId, generatedAgentIdPattern, 'Agent ID was generated')
   t.equal(given.agentName, 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagen', 'Agent Name is optional value and only set from developer')
   t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
   t.equal(given.messages.errors[0], 'Agent Name is too long (max 255 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
@@ -197,7 +199,7 @@ test('Agent ID length check', (t) => {
   process.env['PINPOINT_AGENT_NAME'] = 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameage'
   given = new ConfigBuilder().build()
   t.true(given.enable, 'Application Name must be set')
-  t.true(given.agentId.length === 16, 'Agent ID was generated randomly')
+  t.match(given.agentId, generatedAgentIdPattern, 'Agent ID was generated')
   t.equal(given.agentName, 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameage', 'Agent Name is optional value and only set from developer')
   t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
   t.equal(given.messages, undefined, 'no error message')

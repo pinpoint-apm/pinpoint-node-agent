@@ -125,7 +125,8 @@ name | default | description
 -----|---------|------------
 PINPOINT_AGENT_ID |  | Optional (≤24 chars). Auto-generated as a 22-char base64 UUIDv7 if unset. Pattern: `[a-zA-Z0-9._-]+`.
 PINPOINT_AGENT_NAME |  | Recommended. Shown in Inspector UI (e.g. pod name, hostname). ≤255 chars. Pattern: `[a-zA-Z0-9._-]+`.<br><img width="611" alt="Agent Name in Inspector" src="https://github.com/user-attachments/assets/8022baa4-8b38-4553-9c12-88de17bc8f22" />
-PINPOINT_APPLICATION_NAME | | **Required.** App name (≤24 chars). Multiple agents can share one name. Pattern: `[a-zA-Z0-9._-]+`.
+PINPOINT_APPLICATION_NAME | | **Required.** App name (<255 chars). Multiple agents can share one name. Pattern: `[a-zA-Z0-9._-]+`.
+PINPOINT_UID_VERSION | v4 | `v3` or `v4` (case-insensitive; other values → `v4`). Use `v3` for a collector that does not support v4. Sets the `protocol.version` gRPC header (`100` / `400`).
 PINPOINT_COLLECTOR_IP | localhost | Pinpoint collector address. e.g. `192.168.0.1`
 PINPOINT_SAMPLING_RATE | 10 | Sampling ratio `1/N`. Default `10` = ~10%. See [Performance tester](/demo/performance-tester).
 PINPOINT_LOGGER_LEVELS |  | Comma-separated logger levels. e.g. `default-logger=INFO,grpcLogger=SILENT`

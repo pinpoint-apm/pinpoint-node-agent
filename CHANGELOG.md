@@ -3,6 +3,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 
 ## [1.5.0] - Unreleased
 ### Changed
+- [[#524](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/524)] Add uid version config (`PINPOINT_UID_VERSION` / `uidVersion`, `v3` or `v4`, default `v4`): allow `applicationName` up to 254 characters (was 24) and send the `protocol.version` gRPC header (`400` for v4, `100` for v3).
 - [[#523](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/523)] Auto-generate the agent ID as a 22-char base64 UUIDv7 instead of a 16-char random hex string when `PINPOINT_AGENT_ID` is not set, matching the Java agent.
 
 ## [1.4.3] - 2026-06-11

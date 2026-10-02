@@ -85,7 +85,7 @@ test('ConfigBuilder pathForRequireFunction Learning Test', (t) => {
 // https://github.com/pinpoint-apm/pinpoint/blob/master/bootstraps/bootstrap/src/main/java/com/navercorp/pinpoint/bootstrap/IdValidator.java
 // https://github.com/pinpoint-apm/pinpoint/blob/master/commons/src/main/java/com/navercorp/pinpoint/common/PinpointConstants.java
 // public final class PinpointConstants {
-//   public static final int APPLICATION_NAME_MAX_LEN = 24;
+//   public static final int APPLICATION_NAME_MAX_LEN = 24; // uid v1 only, v3 and v4 allow 254
 //   public static final int AGENT_ID_MAX_LEN = 24;
 // }
 test('Agent ID length check', (t) => {
@@ -116,10 +116,15 @@ test('Agent ID length check', (t) => {
   delete process.env.PINPOINT_APPLICATION_NAME
 
   process.env['PINPOINT_AGENT_ID'] = 'agentIdagentIdagentIdage'
-  process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappicationE'
+  process.env['PINPOINT_APPLICATION_NAME'] = 'a'.repeat(254)
+  given = new ConfigBuilder().build()
+  t.true(given.enable, 'maxlength application Name is 254')
+  t.equal(given.messages, undefined, 'no error message for 254 characters application Name')
+
+  process.env['PINPOINT_APPLICATION_NAME'] = 'a'.repeat(255)
   given = new ConfigBuilder().build()
   t.false(given.enable, 'maxlength application Name error')
-  t.equal(given.messages.errors[0], 'Application Name is too long (max 24 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
+  t.equal(given.messages.errors[0], 'Application Name is too long (max 254 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME
 
@@ -240,14 +245,14 @@ test('Agent Name validation', (t) => {
 
 test('Agent ID and Application Name multiple errors', (t) => {
   process.env.PINPOINT_AGENT_ID = 'agentIdagentIdagentIdageE' // 25 chars -> too long
-  process.env.PINPOINT_APPLICATION_NAME = 'appicationnameappication?' // invalid char
+  process.env.PINPOINT_APPLICATION_NAME = 'a'.repeat(254) + '?' // 255 chars with invalid char
 
   const given = new ConfigBuilder().build()
   t.false(given.enable, 'config disabled when multiple id/app errors')
   t.ok(given.messages?.errors?.length >= 2, 'aggregates multiple errors')
   t.equal(given.messages.errors[0], 'Agent ID is too long (max 24 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
-  t.equal(given.messages.errors[1], 'Application Name is too long (max 24 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
-  t.equal(given.messages.errors[2], 'Application Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: appicationnameappication?. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
+  t.equal(given.messages.errors[1], 'Application Name is too long (max 254 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
+  t.equal(given.messages.errors[2], `Application Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: ${'a'.repeat(254)}?. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables`)
 
   delete process.env.PINPOINT_AGENT_ID
   delete process.env.PINPOINT_APPLICATION_NAME

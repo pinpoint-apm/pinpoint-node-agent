@@ -20,10 +20,12 @@ const { ErrorAnalysisConfigBuilder } = require('./lib/context/trace/error-analys
 const { ExceptionEnricher } = require('./lib/context/trace/exception-enricher')
 const { UidParsingResultFactory } = require('./lib/metric/sql/uid-parsing-result-factory')
 const { SqlStatsConfigBuilder } = require('./lib/metric/sql/sql-stats-config-builder')
+const { NameVersionConfigBuilder } = require('./lib/name/name-version-config-builder')
 
 const config = new ConfigBuilder().build()
+const nameVersionConfig = new NameVersionConfigBuilder(config).build()
 
-const agentInfo = AgentInfo.make(config)
+const agentInfo = AgentInfo.make(config, nameVersionConfig)
 const defaultLogger = logger.getLogger(LogBuilder.createDefaultLogBuilder().setConfig(config).build())
 const agentBuilder = new AgentBuilder(agentInfo)
     .setConfig(config)

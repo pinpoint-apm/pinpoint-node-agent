@@ -20,6 +20,8 @@ const { ErrorAnalysisConfigBuilder } = require('./lib/context/trace/error-analys
 const { ExceptionEnricher } = require('./lib/context/trace/exception-enricher')
 const { UidParsingResultFactory } = require('./lib/metric/sql/uid-parsing-result-factory')
 const { SqlStatsConfigBuilder } = require('./lib/metric/sql/sql-stats-config-builder')
+const { ProtocolVersionConfigBuilder } = require('./lib/name/protocol-version-config-builder')
+const { NamesAndIdsEnricher } = require('./lib/name/names-and-ids-enricher')
 
 const config = new ConfigBuilder().build()
 
@@ -28,6 +30,7 @@ const defaultLogger = logger.getLogger(LogBuilder.createDefaultLogBuilder().setC
 const agentBuilder = new AgentBuilder(agentInfo)
     .setConfig(config)
     .setLogger(defaultLogger)
+    .addEnricher(new NamesAndIdsEnricher(new ProtocolVersionConfigBuilder(config).build()))
 
 const uriStatsConfig = new UriStatsConfigBuilder(config).build()
 if (uriStatsConfig.isUriStatsEnabled()) {

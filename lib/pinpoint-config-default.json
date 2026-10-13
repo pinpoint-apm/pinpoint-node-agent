@@ -5,7 +5,8 @@
         "spanPort": 9993,
         "statPort": 9992,
         "tcpPort": 9991,
-        "deadlineMinutes": 10
+        "deadlineMinutes": 10,
+        "protocolVersion": "v4"
     },
     "sampling": {
         "enable": true,

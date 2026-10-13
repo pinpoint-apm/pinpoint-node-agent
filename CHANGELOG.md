@@ -1,9 +1,12 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
-## [1.5.0] - Unreleased
+## [2.0.0] - Unreleased
 ### Changed
-- [[#523](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/523)] Auto-generate the agent ID as a 22-char base64 UUIDv7 instead of a 16-char random hex string when `PINPOINT_AGENT_ID` is not set, matching the Java agent.
+- [[#527](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/527)] Support the Pinpoint v4 agent identification protocol (default `v4`, `v3` selectable)
+  - `collector.protocolVersion` / `PINPOINT_COLLECTOR_PROTOCOL_VERSION`: `v4` or `v3`
+  - `applicationName` up to 254 characters (was 24)
+  - Auto-generated agentId is a base64 UUIDv7 (22 chars)
 
 ## [1.4.3] - 2026-06-11
 ### Security

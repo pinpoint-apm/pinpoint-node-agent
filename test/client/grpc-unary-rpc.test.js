@@ -247,6 +247,7 @@ test('sendApiMetaInfo retry', (t) => {
             const metadata = callMetadata[0]
             t.deepEqual(metadata.get('grpc.built-in.retry'), ['true'], '1st metadata.get("grpc.built-in.retry") is "true"')
             t.equal(metadata.get('servicetype')[0], '1400', '1st metadata.get("servicetype") is 1400')
+            t.deepEqual(metadata.get('protocol.version'), [], '1st metadata has no protocol.version without NamesAndIdsEnricher')
             afterOne(t)
         })
 

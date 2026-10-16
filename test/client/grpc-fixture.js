@@ -7,6 +7,7 @@
 'use strict'
 
 const agent = require('../support/agent-singleton-mock')
+const { ClientHeader, makeClientHeaderInterceptor } = require('../../lib/name/client-header')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const SpanBuilder = require('../../lib/context/span-builder')
 const RemoteTraceRootBuilder = require('../../lib/context/remote-trace-root-builder')
@@ -34,19 +35,7 @@ function beforeSpecificOne(port, one, serviceConfig) {
             'dataSending': true,
         }
     }).build()
-    const collector = actualConfig.getCollector()
-    return new one(
-        collector.ip,
-        collector.tcpPort,
-        collector.statPort,
-        collector.spanPort,
-        agentInfo(),
-        actualConfig
-    )
-}
-
-function agentInfo() {
-    return agent.getAgentInfo()
+    return new one(actualConfig, [makeClientHeaderInterceptor(ClientHeader.make(agent.agentStartTime, agent.getConfig()))])
 }
 
 function afterOne(t) {
@@ -69,7 +58,7 @@ function increaseCallCount() {
 }
 
 class DataSourceCallCountable extends GrpcDataSender {
-    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+    constructor(config, interceptors) {
         config = Object.assign({}, {
             sendAgentInfo: false,
             sendApiMetaInfo: false,
@@ -85,7 +74,7 @@ class DataSourceCallCountable extends GrpcDataSender {
             agentInfoScheduler: false,
         }, config)
         config = new ConfigBuilder(config).build()
-        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+        super(config, interceptors)
     }
 
     initializeClients() {
@@ -112,21 +101,21 @@ class DataSourceCallCountable extends GrpcDataSender {
         }
     }
 
-    initializeProfilerClients(collectorIp, collectorTcpPort, config) {
+    initializeProfilerClients() {
         if (this.config.sendSupportedServicesCommand) {
-            super.initializeProfilerClients(collectorIp, collectorTcpPort, config)
+            super.initializeProfilerClients()
         }
     }
 
-    initializeSpanStream(collectorIp, collectorSpanPort, config) {
+    initializeSpanStream() {
         if (this.config.sendSpan || this.config.sendSpanChunk) {
-            super.initializeSpanStream(collectorIp, collectorSpanPort, config)
+            super.initializeSpanStream()
         }
     }
 
-    initializeStatStream(collectorIp, collectorStatPort, config) {
+    initializeStatStream() {
         if (this.config.sendStat) {
-            super.initializeStatStream(collectorIp, collectorStatPort, config)
+            super.initializeStatStream()
         }
     }
 
@@ -209,7 +198,7 @@ class DataSourceCallCountable extends GrpcDataSender {
 }
 
 function spanWithId(transactionId) {
-    return new SpanBuilder(new RemoteTraceRootBuilder(agentInfo(), transactionId).build()).build()
+    return new SpanBuilder(new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, transactionId).build()).build()
 }
 
 function spanMessageWithId(spanId) {
@@ -217,38 +206,38 @@ function spanMessageWithId(spanId) {
 }
 
 class ProfilerDataSource extends DataSourceCallCountable {
-    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+    constructor(config, interceptors) {
         config = Object.assign({}, config, {
             sendSupportedServicesCommand: true,
         })
         config = new ConfigBuilder(config).build()
-        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+        super(config, interceptors)
     }
 }
 
 class SpanOnlyFunctionalTestableDataSource extends DataSourceCallCountable {
-    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+    constructor(config, interceptors) {
         config = Object.assign({}, config, {
                 sendSpan: true,
                 sendSpanChunk: true,
             })
         config = new ConfigBuilder(config).build()
-        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+        super(config, interceptors)
     }
 }
 
 class StatOnlyFunctionalTestableDataSource extends DataSourceCallCountable {
-    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+    constructor(config, interceptors) {
         config = Object.assign({}, config, {
             sendStat: true,
         })
         config = new ConfigBuilder(config).build()
-        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+        super(config, interceptors)
     }
 }
 
 class MetaInfoOnlyDataSource extends DataSourceCallCountable {
-    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+    constructor(config, interceptors) {
         config = Object.assign({}, config, {
             sendApiMetaInfo: true,
             sendStringMetaInfo: true,
@@ -257,7 +246,7 @@ class MetaInfoOnlyDataSource extends DataSourceCallCountable {
             sendExceptionMetaData: true,
         })
         config = new ConfigBuilder(config).build()
-        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+        super(config, interceptors)
     }
 }
 

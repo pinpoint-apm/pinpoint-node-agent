@@ -7,7 +7,6 @@
 import { Config } from './config-builder';
 import type { Logging } from './utils/log/types';
 import type { DataSender } from './types';
-import AgentInfo = require('./data/dto/agent-info');
 
 interface TraceObject {
   [key: string]: any;
@@ -26,7 +25,7 @@ interface AgentService {
 type ServiceHandler = (dataSender: DataSender) => void | AgentService;
 
 interface Agent {
-  agentInfo: AgentInfo;
+  agentStartTime: string;
   config: Config;
   dataSender: DataSender;
   traceContext: TraceContext;
@@ -36,15 +35,14 @@ interface Agent {
   createTraceObject(): TraceObject;
   currentTraceObject(): TraceObject | null;
   completeTraceObject(trace: TraceObject): void;
-  getAgentInfo(): AgentInfo;
+  getConfig(): Config;
   getTraceContext(): TraceContext;
   shutdown(): void;
 }
 
 declare class AgentBuilder {
-  constructor(agentInfo: AgentInfo);
+  constructor(config: Config);
 
-  setConfig(config: Config): AgentBuilder;
   setDataSender(dataSender: DataSender): AgentBuilder;
   setLogger(logger: Logging): AgentBuilder;
   addService(service: ServiceHandler): AgentBuilder;

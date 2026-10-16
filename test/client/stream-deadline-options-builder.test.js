@@ -12,19 +12,19 @@ const StreamDeadlineOptionsBuilder = require('../../lib/client/stream-deadline-o
 
 test('stream deadline options from config without exceptions', function (t) {
     agent.bindHttp({ 'collector': null })
-    let dut = new StreamDeadlineOptionsBuilder(agent.config)
+    let dut = new StreamDeadlineOptionsBuilder(agent.getConfig())
     t.equal(dut.deadlineSeconds, 600, 'If stream deadline seconds JSON is null, Node.js runtime is returned as 0')
 
     agent.bindHttp({ 'collector': undefined })
-    dut = new StreamDeadlineOptionsBuilder(agent.config)
+    dut = new StreamDeadlineOptionsBuilder(agent.getConfig())
     t.equal(dut.deadlineSeconds, 600, 'If stream deadline seconds JSON is undefined, returns default 600 seconds')
 
     agent.bindHttp({ 'collector': { 'deadlineMinutes': 1 }})
-    dut = new StreamDeadlineOptionsBuilder(agent.config)
+    dut = new StreamDeadlineOptionsBuilder(agent.getConfig())
     t.equal(dut.deadlineSeconds, 60, 'If stream deadline seconds JSON is 1, returns 60 seconds')
 
     agent.bindHttp()
-    dut = new StreamDeadlineOptionsBuilder(agent.config)
+    dut = new StreamDeadlineOptionsBuilder(agent.getConfig())
     t.equal(dut.deadlineSeconds, 600, 'If stream deadline seconds JSON is not set, returns default 600 seconds')
     t.end()
 })

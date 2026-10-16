@@ -13,11 +13,11 @@ const { beforeSpecificOne, DataSourceCallCountable } = require('./grpc-fixture')
 const shimmer = require('@pinpoint-apm/shimmer')
 
 class PingOnlyDataSource extends DataSourceCallCountable {
-    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+    constructor(config, interceptors) {
         config = Object.assign({}, config, {
             sendPing: true,
         })
-        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+        super(config, interceptors)
     }
 }
 

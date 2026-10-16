@@ -188,6 +188,7 @@ test('Next.JS Production Server start', (suite) => {
                     DB_PASSWORD: container.getUserPassword(),
                     NEXT_TELEMETRY_DISABLED: '1',
                     PINPOINT_APPLICATION_NAME: 'next.js.test.js',
+                    PINPOINT_SERVICE_NAME: 'next.js.test.js',
                     PINPOINT_COLLECTOR_IP: '127.0.0.1',
                     PINPOINT_COLLECTOR_SPAN_PORT: String(spanCollectorPort),
                     PINPOINT_COLLECTOR_STAT_PORT: String(spanCollectorPort),

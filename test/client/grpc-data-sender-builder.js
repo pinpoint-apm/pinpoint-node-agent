@@ -8,12 +8,13 @@
 
 const { DataSourceCallCountable } = require('./grpc-fixture')
 const agent = require('../support/agent-singleton-mock')
+const { ClientHeader, makeClientHeaderInterceptor } = require('../../lib/name/client-header')
 
 class GrpcDataSenderBuilder {
     constructor(port) {
         this.port = port
-        this.config = agent.config
-        this.agentInfo = agent.getAgentInfo()
+        this.config = agent.getConfig()
+        this.interceptors = [makeClientHeaderInterceptor(ClientHeader.make(agent.agentStartTime, agent.getConfig()))]
         this.enableMethods = {
             sendAgentInfo: false,
             sendApiMetaInfo: false,
@@ -86,8 +87,9 @@ class GrpcDataSenderBuilder {
     }
 
     build() {
-        const config = Object.assign({}, this.enableMethods, this.config)
-        return new DataSourceCallCountable('localhost', this.port, this.port, this.port, this.agentInfo, config)
+        const collector = Object.assign({}, this.config.collector, { ip: 'localhost', spanPort: this.port, statPort: this.port, tcpPort: this.port })
+        const config = Object.assign({}, this.enableMethods, this.config, { collector })
+        return new DataSourceCallCountable(config, this.interceptors)
     }
 }
 

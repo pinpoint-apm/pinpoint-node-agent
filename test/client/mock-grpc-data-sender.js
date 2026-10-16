@@ -61,7 +61,7 @@ class MockGrpcDataSender extends GrpcDataSender {
     return this.actualSpans[this.actualSpans.length - 1]
   }
 
-  initializeMetadataClients(collectorIp, collectorTcpPort) {
+  initializeMetadataClients() {
   }
 
   initializeSpanStream() {

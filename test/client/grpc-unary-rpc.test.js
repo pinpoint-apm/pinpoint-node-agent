@@ -10,7 +10,6 @@ const services = require('../../lib/data/v1/Service_grpc_pb')
 const MethodType = require('../../lib/constant/method-type')
 const grpc = require('@grpc/grpc-js')
 const spanMessages = require('../../lib/data/v1/Span_pb')
-const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
@@ -19,6 +18,7 @@ const SqlUidMetaData = require('../../lib/client/sql-uid-meta-data')
 const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, DataSourceCallCountable } = require('./grpc-fixture')
 const InterceptingCall = grpc.InterceptingCall
 const { ConfigBuilder } = require('../../lib/config-builder')
+const AgentInfo = require('../../lib/data/dto/agent-info')
 const { SqlMetadataService } = require('../../lib/instrumentation/sql/sql-metadata-service')
 const { IntIdParsingResultFactory } = require('../../lib/context/trace/parsing-result-factory')
 const { UidParsingResultFactory } = require('../../lib/metric/sql/uid-parsing-result-factory')
@@ -49,8 +49,9 @@ function agentInfo() {
     const config = new ConfigBuilder({
         agentId: '12121212',
         applicationName: 'applicationName',
-    }).build()
-    return Object.assign(AgentInfo.make(config), {
+        serviceName: 'serviceName',
+    }).setUserDefinedJson({}).build()
+    return Object.assign(new AgentInfo(config, String(Date.now())), {
         ip: '1'
     })
 }
@@ -59,12 +60,12 @@ let agentInfoRefreshInterval
 let fixtureMetadata = []
 let enableAgentInfoScheduler = false
 class AgentInfoOnlyDataSource extends DataSourceCallCountable {
-    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+    constructor(config, interceptors) {
         config = Object.assign({}, config, {
             sendAgentInfo: true,
             agentInfoScheduler: enableAgentInfoScheduler
         })
-        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+        super(config, interceptors)
     }
     agentInfoRefreshInterval() {
         return agentInfoRefreshInterval ? agentInfoRefreshInterval : super.agentInfoRefreshInterval()
@@ -195,14 +196,14 @@ test('sendAgentInfo schedule', (t) => {
 })
 
 class MetaInfoOnlyDataSource extends DataSourceCallCountable {
-    constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+    constructor(config, interceptors) {
         config = Object.assign({}, config, {
             sendApiMetaInfo: true,
             sendStringMetaInfo: true,
             sendSqlMetaInfo: true,
             sendSqlUidMetaData: true
         })
-        super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+        super(config, interceptors)
     }
     initializeClients() { }
     initializeSpanStream() { }
@@ -247,7 +248,7 @@ test('sendApiMetaInfo retry', (t) => {
             const metadata = callMetadata[0]
             t.deepEqual(metadata.get('grpc.built-in.retry'), ['true'], '1st metadata.get("grpc.built-in.retry") is "true"')
             t.equal(metadata.get('servicetype')[0], '1400', '1st metadata.get("servicetype") is 1400')
-            t.deepEqual(metadata.get('protocol.version'), [], '1st metadata has no protocol.version without NamesAndIdsEnricher')
+            t.deepEqual(metadata.get('protocol.version'), ['400'], '1st metadata has v4 protocol.version 400')
             afterOne(t)
         })
 

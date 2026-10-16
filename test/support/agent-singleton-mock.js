@@ -21,7 +21,6 @@ const apiMetaService = require('../../lib/context/api-meta-service')
 const activeRequestRepository = require('../../lib/metric/active-request-repository')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const { AgentBuilder } = require('../../lib/agent-builder')
-const AgentInfo = require('../../lib/data/dto/agent-info')
 const { ConfigBuilder } = require('../../lib/config-builder')
 const { UriStatsRepositoryBuilder } = require('../../lib/metric/uri/uri-stats-repository')
 const { UriStatsConfigBuilder } = require('../../lib/metric/uri/uri-stats-config-builder')
@@ -98,11 +97,9 @@ const config = new ConfigBuilder({
     })
     .setDefaultJson(require('../pinpoint-config-test.json'))
     .build()
-const agentInfo = AgentInfo.make(config)
 const initialUriStatsConfig = new UriStatsConfigBuilder(config).build()
-const agentBuilder = new AgentBuilder(agentInfo)
-    .setConfig(config)
-    .setDataSender(dataSenderMock(config, agentInfo))
+const agentBuilder = new AgentBuilder(config)
+    .setDataSender(dataSenderMock(config))
     .disablePingScheduler()
     .disableStatsScheduler()
     .setSpanRecorderFactory(new UriStatsSpanRecorderFactory(config, initialUriStatsConfig))
@@ -127,14 +124,13 @@ class MockAgent {
         const uriStatsRepository = new UriStatsRepositoryBuilder(uriStatsConfig).build()
         this.config = config
 
-        this.agentInfo = AgentInfo.make(config)
 
         activeRequestRepository.activeTraceCache.cache.clear()
         transactionIdGenerator.reset()
 
         localStorage.disable()
 
-        this.traceContext.traceSampler = new TraceSampler(this.agentInfo, config)
+        this.traceContext.traceSampler = new TraceSampler(config, this.agentStartTime)
         this.traceContext.config = config
         this.traceContext.traceCompletionEnricher = uriStatsConfig.isUriStatsEnabled()
             ? new CompositeTraceCompletionEnricher([new TraceCompletionEnricher(uriStatsRepository)])
@@ -145,7 +141,7 @@ class MockAgent {
         const errorAnalysisConfig = new ErrorAnalysisConfigBuilder(config).build()
         const spanEventEnricher = errorAnalysisConfig.isErrorAnalysisEnabled() ? new ExceptionEnricher(errorAnalysisConfig) : exceptionEnricherNullObject
 
-        const dataSender = dataSenderMock(this.config, this.agentInfo, grpcDataSender)
+        const dataSender = dataSenderMock(this.config, grpcDataSender, this.agentStartTime)
         this.traceContext.dataSender = dataSender
         const sqlStatsConfig = new SqlStatsConfigBuilder(config).build()
         const parsingResultFactory = sqlStatsConfig.isSqlStatsEnabled() ? new UidParsingResultFactory() : new IntIdParsingResultFactory()

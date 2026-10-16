@@ -66,7 +66,7 @@ test('Should write pinpoint header', async function (t) {
         }
         const nextTraceId = trace.getTraceId().getNextTraceId()
         const headerWriter = new OutgoingClientRequestHeaderWriter(clientRequest)
-        headerWriter.write(nextTraceId, agent.getAgentInfo())
+        headerWriter.write(nextTraceId, agent.getConfig())
         t.equal(request.headers[Header.traceId], trace.spanBuilder.traceRoot.getTraceId().toStringDelimiterFormatted(), "trace ID new ID was added in Header")
       })
     })
@@ -118,7 +118,7 @@ test('nested request HTTP', async function (t) {
       t.equal(req.headers['host'], 'localhost:5006', 'http://localhost:5006/test endPoint')
       t.equal(traceId.flags, 0, 'http://localhost:5006/test flags')
       t.equal(traceHeader.host, 'localhost:5006', 'http://localhost:5006/test host')
-      t.equal(traceHeader.parentApplicationName, agent.getAgentInfo().getApplicationName(), 'http://localhost:5006/test parentApplicationName')
+      t.equal(traceHeader.parentApplicationName, agent.getConfig().getApplicationName(), 'http://localhost:5006/test parentApplicationName')
       t.equal(traceHeader.parentApplicationType, 1400, 'http://localhost:5006/test parentApplicationType')
       t.equal(traceId.parentSpanId, actualTraceOn5005.spanBuilder.traceRoot.getTraceId().spanId, 'http://localhost:5006/test parentSpanId')
       // t.equal(actualRequestData.remoteAddress, '127.0.0.1', 'http://localhost:5006/test remoteAddress')

@@ -4,8 +4,8 @@
   "description": "Pinpoint Node.js Agent Express 5 Demo Application",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js"
+    "start": "node --env-file=.env app.js",
+    "dev": "nodemon --exec \"node --env-file=.env\" app.js"
   },
   "dependencies": {
     "express": "^5.1.0",

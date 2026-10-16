@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [1.4.4] - 2026-10-19
+### Fixed
+- [[#538](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/538)] Do not mark a client disconnect before the response ends as an error (errorCode 1); restores the 1.3.x behavior ([Thanks @chanmo-kim](https://github.com/chanmo-kim))
+
 ## [1.4.3] - 2026-06-11
 ### Security
 - [[#517](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/517)] Bump `@grpc/grpc-js` to `^1.14.4` to resolve **CVE-2026-41242** in the transitive `protobufjs` dependency (`7.5.3` → `7.6.3`, via `@grpc/proto-loader@0.8.1`) ([Thanks @youngseo-choi](https://github.com/youngseo-choi))

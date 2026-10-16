@@ -19,6 +19,7 @@ const SpanProto = require('../../../../lib/data/v1/Span_pb')
 const StatProto = require('../../../../lib/data/v1/Stat_pb')
 const CmdProto = require('../../../../lib/data/v1/Cmd_pb')
 const AnnotationKey = require('../../../../lib/constant/annotation-key')
+const { sendRequestOverRawSocket } = require('../../../support/raw-http-client')
 
 let container
 let spanCollector
@@ -375,6 +376,68 @@ test('fetch /api/error-500 should record span error and failure in URI stats', a
 
             const failedCount = stat.failedBuckets.reduce((acc, val) => acc + val, 0)
             t.equal(failedCount, 1, 'Failed count should be 1')
+        }
+    } catch (err) {
+        t.fail(err.message)
+    }
+    t.end()
+})
+
+test('client disconnect before the /api/client-disconnect response should not record span error or failure in URI stats', async (t) => {
+    receivedSpans = []
+    receivedStats = []
+    try {
+        const client = sendRequestOverRawSocket(3000, '/api/client-disconnect')
+        await new Promise(resolve => setTimeout(resolve, 300))
+        client.destroy()
+
+        const span = await waitForSpan((s) => {
+            const rpc = s.getAcceptevent()?.getRpc()
+            return rpc && rpc.includes('/api/client-disconnect')
+        }, 10000)
+
+        t.ok(span, 'received span for client disconnect request')
+        t.equal(span.getErr(), 0, 'span should not be marked as error')
+
+        const annotations = span.getAnnotationList()
+        const statusCodeAnnotation = annotations.find(ann => ann.getKey() === AnnotationKey.HTTP_STATUS_CODE.getCode())
+        t.ok(statusCodeAnnotation, 'should have HTTP status code annotation')
+        if (statusCodeAnnotation) {
+            t.equal(statusCodeAnnotation.getValue().getIntvalue(), 200, 'status code annotation value should be 200')
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 3000))
+
+        const mergedStats = {}
+        receivedStats.forEach(statMsg => {
+            const agentUriStat = statMsg.getAgenturistat ? statMsg.getAgenturistat() : null
+            if (agentUriStat) {
+                agentUriStat.getEachuristatList().forEach(each => {
+                    const uri = each.getUri()
+                    if (!mergedStats[uri]) {
+                        mergedStats[uri] = {
+                            totalBuckets: new Array(8).fill(0),
+                            failedBuckets: new Array(8).fill(0)
+                        }
+                    }
+                    const totalHistList = each.getTotalhistogram().getHistogramList()
+                    totalHistList.forEach((count, idx) => mergedStats[uri].totalBuckets[idx] += count)
+
+                    const failedHistList = each.getFailedhistogram().getHistogramList()
+                    failedHistList.forEach((count, idx) => mergedStats[uri].failedBuckets[idx] += count)
+                })
+            }
+        })
+
+        const disconnectUri = '/user/input/uri/client-disconnect'
+        const stat = mergedStats[disconnectUri]
+        t.ok(stat, `URI stats found for ${disconnectUri}`)
+        if (stat) {
+            const totalCount = stat.totalBuckets.reduce((acc, val) => acc + val, 0)
+            t.equal(totalCount, 1, 'Total count should be 1')
+
+            const failedCount = stat.failedBuckets.reduce((acc, val) => acc + val, 0)
+            t.equal(failedCount, 0, 'Failed count should be 0')
         }
     } catch (err) {
         t.fail(err.message)

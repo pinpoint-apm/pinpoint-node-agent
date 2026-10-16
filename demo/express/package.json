@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www"
+    "start": "node --env-file=.env ./bin/www"
   },
   "dependencies": {
     "@testcontainers/postgresql": "^11.0.3",

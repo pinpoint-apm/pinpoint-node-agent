@@ -26,6 +26,7 @@ const { UriStatsInfo } = require('../../../lib/metric/uri/uri-stats-info-builder
 const { ConfigBuilder } = require('../../../lib/config-builder')
 const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
 const { UriStatsMonitor } = require('../../../lib/metric/uri/uri-stats-monitor')
+const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 
 const TEST_ENV = {
   host: 'localhost', port: 5006
@@ -1926,4 +1927,47 @@ test('Express: Should not override uri template from user input when useUserInpu
       server.close()
     }
   })
+})
+
+test('Express: Should not mark a client disconnect before the response as an error', function (t) {
+  agent.bindHttp()
+
+  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
+  const DateNow = require('../../../lib/support/date-now')
+
+  const PATH = '/client-disconnect'
+  const app = new express()
+  let client
+  app.get(PATH, function (req, res) {
+    agent.callbackTraceClose(assertSuccess)
+    res.on('close', () => res.send('ok'))
+    client.destroy()
+  })
+
+  const server = app.listen(0, () => {
+    client = sendRequestOverRawSocket(server.address().port, PATH)
+  })
+
+  function assertSuccess(trace) {
+    t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code annotation is recorded')
+    t.equal(trace.spanBuilder.annotations[0].value, 200, 'HTTP status code is 200')
+    t.equal(trace.getTraceRoot().getShared().getErrorCode(), undefined, 'client disconnect does not mark the error code')
+
+    setImmediate(() => {
+      const repository = getUriStatsRepository()
+      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+
+      const timeWindow = 30000
+      const baseTimestamp = Math.floor(DateNow.now() / timeWindow) * timeWindow
+      const entry = repository.snapshotManager.getCurrent(baseTimestamp)?.dataMap.get(`GET ${PATH}`)
+      t.ok(entry, `Entry for GET ${PATH} exists`)
+      if (entry) {
+        t.equal(entry.totalHistogram.count, 1, 'client disconnect counted in total histogram')
+        t.equal(entry.failedHistogram.count, 0, 'client disconnect not counted in failed histogram')
+      }
+
+      server.close()
+      t.end()
+    })
+  }
 })

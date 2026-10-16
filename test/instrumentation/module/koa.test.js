@@ -19,6 +19,7 @@ const spanMessages = require('../../../lib/data/v1/Span_pb')
 const GrpcDataSenderBuilder = require('../../client/grpc-data-sender-builder')
 const http = require('http')
 const https = require('https')
+const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 
 
 const TEST_ENV = {
@@ -684,4 +685,51 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
       }
     })
   })
+})
+
+test('Koa: Should not mark a client disconnect before the response as an error', function (t) {
+  agent.bindHttp()
+
+  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
+  const DateNow = require('../../../lib/support/date-now')
+
+  const PATH = '/client-disconnect'
+  const app = new Koa()
+  const router = new Router()
+  let client
+  router.get(PATH, async (ctx) => {
+    agent.callbackTraceClose(assertSuccess)
+    const responseClosed = new Promise((resolve) => ctx.res.on('close', resolve))
+    client.destroy()
+    await responseClosed
+    ctx.body = 'ok'
+  })
+  app.use(router.routes()).use(router.allowedMethods())
+
+  const server = app.listen(0, () => {
+    client = sendRequestOverRawSocket(server.address().port, PATH)
+  })
+
+  function assertSuccess(trace) {
+    t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code annotation is recorded')
+    t.equal(trace.spanBuilder.annotations[0].value, 200, 'HTTP status code is 200')
+    t.equal(trace.getTraceRoot().getShared().getErrorCode(), undefined, 'client disconnect does not mark the error code')
+
+    setImmediate(() => {
+      const repository = getUriStatsRepository()
+      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+
+      const timeWindow = 30000
+      const baseTimestamp = Math.floor(DateNow.now() / timeWindow) * timeWindow
+      const entry = repository.snapshotManager.getCurrent(baseTimestamp)?.dataMap.get(`GET ${PATH}`)
+      t.ok(entry, `Entry for GET ${PATH} exists`)
+      if (entry) {
+        t.equal(entry.totalHistogram.count, 1, 'client disconnect counted in total histogram')
+        t.equal(entry.failedHistogram.count, 0, 'client disconnect not counted in failed histogram')
+      }
+
+      server.close()
+      t.end()
+    })
+  }
 })

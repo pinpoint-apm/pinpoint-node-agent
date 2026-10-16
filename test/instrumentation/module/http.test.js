@@ -13,6 +13,8 @@ const GrpcDataSenderBuilder = require('../../client/grpc-data-sender-builder')
 const axios = require('axios')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const ServiceType = require('../../../lib/context/service-type')
+const annotationKey = require('../../../lib/constant/annotation-key')
+const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 
 test('http error status code', (t) => {
     const collectorServer = new grpc.Server()
@@ -94,5 +96,65 @@ test('http error status code', (t) => {
     t.teardown(() => {
         collectorServer.forceShutdown()
         dataSender.close()
+    })
+})
+test('http should not mark a client disconnect before the response as an error', (t) => {
+    agent.bindHttp()
+
+    let client
+    const server = http.createServer((req, res) => {
+        agent.callbackTraceClose((trace) => {
+            t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code annotation is recorded')
+            t.equal(trace.spanBuilder.annotations[0].value, 200, 'HTTP status code is 200')
+            t.equal(trace.getTraceRoot().getShared().getErrorCode(), undefined, 'client disconnect does not mark the error code')
+            server.close()
+            t.end()
+        })
+        res.on('close', () => res.end('ok'))
+        client.destroy()
+    })
+    server.listen(0, () => {
+        client = sendRequestOverRawSocket(server.address().port, '/')
+    })
+})
+
+test('http should not mark a client close after the response as an error', (t) => {
+    agent.bindHttp()
+
+    let client
+    const server = http.createServer((req, res) => {
+        agent.callbackTraceClose((trace) => {
+            t.equal(trace.spanBuilder.annotations[0].value, 200, 'HTTP status code is 200')
+            t.equal(trace.getTraceRoot().getShared().getErrorCode(), undefined, 'client close after the response does not mark the error code')
+            client.destroy()
+            server.close()
+            t.end()
+        })
+        res.end('ok')
+    })
+    server.listen(0, () => {
+        client = sendRequestOverRawSocket(server.address().port, '/')
+    })
+})
+
+test('http should mark a 500 response after a client disconnect as an error', (t) => {
+    agent.bindHttp()
+
+    let client
+    const server = http.createServer((req, res) => {
+        agent.callbackTraceClose((trace) => {
+            t.equal(trace.spanBuilder.annotations[0].value, 500, 'HTTP status code is 500')
+            t.equal(trace.getTraceRoot().getShared().getErrorCode(), 1, '500 status code marks the error code')
+            server.close()
+            t.end()
+        })
+        res.on('close', () => {
+            res.statusCode = 500
+            res.end('error')
+        })
+        client.destroy()
+    })
+    server.listen(0, () => {
+        client = sendRequestOverRawSocket(server.address().port, '/')
     })
 })

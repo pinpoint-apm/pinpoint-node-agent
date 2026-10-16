@@ -5,11 +5,12 @@
  */
 
 const test = require('tape')
+const AgentInfo = require('../lib/data/dto/agent-info')
 
 test('Should initialize agent', function (t) {
   t.plan(2)
 
   const agent = require('./support/agent-singleton-mock')
   t.ok(agent)
-  t.equal(agent.agentInfo.agentVersion, '2.0.0', 'agent version from package.json')
+  t.equal(new AgentInfo(agent.getConfig(), agent.agentStartTime).agentVersion, '2.0.0', 'agent version from package.json')
 })

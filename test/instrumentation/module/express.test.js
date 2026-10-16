@@ -910,8 +910,8 @@ test('incoming request by Disable Trace requests', (t) => {
     t.equal(actualApiRequest.headers['pinpoint-host'], actualApiTrace.spanBuilder.endPoint, 'api request pinpoint-host header is localhost:5006')
     t.equal(actualApiRequest.headers['pinpoint-flags'], '0', 'api request pinpoint-flags header is 0')
     t.equal(actualApiRequest.headers['pinpoint-sampled'], undefined, 'api request pinpoint-sampled header is s0')
-    t.equal(actualApiRequest.headers['pinpoint-pappname'], agent.config.applicationName, 'pinpoint-pappname header is config.applicationName')
-    t.equal(actualApiRequest.headers['pinpoint-papptype'], String(agent.config.applicationServiceType), 'pinpoint-papptype header is config.applicationServiceType')
+    t.equal(actualApiRequest.headers['pinpoint-pappname'], agent.getConfig().getApplicationName(), 'pinpoint-pappname header is the Config applicationName')
+    t.equal(actualApiRequest.headers['pinpoint-papptype'], String(agent.getConfig().getApplicationServiceType()), 'pinpoint-papptype header is the Config applicationServiceType')
     t.equal(actualApiRequest.headers['pinpoint-pspanid'], actualTrace.getTraceId().getSpanId(), 'pinpoint-pspanid header is root span id')
     t.equal(actualApiRequest.headers['pinpoint-spanid'], actualApiTrace.getTraceId().getSpanId(), 'pinpoint-spanid header is api span id')
     t.equal(actualApiRequest.headers['pinpoint-traceid'], actualTrace.getTraceId().toStringDelimiterFormatted(), 'pinpoint-traceid header is root transaction id')
@@ -1563,14 +1563,14 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
 })
 
 class SpanAndStatDataSource extends DataSourceCallCountable {
-  constructor(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config) {
+  constructor(config, interceptors) {
     config = Object.assign({}, config, {
       sendSpan: true,
       sendSpanChunk: true,
       sendStat: true,
     })
     config = new ConfigBuilder(config).build()
-    super(collectorIp, collectorTcpPort, collectorStatPort, collectorSpanPort, agentInfo, config)
+    super(config, interceptors)
   }
 
   send(data) {

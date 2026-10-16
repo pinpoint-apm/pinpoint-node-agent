@@ -22,8 +22,8 @@ test('Should create continued trace and add span info', function (t) {
   t.plan(2)
   agent.bindHttp()
 
-  const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config, new CompositeTraceCompletionEnricher([]), new SpanRecorderFactory(agent.config), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())))
-  const traceId = new TraceIdBuilder(agent.agentInfo.getAgentId(), agent.agentInfo.getAgentStartTime(), '9').build()
+  const traceContext = new TraceContext(agent.dataSender, agent.getConfig(), new CompositeTraceCompletionEnricher([]), new SpanRecorderFactory(agent.getConfig()), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())), agent.agentStartTime)
+  const traceId = new TraceIdBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '9').build()
   const trace = traceContext.continueTraceObject(traceId)
   localStorage.run(trace, () => {
     t.equal(traceContext.currentTraceObject().getTraceId(), traceId, `traceId is ${traceId}`)
@@ -41,7 +41,7 @@ test('Should begin/end trace block asynchronously', async function (t) {
   agent.bindHttp()
 
   // start trace and write span info
-  const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config, new CompositeTraceCompletionEnricher([]), new SpanRecorderFactory(agent.config), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())))
+  const traceContext = new TraceContext(agent.dataSender, agent.getConfig(), new CompositeTraceCompletionEnricher([]), new SpanRecorderFactory(agent.getConfig()), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())), agent.agentStartTime)
   const startedTrace = traceContext.newTraceObject('/')
 
   localStorage.run(startedTrace, () => {
@@ -71,7 +71,7 @@ test('Should begin/end trace block asynchronously', async function (t) {
 test('Should complete trace ', async function (t) {
   t.plan(1)
   agent.bindHttp()
-  const traceContext = new TraceContext(agent.agentInfo, agent.dataSender, agent.config, new CompositeTraceCompletionEnricher([]), new SpanRecorderFactory(agent.config), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())))
+  const traceContext = new TraceContext(agent.dataSender, agent.getConfig(), new CompositeTraceCompletionEnricher([]), new SpanRecorderFactory(agent.getConfig()), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())), agent.agentStartTime)
   const trace = traceContext.newTraceObject('/')
 
   await new Promise(resolve => setTimeout(resolve, 501))

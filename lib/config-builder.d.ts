@@ -13,6 +13,8 @@ export interface ConfigHandler {
 export class Config {
     constructor(config: ConfigInput)
 
+    messages?: { warns?: string[]; errors?: string[] }
+
     getHttpStatusCodeErrors(): unknown
     getGrpcServiceConfig(): unknown
     getSamplingRate(): number
@@ -24,6 +26,12 @@ export class Config {
     isDataSendingEnabled(): boolean
     isStatsMonitoringEnabled(): boolean
     isContainerEnvironment(): boolean
+    getAgentId(): string
+    getAgentName(): string
+    getApplicationName(): string
+    getServiceName(): string | undefined
+    getApplicationServiceType(): number
+    getProtocolVersion(): 'v3' | 'v4'
 }
 
 export class ConfigBuilder {

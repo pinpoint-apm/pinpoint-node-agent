@@ -10,6 +10,7 @@ module.exports = {
     env: {
       NODE_ENV: 'development',
       "PINPOINT_APPLICATION_NAME": "express.node.js",
+      "PINPOINT_SERVICE_NAME": "express.node.js",
       "PINPOINT_COLLECTOR_IP": "localhost",
       "PINPOINT_LOG_LEVEL": "WARN",
       "PINPOINT_SAMPLING_RATE": "10",
@@ -17,6 +18,7 @@ module.exports = {
     env_production: {
       NODE_ENV: 'production',
       "PINPOINT_APPLICATION_NAME": "express.node.js",
+      "PINPOINT_SERVICE_NAME": "express.node.js",
       "PINPOINT_COLLECTOR_IP": "localhost",
       "PINPOINT_LOG_LEVEL": "WARN",
       "PINPOINT_SAMPLING_RATE": "10",

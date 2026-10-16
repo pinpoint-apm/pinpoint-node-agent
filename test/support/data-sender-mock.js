@@ -7,6 +7,7 @@
 'use strict'
 
 const AgentInfo = require('../../lib/data/dto/agent-info')
+const { ClientHeader, makeClientHeaderInterceptor } = require('../../lib/name/client-header')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const DataSender = require('../../lib/client/data-sender')
@@ -84,23 +85,15 @@ class MockDataSender extends DataSender {
   }
 }
 
-const dataSender = (conf, agentInfoOrGrpcDataSender, grpcDataSender) => {
-  if (typeof agentInfoOrGrpcDataSender?.sendAgentInfo === 'function') {
-    return new MockDataSender(conf, agentInfoOrGrpcDataSender)
-  }
+const dataSender = (conf, grpcDataSender, agentStartTime) => {
   if (grpcDataSender) {
     return new MockDataSender(conf, grpcDataSender)
   }
   if (conf?.collector.spanPort > 0) {
-    return new MockDataSender(conf, new GrpcDataSender(conf.collector.ip, conf.collector.spanPort, conf.collector.statPort, conf.collector.tcpPort, agentInfoOrGrpcDataSender, conf))
+    return new MockDataSender(conf, new GrpcDataSender(conf, [makeClientHeaderInterceptor(ClientHeader.make(agentStartTime, conf))]))
   }
-  const config = new ConfigBuilder({
-    agentId: 'agent',
-    applicationName: 'applicationName',
-    agentStartTime: 1234344
-  }).build()
-  const agentInfo = AgentInfo.make(config)
-  return new MockDataSender(conf, new MockGrpcDataSender('', 0, 0, 0, agentInfo, config))
+  const config = new ConfigBuilder().build()
+  return new MockDataSender(conf, new MockGrpcDataSender(config))
 }
 
 module.exports = dataSender

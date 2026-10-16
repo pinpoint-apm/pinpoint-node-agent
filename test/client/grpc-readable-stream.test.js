@@ -16,6 +16,7 @@ const services = require('../../lib/data/v1/Service_grpc_pb')
 const cmdMessage = require('../../lib/data/v1/Cmd_pb')
 const { ProfilerDataSource } = require('./grpc-fixture')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
+const agent = require('../support/agent-singleton-mock')
 
 test('no piped readable stream', (t) => {
     const readable = new GrpcReadableStream()
@@ -289,7 +290,7 @@ test('When gRPC server shutdown and then node agent grpcStream on error fired an
     server.addService(services.ProfilerCommandServiceService, {
         handleCommand: (call, callback) => {
             const metadata = call.metadata
-            t.equal(metadata.get('agentid').toString(), 'node.test.app', 'metadata agentid')
+            t.equal(metadata.get('agentid').toString(), agent.getConfig().getAgentId(), 'metadata agentid')
             t.equal(metadata.get('servicetype')[0], '1400', 'metadata servicetype is 1400')
             if (typeof handleCommandCallback === 'function') {
                 handleCommandCallback(call, callback)

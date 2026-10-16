@@ -12,6 +12,21 @@ pinpoint-node-agent is a library, not a server. "Running" it means running its T
 - `npm install` done.
 - Docker running for integration tests in `test/instrumentation/module/` (testcontainers: MongoDB, MySQL, PostgreSQL, Redis).
 
+### colima
+
+If `docker info` fails, start the runtime with `colima start`. With colima, testcontainers
+resolves the host as `null` (`getaddrinfo ENOTFOUND null`, then "Could not find a working
+container runtime strategy"). Set both overrides when running tests:
+
+```bash
+TESTCONTAINERS_HOST_OVERRIDE=localhost \
+TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock \
+npm test
+```
+
+Use `localhost`, not `127.0.0.1`: endPoint assertions in the mysql and nested-async tests expect
+`localhost`.
+
 ## Tests
 
 ```bash

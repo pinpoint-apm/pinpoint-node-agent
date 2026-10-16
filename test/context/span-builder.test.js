@@ -15,13 +15,9 @@ test('Span.toProtocolBuffer() should include err', (t) => {
     // TraceRoot and TraceId
     const agentId = 'test-agent'
     const agentStartTime = Date.now()
-    const agentInfo = {
-        getAgentId: () => agentId,
-        getAgentStartTime: () => agentStartTime
-    }
     const transactionId = 999
     const traceId = new TraceIdBuilder(agentId, agentStartTime, transactionId).build()
-    const traceRoot = new RemoteTraceRootBuilder(agentInfo, transactionId).setTraceId(traceId).build()
+    const traceRoot = new RemoteTraceRootBuilder(agentId, agentStartTime, transactionId).setTraceId(traceId).build()
 
     traceRoot.getShared().maskErrorCode(1)
 

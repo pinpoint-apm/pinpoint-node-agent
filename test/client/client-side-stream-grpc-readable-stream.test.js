@@ -30,7 +30,7 @@ test('span stream retry connection Tests', async function (t) {
                 if (spanCallCount === 1) {
                     const actualSpan = data.getSpan()
                     t.equal(actualSpan.getSpanid(), expected1.traceRoot.getTraceId().getSpanId(), `spanId should be '${expected1.traceRoot.getTraceId().getSpanId()}'`)
-                    t.equal(actualSpan.getTransactionid().getAgentid(), agent.getAgentInfo().getAgentId(), `agentId should be ${agent.getAgentInfo().getAgentId()}`)
+                    t.equal(actualSpan.getTransactionid().getAgentid(), agent.getConfig().getAgentId(), `agentId should be ${agent.getConfig().getAgentId()}`)
                     t.equal(actualSpan.getTransactionid().getAgentstarttime(), expected1.traceRoot.getTraceId().getAgentStartTime(), `agentStartTime should be '${expected1.traceRoot.getTraceId().getAgentStartTime()}'`)
                     t.equal(actualSpan.getTransactionid().getSequence(), expected1.traceRoot.getTraceId().getTransactionId(), `transactionId should be '${expected1.traceRoot.getTraceId().getTransactionId()}'`)
 
@@ -143,7 +143,7 @@ test('span stream retry connection Tests', async function (t) {
                     const actualSpan = data.getSpan()
                     const expectedSpan = expectedSpans.find((expectedSpan) => expectedSpan.traceRoot.getTraceId().getSpanId() === actualSpan.getSpanid())
                     t.equal(actualSpan.getSpanid(), expectedSpan.traceRoot.getTraceId().getSpanId(), `spanId should be '${expectedSpan.traceRoot.getTraceId().getSpanId()}'`)
-                    t.equal(actualSpan.getTransactionid().getAgentid(), agent.getAgentInfo().getAgentId(), `agentId should be ${agent.getAgentInfo().getAgentId()}`)
+                    t.equal(actualSpan.getTransactionid().getAgentid(), agent.getConfig().getAgentId(), `agentId should be ${agent.getConfig().getAgentId()}`)
                     t.equal(actualSpan.getTransactionid().getAgentstarttime(), expectedSpan.traceRoot.getTraceId().getAgentStartTime(), `agentStartTime should be '${expectedSpan.traceRoot.getTraceId().getAgentStartTime()}'`)
                     t.equal(actualSpan.getTransactionid().getSequence(), expectedSpan.traceRoot.getTraceId().getTransactionId(), `transactionId should be '${expectedSpan.traceRoot.getTraceId().getTransactionId()}'`)
 
@@ -200,7 +200,7 @@ test('client side stream deadline exceeded Tests', function (t) {
     const deadlines = []
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
         dataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
-        t.equal(dataSender.clientSideStreamDeadlineOptionsBuilder.deadlineSeconds, agent.config.collector.deadlineMinutes * 60, `clientSideStreamDeadlineOptionsBuilder.deadlineSeconds should be ${agent.config.streamDeadlineMinutesClientSide * 60}`)
+        t.equal(dataSender.clientSideStreamDeadlineOptionsBuilder.deadlineSeconds, agent.getConfig().collector.deadlineMinutes * 60, `clientSideStreamDeadlineOptionsBuilder.deadlineSeconds should be ${agent.getConfig().streamDeadlineMinutesClientSide * 60}`)
 
         dataSender.clientSideStreamDeadlineOptionsBuilder.setSeconds(1)
         dataSender.initializeSpanStream()

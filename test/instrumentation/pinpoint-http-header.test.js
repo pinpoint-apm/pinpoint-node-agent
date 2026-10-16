@@ -57,8 +57,8 @@ function outgoingRequest(t, sampling) {
     if (sampling) {
       t.equal(actualTrace.getTraceId().toStringDelimiterFormatted(), headers['pinpoint-traceid'], `traceId Header equals ${actualTrace.getTraceId().toStringDelimiterFormatted()}`)
       t.equal(actualTrace.getTraceId().getSpanId(), headers['pinpoint-pspanid'], `spanId Header equals ${actualTrace.getTraceId().getSpanId()}`)
-      t.equal(agent.config.applicationName, headers['pinpoint-pappname'], `applicationName Header equals ${agent.config.applicationName}`)
-      t.equal(agent.config.applicationServiceType, Number(headers['pinpoint-papptype']), `serviceType Header equals ${agent.config.applicationServiceType}`)
+      t.equal(agent.getConfig().getApplicationName(), headers['pinpoint-pappname'], `applicationName Header equals ${agent.getConfig().getApplicationName()}`)
+      t.equal(agent.getConfig().getApplicationServiceType(), Number(headers['pinpoint-papptype']), `serviceType Header equals ${agent.getConfig().getApplicationServiceType()}`)
       t.equal(actualTrace.getTraceId().getFlags(), headers['pinpoint-flags'], `flags Header equals ${actualTrace.getTraceId().getFlags()}`)
     } else {
       // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
@@ -145,7 +145,7 @@ function incomingRequest(t, sampled) {
       'pinpoint-traceid': 'express-spring-sampleid^1599831487121^4',
       'pinpoint-spanid': '8478505740685359',
       'pinpoint-pspanid': '-387300102333636357',
-      'pinpoint-pappname': agent.getAgentInfo().getApplicationName(),
+      'pinpoint-pappname': agent.getConfig().getApplicationName(),
       'pinpoint-papptype': '1400',
       'pinpoint-flags': '0',
       'pinpoint-host': 'localhost:5006',
@@ -213,7 +213,7 @@ test('incomming request by User', (t) => {
       'pinpoint-traceid': 'express-spring-sampleid^1599831487121^4',
       'pinpoint-spanid': '8478505740685359',
       'pinpoint-pspanid': '-387300102333636357',
-      'pinpoint-pappname': agent.getAgentInfo().getApplicationName(),
+      'pinpoint-pappname': agent.getConfig().getApplicationName(),
       'pinpoint-papptype': '1400',
       'pinpoint-flags': '0',
       'pinpoint-host': 'localhost:5006',

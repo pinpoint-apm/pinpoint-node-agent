@@ -16,7 +16,7 @@ test('Should send agent info', function (t) {
   t.plan(1)
   agent.bindHttp()
 
-  const agentInfo = AgentInfo.make(agent.config)
+  const agentInfo = new AgentInfo(agent.getConfig(), agent.agentStartTime)
   agent.dataSender.send(agentInfo)
 
   t.ok(true)

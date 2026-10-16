@@ -131,7 +131,7 @@ test('config object exclusion URL', (t) => {
         }
     })
     agent.bindHttp(config)
-    t.deepEqual(agent.config.features.traceExclusionUrl.patterns, ["/test.jpg"])
+    t.deepEqual(agent.getConfig().features.traceExclusionUrl.patterns, ["/test.jpg"])
     delete config["features"]["traceExclusionUrl"]
 
     config = require('../pinpoint-config-test.json')
@@ -143,7 +143,7 @@ test('config object exclusion URL', (t) => {
         }
     })
     agent.bindHttp(config)
-    t.deepEqual(agent.config.features.traceExclusionUrl.patterns, ["/??/a", "/*bla/test"])
+    t.deepEqual(agent.getConfig().features.traceExclusionUrl.patterns, ["/??/a", "/*bla/test"])
     delete config["features"]["traceExclusionUrl"]
 
     t.end()
@@ -160,7 +160,7 @@ test('config object exclusion URL with cache size', (t) => {
         }
     })
     agent.bindHttp(config)
-    t.deepEqual(agent.config.features.traceExclusionUrl.patterns, ["/test.jpg"])
+    t.deepEqual(agent.getConfig().features.traceExclusionUrl.patterns, ["/test.jpg"])
     delete config["features"]["traceExclusionUrl"]
 
     t.end()
@@ -169,14 +169,14 @@ test('config object exclusion URL with cache size', (t) => {
 test('config env exclusion URL', (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/test"
     agent.bindHttp()
-    t.deepEqual(agent.config.features.traceExclusionUrl.patterns, ["/test"])
+    t.deepEqual(agent.getConfig().features.traceExclusionUrl.patterns, ["/test"])
 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/test, test"
     agent.bindHttp()
-    t.deepEqual(agent.config.features.traceExclusionUrl.patterns, ["/test", "test"])
+    t.deepEqual(agent.getConfig().features.traceExclusionUrl.patterns, ["/test", "test"])
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/test, test,tes?"
     agent.bindHttp()
-    t.deepEqual(agent.config.features.traceExclusionUrl.patterns, ["/test", "test", "tes?"])
+    t.deepEqual(agent.getConfig().features.traceExclusionUrl.patterns, ["/test", "test", "tes?"])
 
     t.end()
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
@@ -236,8 +236,8 @@ async function outgoingRequest(t, path, expectedSampling, expectUnits) {
             } else {
                 t.equal(actualTrace.spanBuilder.getTraceRoot().getTraceId().toStringDelimiterFormatted(), headers['pinpoint-traceid'])
                 t.equal(actualTrace.spanBuilder.getTraceRoot().getTraceId().getSpanId(), headers['pinpoint-pspanid'])
-                t.equal(agent.config.applicationName, headers['pinpoint-pappname'])
-                t.equal(agent.config.applicationServiceType, Number(headers['pinpoint-papptype']))
+                t.equal(agent.getConfig().getApplicationName(), headers['pinpoint-pappname'])
+                t.equal(agent.getConfig().getApplicationServiceType(), Number(headers['pinpoint-papptype']))
                 t.equal(actualTrace.spanBuilder.getTraceRoot().getTraceId().flags, headers['pinpoint-flags'])
                 t.equal(headers['pinpoint-sampled'], undefined, 'When sampling, pinpoint-sampled is undefined')
             }
@@ -345,7 +345,7 @@ test('when pattern match with cache size on ENV environment, sampling test with 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
     agent.bindHttp()
     await outgoingRequest(t, "/test", false, (t) => {
-        t.true(agent.config.features.traceExclusionUrl.cacheSize === 100, `config.features.traceExclusionUrl.cacheSize default value 100 ENV In undefined case`)
+        t.true(agent.getConfig().features.traceExclusionUrl.cacheSize === 100, `config.features.traceExclusionUrl.cacheSize default value 100 ENV In undefined case`)
     })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 
@@ -353,8 +353,8 @@ test('when pattern match with cache size on ENV environment, sampling test with 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
     agent.bindHttp()
     await outgoingRequest(t, "/test", false, (t) => {
-        t.true(typeof agent.config.features.traceExclusionUrl.cacheSize !== 'undefined', 'config.features.traceExclusionUrl.cacheSize ENV case')
-        t.equal(agent.config.features.traceExclusionUrl.cacheSize, 100, 'config.features.traceExclusionUrl.cacheSize default 100')
+        t.true(typeof agent.getConfig().features.traceExclusionUrl.cacheSize !== 'undefined', 'config.features.traceExclusionUrl.cacheSize ENV case')
+        t.equal(agent.getConfig().features.traceExclusionUrl.cacheSize, 100, 'config.features.traceExclusionUrl.cacheSize default 100')
     })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
@@ -362,15 +362,15 @@ test('when pattern match with cache size on ENV environment, sampling test with 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
     agent.bindHttp()
     await outgoingRequest(t, "/test", true, (t) => {
-        t.true(typeof agent.config.features.traceExclusionUrl.patterns === 'undefined', 'when only set config.features.traceExclusionUrl.cacheSize ENV, agent.config.features.traceExclusionUrl.patterns undefined case')
-        t.true(typeof agent.config.features.traceExclusionUrl.cacheSize === 'undefined', 'when only set config.features.traceExclusionUrl.cacheSize ENV, agent.config.features.traceExclusionUrl.cacheSize undefined case')
+        t.true(typeof agent.getConfig().features.traceExclusionUrl.patterns === 'undefined', 'when only set config.features.traceExclusionUrl.cacheSize ENV, agent.getConfig().features.traceExclusionUrl.patterns undefined case')
+        t.true(typeof agent.getConfig().features.traceExclusionUrl.cacheSize === 'undefined', 'when only set config.features.traceExclusionUrl.cacheSize ENV, agent.getConfig().features.traceExclusionUrl.cacheSize undefined case')
     })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/test?"
     agent.bindHttp()
     await outgoingRequest(t, "/test", true, (t) => {
-        t.true(agent.config.features.traceExclusionUrl.cacheSize === 100, 'config.features.traceExclusionUrl.cacheSize ENV undefined case and patterns set, default 100 cache size')
+        t.true(agent.getConfig().features.traceExclusionUrl.cacheSize === 100, 'config.features.traceExclusionUrl.cacheSize ENV undefined case and patterns set, default 100 cache size')
     })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 
@@ -378,8 +378,8 @@ test('when pattern match with cache size on ENV environment, sampling test with 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
     agent.bindHttp()
     await outgoingRequest(t, "/test", true, (t) => {
-        t.true(typeof agent.config.features.traceExclusionUrl.cacheSize !== 'undefined', 'when sampling is true, config.features.traceExclusionUrl.cacheSize ENV case')
-        t.equal(agent.config.features.traceExclusionUrl.cacheSize, 100, 'when sampling is true, config.features.traceExclusionUrl.cacheSize default 100')
+        t.true(typeof agent.getConfig().features.traceExclusionUrl.cacheSize !== 'undefined', 'when sampling is true, config.features.traceExclusionUrl.cacheSize ENV case')
+        t.equal(agent.getConfig().features.traceExclusionUrl.cacheSize, 100, 'when sampling is true, config.features.traceExclusionUrl.cacheSize default 100')
     })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
@@ -398,7 +398,7 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
     })
     agent.bindHttp(config)
     await outgoingRequest(t, "/test", false, (t) => {
-        t.true(agent.config.features.traceExclusionUrl.cacheSize === 100, 'config.features.traceExclusionUrl.cacheSize ENV undefined case')
+        t.true(agent.getConfig().features.traceExclusionUrl.cacheSize === 100, 'config.features.traceExclusionUrl.cacheSize ENV undefined case')
     })
 
     config = require('../pinpoint-config-test.json')
@@ -412,8 +412,8 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
     })
     agent.bindHttp(config)
     await outgoingRequest(t, "/test", false, (t) => {
-        t.true(typeof agent.config.features.traceExclusionUrl.cacheSize !== 'undefined', 'config.features.traceExclusionUrl.cacheSize ENV case')
-        t.equal(agent.config.features.traceExclusionUrl.cacheSize, 100, 'config.features.traceExclusionUrl.cacheSize default 100')
+        t.true(typeof agent.getConfig().features.traceExclusionUrl.cacheSize !== 'undefined', 'config.features.traceExclusionUrl.cacheSize ENV case')
+        t.equal(agent.getConfig().features.traceExclusionUrl.cacheSize, 100, 'config.features.traceExclusionUrl.cacheSize default 100')
     })
 
     config = require('../pinpoint-config-test.json')
@@ -426,8 +426,8 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
     })
     agent.bindHttp(config)
     await outgoingRequest(t, "/test", true, (t) => {
-        t.true(typeof agent.config.features.traceExclusionUrl.patterns === 'undefined', 'when only set config.features.traceExclusionUrl.cacheSize ENV, agent.config.features.traceExclusionUrl.patterns undefined case')
-        t.true(typeof agent.config.features.traceExclusionUrl.cacheSize === 'undefined', 'when only set config.features.traceExclusionUrl.cacheSize ENV, agent.config.features.traceExclusionUrl.cacheSize undefined case')
+        t.true(typeof agent.getConfig().features.traceExclusionUrl.patterns === 'undefined', 'when only set config.features.traceExclusionUrl.cacheSize ENV, agent.getConfig().features.traceExclusionUrl.patterns undefined case')
+        t.true(typeof agent.getConfig().features.traceExclusionUrl.cacheSize === 'undefined', 'when only set config.features.traceExclusionUrl.cacheSize ENV, agent.getConfig().features.traceExclusionUrl.cacheSize undefined case')
     })
 
     config = require('../pinpoint-config-test.json')
@@ -440,7 +440,7 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
     })
     agent.bindHttp(config)
     await outgoingRequest(t, "/test", true, (t) => {
-        t.true(agent.config.features.traceExclusionUrl.cacheSize === 100, 'when sampling is true, config.features.traceExclusionUrl.cacheSize ENV undefined case')
+        t.true(agent.getConfig().features.traceExclusionUrl.cacheSize === 100, 'when sampling is true, config.features.traceExclusionUrl.cacheSize ENV undefined case')
     })
 
     config = require('../pinpoint-config-test.json')
@@ -454,8 +454,8 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
     })
     agent.bindHttp(config)
     await outgoingRequest(t, "/test", true, (t) => {
-        t.true(typeof agent.config.features.traceExclusionUrl.cacheSize !== 'undefined', 'when sampling is true, config.features.traceExclusionUrl.cacheSize ENV case')
-        t.equal(agent.config.features.traceExclusionUrl.cacheSize, 100, 'when sampling is true, config.features.traceExclusionUrl.cacheSize default 100')
+        t.true(typeof agent.getConfig().features.traceExclusionUrl.cacheSize !== 'undefined', 'when sampling is true, config.features.traceExclusionUrl.cacheSize ENV case')
+        t.equal(agent.getConfig().features.traceExclusionUrl.cacheSize, 100, 'when sampling is true, config.features.traceExclusionUrl.cacheSize default 100')
     })
 
     t.end()

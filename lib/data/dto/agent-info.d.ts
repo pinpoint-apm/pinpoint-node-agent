@@ -4,7 +4,7 @@
  * Apache License v2.0
  */
 
-import { Config } from '../../config-builder';
+import type { Config } from '../../config-builder';
 
 declare class AgentInfo {
   agentId: string;
@@ -22,8 +22,6 @@ declare class AgentInfo {
   vmVersion: string;
 
   constructor(config: Config, agentStartTime: string);
-
-  static make(config: Config): AgentInfo;
 
   getAgentId(): string;
   getAgentName(): string;

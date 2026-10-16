@@ -6,15 +6,17 @@
 
 const test = require('tape')
 const agent = require('../support/agent-singleton-mock')
+const AgentInfo = require('../../lib/data/dto/agent-info')
+const { ClientHeader, makeClientHeaderInterceptor } = require('../../lib/name/client-header')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const dataConvertor = require('../../lib/data/grpc-data-convertor')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 var _ = require('lodash')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
+const { ConfigBuilder } = require('../../lib/config-builder')
 const spanMessages = require('../../lib/data/v1/Span_pb')
 const log = require('../../lib/utils/log/logger')
-const AgentInfo = require('../../lib/data/dto/agent-info')
 
 let statClient
 let endAction
@@ -134,7 +136,7 @@ test('sendAgentInfo deadline and metadata', (t) => {
         requestAgentInfo: (call, callback) => {
             agentInfo++
 
-            t.equal(call.metadata.get('agentid')[0], 'node.test.app', 'call.metadata.get("agentid")[0] is node.test.app')
+            t.equal(call.metadata.get('agentid')[0], agent.getConfig().getAgentId(), 'call.metadata.get("agentid")[0] is the generated v4 agentId')
             t.equal(call.metadata.get('applicationname')[0], 'test.application.name', 'call.metadata.get("applicationname")[0] is test.application.name')
             t.equal(call.metadata.get('agentName')[0], 'testAgentName', 'call.metadata.get("agentName")[0] is testAgentName')
             t.equal(call.metadata.get('servicetype')[0], '1400', 'call.metadata.get("servicetype")[0] is 1400')
@@ -150,9 +152,9 @@ test('sendAgentInfo deadline and metadata', (t) => {
         }
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo(), agent.config)
+        const grpcDataSender = grpcDataSenderOf(port)
 
-        const agentInfo = Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
+        const agentInfo = Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
             hostname: 'hostname',
             serviceType: 1400
         })
@@ -179,7 +181,7 @@ test('sendAgentInfo deadline and metadata', (t) => {
             }
             grpcDataSender.unaryDeadlineOptionsBuilder.setSeconds(0.1)
 
-            grpcDataSender.sendAgentInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
+            grpcDataSender.sendAgentInfo(Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
                 hostname: 'hostname',
                 "serviceType": 1400,
             }), callback)
@@ -196,9 +198,9 @@ test('sendAgentInfo deadline and no agent name metadata', (t) => {
         requestAgentInfo: (call, callback) => {
             agentInfo++
 
-            t.equal(call.metadata.get('agentid')[0], 'node.test.app', 'call.metadata.get("agentid")[0] is node.test.app')
+            t.equal(call.metadata.get('agentid')[0], agent.getConfig().getAgentId(), 'call.metadata.get("agentid")[0] is the generated v4 agentId')
             t.equal(call.metadata.get('applicationname')[0], 'test.application.name', 'call.metadata.get("applicationname")[0] is test.application.name')
-            t.equal(call.metadata.get('agentName')[0], undefined, 'call.metadata.get("agentName")[0] is undefined')
+            t.equal(call.metadata.get('agentName')[0], agent.getConfig().getAgentId(), 'v4 without agentName sends agentId as agentname')
             t.equal(call.metadata.get('servicetype')[0], '1400', 'call.metadata.get("servicetype")[0] is 1400')
 
             const result = new spanMessages.PResult()
@@ -212,9 +214,9 @@ test('sendAgentInfo deadline and no agent name metadata', (t) => {
         }
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo(), agent.config)
+        const grpcDataSender = grpcDataSenderOf(port)
 
-        grpcDataSender.sendAgentInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
+        grpcDataSender.sendAgentInfo(Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
             hostname: 'hostname',
             "serviceType": 1400,
         }), (err, response) => {
@@ -240,7 +242,7 @@ test('sendAgentInfo deadline and no agent name metadata', (t) => {
                 t.end()
             }
 
-            grpcDataSender.sendAgentInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
+            grpcDataSender.sendAgentInfo(Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
                 hostname: 'hostname',
                 "serviceType": 1400,
             }), callback)
@@ -271,9 +273,9 @@ test('sendApiMetaInfo deadline', (t) => {
         requestApiMetaData: requestApiMetaData
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo(), agent.config)
+        const grpcDataSender = grpcDataSenderOf(port)
 
-        grpcDataSender.sendApiMetaInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
+        grpcDataSender.sendApiMetaInfo(Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
             hostname: 'hostname',
             "serviceType": 1400,
         }), (err, response) => {
@@ -290,7 +292,7 @@ test('sendApiMetaInfo deadline', (t) => {
 
         function apiMetaInfoFunctionalTest() {
             grpcDataSender.unaryDeadlineOptionsBuilder.setSeconds(0.1)
-            grpcDataSender.sendApiMetaInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
+            grpcDataSender.sendApiMetaInfo(Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
                 hostname: 'hostname',
                 "serviceType": 1400,
             }), (err, response) => {
@@ -327,8 +329,8 @@ test('sendStringMetaInfo deadline', (t) => {
         requestStringMetaData: requestStringMetaData
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = new GrpcDataSender('localhost', port, port, port, agent.getAgentInfo(), agent.config)
-        grpcDataSender.sendStringMetaInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
+        const grpcDataSender = grpcDataSenderOf(port)
+        grpcDataSender.sendStringMetaInfo(Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
             hostname: 'hostname',
             "serviceType": 1400,
         }), (err, response) => {
@@ -345,7 +347,7 @@ test('sendStringMetaInfo deadline', (t) => {
 
         function stringMetaInfoFunctionalTest() {
             grpcDataSender.unaryDeadlineOptionsBuilder.setSeconds(0.1)
-            grpcDataSender.sendStringMetaInfo(Object.assign(new AgentInfo(agent.config, agent.getAgentInfo().agentStartTime), {
+            grpcDataSender.sendStringMetaInfo(Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
                 hostname: 'hostname',
                 "serviceType": 1400,
             }), (err, response) => {
@@ -358,3 +360,9 @@ test('sendStringMetaInfo deadline', (t) => {
         }
     })
 })
+
+function grpcDataSenderOf(port) {
+    const collector = Object.assign({}, agent.getConfig().collector, { ip: 'localhost', spanPort: port, statPort: port, tcpPort: port })
+    const config = new ConfigBuilder(Object.assign({}, agent.getConfig(), { collector })).build()
+    return new GrpcDataSender(config, [makeClientHeaderInterceptor(ClientHeader.make(agent.agentStartTime, agent.getConfig()))])
+}

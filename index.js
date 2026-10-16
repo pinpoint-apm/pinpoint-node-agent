@@ -7,7 +7,6 @@
 'use strict'
 
 const { AgentBuilder } = require('./lib/agent-builder')
-const AgentInfo = require('./lib/data/dto/agent-info')
 const { ConfigBuilder } = require('./lib/config-builder')
 const { LogBuilder } = require('./lib/utils/log/log-builder')
 const logger = require('./lib/utils/log/logger')
@@ -20,17 +19,12 @@ const { ErrorAnalysisConfigBuilder } = require('./lib/context/trace/error-analys
 const { ExceptionEnricher } = require('./lib/context/trace/exception-enricher')
 const { UidParsingResultFactory } = require('./lib/metric/sql/uid-parsing-result-factory')
 const { SqlStatsConfigBuilder } = require('./lib/metric/sql/sql-stats-config-builder')
-const { ProtocolVersionConfigBuilder } = require('./lib/name/protocol-version-config-builder')
-const { NamesAndIdsEnricher } = require('./lib/name/names-and-ids-enricher')
 
 const config = new ConfigBuilder().build()
 
-const agentInfo = AgentInfo.make(config)
 const defaultLogger = logger.getLogger(LogBuilder.createDefaultLogBuilder().setConfig(config).build())
-const agentBuilder = new AgentBuilder(agentInfo)
-    .setConfig(config)
+const agentBuilder = new AgentBuilder(config)
     .setLogger(defaultLogger)
-    .addEnricher(new NamesAndIdsEnricher(new ProtocolVersionConfigBuilder(config).build()))
 
 const uriStatsConfig = new UriStatsConfigBuilder(config).build()
 if (uriStatsConfig.isUriStatsEnabled()) {

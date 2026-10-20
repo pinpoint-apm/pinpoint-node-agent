@@ -10,6 +10,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 
 ### Fixed
 - [[#537](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/537)] Do not mark a client disconnect before the response ends as an error (errorCode 1); restores the 1.3.x behavior ([Thanks @chanmo-kim](https://github.com/chanmo-kim))
+- [[#544](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/544)] Trace `mysql2/promise` `createConnection`, `createPool` and `createPoolCluster` on mysql2 3.11.5 and later
 
 ## [1.4.3] - 2026-06-11
 ### Security

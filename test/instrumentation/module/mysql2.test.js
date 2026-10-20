@@ -299,6 +299,136 @@ test(`Connection Pool with query hooking`, async (t) => {
     })
 })
 
+test(`mysql2/promise createConnection with query hooking`, async (t) => {
+    agent.bindHttp()
+    const source = path.resolve(fixtures, 'mysql.sql')
+    const container = await new MySqlContainer()
+        .withCommand(['--default-authentication-plugin=mysql_native_password'])
+        .withEnvironment({
+            'MYSQL_DATABASE': 'test',
+            'TZ': 'Asia/Seoul',
+        })
+        .withCopyFilesToContainer([{
+            source: source,
+            target: '/docker-entrypoint-initdb.d/mysql.sql'
+        }])
+        .start()
+
+    const trace = agent.createTraceObject()
+    localStorage.run(trace, async () => {
+        const connection = await mysqlp.createConnection({
+            host: container.getHost(),
+            port: container.getPort(3306),
+            database: 'test',
+            user: container.getUsername(),
+            password: container.getUserPassword(),
+            timezone: '+09:00'
+        })
+
+        const [rows] = await connection.query(`SELECT * FROM member WHERE id = ?`, 'a')
+        t.equal(rows[0].id, 'a', 'id in SELECT query hooking')
+        t.equal(rows[0].name, 'name1', 'name in SELECT query hooking')
+
+        agent.callbackTraceClose((trace) => {
+            let actualBuilder = new MethodDescriptorBuilder('createConnection')
+            let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+            const createConnectionSpanEvent = trace.spanBuilder.spanEventList[0]
+            t.equal(createConnectionSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in createConnection spanEvent')
+            t.equal(createConnectionSpanEvent.endPoint, 'localhost', 'endPoint in createConnection spanEvent')
+            t.equal(createConnectionSpanEvent.destinationId, 'test', 'destinationId in createConnection spanEvent')
+            t.equal(createConnectionSpanEvent.serviceType, mysqlServiceType.getCode(), 'serviceType in createConnection spanEvent')
+
+            actualBuilder = new MethodDescriptorBuilder('query')
+                .setClassName('Connection')
+            actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+            const querySpanEvent = trace.spanBuilder.spanEventList[1]
+            t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in query spanEvent')
+            t.equal(querySpanEvent.endPoint, 'localhost', 'endPoint in query spanEvent')
+            t.equal(querySpanEvent.destinationId, 'test', 'destinationId in query spanEvent')
+            t.equal(querySpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType in query spanEvent')
+
+            const actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = ?')
+            const actualQueryAnnotation = querySpanEvent.annotations[0]
+            t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
+            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'intValue in query annotation')
+            t.equal(actualQueryAnnotation.value.stringValue2, 'a', 'stringValue2 in query annotation')
+        })
+
+        setImmediate(async () => {
+            trace.close()
+            await connection.end()
+            t.end()
+        })
+    })
+
+    t.teardown(async () => {
+        await container.stop()
+    })
+})
+
+test(`mysql2/promise createPool with query hooking`, async (t) => {
+    agent.bindHttp()
+    const source = path.resolve(fixtures, 'mysql.sql')
+    const container = await new MySqlContainer()
+        .withCommand(['--default-authentication-plugin=mysql_native_password'])
+        .withEnvironment({
+            'MYSQL_DATABASE': 'test',
+            'TZ': 'Asia/Seoul',
+        })
+        .withCopyFilesToContainer([{
+            source: source,
+            target: '/docker-entrypoint-initdb.d/mysql.sql'
+        }])
+        .start()
+
+    const trace = agent.createTraceObject()
+    localStorage.run(trace, async () => {
+        const pool = mysqlp.createPool({
+            host: container.getHost(),
+            port: container.getPort(),
+            database: 'test',
+            user: container.getUsername(),
+            password: container.getUserPassword(),
+            timezone: '+09:00'
+        })
+
+        const [rows] = await pool.query(`SELECT * FROM member WHERE id = ?`, 'a')
+        t.equal(rows[0].id, 'a', 'id in SELECT query hooking')
+        t.equal(rows[0].name, 'name1', 'name in SELECT query hooking')
+
+        agent.callbackTraceClose((trace) => {
+            let actualBuilder = new MethodDescriptorBuilder('createPool')
+            let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+            let actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence == 0)
+            t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in createPool spanEvent')
+            t.equal(actualSpanEvent.endPoint, 'localhost', 'endPoint in createPool spanEvent')
+            t.equal(actualSpanEvent.destinationId, 'test', 'destinationId in createPool spanEvent')
+            t.equal(actualSpanEvent.depth, 1, 'depth in createPool spanEvent')
+            t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'serviceType in createPool spanEvent')
+
+            actualBuilder = new MethodDescriptorBuilder('query')
+                .setClassName('PoolConnection')
+            actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+            actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence == 1)
+            t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in Pool.query() spanEvent')
+            t.equal(actualSpanEvent.endPoint, 'localhost', 'endPoint in Pool.query() spanEvent')
+            t.equal(actualSpanEvent.destinationId, 'test', 'destinationId in Pool.query() spanEvent')
+            t.equal(actualSpanEvent.depth, 1, 'depth in Pool.query() spanEvent')
+            t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType in Pool.query() spanEvent')
+        })
+
+        setImmediate(async () => {
+            trace.close()
+            await pool.end()
+            t.end()
+        })
+    })
+
+    t.teardown(async () => {
+        await container.stop()
+    })
+})
+
 test(`Cluster with query`, async (t) => {
     agent.bindHttp()
     const source = path.resolve(fixtures, 'mysql.sql')

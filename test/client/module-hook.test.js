@@ -6,6 +6,7 @@
 
 const test = require('tape')
 const agent = require('../support/agent-singleton-mock')
+const { ModuleHook, HookRegistry } = require('../../lib/instrumentation/module-hook')
 
 test('load modules with versions', (t) => {
     const http1 = require('http')
@@ -60,11 +61,33 @@ test('requireId and hook path resolution', (t) => {
     t.true(modules.includes('ioredis'), 'ioredis is included in require modules')
     t.true(modules.includes('mysql'), 'mysql is included in require modules')
     t.true(modules.includes('mysql2'), 'mysql2 is included in require modules')
+    t.true(modules.includes('mysql2/lib/create_connection'), 'mysql2/lib/create_connection is included in require modules')
+    t.true(modules.includes('mysql2/lib/create_pool'), 'mysql2/lib/create_pool is included in require modules')
+    t.true(modules.includes('mysql2/lib/create_pool_cluster'), 'mysql2/lib/create_pool_cluster is included in require modules')
     t.true(modules.includes('mongodb'), 'mongodb is included in require modules')
     t.true(modules.includes('pg'), 'pg is included in require modules')
     t.true(modules.includes('undici'), 'undici is included in require modules')
     t.false(modules.includes('next'), 'next is included in require modules')
     t.false(modules.includes('next/dist/server/next-server.js'), 'next/dist/server/next-server.js is not included in require modules')
 
+    t.end()
+})
+
+test('registry keeps every hook for the same requireId', (t) => {
+    const dut = new HookRegistry()
+    dut.registry('registry-test-module', '/hooks/first.js')
+    dut.registry('registry-test-module', '/hooks/second.js')
+
+    t.deepEqual(dut.getHooks('registry-test-module'), ['/hooks/first.js', '/hooks/second.js'], 'both hooks are registered in order')
+    t.end()
+})
+
+test('hook return value becomes the module exports', (t) => {
+    const dut = new ModuleHook(agent)
+    const original = function createConnection() {}
+    const wrapped = function wrappedCreateConnection() {}
+    dut.hookRegistry.registry('hook-return-test-module', (agent, version, exports) => exports === original ? wrapped : exports)
+
+    t.equal(dut.hookModule(original, 'hook-return-test-module', '1.0.0'), wrapped, 'hookModule returns what the hook returns')
     t.end()
 })

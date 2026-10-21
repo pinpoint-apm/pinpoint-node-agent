@@ -6,7 +6,7 @@
 
 const test = require('tape')
 const agent = require('../support/agent-singleton-mock')
-const { HookRegistry } = require('../../lib/instrumentation/module-hook')
+const { ModuleHook, HookRegistry } = require('../../lib/instrumentation/module-hook')
 
 test('load modules with versions', (t) => {
     const http1 = require('http')
@@ -79,5 +79,15 @@ test('registry keeps every hook for the same requireId', (t) => {
     dut.registry('registry-test-module', '/hooks/second.js')
 
     t.deepEqual(dut.getHooks('registry-test-module'), ['/hooks/first.js', '/hooks/second.js'], 'both hooks are registered in order')
+    t.end()
+})
+
+test('hook return value becomes the module exports', (t) => {
+    const dut = new ModuleHook(agent)
+    const original = function createConnection() {}
+    const wrapped = function wrappedCreateConnection() {}
+    dut.hookRegistry.registry('hook-return-test-module', (agent, version, exports) => exports === original ? wrapped : exports)
+
+    t.equal(dut.hookModule(original, 'hook-return-test-module', '1.0.0'), wrapped, 'hookModule returns what the hook returns')
     t.end()
 })

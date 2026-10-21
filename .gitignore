@@ -46,3 +46,5 @@ checkstyle-results.xml
 # claude code
 **/.claude/**/*.local.json
 **/.claude/worktrees/
+
+.env

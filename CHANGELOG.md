@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
-## [1.4.4] - 2026-10-19
+## [1.4.4] - 2026-10-21
 ### Security
 - [[#543](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/543)] Bump `@grpc/grpc-js` to `^1.14.5` to address CVE-2026-101916 and CVE-2026-101915, and refresh `protobufjs` to address CVE-2026-59877
 

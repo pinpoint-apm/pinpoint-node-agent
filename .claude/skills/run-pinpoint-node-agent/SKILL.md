@@ -10,16 +10,7 @@ pinpoint-node-agent is a library, not a server. "Running" it means running its T
 ## Prerequisites
 
 - `npm install` done.
-- Docker running for integration tests in `test/instrumentation/module/` (testcontainers: MongoDB, MySQL, PostgreSQL, Redis).
-
-### colima
-
-```bash
-colima status >/dev/null 2>&1 || colima start --network-address --memory 6
-export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
-export TESTCONTAINERS_HOST_OVERRIDE=$(colima ls -j | jq -r '.address')
-npm test
-```
+- Docker running for integration tests in `test/instrumentation/module/` (testcontainers: MongoDB, MySQL, PostgreSQL, Redis). With colima, see the Testing section of `AGENTS.md`.
 
 ## Tests
 

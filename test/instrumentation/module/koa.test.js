@@ -811,3 +811,43 @@ test('Koa: v3 sends no Pinpoint-pServiceName and an inbound request without it l
     }
   })
 })
+
+test('Koa: application service type is NODE 1400 even with PINPOINT_SERVICE_TYPE and json applicationServiceType', function (t) {
+  process.env.PINPOINT_SERVICE_TYPE = '1600'
+  agent.bindHttp({ applicationServiceType: 1500 })
+  delete process.env.PINPOINT_SERVICE_TYPE
+
+  const PATH = '/application-service-type'
+  const OUTGOING_PATH = '/application-service-type/outgoing'
+  const app = new Koa()
+  const router = new Router()
+  let outgoingRequestHeaders
+  router.get(PATH, async (ctx) => {
+    await axios.get(getServerUrl(OUTGOING_PATH), { httpAgent: new http.Agent({ keepAlive: false }) })
+    ctx.body = 'ok'
+  })
+  router.get(OUTGOING_PATH, async (ctx) => {
+    outgoingRequestHeaders = ctx.request.headers
+    ctx.body = 'ok'
+  })
+  app.use(router.routes()).use(router.allowedMethods())
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    try {
+      await axios.get(getServerUrl(PATH), { httpAgent: new http.Agent({ keepAlive: false }) })
+
+      t.equal(outgoingRequestHeaders['pinpoint-papptype'], '1400', 'outgoing request has Pinpoint-pAppType header of NODE 1400')
+
+      const span = agent.dataSender.mockSpans.find(span => span.rpc === PATH)
+      t.equal(span.toProtocolBuffer().getSpan().getApplicationservicetype(), 1400, 'PSpan.applicationServiceType is NODE 1400')
+
+      const outgoingSpan = agent.dataSender.mockSpans.find(span => span.rpc === OUTGOING_PATH)
+      t.equal(outgoingSpan.parentApplicationType, 1400, 'next hop span parentApplicationType is NODE 1400')
+    } catch (error) {
+      t.fail(error.stack)
+    } finally {
+      server.close()
+      t.end()
+    }
+  })
+})

@@ -5,7 +5,12 @@ Personal, uncommitted instructions go in `~/.claude/CLAUDE.md` or `~/.claude/ski
 ## Testing
 
 - Tests use Tape. While iterating, run the affected file: `npx tape test/path/to/file.test.js`.
-- Before a PR, run the full suite: `npm test`. Integration tests in `test/instrumentation/module/` use testcontainers, so Docker must be running.
+- Before a PR, run the full suite: `npm test`. Integration tests in `test/instrumentation/module/` use testcontainers, so Docker must be running. With colima, export the testcontainers overrides first:
+  ```bash
+  colima status >/dev/null 2>&1 || colima start --network-address --memory 6
+  export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
+  export TESTCONTAINERS_HOST_OVERRIDE=$(colima ls -j | jq -r '.address')
+  ```
 - New features and bug fixes need functional tests for every supported web framework (Express, Koa, Next.js).
 - Lint, coverage and other commands: `run-pinpoint-node-agent` skill.
 

@@ -10,7 +10,6 @@ declare class AgentInfo {
   agentId: string;
   agentName: string;
   applicationName: string;
-  serviceType: number;
   applicationServiceType: number;
   container: boolean;
   agentStartTime: string;
@@ -26,7 +25,6 @@ declare class AgentInfo {
   getAgentId(): string;
   getAgentName(): string;
   getAgentStartTime(): string;
-  getServiceType(): number;
   getApplicationName(): string;
   getApplicationServiceType(): number;
 }

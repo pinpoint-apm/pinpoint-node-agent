@@ -25,7 +25,6 @@ const getTraceId = (transactionId) => {
 const getAgentInfo = () => ({
   agentId: config.agentId,
   applicationName: config.applicationName,
-  serviceType : config.serviceType,
   agentStartTime: Date.now(),
 })
 

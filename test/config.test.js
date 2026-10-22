@@ -142,13 +142,12 @@ test('ConfigBuilder accumulates the warns of pinpoint-config.json and the handle
 })
 
 test('Config getters return the final names and ids', (t) => {
-  const v4 = new ConfigBuilder({ agentId: 'node.app', applicationName: 'appName', serviceName: 'serviceName', applicationServiceType: 1500 }).setUserDefinedJson({}).build()
+  const v4 = new ConfigBuilder({ agentId: 'node.app', applicationName: 'appName', serviceName: 'serviceName' }).setUserDefinedJson({}).build()
   t.equal(v4.getAgentId(), v4.agentId, 'getAgentId is the generated v4 agentId')
   t.notEqual(v4.getAgentId(), 'node.app', 'getAgentId is not the configured agentId')
   t.equal(v4.getAgentName(), v4.getAgentId(), 'getAgentName falls back to the agentId')
   t.equal(v4.getApplicationName(), 'appName', 'getApplicationName')
   t.equal(v4.getServiceName(), 'serviceName', 'getServiceName')
-  t.equal(v4.getApplicationServiceType(), 1500, 'getApplicationServiceType')
   t.equal(v4.getProtocolVersion(), 'v4', 'getProtocolVersion defaults to v4')
   t.equal(v4.isContainerEnvironment(), isContainerEnvironment(), 'isContainerEnvironment follows the container detection')
 

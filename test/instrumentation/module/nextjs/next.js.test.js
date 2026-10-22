@@ -191,6 +191,7 @@ test('Next.JS Production Server start', (suite) => {
                     NEXT_TELEMETRY_DISABLED: '1',
                     PINPOINT_APPLICATION_NAME: 'next.js.test.js',
                     PINPOINT_SERVICE_NAME: 'next.js.service',
+                    PINPOINT_SERVICE_TYPE: '1600',
                     PINPOINT_COLLECTOR_IP: '127.0.0.1',
                     PINPOINT_COLLECTOR_SPAN_PORT: String(spanCollectorPort),
                     PINPOINT_COLLECTOR_STAT_PORT: String(spanCollectorPort),
@@ -469,6 +470,36 @@ test('Next.js: v4 serviceName is sent as Pinpoint-pServiceName and an inbound on
 
         const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/parent-service-name'), 10000)
         t.equal(span.getAcceptevent().getParentinfo().getParentservicename(), 'upstream.service', 'PParentInfo.parentServiceName is the inbound Pinpoint-pServiceName')
+    } catch (err) {
+        t.fail(err.message)
+    } finally {
+        outgoingServer.close()
+    }
+    t.end()
+})
+
+test('Next.js: application service type is NODE 1400 even with PINPOINT_SERVICE_TYPE', async (t) => {
+    receivedSpans = []
+    const http = require('http')
+    let outgoingRequestHeaders
+    const outgoingServer = http.createServer((req, res) => {
+        outgoingRequestHeaders = req.headers
+        res.end('ok')
+    })
+    await new Promise(resolve => outgoingServer.listen(0, '127.0.0.1', resolve))
+    try {
+        const target = `http://127.0.0.1:${outgoingServer.address().port}/outgoing`
+        const client = sendRequestOverRawSocket(3000, `/api/parent-service-name?target=${encodeURIComponent(target)}`)
+        client.setTimeout(10000, () => client.destroy())
+        let response = ''
+        client.on('data', (chunk) => response += chunk)
+        await new Promise(resolve => client.on('close', resolve))
+        t.ok(response.startsWith('HTTP/1.1 200'), '/api/parent-service-name responds with 200')
+
+        t.equal(outgoingRequestHeaders['pinpoint-papptype'], '1400', 'outgoing request has Pinpoint-pAppType header of NODE 1400')
+
+        const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/parent-service-name'), 10000)
+        t.equal(span.getApplicationservicetype(), 1400, 'PSpan.applicationServiceType is NODE 1400')
     } catch (err) {
         t.fail(err.message)
     } finally {

@@ -913,7 +913,7 @@ test('incoming request by Disable Trace requests', (t) => {
     t.equal(actualApiRequest.headers['pinpoint-flags'], '0', 'api request pinpoint-flags header is 0')
     t.equal(actualApiRequest.headers['pinpoint-sampled'], undefined, 'api request pinpoint-sampled header is s0')
     t.equal(actualApiRequest.headers['pinpoint-pappname'], agent.getConfig().getApplicationName(), 'pinpoint-pappname header is the Config applicationName')
-    t.equal(actualApiRequest.headers['pinpoint-papptype'], String(agent.getConfig().getApplicationServiceType()), 'pinpoint-papptype header is the Config applicationServiceType')
+    t.equal(actualApiRequest.headers['pinpoint-papptype'], '1400', 'pinpoint-papptype header is NODE 1400')
     t.equal(actualApiRequest.headers['pinpoint-pspanid'], actualTrace.getTraceId().getSpanId(), 'pinpoint-pspanid header is root span id')
     t.equal(actualApiRequest.headers['pinpoint-spanid'], actualApiTrace.getTraceId().getSpanId(), 'pinpoint-spanid header is api span id')
     t.equal(actualApiRequest.headers['pinpoint-traceid'], actualTrace.getTraceId().toStringDelimiterFormatted(), 'pinpoint-traceid header is root transaction id')
@@ -2037,6 +2037,44 @@ test('Express: v3 sends no Pinpoint-pServiceName and an inbound request without 
       t.equal(span.parentApplicationName, 'upstream.application', 'span parentApplicationName is the inbound Pinpoint-pAppName')
       t.equal(span.parentServiceName, undefined, 'span parentServiceName is unset')
       t.equal(span.toProtocolBuffer().getSpan().getAcceptevent().getParentinfo().getParentservicename(), '', 'PParentInfo.parentServiceName is unset')
+    } catch (error) {
+      t.fail(error.stack)
+    } finally {
+      server.close()
+      t.end()
+    }
+  })
+})
+
+test('Express: application service type is NODE 1400 even with PINPOINT_SERVICE_TYPE and json applicationServiceType', function (t) {
+  process.env.PINPOINT_SERVICE_TYPE = '1600'
+  agent.bindHttp({ applicationServiceType: 1500 })
+  delete process.env.PINPOINT_SERVICE_TYPE
+
+  const PATH = '/application-service-type'
+  const OUTGOING_PATH = '/application-service-type/outgoing'
+  const app = new express()
+  let outgoingRequestHeaders
+  app.get(PATH, async (req, res) => {
+    await axios.get(getServerUrl(OUTGOING_PATH), { httpAgent: new http.Agent({ keepAlive: false }) })
+    res.send('ok')
+  })
+  app.get(OUTGOING_PATH, (req, res) => {
+    outgoingRequestHeaders = req.headers
+    res.send('ok')
+  })
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    try {
+      await axios.get(getServerUrl(PATH), { httpAgent: new http.Agent({ keepAlive: false }) })
+
+      t.equal(outgoingRequestHeaders['pinpoint-papptype'], '1400', 'outgoing request has Pinpoint-pAppType header of NODE 1400')
+
+      const span = agent.dataSender.mockSpans.find(span => span.rpc === PATH)
+      t.equal(span.toProtocolBuffer().getSpan().getApplicationservicetype(), 1400, 'PSpan.applicationServiceType is NODE 1400')
+
+      const outgoingSpan = agent.dataSender.mockSpans.find(span => span.rpc === OUTGOING_PATH)
+      t.equal(outgoingSpan.parentApplicationType, 1400, 'next hop span parentApplicationType is NODE 1400')
     } catch (error) {
       t.fail(error.stack)
     } finally {

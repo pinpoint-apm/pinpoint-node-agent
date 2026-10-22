@@ -8,6 +8,9 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
   - The agent ID is always generated; `agentName` defaults to it
   - `applicationName` up to 254 characters
 
+### Removed
+- [[#531](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/531)] `PINPOINT_SERVICE_TYPE` and json `applicationServiceType`; the application service type is always NODE (1400)
+
 ### Fixed
 - [[#537](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/537)] Do not mark a client disconnect before the response ends as an error (errorCode 1); restores the 1.3.x behavior ([Thanks @chanmo-kim](https://github.com/chanmo-kim))
 - [[#544](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/544)] Trace `mysql2/promise` `createConnection`, `createPool` and `createPoolCluster` on mysql2 3.11.5 and later

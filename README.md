@@ -105,7 +105,6 @@ PINPOINT_APPLICATION_NAME | | **Required.** Application name. Multiple agents ca
 PINPOINT_SERVICE_NAME | | **Required with `v4`.** Service name. Ignored with `v3`.
 PINPOINT_AGENT_NAME | | Recommended. Shown in the Inspector UI (e.g. pod name, hostname). Defaults to the agent ID.<br><img width="611" alt="Agent Name in Inspector" src="https://github.com/user-attachments/assets/8022baa4-8b38-4553-9c12-88de17bc8f22" />
 PINPOINT_AGENT_ID | | `v3` only. Generated if unset. Ignored with `v4`, which always generates it.
-PINPOINT_SERVICE_TYPE | 1400 | Application service type code.
 PINPOINT_COLLECTOR_IP | localhost | Collector address, e.g. `192.168.0.1`.
 PINPOINT_COLLECTOR_SPAN_PORT | 9993 | Collector span port.
 PINPOINT_COLLECTOR_STAT_PORT | 9992 | Collector stat port.
@@ -161,7 +160,6 @@ Example `pinpoint-config.json`:
   "applicationName": "your-app-name",
   "serviceName": "your-service-name",
   "agentName": "your-pod-name",
-  "applicationServiceType": 1400,
   "collector": {
     "ip": "localhost",
     "spanPort": 9993,
@@ -209,7 +207,6 @@ v1.4 restructured the `pinpoint-config.json` format ([before v1.4](https://githu
 
 | before v1.4 | v1.4 |
 |------|------|
-| `application-type` | `applicationServiceType` |
 | `collector.span-port` | `collector.spanPort` |
 | `collector.stat-port` | `collector.statPort` |
 | `collector.tcp-port` | `collector.tcpPort` |

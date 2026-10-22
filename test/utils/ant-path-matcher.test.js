@@ -237,7 +237,7 @@ async function outgoingRequest(t, path, expectedSampling, expectUnits) {
                 t.equal(actualTrace.spanBuilder.getTraceRoot().getTraceId().toStringDelimiterFormatted(), headers['pinpoint-traceid'])
                 t.equal(actualTrace.spanBuilder.getTraceRoot().getTraceId().getSpanId(), headers['pinpoint-pspanid'])
                 t.equal(agent.getConfig().getApplicationName(), headers['pinpoint-pappname'])
-                t.equal(agent.getConfig().getApplicationServiceType(), Number(headers['pinpoint-papptype']))
+                t.equal(Number(headers['pinpoint-papptype']), 1400, 'pinpoint-papptype header is NODE 1400')
                 t.equal(actualTrace.spanBuilder.getTraceRoot().getTraceId().flags, headers['pinpoint-flags'])
                 t.equal(headers['pinpoint-sampled'], undefined, 'When sampling, pinpoint-sampled is undefined')
             }

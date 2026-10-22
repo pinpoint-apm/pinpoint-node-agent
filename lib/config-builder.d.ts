@@ -30,7 +30,6 @@ export class Config {
     getAgentName(): string
     getApplicationName(): string
     getServiceName(): string | undefined
-    getApplicationServiceType(): number
     getProtocolVersion(): 'v3' | 'v4'
 }
 

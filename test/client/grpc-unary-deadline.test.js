@@ -156,7 +156,6 @@ test('sendAgentInfo deadline and metadata', (t) => {
 
         const agentInfo = Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
             hostname: 'hostname',
-            serviceType: 1400
         })
         grpcDataSender.sendAgentInfo(agentInfo, (err, response) => {
             t.true(response, '1st sendAgentInfo response is success')

@@ -121,17 +121,12 @@ test('agentName falls back to agentId', (t) => {
     t.end()
 })
 
-test('applicationServiceType defaults to 1400, json and PINPOINT_SERVICE_TYPE override it', (t) => {
-    const byDefault = namesAndIdsOf(v3Json)
-    t.equal(byDefault.applicationServiceType, 1400, 'default applicationServiceType is 1400')
-
-    const byJson = namesAndIdsOf({ ...v3Json, applicationServiceType: 1500 })
-    t.equal(byJson.applicationServiceType, 1500, 'json applicationServiceType is 1500')
-
+test('json applicationServiceType and PINPOINT_SERVICE_TYPE are ignored and AgentInfo is NODE 1400', (t) => {
     process.env.PINPOINT_SERVICE_TYPE = '1600'
-    const byEnv = namesAndIdsOf({ ...v3Json, applicationServiceType: 1500 })
+    const config = configOf({ applicationName: 'appName', serviceName: 'serviceName', applicationServiceType: 1500 })
     delete process.env.PINPOINT_SERVICE_TYPE
-    t.equal(byEnv.applicationServiceType, 1600, 'PINPOINT_SERVICE_TYPE overrides json')
+
+    t.equal(new AgentInfo(config, '1700000000000').getApplicationServiceType(), 1400, 'AgentInfo applicationServiceType is NODE 1400')
     t.end()
 })
 
@@ -155,9 +150,9 @@ test('KUBERNETES_SERVICE_HOST is detected as a container', (t) => {
     t.end()
 })
 
-test('AgentInfo carries the final names, ids, applicationServiceType and container of Config', (t) => {
+test('AgentInfo carries the final names, ids and container of Config', (t) => {
     process.env.KUBERNETES_SERVICE_HOST = 'aaa'
-    const config = configOf({ applicationName: 'appName', serviceName: 'serviceName', applicationServiceType: 1500 })
+    const config = configOf({ applicationName: 'appName', serviceName: 'serviceName' })
     delete process.env.KUBERNETES_SERVICE_HOST
 
     const agentInfo = new AgentInfo(config, '1700000000000')
@@ -165,7 +160,6 @@ test('AgentInfo carries the final names, ids, applicationServiceType and contain
     t.equal(agentInfo.getAgentId(), config.agentId, 'agentId is the Config agentId')
     t.equal(agentInfo.getAgentName(), config.agentId, 'agentName falls back to agentId')
     t.equal(agentInfo.getApplicationName(), 'appName', 'applicationName')
-    t.equal(agentInfo.getApplicationServiceType(), 1500, 'applicationServiceType')
     t.true(agentInfo.container, 'container')
     t.equal(agentInfo.getAgentStartTime(), '1700000000000', 'agentStartTime is the given agentStartTime')
     t.end()

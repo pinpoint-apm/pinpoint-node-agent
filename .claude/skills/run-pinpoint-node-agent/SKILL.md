@@ -14,18 +14,12 @@ pinpoint-node-agent is a library, not a server. "Running" it means running its T
 
 ### colima
 
-If `docker info` fails, start the runtime with `colima start`. With colima, testcontainers
-resolves the host as `null` (`getaddrinfo ENOTFOUND null`, then "Could not find a working
-container runtime strategy"). Set both overrides when running tests:
-
 ```bash
-TESTCONTAINERS_HOST_OVERRIDE=localhost \
-TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock \
+colima status >/dev/null 2>&1 || colima start --network-address --memory 6
+export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
+export TESTCONTAINERS_HOST_OVERRIDE=$(colima ls -j | jq -r '.address')
 npm test
 ```
-
-Use `localhost`, not `127.0.0.1`: endPoint assertions in the mysql and nested-async tests expect
-`localhost`.
 
 ## Tests
 

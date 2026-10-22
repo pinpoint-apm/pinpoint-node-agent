@@ -20,6 +20,7 @@ const StatProto = require('../../../../lib/data/v1/Stat_pb')
 const CmdProto = require('../../../../lib/data/v1/Cmd_pb')
 const AnnotationKey = require('../../../../lib/constant/annotation-key')
 const { sendRequestOverRawSocket } = require('../../../support/raw-http-client')
+const { FixturesUpstreamHeader } = require('../../../support/fixtures-upstream-header')
 
 let container
 let spanCollector
@@ -189,7 +190,7 @@ test('Next.JS Production Server start', (suite) => {
                     DB_PASSWORD: container.getUserPassword(),
                     NEXT_TELEMETRY_DISABLED: '1',
                     PINPOINT_APPLICATION_NAME: 'next.js.test.js',
-                    PINPOINT_SERVICE_NAME: 'next.js.test.js',
+                    PINPOINT_SERVICE_NAME: 'next.js.service',
                     PINPOINT_COLLECTOR_IP: '127.0.0.1',
                     PINPOINT_COLLECTOR_SPAN_PORT: String(spanCollectorPort),
                     PINPOINT_COLLECTOR_STAT_PORT: String(spanCollectorPort),
@@ -442,6 +443,36 @@ test('client disconnect before the /api/client-disconnect response should not re
         }
     } catch (err) {
         t.fail(err.message)
+    }
+    t.end()
+})
+
+test('Next.js: v4 serviceName is sent as Pinpoint-pServiceName and an inbound one is recorded as parentServiceName', async (t) => {
+    receivedSpans = []
+    const http = require('http')
+    let outgoingRequestHeaders
+    const outgoingServer = http.createServer((req, res) => {
+        outgoingRequestHeaders = req.headers
+        res.end('ok')
+    })
+    await new Promise(resolve => outgoingServer.listen(0, '127.0.0.1', resolve))
+    try {
+        const target = `http://127.0.0.1:${outgoingServer.address().port}/outgoing`
+        const client = sendRequestOverRawSocket(3000, `/api/parent-service-name?target=${encodeURIComponent(target)}`, FixturesUpstreamHeader.header('pinpoint-pservicename', 'upstream.service'))
+        client.setTimeout(10000, () => client.destroy())
+        let response = ''
+        client.on('data', (chunk) => response += chunk)
+        await new Promise(resolve => client.on('close', resolve))
+        t.ok(response.startsWith('HTTP/1.1 200'), '/api/parent-service-name responds with 200')
+
+        t.equal(outgoingRequestHeaders['pinpoint-pservicename'], 'next.js.service', 'outgoing request has Pinpoint-pServiceName header of PINPOINT_SERVICE_NAME')
+
+        const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/parent-service-name'), 10000)
+        t.equal(span.getAcceptevent().getParentinfo().getParentservicename(), 'upstream.service', 'PParentInfo.parentServiceName is the inbound Pinpoint-pServiceName')
+    } catch (err) {
+        t.fail(err.message)
+    } finally {
+        outgoingServer.close()
     }
     t.end()
 })

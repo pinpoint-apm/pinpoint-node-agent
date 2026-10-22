@@ -20,6 +20,7 @@ const GrpcDataSenderBuilder = require('../../client/grpc-data-sender-builder')
 const http = require('http')
 const https = require('https')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
+const { FixturesUpstreamHeader } = require('../../support/fixtures-upstream-header')
 
 
 const TEST_ENV = {
@@ -732,4 +733,81 @@ test('Koa: Should not mark a client disconnect before the response as an error',
       t.end()
     })
   }
+})
+
+test('Koa: v4 serviceName is sent as Pinpoint-pServiceName and an inbound one is recorded as parentServiceName', function (t) {
+  agent.bindHttp({ serviceName: 'koa.service' })
+
+  const PATH = '/parent-service-name'
+  const OUTGOING_PATH = '/parent-service-name/outgoing'
+  const app = new Koa()
+  const router = new Router()
+  let outgoingRequestHeaders
+  router.get(PATH, async (ctx) => {
+    await axios.get(getServerUrl(OUTGOING_PATH), { httpAgent: new http.Agent({ keepAlive: false }) })
+    ctx.body = 'ok'
+  })
+  router.get(OUTGOING_PATH, async (ctx) => {
+    outgoingRequestHeaders = ctx.request.headers
+    ctx.body = 'ok'
+  })
+  app.use(router.routes()).use(router.allowedMethods())
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    try {
+      await axios.get(getServerUrl(PATH), { headers: FixturesUpstreamHeader.header('pinpoint-pservicename', 'upstream.service'), httpAgent: new http.Agent({ keepAlive: false }) })
+
+      t.equal(outgoingRequestHeaders['pinpoint-pservicename'], 'koa.service', 'outgoing request has Pinpoint-pServiceName header of the Config serviceName')
+
+      const span = agent.dataSender.mockSpans.find(span => span.rpc === PATH)
+      t.equal(span.parentServiceName, 'upstream.service', 'span parentServiceName is the inbound Pinpoint-pServiceName')
+      t.equal(span.toProtocolBuffer().getSpan().getAcceptevent().getParentinfo().getParentservicename(), 'upstream.service', 'PParentInfo.parentServiceName is the inbound Pinpoint-pServiceName')
+
+      const outgoingSpan = agent.dataSender.mockSpans.find(span => span.rpc === OUTGOING_PATH)
+      t.equal(outgoingSpan.parentServiceName, 'koa.service', 'next hop span parentServiceName is this agent serviceName')
+    } catch (error) {
+      t.fail(error.stack)
+    } finally {
+      server.close()
+      t.end()
+    }
+  })
+})
+
+test('Koa: v3 sends no Pinpoint-pServiceName and an inbound request without it leaves parentServiceName unset', function (t) {
+  agent.bindHttp({ serviceName: 'ignored.service', collector: { ip: '127.0.0.1', spanPort: -1, statPort: -1, tcpPort: -1, protocolVersion: 'v3' } })
+
+  const PATH = '/parent-service-name'
+  const OUTGOING_PATH = '/parent-service-name/outgoing'
+  const app = new Koa()
+  const router = new Router()
+  let outgoingRequestHeaders
+  router.get(PATH, async (ctx) => {
+    await axios.get(getServerUrl(OUTGOING_PATH), { httpAgent: new http.Agent({ keepAlive: false }) })
+    ctx.body = 'ok'
+  })
+  router.get(OUTGOING_PATH, async (ctx) => {
+    outgoingRequestHeaders = ctx.request.headers
+    ctx.body = 'ok'
+  })
+  app.use(router.routes()).use(router.allowedMethods())
+
+  const server = app.listen(TEST_ENV.port, async () => {
+    try {
+      await axios.get(getServerUrl(PATH), { headers: FixturesUpstreamHeader.header('pinpoint-pappname', 'upstream.application'), httpAgent: new http.Agent({ keepAlive: false }) })
+
+      t.equal(outgoingRequestHeaders['pinpoint-pappname'], 'test.application.name', 'outgoing request has Pinpoint-pAppName header')
+      t.equal(outgoingRequestHeaders['pinpoint-pservicename'], undefined, 'v3 outgoing request has no Pinpoint-pServiceName header even with serviceName set')
+
+      const span = agent.dataSender.mockSpans.find(span => span.rpc === PATH)
+      t.equal(span.parentApplicationName, 'upstream.application', 'span parentApplicationName is the inbound Pinpoint-pAppName')
+      t.equal(span.parentServiceName, undefined, 'span parentServiceName is unset')
+      t.equal(span.toProtocolBuffer().getSpan().getAcceptevent().getParentinfo().getParentservicename(), '', 'PParentInfo.parentServiceName is unset')
+    } catch (error) {
+      t.fail(error.stack)
+    } finally {
+      server.close()
+      t.end()
+    }
+  })
 })

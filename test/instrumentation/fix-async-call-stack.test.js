@@ -11,7 +11,7 @@ const { Wait } = require('testcontainers')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 
 test(`fix redis call stack depth`, async (t) => {
-    const container = await new RedisContainer()
+    const container = await new RedisContainer('redis:7.2')
         .withWaitStrategy(Wait.forAll([
             Wait.forListeningPorts(),
             Wait.forLogMessage("Ready to accept connections")

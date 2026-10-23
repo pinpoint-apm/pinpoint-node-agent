@@ -12,7 +12,7 @@ const { addressStringOf } = require('../../../lib/utils/convert-utils')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
 
 test(`redis destination id`, async (t) => {
-    const container = await new RedisContainer()
+    const container = await new RedisContainer('redis:7.2')
         .withWaitStrategy(Wait.forAll([
             Wait.forListeningPorts(),
             Wait.forLogMessage("Ready to accept connections")
@@ -57,7 +57,7 @@ test(`redis destination id`, async (t) => {
 })
 
 test("ioredis destination id", async function (t) {
-    const container = await new RedisContainer()
+    const container = await new RedisContainer('redis:7.2')
         .withWaitStrategy(Wait.forAll([
             Wait.forListeningPorts(),
             Wait.forLogMessage("Ready to accept connections")
@@ -119,7 +119,7 @@ test(`addressStringOf`, (t) => {
 
 // https://github.com/NodeRedis/node-redis#rediscreateclient
 test(`Fix app crash without callback function https://github.com/pinpoint-apm/pinpoint-node-agent/pull/12`, async (t) => {
-    const container = await new RedisContainer()
+    const container = await new RedisContainer('redis:7.2')
         .withWaitStrategy(Wait.forAll([
             Wait.forListeningPorts(),
             Wait.forLogMessage("Ready to accept connections")

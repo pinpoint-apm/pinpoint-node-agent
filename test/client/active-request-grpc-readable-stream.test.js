@@ -15,7 +15,6 @@ const { ProfilerDataSource } = require('./grpc-fixture')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const shimmer = require('@pinpoint-apm/shimmer')
 const GrpcReadableStream = require('../../lib/client/grpc-readable-stream')
-const semver = require('semver')
 
 test('If you run the ActiveRequest function, and then Node agent send the fifth piece of data, and the Pinpoint server fails, the ActiveRequest gRPC Stream closes and the for statement stops', (t) => {
     t.plan(56)
@@ -147,16 +146,10 @@ test('If you run the ActiveRequest function, and then Node agent send the fifth 
                     const commandStream4th = this
                     t.equal(commandStream4th.name, '', '5th created stream is 4th commandStream')
                     commandStream4th.writableStream.on('end', () => {
-                        if (semver.satisfies(process.versions.node, '<19.0')) {
-                            t.true(firedError, 'The fourth commandStream is end method called by writable stream of fourth commandStream')
-                        } else {
-                            t.true('The fourth commandStream is end method called by writable stream of fourth commandStream')
-                        }
+                        t.pass('The fourth commandStream is end method called by writable stream of fourth commandStream')
                         t.end()
                     })
-                    let firedError
                     commandStream4th.writableStream.on('error', (error) => {
-                        firedError = error
                         t.equal(error.code, grpc.status.CANCELLED, 'The fourth commandStream is ended by Collector server shutdown')
                     })
                 }

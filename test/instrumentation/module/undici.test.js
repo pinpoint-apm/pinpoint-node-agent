@@ -378,14 +378,6 @@ test('shimming undici: should not collect ExceptionMetaData when errorAnalysis i
     })
 })
 
-if (parseInt(process.versions.node.split('.')[0], 10) < 20) {
-    test('node version 20 or higher specific test', function (t) {
-        t.pass('This test runs only on Node.js version 20 or higher')
-        t.end()
-    })
-    return
-}
-
 // https://nodejs.org/en/learn/getting-started/fetch
 test('shimming udici by global nodejs fetch', function (t) {
     const collectorServer = new grpc.Server()

@@ -22,7 +22,7 @@ test('mysql uid query', async (t) => {
         }
     })
     const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer()
+    const container = await new MySqlContainer('mysql:8.0.31')
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
         .withEnvironment({
             'MYSQL_DATABASE': 'test',
@@ -64,7 +64,7 @@ test('mysql uid query', async (t) => {
             let actualBuilder = new MethodDescriptorBuilder('createConnection')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             const createConnectionSpanEvent = trace.spanBuilder.spanEventList[0]
-            t.equal(createConnectionSpanEvent.endPoint, 'localhost', 'createConnection endPoint is localhost in mysql uid functional test')
+            t.equal(createConnectionSpanEvent.endPoint, container.getHost(), 'createConnection endPoint is localhost in mysql uid functional test')
             t.equal(createConnectionSpanEvent.destinationId, 'test', 'createConnection destinationId is test in mysql uid functional test')
             t.equal(createConnectionSpanEvent.apiId, actualMethodDescriptor.apiId, 'createConnection apiId is same in mysql uid functional test')
 

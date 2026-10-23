@@ -28,6 +28,7 @@ const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats
 const { UriStatsMonitor } = require('../../../lib/metric/uri/uri-stats-monitor')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 const { FixturesUpstreamHeader } = require('../../support/fixtures-upstream-header')
+const { receiverTypeNameOfFunctionMethod } = require('../../support/stack-frame')
 
 const TEST_ENV = {
   host: 'localhost', port: 5006
@@ -316,7 +317,7 @@ function unhandledExceptionStatsFrameTest(trace, t) {
     'express-layer-interceptor.js.wrapped (<workspace>/lib/instrumentation/module/express/express-layer-interceptor.js:<line>)',
     'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
     'index.js.<anonymous> (<workspace>/node_modules/express/lib/router/index.js:<line>)',
-    'Function.process_params (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+    `${receiverTypeNameOfFunctionMethod('router')}.process_params (<workspace>/node_modules/express/lib/router/index.js:<line>)`,
     'index.js.next (<workspace>/node_modules/express/lib/router/index.js:<line>)',
   ].join('\n')
 
@@ -1397,7 +1398,7 @@ test('Functional Test: requestExceptionMetaData should deliver converted excepti
           'express-layer-interceptor.js.wrapped (<workspace>/lib/instrumentation/module/express/express-layer-interceptor.js:<line>)',
           'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
           'index.js.<anonymous> (<workspace>/node_modules/express/lib/router/index.js:<line>)',
-          'Function.process_params (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+          `${receiverTypeNameOfFunctionMethod('router')}.process_params (<workspace>/node_modules/express/lib/router/index.js:<line>)`,
           'index.js.next (<workspace>/node_modules/express/lib/router/index.js:<line>)',
         ].join('\n')
 

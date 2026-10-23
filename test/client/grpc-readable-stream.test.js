@@ -9,7 +9,6 @@
 const test = require('tape')
 const GrpcReadableStream = require('../../lib/client/grpc-readable-stream')
 const { Writable } = require('node:stream')
-const semver = require('semver')
 const { spanMessageWithId, beforeSpecificOne } = require('./grpc-fixture')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
@@ -57,11 +56,7 @@ test('piped readable stream', (t) => {
 })
 
 test('reconnect writable stream on piped readable stream', (t) => {
-    if (semver.satisfies(process.versions.node, '<17.0')) {
-        t.plan(17)
-    } else {
-        t.plan(21)
-    }
+    t.plan(21)
     const writableStreams = []
     let writableStreamCreatedCount = 0
     const readable = new GrpcReadableStream(() => {
@@ -141,18 +136,14 @@ test('reconnect writable stream on piped readable stream', (t) => {
     function createdWritableStream(count) {
         if (count === 2) {
             t.true(writableStreams[0].destroyed, 'piped writable stream is destroyed')
-            if (semver.satisfies(process.versions.node, '>17.0')) {
-                t.true(writableStreams[0].closed, 'piped writable stream is closed')
-                t.equal(writableStreams[0].errored.message, 'Cannot pipe, not readable', 'piped writable stream error message')
-            }
+            t.true(writableStreams[0].closed, 'piped writable stream is closed')
+            t.equal(writableStreams[0].errored.message, 'Cannot pipe, not readable', 'piped writable stream error message')
             t.true(writableStreams[0].writableObjectMode, 'piped writable stream is object mode')
             t.false(writableStreams[0].writableEnded, 'piped writable stream is not ended. It is ended by destroy and close')
 
             t.false(writableStreams[1].destroyed, 'new piped writable stream is not destroyed')
-            if (semver.satisfies(process.versions.node, '>17.0')) {
-                t.false(writableStreams[1].closed, 'new piped writable stream is not closed')
-                t.false(writableStreams[1].errored, 'new piped writable stream is not errored')
-            }
+            t.false(writableStreams[1].closed, 'new piped writable stream is not closed')
+            t.false(writableStreams[1].errored, 'new piped writable stream is not errored')
             t.false(writableStreams[1].writableEnded, 'new piped writable stream is not ended')
             t.true(readable.readableStream.readable, 'piped readable stream is readable on new piped writable stream')
 
@@ -165,11 +156,7 @@ test('reconnect writable stream on piped readable stream', (t) => {
 })
 
 test('If the Readable stream emits an error during processing, the writable destination is not closed automatically. If an error occurs, Close each streams, ', async (t) => {
-    if (semver.satisfies(process.versions.node, '<17.0')) {
-        t.plan(13)
-    } else {
-        t.plan(16)
-    }
+    t.plan(16)
 
     let throwError = false
     const readable = new GrpcReadableStream(() => {
@@ -194,9 +181,7 @@ test('If the Readable stream emits an error during processing, the writable dest
         })
 
         writableStream.on('close', function () {
-            if (semver.satisfies(process.versions.node, '>17.0')) {
-                t.true(this.closed, 'closed property is true on the close event of writable stream')
-            }
+            t.true(this.closed, 'closed property is true on the close event of writable stream')
             t.true(this.destroyed, 'destroyed property is true on the close event of writable stream')
             t.false(this.writable, 'writable property is false on the close event of writable stream')
         })
@@ -210,7 +195,6 @@ test('If the Readable stream emits an error during processing, the writable dest
 
         return writableStream
     }, {
-        // NODE 17+
         // readable stream has only errorOrDestroy method on _read method
         // try {
         //     this._read(state.highWaterMark);
@@ -218,7 +202,7 @@ test('If the Readable stream emits an error during processing, the writable dest
         //     errorOrDestroy(this, err);
         // }
         read: () => {
-            if (throwError && semver.satisfies(process.versions.node, '>17.0')) {
+            if (throwError) {
                 throw new Error('test error')
             }
         }
@@ -228,35 +212,22 @@ test('If the Readable stream emits an error during processing, the writable dest
     readable.push(expected1)
     readable.push(expected2)
     readable.readableStream.on('error', (error) => {
-        if (semver.satisfies(process.versions.node, '>17.0')) {
-            t.equal(error.message, 'test error', 'readable stream error message check')
-        } else {
-            t.equal(error.message, 'stream.push() after EOF', 'readable stream error message check')
-        }
+        t.equal(error.message, 'test error', 'readable stream error message check')
         t.equal(readable.readableStream.readable, false, 'the readable of readable stream is false on error event')
-        if (semver.satisfies(process.versions.node, '>17.0')) {
-            t.true(readable.readableStream.closed, 'closed property is true on error event of readable stream')
-        }
+        t.true(readable.readableStream.closed, 'closed property is true on error event of readable stream')
         t.true(readable.readableStream.destroyed, 'destroyed property is true on error event of readable stream')
     })
     readable.readableStream.on('end', () => {
-        if (semver.satisfies(process.versions.node, '>17.0')) {
-            t.fail('readable stream end event is not called')
-        }
+        t.fail('readable stream end event is not called')
     })
     readable.readableStream.on('close', function () {
         t.false(this.readable, 'readable property is false on close event of readable stream')
-        if (semver.satisfies(process.versions.node, '>17.0')) {
-            t.true(this.closed, 'closed property is true on close event of readable stream')
-        }
+        t.true(this.closed, 'closed property is true on close event of readable stream')
         t.true(this.destroyed, 'destroyed property is true on close event of readable stream')
     })
 
     process.nextTick(() => {
         throwError = true
-        if (semver.satisfies(process.versions.node, '<17.0')) {
-            readable.readableStream.end()
-        }
         readable.push(spanMessageWithId('3'))
     })
 })

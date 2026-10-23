@@ -27,7 +27,7 @@ const DisableTrace = require('../../../lib/context/disable-trace')
 test(`getConnection query hooking`, async (t) => {
     agent.bindHttp()
     const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer()
+    const container = await new MySqlContainer('mysql:8.0.31')
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
         .withEnvironment({
             'MYSQL_DATABASE': 'test',
@@ -69,7 +69,7 @@ test(`getConnection query hooking`, async (t) => {
             let actualBuilder = new MethodDescriptorBuilder('createConnection')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             const createConnectionSpanEvent = trace.spanBuilder.spanEventList[0]
-            t.equal(createConnectionSpanEvent.endPoint, 'localhost', 'the createConnection SpanEvent endPoint')
+            t.equal(createConnectionSpanEvent.endPoint, container.getHost(), 'the createConnection SpanEvent endPoint')
             t.equal(createConnectionSpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
             t.equal(actualMethodDescriptor.apiId, createConnectionSpanEvent.apiId, 'apiId')
 
@@ -97,7 +97,7 @@ test(`getConnection query hooking`, async (t) => {
 test(`connection with query`, async (t) => {
     agent.bindHttp()
     const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer()
+    const container = await new MySqlContainer('mysql:8.0.31')
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
         .withEnvironment({
             'MYSQL_DATABASE': 'test',
@@ -160,7 +160,7 @@ test(`connection with query`, async (t) => {
             let actualBuilder = new MethodDescriptorBuilder('createConnection')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             const createConnectionSpanEvent = trace.spanBuilder.spanEventList[0]
-            t.equal(createConnectionSpanEvent.endPoint, 'localhost', 'the createConnection SpanEvent endPoint')
+            t.equal(createConnectionSpanEvent.endPoint, container.getHost(), 'the createConnection SpanEvent endPoint')
             t.equal(createConnectionSpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
             t.equal(actualMethodDescriptor.apiId, createConnectionSpanEvent.apiId, 'apiId')
 
@@ -176,7 +176,7 @@ test(`connection with query`, async (t) => {
                 .setClassName('Connection')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             let querySpanEvent = trace.spanBuilder.spanEventList[2]
-            t.equal(querySpanEvent.endPoint, 'localhost', 'the createConnection SpanEvent endPoint')
+            t.equal(querySpanEvent.endPoint, container.getHost(), 'the createConnection SpanEvent endPoint')
             t.equal(querySpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
             t.equal(actualMethodDescriptor.apiId, querySpanEvent.apiId, 'apiId')
 
@@ -190,7 +190,7 @@ test(`connection with query`, async (t) => {
                 .setClassName('Connection')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             querySpanEvent = trace.spanBuilder.spanEventList[3]
-            t.equal(querySpanEvent.endPoint, 'localhost', 'the createConnection SpanEvent endPoint')
+            t.equal(querySpanEvent.endPoint, container.getHost(), 'the createConnection SpanEvent endPoint')
             t.equal(querySpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
             t.equal(actualMethodDescriptor.apiId, querySpanEvent.apiId, 'apiId')
 
@@ -204,7 +204,7 @@ test(`connection with query`, async (t) => {
                 .setClassName('Connection')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             querySpanEvent = trace.spanBuilder.spanEventList[4]
-            t.equal(querySpanEvent.endPoint, 'localhost', 'the createConnection SpanEvent endPoint')
+            t.equal(querySpanEvent.endPoint, container.getHost(), 'the createConnection SpanEvent endPoint')
             t.equal(querySpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
             t.equal(actualMethodDescriptor.apiId, querySpanEvent.apiId, 'apiId')
 
@@ -220,7 +220,7 @@ test(`connection with query`, async (t) => {
                 .setClassName('Connection')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             querySpanEvent = trace.spanBuilder.spanEventList[5]
-            t.equal(querySpanEvent.endPoint, 'localhost', 'the createConnection SpanEvent endPoint')
+            t.equal(querySpanEvent.endPoint, container.getHost(), 'the createConnection SpanEvent endPoint')
             t.equal(querySpanEvent.destinationId, 'test', 'the createConnection SpanEvent destinationId')
             t.equal(actualMethodDescriptor.apiId, querySpanEvent.apiId, 'apiId')
 
@@ -240,7 +240,7 @@ test(`connection with query`, async (t) => {
 test(`Connection Pool with query`, async (t) => {
     agent.bindHttp()
     const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer()
+    const container = await new MySqlContainer('mysql:8.0.31')
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
         .withEnvironment({
             'MYSQL_DATABASE': 'test',
@@ -301,7 +301,7 @@ test(`Connection Pool with query`, async (t) => {
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             let actualSpanEvent = trace.spanBuilder.spanEventList[0]
             t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId')
-            t.equal(actualSpanEvent.endPoint, 'localhost', 'createPool SpanEvent endPoint')
+            t.equal(actualSpanEvent.endPoint, container.getHost(), 'createPool SpanEvent endPoint')
             t.equal(actualSpanEvent.destinationId, 'test', 'createPool SpanEvent destinationId')
             t.equal(actualSpanEvent.sequence, 0, 'createPool spanEvent sequence')
             t.equal(actualSpanEvent.depth, 1, 'createPool spanEvent depth')
@@ -367,7 +367,7 @@ test(`Connection Pool with query`, async (t) => {
 test(`Cluster with query`, async (t) => {
     agent.bindHttp()
     const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer()
+    const container = await new MySqlContainer('mysql:8.0.31')
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
         .withEnvironment({
             'MYSQL_DATABASE': 'test',
@@ -483,7 +483,7 @@ test(`Cluster with query`, async (t) => {
 let container
 test('setup', async (t) => {
     const source = path.resolve(fixtures, 'mysql.sql')
-    container = await new MySqlContainer()
+    container = await new MySqlContainer('mysql:8.0.31')
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
         .withEnvironment({
             'MYSQL_DATABASE': 'test',
@@ -556,7 +556,7 @@ test('Disable trace', async (t) => {
                 t.equal(actualSpanEvent.depth, 2, 'spanEvent.depth Connection.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'spanEvent.serviceType Connection.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualSpanEvent.destinationId, 'test', 'spanEvent.destinationId Connection.query in sampled Trace of DisableTrace Functional Tests')
-                t.equal(actualSpanEvent.endPoint, 'localhost', 'spanEvent.endPoint Connection.query in sampled Trace of DisableTrace Functional Tests')
+                t.equal(actualSpanEvent.endPoint, container.getHost(), 'spanEvent.endPoint Connection.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualSpanEvent.nextSpanId, '-1', 'spanEvent.nextSpanId Connection.query in sampled Trace of DisableTrace Functional Tests')
                 let actualNextAsyncId = actualSpanEvent.asyncId
                 let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)

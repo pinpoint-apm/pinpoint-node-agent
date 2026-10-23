@@ -13,15 +13,15 @@ jobs:
       checks: write
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
       - name: Download checkstyle artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: checkstyle-result
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Report checkstyle
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const script = require('./.github/scripts/report-checkstyle.js')

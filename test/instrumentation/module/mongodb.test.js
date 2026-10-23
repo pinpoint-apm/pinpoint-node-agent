@@ -8,6 +8,7 @@ const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
 const express = require('express')
 const { MongoDBContainer } = require('@testcontainers/mongodb')
+const { startMongoDB } = require('../../support/shared-containers')
 const axios = require('axios')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../../lib/data/v1/Service_grpc_pb')
@@ -15,7 +16,7 @@ const spanMessages = require('../../../lib/data/v1/Span_pb')
 const { MongoClient } = require('mongodb')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
-const { beforeSpecificOne, MetaInfoOnlyDataSource } = require('../../client/grpc-fixture')
+const { beforeSpecificOne, MetaInfoOnlyDataSource } = require('../../support/grpc-fixture')
 
 test('mongodb query', async (t) => {
     const collectorServer = new grpc.Server()
@@ -28,7 +29,7 @@ test('mongodb query', async (t) => {
     collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), async (error, port) => {
         const dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
         agent.bindHttp(dataSender)
-        const mongodbContainer = await new MongoDBContainer("mongo:6.0.1").start()
+        const mongodbContainer = await startMongoDB()
         const client = new MongoClient(mongodbContainer.getConnectionString(), { directConnection: true })
 
         const app = express()
@@ -90,7 +91,6 @@ test('mongodb query', async (t) => {
         t.teardown(async () => {
             client.close()
             server.close()
-            await mongodbContainer.stop()
             collectorServer.forceShutdown()
         })
     })

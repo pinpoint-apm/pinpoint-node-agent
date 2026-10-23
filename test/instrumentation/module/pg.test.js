@@ -5,8 +5,7 @@
  */
 
 const test = require('tape')
-const { PostgreSqlContainer } = require('@testcontainers/postgresql')
-const path = require('path')
+const { startPostgreSql } = require('../../support/shared-containers')
 const agent = require('../../support/agent-singleton-mock')
 const { Client, Pool } = require('pg')
 const apiMetaService = require('../../../lib/context/api-meta-service')
@@ -16,23 +15,10 @@ const pgExecuteQueryServiceType = require('../../../lib/instrumentation/module/p
 const ServiceType = require('../../../lib/context/service-type')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
-const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')
 
 test(`Client create and query hooking`, async (t) => {
     agent.bindHttp()
-    const source = path.resolve(fixtures, 'postgresql.sql')
-    const container = await new PostgreSqlContainer('postgres:13')
-        .withDatabase('test')
-        .withUsername('testuser')
-        .withPassword('testpass')
-        .withEnvironment({
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/postgresql.sql'
-        }])
-        .start()
+    const container = await startPostgreSql()
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
@@ -58,7 +44,6 @@ test(`Client create and query hooking`, async (t) => {
 
             trace.close()
             client.end()
-            await container.stop()
 
             const querySpanEvent = trace.spanBuilder.spanEventList[0]
             let expectedBuilder = new MethodDescriptorBuilder('query')
@@ -83,19 +68,7 @@ test(`Client create and query hooking`, async (t) => {
 
 test(`Client multiple queries with parameters`, async (t) => {
     agent.bindHttp()
-    const source = path.resolve(fixtures, 'postgresql.sql')
-    const container = await new PostgreSqlContainer('postgres:13')
-        .withDatabase('test')
-        .withUsername('testuser')
-        .withPassword('testpass')
-        .withEnvironment({
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/postgresql.sql'
-        }])
-        .start()
+    const container = await startPostgreSql()
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
@@ -156,7 +129,6 @@ test(`Client multiple queries with parameters`, async (t) => {
             t.equal(actualQueryAnnotation.value.stringValue2, 'updated_name,c', 'UPDATE annotation bind values')
 
             client.end()
-            await container.stop()
             t.end()
         })
     })
@@ -164,19 +136,7 @@ test(`Client multiple queries with parameters`, async (t) => {
 
 test(`Pool create and query hooking`, async (t) => {
     agent.bindHttp()
-    const source = path.resolve(fixtures, 'postgresql.sql')
-    const container = await new PostgreSqlContainer('postgres:13')
-        .withDatabase('test')
-        .withUsername('testuser')
-        .withPassword('testpass')
-        .withEnvironment({
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/postgresql.sql'
-        }])
-        .start()
+    const container = await startPostgreSql()
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
@@ -196,7 +156,6 @@ test(`Pool create and query hooking`, async (t) => {
 
             trace.close()
             pool.end()
-            await container.stop()
 
             const querySpanEvent = trace.spanBuilder.spanEventList[0]
             let expectedBuilder = new MethodDescriptorBuilder('query')
@@ -216,19 +175,7 @@ test(`Pool create and query hooking`, async (t) => {
 
 test(`Pool connect and query hooking`, async (t) => {
     agent.bindHttp()
-    const source = path.resolve(fixtures, 'postgresql.sql')
-    const container = await new PostgreSqlContainer('postgres:13')
-        .withDatabase('test')
-        .withUsername('testuser')
-        .withPassword('testpass')
-        .withEnvironment({
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/postgresql.sql'
-        }])
-        .start()
+    const container = await startPostgreSql()
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
@@ -252,7 +199,6 @@ test(`Pool connect and query hooking`, async (t) => {
                 setImmediate(async () => {
                     trace.close()
                     pool.end()
-                    await container.stop()
                 })
             })
         })
@@ -293,19 +239,7 @@ test('Disable trace with Express and PostgreSQL', async (t) => {
     const ServiceType = require('../../../lib/context/service-type')
     const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 
-    const source = path.resolve(fixtures, 'postgresql.sql')
-    const container = await new PostgreSqlContainer('postgres:13')
-        .withDatabase('test')
-        .withUsername('testuser')
-        .withPassword('testpass')
-        .withEnvironment({
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/postgresql.sql'
-        }])
-        .start()
+    const container = await startPostgreSql()
 
     const app = express()
     const client = new Client({
@@ -365,7 +299,6 @@ test('Disable trace with Express and PostgreSQL', async (t) => {
 
                 setImmediate(async () => {
                     client.end()
-                    await container.stop()
                     t.end()
                 })
             }

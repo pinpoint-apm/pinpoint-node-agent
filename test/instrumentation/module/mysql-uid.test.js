@@ -6,10 +6,8 @@
 
 const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
-const { MySqlContainer } = require('@testcontainers/mysql')
-const path = require('path')
+const { startMySql } = require('../../support/shared-containers')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
-const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')
 const mysql = require('mysql')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const apiMetaService = require('../../../lib/context/api-meta-service')
@@ -21,18 +19,7 @@ test('mysql uid query', async (t) => {
             "sqlStats": true
         }
     })
-    const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer('mysql:8.0.31')
-        .withCommand(['--default-authentication-plugin=mysql_native_password'])
-        .withEnvironment({
-            'MYSQL_DATABASE': 'test',
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/mysql.sql'
-        }])
-        .start()
+    const container = await startMySql()
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
@@ -59,7 +46,6 @@ test('mysql uid query', async (t) => {
 
             trace.close()
             connection.end()
-            await container.stop()
 
             let actualBuilder = new MethodDescriptorBuilder('createConnection')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)

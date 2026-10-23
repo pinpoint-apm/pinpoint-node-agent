@@ -25,17 +25,9 @@ jobs:
         with:
           node-version: ${{ matrix.node_version }}
       - run: npm install
-      - run: npm test
-      - name: Lint
-        if: matrix.node_version == env.TARGET_NODE_VERSION
-        run: npm run lint
-      - name: Upload checkstyle result
-        if: matrix.node_version == env.TARGET_NODE_VERSION
-        uses: actions/upload-artifact@v7
-        with:
-          name: checkstyle-result
-          path: checkstyle-result.xml
-          retention-days: 1
+      - name: Test
+        if: matrix.node_version != env.TARGET_NODE_VERSION
+        run: npm test
       - name: Coverage
         if: matrix.node_version == env.TARGET_NODE_VERSION
         run: npm run coverage
@@ -45,6 +37,16 @@ jobs:
         with:
           name: coverage-report
           path: coverage/lcov.info
+          retention-days: 1
+      - name: Lint
+        if: matrix.node_version == env.TARGET_NODE_VERSION
+        run: npm run lint
+      - name: Upload checkstyle result
+        if: matrix.node_version == env.TARGET_NODE_VERSION
+        uses: actions/upload-artifact@v7
+        with:
+          name: checkstyle-result
+          path: checkstyle-result.xml
           retention-days: 1
       - name: Save PR number
         if: matrix.node_version == env.TARGET_NODE_VERSION && github.event_name == 'pull_request'

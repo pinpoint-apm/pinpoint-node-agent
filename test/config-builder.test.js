@@ -63,21 +63,12 @@ test('sampling Rate', (t) => {
   t.end()
 })
 
-
-test('HTTP Status Code Errors', (t) => {
-  let conf = new ConfigBuilder().build()
-  t.equal(conf.plugins.http.errorStatusCodes, '5xx,401,403', 'default http status code errors is 5xx,401,403')
-
-  const errors = conf.getHttpStatusCodeErrors()
-  t.equal(errors.isErrorCode(500), true, '500 is error code')
-  t.equal(errors.isErrorCode(200), false, '200 is not error code')
-  t.equal(errors.isErrorCode(401), true, '401 is error code')
-  t.equal(errors.isErrorCode(403), true, '403 is error code')
-  t.end()
-})
-
 test('HTTP Status Code Errors with config changes', (t) => {
-  let httpErrors = new ConfigBuilder().build().getHttpStatusCodeErrors()
+  const defaultConf = new ConfigBuilder().build()
+  t.equal(defaultConf.plugins.http.errorStatusCodes, '5xx,401,403', 'default: httpStatusCodeErrors value')
+
+  let httpErrors = defaultConf.getHttpStatusCodeErrors()
+  t.equal(httpErrors.isErrorCode(200), false, 'default: 200 is not error code')
   t.equal(httpErrors.isErrorCode(500), true, 'default: 500 is error code')
   t.equal(httpErrors.isErrorCode(401), true, 'default: 401 is error code')
   t.equal(httpErrors.isErrorCode(403), true, 'default: 403 is error code')

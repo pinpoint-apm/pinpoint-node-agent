@@ -16,10 +16,11 @@ const TraceHeaderBuilder = require('../../lib/instrumentation/http/trace-header-
 const Header = require('../../lib/instrumentation/http/pinpoint-header')
 const HttpClientRequest = require('../../lib/instrumentation/http/http-client-request')
 const OutgoingClientRequestHeaderWriter = require('../../lib/instrumentation/http/outgoing-client-request-header-writer')
-const fixture = require('../fixture')
+const TraceIdBuilder = require('../../lib/context/trace/trace-id-builder')
+const testConfig = require('../pinpoint-config-test.json')
 
 const headers = {
-  'Pinpoint-TraceID': fixture.getTraceId().transactionId.toString(),
+  'Pinpoint-TraceID': new TraceIdBuilder(testConfig.agentId, Date.now().toString(), '99').build().toStringDelimiterFormatted(),
   'Pinpoint-SpanID': 2,
   'Pinpoint-pSpanID': 3,
 }

@@ -16,7 +16,7 @@ const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats
 const grpc = require('@grpc/grpc-js')
 const services = require('../../../lib/data/v1/Service_grpc_pb')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
-const GrpcDataSenderBuilder = require('../../client/grpc-data-sender-builder')
+const GrpcDataSenderBuilder = require('../../support/grpc-data-sender-builder')
 const http = require('http')
 const https = require('https')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
@@ -76,10 +76,10 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
       httpAgent: new http.Agent({ keepAlive: false }),
       httpsAgent: new https.Agent({ keepAlive: false }),
     })
-    t.ok(result1.status, 200)
+    t.equal(result1.status, 200)
 
     const result2 = await axios.post(getServerUrl(PATH))
-    t.ok(result2.status, 200)
+    t.equal(result2.status, 200)
 
     t.end()
     server.close()

@@ -18,6 +18,8 @@ const { ConfigBuilder } = require('../../lib/config-builder')
 const spanMessages = require('../../lib/data/v1/Span_pb')
 const log = require('../../lib/utils/log/logger')
 
+const retryTestTimeout = { timeout: 10 * 1000 }
+
 let statClient
 let endAction
 let serverT
@@ -74,7 +76,7 @@ function callStat(t) {
     }
 }
 
-test('client side streaming with deadline', function (t) {
+test('client side streaming with deadline', retryTestTimeout, function (t) {
     const server = new grpc.Server()
     let dataCount = 0
     server.addService(services.StatService, {
@@ -127,7 +129,7 @@ test('client side streaming with deadline', function (t) {
 })
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('sendAgentInfo deadline and metadata', (t) => {
+test('sendAgentInfo deadline and metadata', retryTestTimeout, (t) => {
     agent.bindHttp({ 'agentName': 'testAgentName' })
     const server = new grpc.Server()
     let agentInfo = 0
@@ -188,7 +190,7 @@ test('sendAgentInfo deadline and metadata', (t) => {
     })
 })
 
-test('sendAgentInfo deadline and no agent name metadata', (t) => {
+test('sendAgentInfo deadline and no agent name metadata', retryTestTimeout, (t) => {
     agent.bindHttp()
     const server = new grpc.Server()
     let agentInfo = 0
@@ -266,7 +268,7 @@ function requestApiMetaData(call, callback) {
 }
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('sendApiMetaInfo deadline', (t) => {
+test('sendApiMetaInfo deadline', retryTestTimeout, (t) => {
     const server = new grpc.Server()
     server.addService(services.MetadataService, {
         requestApiMetaData: requestApiMetaData
@@ -322,7 +324,7 @@ function requestStringMetaData(call, callback) {
 }
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('sendStringMetaInfo deadline', (t) => {
+test('sendStringMetaInfo deadline', retryTestTimeout, (t) => {
     const server = new grpc.Server()
     server.addService(services.MetadataService, {
         requestStringMetaData: requestStringMetaData

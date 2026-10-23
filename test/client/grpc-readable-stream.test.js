@@ -9,13 +9,15 @@
 const test = require('tape')
 const GrpcReadableStream = require('../../lib/client/grpc-readable-stream')
 const { Writable } = require('node:stream')
-const { spanMessageWithId, beforeSpecificOne } = require('./grpc-fixture')
+const { spanMessageWithId, beforeSpecificOne } = require('../support/grpc-fixture')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const cmdMessage = require('../../lib/data/v1/Cmd_pb')
-const { ProfilerDataSource } = require('./grpc-fixture')
+const { ProfilerDataSource } = require('../support/grpc-fixture')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const agent = require('../support/agent-singleton-mock')
+
+const reconnectTestTimeout = { timeout: 60 * 1000 }
 
 test('no piped readable stream', (t) => {
     const readable = new GrpcReadableStream()
@@ -55,7 +57,7 @@ test('piped readable stream', (t) => {
     readable.push(null)
 })
 
-test('reconnect writable stream on piped readable stream', (t) => {
+test('reconnect writable stream on piped readable stream', reconnectTestTimeout, (t) => {
     t.plan(21)
     const writableStreams = []
     let writableStreamCreatedCount = 0
@@ -253,7 +255,7 @@ test('Max buffer size', (t) => {
     t.end()
 })
 
-test('When gRPC server shutdown and then node agent grpcStream on error fired and then reconnection gRPC call and then check errored stream going end stream', (t) => {
+test('When gRPC server shutdown and then node agent grpcStream on error fired and then reconnection gRPC call and then check errored stream going end stream', reconnectTestTimeout, (t) => {
     t.plan(3)
     let server = new grpc.Server()
     let requestId = 0

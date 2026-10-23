@@ -1,8 +1,8 @@
 const test = require('tape')
-const { UriStatsRepository, UriStatsRepositoryBuilder } = require('../../lib/metric/uri/uri-stats-repository')
-const { UriStatsInfo } = require('../../lib/metric/uri/uri-stats-info-builder')
-const { UriStatsMonitor } = require('../../lib/metric/uri/uri-stats-monitor')
-const DateNow = require('../../lib/support/date-now')
+const { UriStatsRepository, UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
+const { UriStatsInfo } = require('../../../lib/metric/uri/uri-stats-info-builder')
+const { UriStatsMonitor } = require('../../../lib/metric/uri/uri-stats-monitor')
+const DateNow = require('../../../lib/support/date-now')
 
 test('UriStatsRepositoryBuilder nullObject should expose getTimeWindow for monitor compatibility', (t) => {
     t.plan(3)

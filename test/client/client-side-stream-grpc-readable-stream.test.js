@@ -8,14 +8,16 @@
 
 const test = require('tape')
 const grpc = require('@grpc/grpc-js')
-const { beforeSpecificOne, SpanOnlyFunctionalTestableDataSource, spanWithId } = require('./grpc-fixture')
+const { beforeSpecificOne, SpanOnlyFunctionalTestableDataSource, spanWithId } = require('../support/grpc-fixture')
 const agent = require('../support/agent-singleton-mock')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const { setInterval } = require('node:timers/promises')
 const shimmer = require('@pinpoint-apm/shimmer')
 
-test('span stream retry connection Tests', async function (t) {
+const reconnectTestTimeout = { timeout: 60 * 1000 }
+
+test('span stream retry connection Tests', reconnectTestTimeout, async function (t) {
     agent.bindHttp()
 
     const expected1 = spanWithId('1')
@@ -174,7 +176,7 @@ test('span stream retry connection Tests', async function (t) {
     })
 })
 
-test('client side stream deadline exceeded Tests', function (t) {
+test('client side stream deadline exceeded Tests', reconnectTestTimeout, function (t) {
     const server = new grpc.Server()
     let serverCount = 0
     server.addService(services.SpanService, {

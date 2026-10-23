@@ -6,7 +6,7 @@
 
 'use strict'
 
-const agent = require('../support/agent-singleton-mock')
+const agent = require('./agent-singleton-mock')
 const { ClientHeader, makeClientHeaderInterceptor } = require('../../lib/name/client-header')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const SpanBuilder = require('../../lib/context/span-builder')
@@ -17,6 +17,25 @@ let callCount = 0
 let afterCount = 0
 let callRequests = []
 let callMetadata = []
+
+// The default v1.Agent and v1.Metadata retry policy with millisecond backoffs, so retry tests do not wait seconds between attempts.
+const fastRetryServiceConfig = {
+    methodConfig: [
+        {
+            name: [
+                { service: 'v1.Agent' },
+                { service: 'v1.Metadata' },
+            ],
+            retryPolicy: {
+                maxAttempts: 3,
+                initialBackoff: '0.01s',
+                maxBackoff: '0.05s',
+                backoffMultiplier: 2,
+                retryableStatusCodes: [14],
+            },
+        },
+    ]
+}
 
 function beforeSpecificOne(port, one, serviceConfig) {
     callCount = 0
@@ -251,6 +270,7 @@ class MetaInfoOnlyDataSource extends DataSourceCallCountable {
 }
 
 module.exports = {
+    fastRetryServiceConfig,
     beforeSpecificOne,
     afterOne,
     getCallRequests,

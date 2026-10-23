@@ -11,7 +11,7 @@ const { ClientHeader, makeClientHeaderInterceptor } = require('../../lib/name/cl
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const DataSender = require('../../lib/client/data-sender')
-const MockGrpcDataSender = require('../client/mock-grpc-data-sender')
+const MockGrpcDataSender = require('./mock-grpc-data-sender')
 const SqlMetaData = require('../../lib/client/sql-meta-data')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const SqlUidMetaData = require('../../lib/client/sql-uid-meta-data')
@@ -53,14 +53,6 @@ class MockDataSender extends DataSender {
 
   findSpanChunk(asyncId) {
     return this.mockSpanChunks.find(spanChunk => spanChunk.localAsyncId.asyncId === (asyncId.asyncId || asyncId))
-  }
-
-  findSpanChunks(asyncId) {
-    return this.mockSpanChunks.filter(spanChunk => spanChunk.localAsyncId.asyncId === (asyncId.asyncId || asyncId))
-  }
-
-  findSpanEvent(apiId) {
-    return this.mockSpan.spanEventList.find(event => event.apiId === apiId)
   }
 
   clear() {

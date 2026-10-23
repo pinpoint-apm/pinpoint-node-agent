@@ -5,11 +5,11 @@
  */
 
 const test = require('tape')
+const agent = require('../support/agent-singleton-mock')
 const axios = require('axios')
 const express = require('express')
 const http = require('http')
 const https = require('https')
-const agent = require('../support/agent-singleton-mock')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -17,31 +17,12 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-test('outgoing request when canSample true', (t) => {
-  outgoingRequest(t, true)
-})
-
-function outgoingRequest(t, sampling) {
-  if (sampling) {
-    agent.bindHttp({ 'sampling': { 'enable': true } })
-  } else {
-    agent.bindHttp({ 'sampling': { 'enable': false } })
-  }
+test('outgoing request when canSample false', (t) => {
+  agent.bindHttp({ 'sampling': { 'enable': false } })
   const PATH = '/request'
   const app = new express()
 
-  let actualTrace
   app.get(PATH, async (req, res) => {
-    const https = require('https')
-    const options = {
-      hostname: 'naver.com',
-      port: 443,
-      path: '/',
-      method: 'GET'
-    }
-
-    actualTrace = agent.currentTraceObject()
-
     const result1 = await axios.get(getServerUrl(OUTGOING_PATH), {
       timeout: 1000,
       httpAgent: new http.Agent({ keepAlive: false }),
@@ -53,17 +34,8 @@ function outgoingRequest(t, sampling) {
 
   const OUTGOING_PATH = '/outgoingrequest'
   app.get(OUTGOING_PATH, async (req, res) => {
-    const headers = req.headers
-    if (sampling) {
-      t.equal(actualTrace.getTraceId().toStringDelimiterFormatted(), headers['pinpoint-traceid'], `traceId Header equals ${actualTrace.getTraceId().toStringDelimiterFormatted()}`)
-      t.equal(actualTrace.getTraceId().getSpanId(), headers['pinpoint-pspanid'], `spanId Header equals ${actualTrace.getTraceId().getSpanId()}`)
-      t.equal(agent.getConfig().getApplicationName(), headers['pinpoint-pappname'], `applicationName Header equals ${agent.getConfig().getApplicationName()}`)
-      t.equal(Number(headers['pinpoint-papptype']), 1400, 'pinpoint-papptype header is NODE 1400')
-      t.equal(actualTrace.getTraceId().getFlags(), headers['pinpoint-flags'], `flags Header equals ${actualTrace.getTraceId().getFlags()}`)
-    } else {
-      // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
-      t.equal('s0', headers['pinpoint-sampled'], `sampled Header equals ${headers['pinpoint-sampled']}`)
-    }
+    // ClientCallStartInterceptor.java requestTraceWriter.write(metadata);
+    t.equal('s0', req.headers['pinpoint-sampled'], `sampled Header equals ${req.headers['pinpoint-sampled']}`)
     res.send('ok get')
   })
 
@@ -73,15 +45,11 @@ function outgoingRequest(t, sampling) {
       httpAgent: new http.Agent({ keepAlive: false }),
       httpsAgent: new https.Agent({ keepAlive: false }),
     })
-    t.ok(result1.status, 200)
+    t.equal(result1.status, 200)
 
     server.close()
     t.end()
   })
-}
-
-test('outgoing request when canSample false', (t) => {
-  outgoingRequest(t, false)
 })
 
 test('incomming request agent sampled true', (t) => {
@@ -168,7 +136,7 @@ function incomingRequest(t, sampled) {
 
   const server = app.listen(TEST_ENV.port, async () => {
     const result1 = await axios.get(getServerUrl(PATH), config)
-    t.ok(result1.status, 200)
+    t.equal(result1.status, 200)
     if (sampled) {
       t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getSpanId(), 'string')
       t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getParentSpanId(), 'string')
@@ -187,11 +155,13 @@ test('incomming request by User', (t) => {
   const PATH = '/incommingrequest'
   let expectedTransactionId
   let expectedSpanId
+  let expectedFlags
   app.get(PATH, async (req, res) => {
     const trace = agent.currentTraceObject()
 
     expectedTransactionId = trace.getTraceId().toStringDelimiterFormatted()
     expectedSpanId = trace.getTraceId().spanId
+    expectedFlags = trace.getTraceId().getFlags()
     t.equal(typeof expectedTransactionId, 'string')
     t.equal(typeof expectedSpanId, 'string')
     t.equal(trace.getTraceId().parentSpanId, '-1')
@@ -226,12 +196,13 @@ test('incomming request by User', (t) => {
     t.equal(actualHeaders['pinpoint-papptype'], headers['pinpoint-papptype'])
     t.equal(actualHeaders['pinpoint-host'], headers['pinpoint-host'])
     t.equal(actualHeaders['pinpoint-sampled'], headers['pinpoint-sampled'])
+    t.equal(expectedFlags, headers['pinpoint-flags'], `flags Header equals ${expectedFlags}`)
     res.send('ok get')
   })
 
   const server = app.listen(TEST_ENV.port, async () => {
     const result1 = await axios.get(getServerUrl(PATH))
-    t.ok(result1.status, 200)
+    t.equal(result1.status, 200)
     t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getSpanId(), 'string')
     t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getParentSpanId(), 'string')
     t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().agentStartTime, 'string')

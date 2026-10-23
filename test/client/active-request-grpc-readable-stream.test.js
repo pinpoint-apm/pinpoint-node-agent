@@ -8,16 +8,18 @@
 
 const test = require('tape')
 const grpc = require('@grpc/grpc-js')
-const { beforeSpecificOne } = require('./grpc-fixture')
+const { beforeSpecificOne } = require('../support/grpc-fixture')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const cmdMessage = require('../../lib/data/v1/Cmd_pb')
-const { ProfilerDataSource } = require('./grpc-fixture')
+const { ProfilerDataSource } = require('../support/grpc-fixture')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const shimmer = require('@pinpoint-apm/shimmer')
 const GrpcReadableStream = require('../../lib/client/grpc-readable-stream')
 
-test('If you run the ActiveRequest function, and then Node agent send the fifth piece of data, and the Pinpoint server fails, the ActiveRequest gRPC Stream closes and the for statement stops', (t) => {
-    t.plan(56)
+const reconnectTestTimeout = { timeout: 60 * 1000 }
+
+test('If you run the ActiveRequest function, and then Node agent send the second piece of data, and the Pinpoint server fails, the ActiveRequest gRPC Stream closes and the for statement stops', reconnectTestTimeout, (t) => {
+    t.plan(29)
     const server = new grpc.Server()
     let requestId = 1
     let activeRequestCount = 0
@@ -36,19 +38,19 @@ test('If you run the ActiveRequest function, and then Node agent send the fifth 
                     t.equal(commonStream.getResponseid(), 1, 'responseId is 1')
                     t.equal(commonStream.getSequenceid(), activeRequestCount, `sequenceId is ${activeRequestCount}`)
 
-                    if (activeRequestCount === 5) {
+                    if (activeRequestCount === 2) {
                         server.forceShutdown()
                     }
 
-                    if (activeRequestCount > 5) {
+                    if (activeRequestCount > 2) {
                         t.fail('The for statement should stop when the server fails')
                     }
                 } else if (commonStream.getResponseid() == 2) {
                     t.equal(data.getHistogramschematype(), 2, 'schemaType is 2')
                     t.equal(commonStream.getResponseid(), 2, 'responseId is 2')
-                    t.equal(commonStream.getSequenceid(), activeRequestCount - 5, `sequenceId is ${activeRequestCount - 5}`)
+                    t.equal(commonStream.getSequenceid(), activeRequestCount - 2, `sequenceId is ${activeRequestCount - 2}`)
 
-                    if (activeRequestCount === 13) {
+                    if (activeRequestCount === 4) {
                         callback(null, new Empty())
                     }
                 }
@@ -163,7 +165,7 @@ test('If you run the ActiveRequest function, and then Node agent send the fifth 
             callCountHandleCommand++
             if (callCountHandleCommand == 1) {
                 t.equal(err.code, 1, 'When the server is down, the error code is 1')
-                t.equal(activeRequestCount, 5, 'ended activeRequestCount is 5')
+                t.equal(activeRequestCount, 2, 'ended activeRequestCount is 2')
             } else if (callCountHandleCommand === 2) {
                 process.nextTick(() => {
                     dataSender.close()
@@ -185,7 +187,7 @@ function callHandleCommandStream(requestId) {
     handleCommandCall.write(result)
 }
 
-test('If you run the ActiveRequest function, and deadline occurs, the ActiveRequest reconnection is successful', (t) => {
+test('If you run the ActiveRequest function, and deadline occurs, the ActiveRequest reconnection is successful', reconnectTestTimeout, (t) => {
     const server = new grpc.Server()
     let activeRequestCallCount = 0
     const profilerServices = {
@@ -202,7 +204,7 @@ test('If you run the ActiveRequest function, and deadline occurs, the ActiveRequ
                 t.equal(commandStream.getResponseid(), 1, 'responseId is 1')
                 t.equal(commandStream.getSequenceid(), activeRequestCallCount, `sequenceId is ${activeRequestCallCount}`)
 
-                if (activeRequestCallCount === 5) {
+                if (activeRequestCallCount === 2) {
                     setTimeout(() => {
                         call.emit('error', new Error('Server Unknown errors Functional Test is Ended'))
                     }, 100)

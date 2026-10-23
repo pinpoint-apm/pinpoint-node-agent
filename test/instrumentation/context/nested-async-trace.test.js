@@ -111,7 +111,7 @@ test(`nested mysql async query with express`, async (t) => {
         agent.bindHttp(port)
         resetSpanOrSpanChunks()
         const source = path.resolve(fixtures, 'mysql.sql')
-        const container = await new MySqlContainer()
+        const container = await new MySqlContainer('mysql:8.0.31')
             .withCommand(['--default-authentication-plugin=mysql_native_password'])
             .withEnvironment({
                 'MYSQL_DATABASE': 'test',
@@ -168,7 +168,7 @@ test(`nested mysql async query with express`, async (t) => {
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = trace.repository.dataSender.mockSpan.spanEventList.find(spanEvent => spanEvent.sequence === 1)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
-                t.equal(actualSpanEvent.endPoint, 'localhost', 'endPoint is equal')
+                t.equal(actualSpanEvent.endPoint, container.getHost(), 'endPoint is equal')
                 t.equal(actualSpanEvent.destinationId, 'test', 'destinationId is equal')
                 t.equal(actualSpanEvent.sequence, 1, 'sequence is 1')
                 t.equal(actualSpanEvent.depth, 2, 'depth is 2')
@@ -309,7 +309,7 @@ test(`nested mysql2 async query with express`, async (t) => {
     collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), async (err, port) => {
         agent.bindHttpWithCallSite(port)
         const source = path.resolve(fixtures, 'mysql.sql')
-        const container = await new MySqlContainer()
+        const container = await new MySqlContainer('mysql:8.0.31')
             .withCommand(['--default-authentication-plugin=mysql_native_password'])
             .withEnvironment({
                 'MYSQL_DATABASE': 'test',
@@ -383,7 +383,7 @@ test(`nested mysql2 async query with express`, async (t) => {
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
                 actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 1)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
-                t.equal(actualSpanEvent.endPoint, 'localhost', 'endPoint is equal')
+                t.equal(actualSpanEvent.endPoint, container.getHost(), 'endPoint is equal')
                 t.equal(actualSpanEvent.destinationId, 'test', 'destinationId is equal')
                 t.equal(actualSpanEvent.sequence, 1, 'sequence is 1')
                 t.equal(actualSpanEvent.depth, 2, 'depth is 2')

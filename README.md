@@ -16,7 +16,7 @@ For feedback or questions, open an issue in [pinpoint-apm/pinpoint-node-agent](h
 - [License](#license)
 
 ## Installation and Getting Started
-Requires Node.js 18 or later.
+Requires Node.js 20.18.1 or later.
 
 ### 1. Install
 With [npm](https://www.npmjs.com/):

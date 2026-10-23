@@ -29,7 +29,7 @@ let receivedSpans = []
 let receivedStats = []
 test('setup', async (t) => {
     const source = path.resolve(fixtures, 'mysql.sql')
-    container = await new MySqlContainer()
+    container = await new MySqlContainer('mysql:8.0.31')
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
         .withEnvironment({
             'MYSQL_DATABASE': 'test',

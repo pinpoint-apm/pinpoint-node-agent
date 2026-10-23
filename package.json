@@ -55,7 +55,7 @@
   },
   "homepage": "https://github.com/pinpoint-apm/pinpoint-node-agent",
   "engines": {
-    "node": ">=18.0"
+    "node": ">=20.18.1"
   },
   "keywords": [
     "pinpoint",
@@ -82,7 +82,7 @@
     "devops"
   ],
   "dependencies": {
-    "@grpc/grpc-js": "^1.14.4",
+    "@grpc/grpc-js": "^1.14.6",
     "@pinpoint-apm/shimmer": "^1.2.2",
     "google-protobuf": "^3.13.0",
     "internal-ip": "^3.0.1",
@@ -93,10 +93,11 @@
   },
   "devDependencies": {
     "@koa/router": "^13.1.1",
-    "@testcontainers/mongodb": "^10.18.0",
-    "@testcontainers/mysql": "^10.18.0",
-    "@testcontainers/postgresql": "^11.0.3",
-    "@testcontainers/redis": "^10.18.0",
+    "testcontainers": "12.0.1",
+    "@testcontainers/mongodb": "12.0.1",
+    "@testcontainers/mysql": "12.0.1",
+    "@testcontainers/postgresql": "12.0.1",
+    "@testcontainers/redis": "12.0.1",
     "@types/node": "^24.5.2",
     "@types/semver": "^7.3.13",
     "@types/shimmer": "^1.0.2",
@@ -119,17 +120,16 @@
     "mongoose": "^8.8.4",
     "mysql": "^2.18.1",
     "mysql2": "^3.24.6",
-    "next": "^15.4.2",
-    "nyc": "^17.1.0",
+    "next": "^16.4.2",
+    "nyc": "^18.0.0",
     "pg": "^8.11.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "redis": "^3.1.2",
     "rimraf": "^2.6.2",
     "tape": "^4.16.0",
-    "testcontainers": "^10.10.3",
     "tsup": "^8.5.0",
     "typescript": "^4.8.3",
-    "undici": "^7.6.0"
+    "undici": "^7.30.1"
   }
 }

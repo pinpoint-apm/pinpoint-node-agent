@@ -65,7 +65,7 @@ test(`Client create and query hooking`, async (t) => {
                                     .setClassName('Client')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(expectedBuilder)
             t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, `Client query apiId ${actualMethodDescriptor.apiId}`)
-            t.equal(querySpanEvent.endPoint, `localhost:${container.getPort()}`, 'createClient endPoint')
+            t.equal(querySpanEvent.endPoint, `${container.getHost()}:${container.getPort()}`, 'createClient endPoint')
             t.equal(querySpanEvent.destinationId, 'test', 'createClient destinationId')
             t.equal(querySpanEvent.serviceType, pgExecuteQueryServiceType.getCode(), 'createClient serviceType')
 
@@ -206,7 +206,7 @@ test(`Pool create and query hooking`, async (t) => {
             t.equal(querySpanEvent.depth, 1, 'Pool query depth')
             t.equal(querySpanEvent.sequence, 0, 'Pool query sequence')
             t.equal(querySpanEvent.serviceType, pgExecuteQueryServiceType.getCode(), 'Pool query serviceType')
-            t.equal(querySpanEvent.endPoint, `localhost:${container.getPort()}`, 'createPool endPoint')
+            t.equal(querySpanEvent.endPoint, `${container.getHost()}:${container.getPort()}`, 'createPool endPoint')
             t.equal(querySpanEvent.destinationId, 'test', 'createPool destinationId')
 
             t.end()
@@ -260,7 +260,7 @@ test(`Pool connect and query hooking`, async (t) => {
         agent.callbackTraceClose((trace) => {
             let querySpanEvent = trace.spanBuilder.spanEventList[0]
             t.ok(querySpanEvent.apiId > 0, `Client query apiId ${querySpanEvent.apiId}`)
-            t.equal(querySpanEvent.endPoint, `localhost:${container.getPort()}`, 'query endPoint')
+            t.equal(querySpanEvent.endPoint, `${container.getHost()}:${container.getPort()}`, 'query endPoint')
             t.equal(querySpanEvent.destinationId, 'test', 'query destinationId')
             t.equal(querySpanEvent.sequence, 0, 'query sequence')
             t.equal(querySpanEvent.depth, 1, 'query depth')
@@ -347,7 +347,7 @@ test('Disable trace with Express and PostgreSQL', async (t) => {
                 t.equal(actualSpanEvent.depth, 2, 'spanEvent.depth Client.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualSpanEvent.serviceType, pgExecuteQueryServiceType.getCode(), 'spanEvent.serviceType Client.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualSpanEvent.destinationId, 'test', 'spanEvent.destinationId Client.query in sampled Trace of DisableTrace Functional Tests')
-                t.equal(actualSpanEvent.endPoint, `localhost:${container.getPort()}`, 'spanEvent.endPoint Client.query in sampled Trace of DisableTrace Functional Tests')
+                t.equal(actualSpanEvent.endPoint, `${container.getHost()}:${container.getPort()}`, 'spanEvent.endPoint Client.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualSpanEvent.nextSpanId, '-1', 'spanEvent.nextSpanId Client.query in sampled Trace of DisableTrace Functional Tests')
 
                 let actualNextAsyncId = actualSpanEvent.asyncId

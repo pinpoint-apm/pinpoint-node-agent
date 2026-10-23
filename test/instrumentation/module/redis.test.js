@@ -37,7 +37,7 @@ const redisData = {
 const testName1 = 'express-redis'
 test(`${testName1} should Record the connections between express and redis.`, async function (t) {
   agent.bindHttp()
-  const container = await new RedisContainer()
+  const container = await new RedisContainer('redis:7.2')
     .withWaitStrategy(Wait.forAll([
       Wait.forListeningPorts(),
       Wait.forLogMessage("Ready to accept connections")
@@ -106,7 +106,7 @@ test(`${testName1} should Record the connections between express and redis.`, as
           t.equal(actualSpanEvent.depth, 2, 'RedisClient.expire actualSpanEvent.depth')
           t.equal(actualSpanEvent.serviceType, 8200, 'RedisClient.expire actualSpanEvent.serviceType')
           t.equal(actualSpanEvent.destinationId, 'Redis', 'RedisClient.expire actualSpanEvent.destinationId')
-          t.equal(actualSpanEvent.endPoint, `localhost:${container.getMappedPort(6379)}`, 'RedisClient.expire actualSpanEvent.endPoint')
+          t.equal(actualSpanEvent.endPoint, `${container.getHost()}:${container.getMappedPort(6379)}`, 'RedisClient.expire actualSpanEvent.endPoint')
         })
       })
 
@@ -192,7 +192,7 @@ test(`${testName1} should Record the connections between express and redis.`, as
       t.equal(actualSpanEvent.depth, 2, 'depth')
       t.equal(actualSpanEvent.serviceType, 8200, 'serviceType')
       t.equal(actualSpanEvent.destinationId, 'Redis', 'destinationId')
-      t.equal(actualSpanEvent.endPoint, `localhost:${container.getMappedPort(6379)}`, 'endPoint')
+      t.equal(actualSpanEvent.endPoint, `${container.getHost()}:${container.getMappedPort(6379)}`, 'endPoint')
     })
   })
 
@@ -231,7 +231,7 @@ test(`${testName1} should Record the connections between express and redis.`, as
 
 test(`${testName1} redis callback nested asyncTrace with await HTTP get`, async function (t) {
   agent.bindHttp()
-  const container = await new RedisContainer()
+  const container = await new RedisContainer('redis:7.2')
     .withWaitStrategy(Wait.forAll([
       Wait.forListeningPorts(),
       Wait.forLogMessage("Ready to accept connections")
@@ -284,7 +284,7 @@ test(`${testName1} redis callback nested asyncTrace with await HTTP get`, async 
       t.equal(actualSpanEvent.depth, 2, 'depth')
       t.equal(actualSpanEvent.serviceType, 8200, 'serviceType')
       t.equal(actualSpanEvent.destinationId, 'Redis', 'destinationId')
-      t.equal(actualSpanEvent.endPoint, `localhost:${container.getMappedPort(6379)}`, 'endPoint')
+      t.equal(actualSpanEvent.endPoint, `${container.getHost()}:${container.getMappedPort(6379)}`, 'endPoint')
       let actualNextAsyncId = actualSpanEvent.asyncId
 
       let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
@@ -324,7 +324,7 @@ test(`${testName1} redis callback nested asyncTrace with await HTTP get`, async 
 const testName2 = 'express-ioredis'
 test(`${testName2} should Record the connections between express and ioredis.`, async function (t) {
   agent.bindHttp()
-  const container = await new RedisContainer()
+  const container = await new RedisContainer('redis:7.2')
     .withWaitStrategy(Wait.forAll([
       Wait.forListeningPorts(),
       Wait.forLogMessage("Ready to accept connections")
@@ -387,7 +387,7 @@ test(`${testName2} should Record the connections between express and ioredis.`, 
 const testName3 = 'koa-redis'
 test(`${testName3} should Record the connections between koa and redis.`, async function (t) {
   agent.bindHttp()
-  const container = await new RedisContainer()
+  const container = await new RedisContainer('redis:7.2')
     .withWaitStrategy(Wait.forAll([
       Wait.forListeningPorts(),
       Wait.forLogMessage("Ready to accept connections")
@@ -445,7 +445,7 @@ test(`${testName3} should Record the connections between koa and redis.`, async 
 const testName4 = 'koa-ioredis'
 test(`${testName4} should Record the connections between koa and ioredis.`, async function (t) {
   agent.bindHttp()
-  const container = await new RedisContainer()
+  const container = await new RedisContainer('redis:7.2')
     .withWaitStrategy(Wait.forAll([
       Wait.forListeningPorts(),
       Wait.forLogMessage("Ready to accept connections")
@@ -519,7 +519,7 @@ test(`${testName4} should Record the connections between koa and ioredis.`, asyn
 
 test(`${testName1} await connections between express and redis.`, async function (t) {
   agent.bindHttp()
-  const container = await new RedisContainer()
+  const container = await new RedisContainer('redis:7.2')
     .withWaitStrategy(Wait.forAll([
       Wait.forListeningPorts(),
       Wait.forLogMessage("Ready to accept connections")
@@ -567,7 +567,7 @@ test(`${testName1} await connections between express and redis.`, async function
         t.equal(actualSpanEvent.depth, 2, 'RedisClient.expire actualSpanEvent.depth')
         t.equal(actualSpanEvent.serviceType, 8200, 'RedisClient.expire actualSpanEvent.serviceType')
         t.equal(actualSpanEvent.destinationId, 'Redis', 'RedisClient.expire actualSpanEvent.destinationId')
-        t.equal(actualSpanEvent.endPoint, `localhost:${container.getMappedPort(6379)}`, 'RedisClient.expire actualSpanEvent.endPoint')
+        t.equal(actualSpanEvent.endPoint, `${container.getHost()}:${container.getMappedPort(6379)}`, 'RedisClient.expire actualSpanEvent.endPoint')
         actualNextAsyncId = actualSpanEvent.asyncId
 
         actualSpanEvent = actualSpanChunk.spanEventList.find(spanEvent => spanEvent.sequence === 2)
@@ -646,7 +646,7 @@ test(`${testName1} await connections between express and redis.`, async function
       t.equal(actualSpanEvent.depth, 2, 'depth')
       t.equal(actualSpanEvent.serviceType, 8200, 'serviceType')
       t.equal(actualSpanEvent.destinationId, 'Redis', 'destinationId')
-      t.equal(actualSpanEvent.endPoint, `localhost:${container.getMappedPort(6379)}`, 'endPoint')
+      t.equal(actualSpanEvent.endPoint, `${container.getHost()}:${container.getMappedPort(6379)}`, 'endPoint')
     })
   })
 

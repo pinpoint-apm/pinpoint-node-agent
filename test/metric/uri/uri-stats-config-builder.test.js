@@ -5,8 +5,8 @@
  */
 
 const test = require('tape')
-const { ConfigBuilder } = require('../../lib/config-builder')
-const { UriStatsConfigBuilder } = require('../../lib/metric/uri/uri-stats-config-builder')
+const { ConfigBuilder } = require('../../../lib/config-builder')
+const { UriStatsConfigBuilder } = require('../../../lib/metric/uri/uri-stats-config-builder')
 
 function clearUriStatsEnv() {
   delete process.env.PINPOINT_FEATURES_URI_STATS
@@ -20,10 +20,10 @@ test('uri config is preserved', (t) => {
   t.plan(4)
   clearUriStatsEnv()
 
-  const defaultJson = Object.assign({}, require('../../lib/pinpoint-config-default.json'), {
+  const defaultJson = Object.assign({}, require('../../../lib/pinpoint-config-default.json'), {
     agentId: 'agent-from-test',
     applicationName: 'app-from-test',
-    features: Object.assign({}, require('../../lib/pinpoint-config-default.json').features, {
+    features: Object.assign({}, require('../../../lib/pinpoint-config-default.json').features, {
       uriStats: {
         httpMethod: true,
         capacity: 500

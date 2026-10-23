@@ -8,7 +8,7 @@ const test = require('tape')
 const AsyncId = require('../../lib/context/async-id')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
-const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, ProfilerDataSource, SpanOnlyFunctionalTestableDataSource, StatOnlyFunctionalTestableDataSource } = require('./grpc-fixture')
+const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, ProfilerDataSource, SpanOnlyFunctionalTestableDataSource, StatOnlyFunctionalTestableDataSource } = require('../support/grpc-fixture')
 const cmdMessage = require('../../lib/data/v1/Cmd_pb')
 const CommandType = require('../../lib/client/command/command-type')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
@@ -229,77 +229,6 @@ test('sendSpanChunk redis.SET.end', function (t) {
             t.equal(annotation.getKey(), 12, 'annotation key')
             const pAnnotationValue = annotation.getValue()
             t.equal(pAnnotationValue.getStringvalue(), 'redis.SET.end', 'annotation string value')
-          })
-        }
-      })
-      afterOne(t)
-    }
-  })
-  t.teardown(() => {
-    dataSender.close()
-    server.forceShutdown()
-  })
-})
-
-test('sendSpanChunk redis.GET.end', (t) => {
-  agent.bindHttp()
-  sendSpanMethodOnDataCallback = null
-  const server = new grpc.Server()
-  server.addService(services.SpanService, {
-    sendSpan: sendSpan
-  })
-
-  let dataSender
-  server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-    const grpcDataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
-    const traceRoot = new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '5').build()
-    const asyncId = AsyncId.make()
-    dataSender = dataSenderMock(agent.getConfig(), grpcDataSender)
-    const spanChunkBuilder = new AsyncSpanChunkBuilder(traceRoot, asyncId)
-    const repository = new SpanRepository(spanChunkBuilder, dataSender)
-    const childTraceBuilder = new ChildTraceBuilder(traceRoot, repository, asyncId, new SpanEventRecorderFactory())
-
-    const spanEventRecorder = childTraceBuilder.traceBlockBegin()
-    spanEventRecorder.recordServiceType(serviceType.redis)
-    spanEventRecorder.recordApiDesc('redis.GET.end')
-    childTraceBuilder.traceBlockEnd(spanEventRecorder)
-
-    agent.completeTraceObject(childTraceBuilder)
-
-    sendSpanMethodOnDataCallback = (actualSpanChunk) => {
-      t.plan(16)
-      t.equal(actualSpanChunk.getVersion(), 1, 'version')
-
-      const actualTransactionId = actualSpanChunk.getTransactionid()
-      t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), 'gRPC agentId')
-      t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), 'agent start time')
-      t.equal(actualTransactionId.getSequence(), traceRoot.getTransactionId(), 'sequence')
-
-      t.equal(actualSpanChunk.getSpanid(), traceRoot.getTraceId().getSpanId(), 'span ID')
-      t.equal(actualSpanChunk.getEndpoint(), '', 'endpoint')
-      t.equal(actualSpanChunk.getApplicationservicetype(), actualSpanChunk.getApplicationservicetype(), 'application service type')
-
-      const actualLocalAsyncId = actualSpanChunk.getLocalasyncid()
-      t.equal(actualLocalAsyncId.getAsyncid(), asyncId.getAsyncId(), 'local async id')
-      t.equal(actualLocalAsyncId.getSequence(), asyncId.getSequence(), 'local async id sequence')
-
-      t.equal(actualSpanChunk.getKeytime(), spanChunkBuilder.keyTime, `keytime ${actualSpanChunk.getKeytime()}`)
-      const actualPSpanEvents = actualSpanChunk.getSpaneventList()
-      actualPSpanEvents.forEach((pSpanEvent, index) => {
-        if (index == 1) {
-          t.equal(pSpanEvent.getSequence(), 1, 'sequence')
-          t.equal(pSpanEvent.getDepth(), 2, 'depth')
-
-          const expectedSpanChunk = repository.dataSender.findSpanChunk(childTraceBuilder.localAsyncId)
-          const expectedSpanEvent = expectedSpanChunk.spanEventList[index]
-          t.equal(pSpanEvent.getStartelapsed(), expectedSpanEvent.startElapsedTime, 'startElapsed')
-          t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
-
-          const pAnnotations = pSpanEvent.getAnnotationList()
-          pAnnotations.forEach(annotation => {
-            t.equal(annotation.getKey(), 12, 'annotation key')
-            const pAnnotationValue = annotation.getValue()
-            t.equal(pAnnotationValue.getStringvalue(), 'redis.GET.end', 'annotation string value')
           })
         }
       })

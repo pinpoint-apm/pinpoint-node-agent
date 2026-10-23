@@ -6,63 +6,12 @@
 
 const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
-const { RedisContainer } = require('@testcontainers/redis')
-const { Wait } = require('testcontainers')
+const { startRedis } = require('../../support/shared-containers')
 const { addressStringOf } = require('../../../lib/utils/convert-utils')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
 
-test(`redis destination id`, async (t) => {
-    const container = await new RedisContainer('redis:7.2')
-        .withWaitStrategy(Wait.forAll([
-            Wait.forListeningPorts(),
-            Wait.forLogMessage("Ready to accept connections")
-        ]))
-        .start()
-
-    agent.bindHttp()
-
-    t.plan(6)
-
-    const trace = agent.createTraceObject()
-    const traceContext = agent.getTraceContext()
-    localStorage.run(trace, () => {
-        const redis = require('redis')
-
-        const client = redis.createClient({ url: container.getConnectionUrl() })
-
-        client.on("error", function (error) {
-            console.error(error)
-        })
-
-        client.set("key", "value", async function (error) {
-            t.true(error == null, "error is null")
-
-            const trace = traceContext.currentTraceObject()
-            t.equal(trace.callStack.stack.length, 1, "callStack is 1")
-        })
-        t.equal(traceContext.currentTraceObject().callStack.stack.length, 0, "set spanevent callstack")
-
-        client.get("key", async function (error, data) {
-            t.equal(data, "value", "redis value validation")
-
-            const trace = traceContext.currentTraceObject()
-            t.equal(trace.callStack.stack.length, 1, "callStack is 1")
-
-            client.quit()
-            agent.completeTraceObject(trace)
-            await container.stop()
-        })
-        t.equal(traceContext.currentTraceObject().callStack.stack.length, 0, "get spanevent callstack")
-    })
-})
-
 test("ioredis destination id", async function (t) {
-    const container = await new RedisContainer('redis:7.2')
-        .withWaitStrategy(Wait.forAll([
-            Wait.forListeningPorts(),
-            Wait.forLogMessage("Ready to accept connections")
-        ]))
-        .start()
+    const container = await startRedis()
 
     agent.bindHttp()
 
@@ -95,7 +44,6 @@ test("ioredis destination id", async function (t) {
 
                 redis.quit()
                 agent.completeTraceObject(trace)
-                await container.stop()
             })
         })
     })
@@ -119,12 +67,7 @@ test(`addressStringOf`, (t) => {
 
 // https://github.com/NodeRedis/node-redis#rediscreateclient
 test(`Fix app crash without callback function https://github.com/pinpoint-apm/pinpoint-node-agent/pull/12`, async (t) => {
-    const container = await new RedisContainer('redis:7.2')
-        .withWaitStrategy(Wait.forAll([
-            Wait.forListeningPorts(),
-            Wait.forLogMessage("Ready to accept connections")
-        ]))
-        .start()
+    const container = await startRedis()
 
     agent.bindHttp()
 
@@ -159,7 +102,6 @@ test(`Fix app crash without callback function https://github.com/pinpoint-apm/pi
 
             client.quit()
             agent.completeTraceObject(trace)
-            await container.stop()
         })
         t.equal(traceContext.currentTraceObject().callStack.stack.length, 0, "get spanevent callstack")
     })

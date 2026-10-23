@@ -5,8 +5,7 @@
  */
 
 const test = require('tape')
-const { MySqlContainer } = require('@testcontainers/mysql')
-const path = require('path')
+const { startMySql } = require('../../support/shared-containers')
 const agent = require('../../support/agent-singleton-mock')
 const mysql = require('mysql')
 const apiMetaService = require('../../../lib/context/api-meta-service')
@@ -17,8 +16,7 @@ const mysqlExecuteQueryServiceType = require('../../../lib/instrumentation/modul
 const mysqlServiceType = require('../../../lib/instrumentation/module/mysql/mysql-service-type')
 const ServiceType = require('../../../lib/context/service-type')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
-const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')
-const { asyncSpanChunkMySQLMatcher } = require('../../fixtures/instrument-support')
+const { asyncSpanChunkMySQLMatcher } = require('../../support/instrument-support')
 const express = require('express')
 const axios = require('axios')
 const http = require('http')
@@ -26,18 +24,7 @@ const DisableTrace = require('../../../lib/context/disable-trace')
 
 test(`getConnection query hooking`, async (t) => {
     agent.bindHttp()
-    const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer('mysql:8.0.31')
-        .withCommand(['--default-authentication-plugin=mysql_native_password'])
-        .withEnvironment({
-            'MYSQL_DATABASE': 'test',
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/mysql.sql'
-        }])
-        .start()
+    const container = await startMySql()
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
@@ -64,7 +51,6 @@ test(`getConnection query hooking`, async (t) => {
 
             trace.close()
             connection.end()
-            await container.stop()
 
             let actualBuilder = new MethodDescriptorBuilder('createConnection')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -96,18 +82,7 @@ test(`getConnection query hooking`, async (t) => {
 
 test(`connection with query`, async (t) => {
     agent.bindHttp()
-    const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer('mysql:8.0.31')
-        .withCommand(['--default-authentication-plugin=mysql_native_password'])
-        .withEnvironment({
-            'MYSQL_DATABASE': 'test',
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/mysql.sql'
-        }])
-        .start()
+    const container = await startMySql()
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
@@ -148,7 +123,6 @@ test(`connection with query`, async (t) => {
             setImmediate(() => {
                 trace.close()
                 connection.end()
-                container.stop()
             })
 
             t.equal(results[0].id, 'c', 'SELECT member id')
@@ -239,18 +213,7 @@ test(`connection with query`, async (t) => {
 
 test(`Connection Pool with query`, async (t) => {
     agent.bindHttp()
-    const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer('mysql:8.0.31')
-        .withCommand(['--default-authentication-plugin=mysql_native_password'])
-        .withEnvironment({
-            'MYSQL_DATABASE': 'test',
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/mysql.sql'
-        }])
-        .start()
+    const container = await startMySql()
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
@@ -276,7 +239,6 @@ test(`Connection Pool with query`, async (t) => {
                 setTimeout(async () => {
                     trace.close()
                     pool.end()
-                    await container.stop()
                 }, 1000)
             }
         })
@@ -291,7 +253,6 @@ test(`Connection Pool with query`, async (t) => {
                 setTimeout(async () => {
                     trace.close()
                     pool.end()
-                    await container.stop()
                 }, 1000)
             }
         })
@@ -366,18 +327,7 @@ test(`Connection Pool with query`, async (t) => {
 
 test(`Cluster with query`, async (t) => {
     agent.bindHttp()
-    const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer('mysql:8.0.31')
-        .withCommand(['--default-authentication-plugin=mysql_native_password'])
-        .withEnvironment({
-            'MYSQL_DATABASE': 'test',
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/mysql.sql'
-        }])
-        .start()
+    const container = await startMySql()
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
@@ -423,7 +373,6 @@ test(`Cluster with query`, async (t) => {
                 setImmediate(async () => {
                     trace.close()
                     poolCluster.end()
-                    await container.stop()
                 })
             })
         })
@@ -482,18 +431,7 @@ test(`Cluster with query`, async (t) => {
 
 let container
 test('setup', async (t) => {
-    const source = path.resolve(fixtures, 'mysql.sql')
-    container = await new MySqlContainer('mysql:8.0.31')
-        .withCommand(['--default-authentication-plugin=mysql_native_password'])
-        .withEnvironment({
-            'MYSQL_DATABASE': 'test',
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/mysql.sql'
-        }])
-        .start()
+    container = await startMySql()
     t.pass('setup complete')
     t.end()
 })
@@ -650,10 +588,4 @@ test('Fix wrong transactionId', (t) => {
         pool.end()
         server.close()
     })
-})
-
-test('teardown', async (t) => {
-    await container.stop()
-    t.pass('teardown complete')
-    t.end()
 })

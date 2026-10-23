@@ -5,9 +5,8 @@
  */
 
 const test = require('tape')
-const path = require('path')
 const agent = require('../../support/agent-singleton-mock')
-const { MySqlContainer } = require('@testcontainers/mysql')
+const { startMySql } = require('../../support/shared-containers')
 const mysql = require('mysql2')
 const mysqlp = require('mysql2/promise')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
@@ -18,23 +17,11 @@ const mysqlExecuteQueryServiceType = require('../../../lib/instrumentation/modul
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const ServiceType = require('../../../lib/context/service-type')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
-const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')
 
 
 test(`getConnection query hooking`, async (t) => {
     agent.bindHttp()
-    const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer('mysql:8.0.31')
-        .withCommand(['--default-authentication-plugin=mysql_native_password'])
-        .withEnvironment({
-            'MYSQL_DATABASE': 'test',
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/mysql.sql'
-        }])
-        .start()
+    const container = await startMySql()
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, () => {
@@ -148,93 +135,13 @@ test(`getConnection query hooking`, async (t) => {
         })
 
         t.teardown(async () => {
-            await container.stop()
         })
-    })
-})
-
-test(`getConnection promise query hooking`, async (t) => {
-    agent.bindHttp()
-    const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer('mysql:8.0.31')
-        .withCommand(['--default-authentication-plugin=mysql_native_password'])
-        .withEnvironment({
-            'MYSQL_DATABASE': 'test',
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/mysql.sql'
-        }])
-        .start()
-
-    const trace = agent.createTraceObject()
-    localStorage.run(trace, async () => {
-        const connection = mysql.createConnection({
-            host: container.getHost(),
-            port: container.getPort(3306),
-            database: 'test',
-            user: container.getUsername(),
-            password: container.getUserPassword(),
-            timezone: '+09:00'
-        })
-
-        const [rows] = await connection.promise().query(`SELECT * FROM member WHERE id = ?`, 'a')
-        t.equal(rows[0].id, 'a', 'id in SELECT query hooking')
-        t.equal(rows[0].name, 'name1', 'name in SELECT query hooking')
-        t.equal(rows[0].joined.toISOString().slice(0, 10), '2023-01-17', 'joined in SELECT query hooking')
-
-        agent.callbackTraceClose((trace) => {
-            let actualBuilder = new MethodDescriptorBuilder('createConnection')
-            let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            const createConnectionSpanEvent = trace.spanBuilder.spanEventList[0]
-            t.equal(createConnectionSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in createConnection spanEvent')
-            t.equal(createConnectionSpanEvent.endPoint, container.getHost(), 'endPoint in createConnection spanEvent')
-            t.equal(createConnectionSpanEvent.destinationId, 'test', 'destinationId in createConnection spanEvent')
-
-            actualBuilder = new MethodDescriptorBuilder('query')
-                .setClassName('Connection')
-            actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            let querySpanEvent = trace.spanBuilder.spanEventList[1]
-            t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in query spanEvent')
-            t.equal(querySpanEvent.endPoint, container.getHost(), 'endPoint in query spanEvent')
-            t.equal(querySpanEvent.destinationId, 'test', 'destinationId in query spanEvent')
-
-            let actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = ?')
-            let actualQueryAnnotation = querySpanEvent.annotations[0]
-            t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
-            t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'intValue in query annotation')
-            t.equal(actualQueryAnnotation.value.stringValue1, '', 'stringValue1 in query annotation')
-            t.equal(actualQueryAnnotation.value.stringValue2, 'a', 'stringValue2 in query annotation')
-            t.equal(actualParsingResult.sql.normalizedSql, 'SELECT * FROM member WHERE id = ?', 'normalizedSql in query annotation')
-        })
-
-        setImmediate(() => {
-            trace.close()
-            connection.end()
-            t.end()
-        })
-    })
-
-    t.teardown(async () => {
-        await container.stop()
     })
 })
 
 test(`Connection Pool with query hooking`, async (t) => {
     agent.bindHttp()
-    const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer('mysql:8.0.31')
-        .withCommand(['--default-authentication-plugin=mysql_native_password'])
-        .withEnvironment({
-            'MYSQL_DATABASE': 'test',
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/mysql.sql'
-        }])
-        .start()
+    const container = await startMySql()
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, async () => {
@@ -295,24 +202,12 @@ test(`Connection Pool with query hooking`, async (t) => {
     })
 
     t.teardown(async () => {
-        await container.stop()
     })
 })
 
 test(`mysql2/promise createConnection with query hooking`, async (t) => {
     agent.bindHttp()
-    const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer('mysql:8.0.31')
-        .withCommand(['--default-authentication-plugin=mysql_native_password'])
-        .withEnvironment({
-            'MYSQL_DATABASE': 'test',
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/mysql.sql'
-        }])
-        .start()
+    const container = await startMySql()
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, async () => {
@@ -328,6 +223,7 @@ test(`mysql2/promise createConnection with query hooking`, async (t) => {
         const [rows] = await connection.query(`SELECT * FROM member WHERE id = ?`, 'a')
         t.equal(rows[0].id, 'a', 'id in SELECT query hooking')
         t.equal(rows[0].name, 'name1', 'name in SELECT query hooking')
+        t.equal(rows[0].joined.toISOString().slice(0, 10), '2023-01-17', 'joined in SELECT query hooking')
 
         agent.callbackTraceClose((trace) => {
             let actualBuilder = new MethodDescriptorBuilder('createConnection')
@@ -351,7 +247,9 @@ test(`mysql2/promise createConnection with query hooking`, async (t) => {
             const actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'intValue in query annotation')
+            t.equal(actualQueryAnnotation.value.stringValue1, '', 'stringValue1 in query annotation')
             t.equal(actualQueryAnnotation.value.stringValue2, 'a', 'stringValue2 in query annotation')
+            t.equal(actualParsingResult.sql.normalizedSql, 'SELECT * FROM member WHERE id = ?', 'normalizedSql in query annotation')
         })
 
         setImmediate(async () => {
@@ -362,24 +260,12 @@ test(`mysql2/promise createConnection with query hooking`, async (t) => {
     })
 
     t.teardown(async () => {
-        await container.stop()
     })
 })
 
 test(`mysql2/promise createPool with query hooking`, async (t) => {
     agent.bindHttp()
-    const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer('mysql:8.0.31')
-        .withCommand(['--default-authentication-plugin=mysql_native_password'])
-        .withEnvironment({
-            'MYSQL_DATABASE': 'test',
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/mysql.sql'
-        }])
-        .start()
+    const container = await startMySql()
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, async () => {
@@ -425,24 +311,12 @@ test(`mysql2/promise createPool with query hooking`, async (t) => {
     })
 
     t.teardown(async () => {
-        await container.stop()
     })
 })
 
 test(`Cluster with query`, async (t) => {
     agent.bindHttp()
-    const source = path.resolve(fixtures, 'mysql.sql')
-    const container = await new MySqlContainer('mysql:8.0.31')
-        .withCommand(['--default-authentication-plugin=mysql_native_password'])
-        .withEnvironment({
-            'MYSQL_DATABASE': 'test',
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/mysql.sql'
-        }])
-        .start()
+    const container = await startMySql()
 
     const trace = agent.createTraceObject()
     localStorage.run(trace, async () => {
@@ -541,6 +415,5 @@ test(`Cluster with query`, async (t) => {
         })
     })
     t.teardown(async () => {
-        await container.stop()
     })
 })

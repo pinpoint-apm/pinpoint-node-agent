@@ -7,10 +7,10 @@
 'use strict'
 
 const test = require('tape')
-const SpanRecorder = require('../../lib/context/trace/span-recorder')
-const SpanBuilder = require('../../lib/context/span-builder')
-const TraceRootBuilder = require('../../lib/context/trace-root-builder')
-const TraceIdBuilder = require('../../lib/context/trace/trace-id-builder')
+const SpanRecorder = require('../../../lib/context/trace/span-recorder')
+const SpanBuilder = require('../../../lib/context/span-builder')
+const TraceRootBuilder = require('../../../lib/context/trace-root-builder')
+const TraceIdBuilder = require('../../../lib/context/trace/trace-id-builder')
 
 test('SpanRecorder.recordException() should mask error code', (t) => {
     // Setup

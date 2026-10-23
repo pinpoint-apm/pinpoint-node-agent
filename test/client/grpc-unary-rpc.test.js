@@ -15,7 +15,7 @@ const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
 const SqlMetaData = require('../../lib/client/sql-meta-data')
 const SqlUidMetaData = require('../../lib/client/sql-uid-meta-data')
-const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, DataSourceCallCountable } = require('./grpc-fixture')
+const { fastRetryServiceConfig, beforeSpecificOne, afterOne, getCallRequests, getMetadata, DataSourceCallCountable } = require('../support/grpc-fixture')
 const InterceptingCall = grpc.InterceptingCall
 const { ConfigBuilder } = require('../../lib/config-builder')
 const AgentInfo = require('../../lib/data/dto/agent-info')
@@ -23,6 +23,8 @@ const { SqlMetadataService } = require('../../lib/instrumentation/sql/sql-metada
 const { IntIdParsingResultFactory } = require('../../lib/context/trace/parsing-result-factory')
 const { UidParsingResultFactory } = require('../../lib/metric/sql/uid-parsing-result-factory')
 const { SqlStatsConfigBuilder } = require('../../lib/metric/sql/sql-stats-config-builder')
+
+const retryTestTimeout = { timeout: 10 * 1000 }
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
 const service = (call, callback) => {
@@ -132,7 +134,7 @@ test('AgentInfo with retries enabled and configured', (t) => {
 
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-        dataSender = beforeSpecificOne(port, AgentInfoOnlyDataSource)
+        dataSender = beforeSpecificOne(port, AgentInfoOnlyDataSource, fastRetryServiceConfig)
 
         fixtureMetadata = []
         dataSender.sendAgentInfo(agentInfo(), function (error, response) {
@@ -229,7 +231,7 @@ class MetaInfoOnlyDataSource extends DataSourceCallCountable {
     }
 }
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('sendApiMetaInfo retry', (t) => {
+test('sendApiMetaInfo retry', retryTestTimeout, (t) => {
     const server = new grpc.Server()
     server.addService(services.MetadataService, {
         requestApiMetaData: service
@@ -237,7 +239,7 @@ test('sendApiMetaInfo retry', (t) => {
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         fixtureMetadata = []
-        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource, fastRetryServiceConfig)
         const callRequests = getCallRequests()
         const callMetadata = getMetadata()
 
@@ -283,7 +285,7 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
     })
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource, fastRetryServiceConfig)
         const callRequests = getCallRequests()
         const callMetadata = getMetadata()
 
@@ -365,7 +367,7 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
 })
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('sendStringMetaInfo retry', (t) => {
+test('sendStringMetaInfo retry', retryTestTimeout, (t) => {
     const server = new grpc.Server()
     server.addService(services.MetadataService, {
         requestStringMetaData: service
@@ -373,7 +375,8 @@ test('sendStringMetaInfo retry', (t) => {
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         fixtureMetadata = []
-        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource, fastRetryServiceConfig)
+        const callRequests = getCallRequests()
 
         const stringMetaInfo = new StringMetaInfo({
             stringId: '12121212',
@@ -384,6 +387,16 @@ test('sendStringMetaInfo retry', (t) => {
             afterOne(t)
         })
 
+        fixtureMetadata = [{ 'succeed-on-retry-attempt': '2', 'respond-with-status': '14' }]
+        dataSender.initializeMetadataClients()
+        dataSender.sendStringMetaInfo(new StringMetaInfo({ stringId: '2', stringValue: 'retried' }), function (error, response) {
+            t.true(response.getSuccess(), '2nd PResult.success is true')
+            t.equal(response.getMessage(), 'succeed-on-retry-attempt: 2, grpc-previous-rpc-attempts: 2', '2nd PResult.message is "succeed-on-retry-attempt: 2, grpc-previous-rpc-attempts: 2"')
+            t.equal(callRequests.length, 2, '2nd callRequests.length is 2')
+            t.equal(callRequests[1].getStringvalue(), 'retried', '2nd callRequests[1].stringValue is "retried"')
+            afterOne(t)
+        })
+
         t.teardown(() => {
             dataSender.close()
             server.forceShutdown()
@@ -391,7 +404,7 @@ test('sendStringMetaInfo retry', (t) => {
     })
 })
 
-test('sendSqlMetaData retry', (t) => {
+test('sendSqlMetaData retry', retryTestTimeout, (t) => {
     const server = new grpc.Server()
     server.addService(services.MetadataService, {
         requestSqlMetaData: service
@@ -399,7 +412,7 @@ test('sendSqlMetaData retry', (t) => {
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         fixtureMetadata = []
-        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource, fastRetryServiceConfig)
         const sqlMetadataService = new SqlMetadataService(dataSender, new IntIdParsingResultFactory())
         const callRequests = getCallRequests()
 
@@ -430,7 +443,7 @@ test('sendSqlMetaData retry', (t) => {
     })
 })
 
-test('sendSqlUidMetaData retry', (t) => {
+test('sendSqlUidMetaData retry', retryTestTimeout, (t) => {
     process.env['PINPOINT_PROFILER_SQL_STAT'] = 'true'
     const conf = new ConfigBuilder().build()
     const sqlStatsConfig = new SqlStatsConfigBuilder(conf).build()
@@ -443,7 +456,7 @@ test('sendSqlUidMetaData retry', (t) => {
     let dataSender
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         fixtureMetadata = []
-        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
+        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource, fastRetryServiceConfig)
         const sqlMetadataService = new SqlMetadataService(dataSender, new UidParsingResultFactory())
         const callRequests = getCallRequests()
         const callMetadata = getMetadata()

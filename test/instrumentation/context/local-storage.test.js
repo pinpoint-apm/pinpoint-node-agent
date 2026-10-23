@@ -5,7 +5,7 @@
  */
 
 const test = require('tape')
-const localStorage = require('../../lib/instrumentation/context/local-storage')
+const localStorage = require('../../../lib/instrumentation/context/local-storage')
 
 test('Should trace context in setTimeout', async function (t) {
   t.plan(1)

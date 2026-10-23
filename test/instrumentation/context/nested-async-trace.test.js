@@ -11,9 +11,7 @@ const axios = require('axios')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const mysql = require('mysql')
-const path = require('path')
-const fixtures = path.resolve(__dirname, '..', '..', 'fixtures', 'db')
-const { MySqlContainer } = require('@testcontainers/mysql')
+const { startMySql } = require('../../support/shared-containers')
 const expressServiceType = require('../../../lib/instrumentation/module/express/express-service-type')
 const mysqlServiceType = require('../../../lib/instrumentation/module/mysql/mysql-service-type')
 const mysqlExecuteQueryServiceType = require('../../../lib/instrumentation/module/mysql/mysql-execute-query-service-type')
@@ -110,18 +108,7 @@ test(`nested mysql async query with express`, async (t) => {
     collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), async (err, port) => {
         agent.bindHttp(port)
         resetSpanOrSpanChunks()
-        const source = path.resolve(fixtures, 'mysql.sql')
-        const container = await new MySqlContainer('mysql:8.0.31')
-            .withCommand(['--default-authentication-plugin=mysql_native_password'])
-            .withEnvironment({
-                'MYSQL_DATABASE': 'test',
-                'TZ': 'Asia/Seoul',
-            })
-            .withCopyFilesToContainer([{
-                source: source,
-                target: '/docker-entrypoint-initdb.d/mysql.sql'
-            }])
-            .start()
+        const container = await startMySql()
 
         const app = new express()
         app.get('/test1', (req, res) => {
@@ -282,7 +269,6 @@ test(`nested mysql async query with express`, async (t) => {
             server.close()
         })
         t.teardown(async () => {
-            await container.stop()
             collectorServer.forceShutdown()
             delete process.env.PINPOINT_PROFILER_SQL_STAT
         })
@@ -308,18 +294,7 @@ test(`nested mysql2 async query with express`, async (t) => {
 
     collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), async (err, port) => {
         agent.bindHttpWithCallSite(port)
-        const source = path.resolve(fixtures, 'mysql.sql')
-        const container = await new MySqlContainer('mysql:8.0.31')
-            .withCommand(['--default-authentication-plugin=mysql_native_password'])
-            .withEnvironment({
-                'MYSQL_DATABASE': 'test',
-                'TZ': 'Asia/Seoul',
-            })
-            .withCopyFilesToContainer([{
-                source: source,
-                target: '/docker-entrypoint-initdb.d/mysql.sql'
-            }])
-            .start()
+        const container = await startMySql()
 
         const app = new express()
         app.get('/test1', async (req, res) => {
@@ -494,7 +469,6 @@ test(`nested mysql2 async query with express`, async (t) => {
             server.close()
         })
         t.teardown(async () => {
-            await container.stop()
             collectorServer.forceShutdown()
         })
     })

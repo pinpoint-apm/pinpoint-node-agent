@@ -8,8 +8,7 @@
 
 const test = require('tape')
 const path = require('path')
-const fixtures = path.resolve(__dirname, '..', '..', '..', 'fixtures', 'db')
-const { MySqlContainer } = require('@testcontainers/mysql')
+const { startMySql } = require('../../../support/shared-containers')
 const testAppDir = path.join(__dirname, 'nextjs-app-router')
 const fs = require('fs')
 const grpc = require('@grpc/grpc-js')
@@ -28,18 +27,7 @@ let spanCollectorPort
 let receivedSpans = []
 let receivedStats = []
 test('setup', async (t) => {
-    const source = path.resolve(fixtures, 'mysql.sql')
-    container = await new MySqlContainer('mysql:8.0.31')
-        .withCommand(['--default-authentication-plugin=mysql_native_password'])
-        .withEnvironment({
-            'MYSQL_DATABASE': 'test',
-            'TZ': 'Asia/Seoul',
-        })
-        .withCopyFilesToContainer([{
-            source: source,
-            target: '/docker-entrypoint-initdb.d/mysql.sql'
-        }])
-        .start()
+    container = await startMySql()
     t.pass('setup complete')
     t.end()
 })
@@ -515,7 +503,6 @@ test('teardown', async (t) => {
     if (spanCollector) {
         spanCollector.forceShutdown()
     }
-    await container.stop()
     t.pass('teardown complete')
     t.end()
 })

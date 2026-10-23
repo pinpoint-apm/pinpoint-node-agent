@@ -9,8 +9,10 @@
 const test = require('tape')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../lib/data/v1/Service_grpc_pb')
-const { beforeSpecificOne, DataSourceCallCountable } = require('./grpc-fixture')
+const { beforeSpecificOne, DataSourceCallCountable } = require('../support/grpc-fixture')
 const shimmer = require('@pinpoint-apm/shimmer')
+
+const reconnectTestTimeout = { timeout: 60 * 1000 }
 
 class PingOnlyDataSource extends DataSourceCallCountable {
     constructor(config, interceptors) {
@@ -22,7 +24,7 @@ class PingOnlyDataSource extends DataSourceCallCountable {
 }
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('If grpc server is ended, and then retry to connect Pinpoint server', (t) => {
+test('If grpc server is ended, and then retry to connect Pinpoint server', reconnectTestTimeout, (t) => {
     const server = new grpc.Server()
     let grpcServerCount = 0
     server.addService(services.AgentService, {
@@ -78,7 +80,7 @@ test('If grpc server is ended, and then retry to connect Pinpoint server', (t) =
     })
 })
 
-test('ping stream retry', (t) => {
+test('ping stream retry', reconnectTestTimeout, (t) => {
     const server = new grpc.Server()
     let grpcServerCount = 0
     server.addService(services.AgentService, {

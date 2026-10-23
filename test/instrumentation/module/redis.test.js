@@ -13,14 +13,13 @@ const Router = require('koa-router')
 const koaBodyParser = require('koa-bodyparser')
 const ioRedis = require('ioredis')
 const { createClient } = require('redis')
-const { RedisContainer } = require('@testcontainers/redis')
-const { Wait } = require('testcontainers')
+const { startRedis } = require('../../support/shared-containers')
+const { startLocalHttpsServer } = require('../../support/local-https-server')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const ServiceType = require('../../../lib/context/service-type')
 const annotationKey = require('../../../lib/constant/annotation-key')
-const https = require('https')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -37,12 +36,9 @@ const redisData = {
 const testName1 = 'express-redis'
 test(`${testName1} should Record the connections between express and redis.`, async function (t) {
   agent.bindHttp()
-  const container = await new RedisContainer('redis:7.2')
-    .withWaitStrategy(Wait.forAll([
-      Wait.forListeningPorts(),
-      Wait.forLogMessage("Ready to accept connections")
-    ]))
-    .start()
+  const outgoingServer = await startLocalHttpsServer()
+  t.teardown(() => outgoingServer.close())
+  const container = await startRedis()
 
   const testName = testName1
   const app = new express()
@@ -90,7 +86,7 @@ test(`${testName1} should Record the connections between express and redis.`, as
         t.equal(actualAnnotation.value, 'http.request', 'HTTP request annotation value')
       })
 
-      await axios.get(`https://www.naver.com`, { httpsAgent: new https.Agent({ keepAlive: false }) })
+      await axios.get(outgoingServer.url, { httpsAgent: outgoingServer.agent() })
       req.cache.expire(key, 10, function (err, data) {
         agent.callbackTraceClose((childTrace) => {
           t.true(err === null, `expire callback err is null`)
@@ -135,7 +131,7 @@ test(`${testName1} should Record the connections between express and redis.`, as
       t.equal(actualAnnotation.value, 'GET', 'HTTP request callback spanEvent.annotation[0].value')
       actualAnnotation = actualSpanEvent.annotations[1]
       t.equal(actualAnnotation.key, annotationKey.HTTP_URL.getCode(), 'HTTP request callback spanEvent.annotation[1].key annotationKey.HTTP_URL')
-      t.equal(actualAnnotation.value, 'www.naver.com/', 'HTTP request callback spanEvent.annotation[1].value annotationKey.HTTP_URL')
+      t.equal(actualAnnotation.value, `${outgoingServer.host}/`, 'HTTP request callback spanEvent.annotation[1].value annotationKey.HTTP_URL')
       actualAnnotation = actualSpanEvent.annotations[2]
       t.equal(actualAnnotation.key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP request callback spanEvent.annotation[2].key annotationKey.HTTP_STATUS_CODE')
       t.equal(actualAnnotation.value, 200, 'HTTP request callback spanEvent.annotation[2].value annotationKey.HTTP_STATUS_CODE')
@@ -215,28 +211,24 @@ test(`${testName1} should Record the connections between express and redis.`, as
   })
   const server = app.listen(TEST_ENV.port, async function () {
     const rstPush = await axios.post(getServerUrl(PATH), redisData)
-    t.ok(rstPush.status, 200)
+    t.equal(rstPush.status, 200)
 
     const rstGet = await axios.get(getServerUrl(`${PATH}/jundol`))
-    t.ok(rstGet.status, 200)
+    t.equal(rstGet.status, 200)
 
     t.end()
   })
   t.teardown(async () => {
-    client.quit()
-    await container.stop()
+    await new Promise(resolve => client.quit(resolve))
     server.close()
   })
 })
 
 test(`${testName1} redis callback nested asyncTrace with await HTTP get`, async function (t) {
   agent.bindHttp()
-  const container = await new RedisContainer('redis:7.2')
-    .withWaitStrategy(Wait.forAll([
-      Wait.forListeningPorts(),
-      Wait.forLogMessage("Ready to accept connections")
-    ]))
-    .start()
+  const outgoingServer = await startLocalHttpsServer()
+  t.teardown(() => outgoingServer.close())
+  const container = await startRedis()
 
   const testName = testName1
   const app = new express()
@@ -251,7 +243,7 @@ test(`${testName1} redis callback nested asyncTrace with await HTTP get`, async 
         return
       }
       try {
-        const { data } = await axios.get(`https://www.naver.com`, { httpsAgent: new https.Agent({ keepAlive: false }) })
+        const { data } = await axios.get(outgoingServer.url, { httpsAgent: outgoingServer.agent() })
       } catch (error) {
         console.error(error)
       }
@@ -311,10 +303,9 @@ test(`${testName1} redis callback nested asyncTrace with await HTTP get`, async 
 
   const server = app.listen(TEST_ENV.port, async function () {
     const rstPush = await axios.post(getServerUrl(PATH), redisData)
-    t.ok(rstPush.status, 200)
+    t.equal(rstPush.status, 200)
 
-    client.quit()
-    await container.stop()
+    await new Promise(resolve => client.quit(resolve))
     server.close()
     t.end()
   })
@@ -324,12 +315,7 @@ test(`${testName1} redis callback nested asyncTrace with await HTTP get`, async 
 const testName2 = 'express-ioredis'
 test(`${testName2} should Record the connections between express and ioredis.`, async function (t) {
   agent.bindHttp()
-  const container = await new RedisContainer('redis:7.2')
-    .withWaitStrategy(Wait.forAll([
-      Wait.forListeningPorts(),
-      Wait.forLogMessage("Ready to accept connections")
-    ]))
-    .start()
+  const container = await startRedis()
 
   const testName = testName2
 
@@ -375,10 +361,9 @@ test(`${testName2} should Record the connections between express and ioredis.`, 
   })
   const server = app.listen(TEST_ENV.port, async function () {
     const rstPush = await axios.post(getServerUrl(PATH), redisData)
-    t.ok(rstPush.status, 200)
+    t.equal(rstPush.status, 200)
 
-    redis.quit()
-    container.stop()
+    await redis.quit()
     server.close()
     t.end()
   })
@@ -387,12 +372,7 @@ test(`${testName2} should Record the connections between express and ioredis.`, 
 const testName3 = 'koa-redis'
 test(`${testName3} should Record the connections between koa and redis.`, async function (t) {
   agent.bindHttp()
-  const container = await new RedisContainer('redis:7.2')
-    .withWaitStrategy(Wait.forAll([
-      Wait.forListeningPorts(),
-      Wait.forLogMessage("Ready to accept connections")
-    ]))
-    .start()
+  const container = await startRedis()
 
   const testName = testName3
   const app = new Koa()
@@ -433,10 +413,9 @@ test(`${testName3} should Record the connections between koa and redis.`, async 
     // t.ok(rstPush.status, 200)
 
     const rstGet = await axios.get(getServerUrl(`${PATH}/jundol`))
-    t.ok(rstGet.status, 200)
+    t.equal(rstGet.status, 200)
 
-    client.quit()
-    await container.stop()
+    await new Promise(resolve => client.quit(resolve))
     server.close()
     t.end()
   })
@@ -445,12 +424,7 @@ test(`${testName3} should Record the connections between koa and redis.`, async 
 const testName4 = 'koa-ioredis'
 test(`${testName4} should Record the connections between koa and ioredis.`, async function (t) {
   agent.bindHttp()
-  const container = await new RedisContainer('redis:7.2')
-    .withWaitStrategy(Wait.forAll([
-      Wait.forListeningPorts(),
-      Wait.forLogMessage("Ready to accept connections")
-    ]))
-    .start()
+  const container = await startRedis()
 
   const testName = testName4
 
@@ -506,12 +480,11 @@ test(`${testName4} should Record the connections between koa and ioredis.`, asyn
 
   const server = app.listen(TEST_ENV.port, async () => {
     const rstPush = await axios.post(getServerUrl(PATH), redisData)
-    t.ok(rstPush.status, 200)
+    t.equal(rstPush.status, 200)
     const rstGet = await axios.get(getServerUrl(`${PATH}/jundol`))
-    t.ok(rstGet.status, 200)
+    t.equal(rstGet.status, 200)
 
-    redis.quit()
-    await container.stop()
+    await redis.quit()
     server.close()
     t.end()
   })
@@ -519,12 +492,9 @@ test(`${testName4} should Record the connections between koa and ioredis.`, asyn
 
 test(`${testName1} await connections between express and redis.`, async function (t) {
   agent.bindHttp()
-  const container = await new RedisContainer('redis:7.2')
-    .withWaitStrategy(Wait.forAll([
-      Wait.forListeningPorts(),
-      Wait.forLogMessage("Ready to accept connections")
-    ]))
-    .start()
+  const outgoingServer = await startLocalHttpsServer()
+  t.teardown(() => outgoingServer.close())
+  const container = await startRedis()
 
   const testName = testName1
   const app = new express()
@@ -585,7 +555,7 @@ test(`${testName1} await connections between express and redis.`, async function
 
       })
       client.expire('key', 10)
-      await axios.get(`https://www.naver.com`, { httpsAgent: new https.Agent({ keepAlive: false }) })
+      await axios.get(outgoingServer.url, { httpsAgent: outgoingServer.agent() })
 
       const actualOutgoingChildTrace = agent.getTrace(2)
       const asyncSpanChunk = actualOutgoingChildTrace.repository.dataSender.findSpanChunk(actualOutgoingChildTrace.localAsyncId)
@@ -611,13 +581,12 @@ test(`${testName1} await connections between express and redis.`, async function
       t.equal(actualAnnotation.value, 'GET', 'HTTP request callback spanEvent.annotation[0].value')
       actualAnnotation = actualSpanEvent.annotations[1]
       t.equal(actualAnnotation.key, annotationKey.HTTP_URL.getCode(), 'HTTP request callback spanEvent.annotation[1].key annotationKey.HTTP_URL')
-      t.equal(actualAnnotation.value, 'www.naver.com/', 'HTTP request callback spanEvent.annotation[1].value annotationKey.HTTP_URL')
+      t.equal(actualAnnotation.value, `${outgoingServer.host}/`, 'HTTP request callback spanEvent.annotation[1].value annotationKey.HTTP_URL')
       actualAnnotation = actualSpanEvent.annotations[2]
       t.equal(actualAnnotation.key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP request callback spanEvent.annotation[2].key annotationKey.HTTP_STATUS_CODE')
       t.equal(actualAnnotation.value, 200, 'HTTP request callback spanEvent.annotation[2].value annotationKey.HTTP_STATUS_CODE')
 
       client.quit()
-      await container.stop()
       res.json('ok')
     })
 
@@ -652,7 +621,7 @@ test(`${testName1} await connections between express and redis.`, async function
 
   const server = app.listen(TEST_ENV.port, async function () {
     const rstPush = await axios.post(getServerUrl(PATH))
-    t.ok(rstPush.status, 200)
+    t.equal(rstPush.status, 200)
 
     server.close()
     t.end()

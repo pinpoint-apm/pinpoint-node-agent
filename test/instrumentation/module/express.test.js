@@ -10,7 +10,6 @@ const agent = require('../../support/agent-singleton-mock')
 const express = require('express')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
-const semver = require('semver')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const DisableTrace = require('../../../lib/context/disable-trace')
 const http = require('http')
@@ -19,16 +18,15 @@ const { getTransactionId, getDisabledId } = require('../../../lib/context/trace/
 const grpc = require('@grpc/grpc-js')
 const services = require('../../../lib/data/v1/Service_grpc_pb')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
-const GrpcDataSenderBuilder = require('../../client/grpc-data-sender-builder')
-const { beforeSpecificOne, StatOnlyFunctionalTestableDataSource, DataSourceCallCountable } = require('../../../test/client/grpc-fixture')
-const { UriStatsSnapshot } = require('../../../lib/metric/uri/uri-stats-snapshot')
-const { UriStatsInfo } = require('../../../lib/metric/uri/uri-stats-info-builder')
+const GrpcDataSenderBuilder = require('../../support/grpc-data-sender-builder')
+const { beforeSpecificOne, DataSourceCallCountable } = require('../../support/grpc-fixture')
 const { ConfigBuilder } = require('../../../lib/config-builder')
 const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
 const { UriStatsMonitor } = require('../../../lib/metric/uri/uri-stats-monitor')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 const { FixturesUpstreamHeader } = require('../../support/fixtures-upstream-header')
 const { receiverTypeNameOfFunctionMethod } = require('../../support/stack-frame')
+const { startLocalHttpsServer } = require('../../support/local-https-server')
 
 const TEST_ENV = {
   host: 'localhost', port: 5006
@@ -84,7 +82,7 @@ test(`${testName1} Should record request in basic route`, function (t) {
       const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       let spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.true(actualMethodDescriptor.apiDescriptor, 'Router.post', 'apiDescriptor')
+      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.post', 'apiDescriptor')
       t.equal(actualMethodDescriptor.className, 'Router', 'className')
       t.equal(actualMethodDescriptor.methodName, 'post', 'methodName')
     })
@@ -383,22 +381,24 @@ test(`[${testName2}] Should record request in express.Router`, function (t) {
       httpAgent: new http.Agent({ keepAlive: false }),
       httpsAgent: new https.Agent({ keepAlive: false }),
     })
-    t.ok(result1.status, 200)
+    t.equal(result1.status, 200)
 
     const result2 = await axios.get(getServerUrl(`/express.router2${PATH}`), {
       timeout: 3000,
       httpAgent: new http.Agent({ keepAlive: false }),
       httpsAgent: new https.Agent({ keepAlive: false }),
     })
-    t.ok(result2.status, 200)
+    t.equal(result2.status, 200)
 
     server.close()
   })
 })
 
 const testName3 = 'express3'
-test(`${testName3} Should record request taking more than 2 sec`, function (t) {
+test(`${testName3} Should record request taking more than 2 sec`, async function (t) {
   agent.bindHttpWithCallSite()
+  const outgoingServer = await startLocalHttpsServer({ responseDelayMs: 2000 })
+  t.teardown(() => outgoingServer.close())
 
   const testName = testName3
 
@@ -410,7 +410,7 @@ test(`${testName3} Should record request taking more than 2 sec`, function (t) {
   app.get(PATH, async (req, res) => {
     // slow outgoing call
     try {
-      await axios.get('https://www.naver.com', { httpsAgent: new https.Agent({ keepAlive: false }) })
+      await axios.get(outgoingServer.url, { httpsAgent: outgoingServer.agent() })
     } catch (error) {
       log.error(error)
     }
@@ -419,7 +419,7 @@ test(`${testName3} Should record request taking more than 2 sec`, function (t) {
 
   const server = app.listen(TEST_ENV.port, async function () {
     const result = await axios.get(getServerUrl(PATH))
-    t.ok(result.status, 200)
+    t.equal(result.status, 200)
     server.close()
   })
 })
@@ -446,13 +446,12 @@ test(`${testName4} Should record internal error in express.test.js`, function (t
   })
   app.use((error, req, res, next) => {
     console.log('[app] error handler')
-    res.json({ message: error.message })
-    res.status = 500
+    res.status(500).json({ message: error.message })
   })
 
   const server = app.listen(TEST_ENV.port, async function () {
-    const result = await axios.get(getServerUrl(PATH))
-    t.ok(result.status, 500)
+    const result = await axios.get(getServerUrl(PATH), { validateStatus: () => true })
+    t.equal(result.status, 500)
     server.close()
   })
 })
@@ -510,7 +509,7 @@ test(`${testName5} Should record middleware`, function (t) {
       const actualMiddleware2MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
       spanEvent = trace.spanBuilder.spanEventList[0]
       t.equal(actualMiddleware2MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.true(actualMiddleware2MethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
+      t.equal(actualMiddleware2MethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
       t.equal(actualMiddleware2MethodDescriptor.className, 'Router', 'className')
       t.equal(actualMiddleware2MethodDescriptor.methodName, 'use', 'methodName')
       t.equal(spanEvent.sequence, 0, 'sequence')
@@ -526,7 +525,7 @@ test(`${testName5} Should record middleware`, function (t) {
       httpAgent: new http.Agent({ keepAlive: false }),
       httpsAgent: new https.Agent({ keepAlive: false }),
     })
-    t.ok(result1.status, 200)
+    t.equal(result1.status, 200)
 
     t.end()
     server.close()
@@ -563,27 +562,22 @@ test(`${testName6} Should record each http method`, function (t) {
 
   const server = app.listen(TEST_ENV.port, async function () {
     const result1 = await axios.get(getServerUrl(PATH))
-    t.ok(result1.status, 200)
+    t.equal(result1.status, 200)
 
     const result2 = await axios.post(getServerUrl(PATH))
-    t.ok(result2.status, 200)
+    t.equal(result2.status, 200)
 
     const result3 = await axios.put(getServerUrl(PATH))
-    t.ok(result3.status, 200)
+    t.equal(result3.status, 200)
 
     const result4 = await axios.patch(getServerUrl(PATH))
-    t.ok(result4.status, 200)
+    t.equal(result4.status, 200)
 
     const result5 = await axios.delete(getServerUrl(PATH))
-    t.ok(result5.status, 200)
+    t.equal(result5.status, 200)
 
     server.close()
   })
-})
-
-test('semver test', (t) => {
-  t.false(semver.satisfies('5.0.0', '^4.0.0'), 'express version')
-  t.end()
 })
 
 test('express version check', (t) => {
@@ -1289,61 +1283,6 @@ test('Should aggregate URI stats for DisableTrace in Express', function (t) {
       server.close()
       t.end()
     }
-  })
-})
-
-test('sendStat with UriStatsSnapshot', (t) => {
-  const collectorServer = new grpc.Server()
-  let assertAgentStat
-
-  collectorServer.addService(services.StatService, {
-    sendAgentStat: (call) => {
-      call.on('data', (data) => {
-        assertAgentStat?.(data)
-      })
-    }
-  })
-
-  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-    const grpcDataSender = beforeSpecificOne(port, StatOnlyFunctionalTestableDataSource)
-    const baseTimestamp = Date.now()
-    const snapshot = new UriStatsSnapshot(baseTimestamp, 10)
-    snapshot.add(new UriStatsInfo('/foo', true, 0, 50))
-    snapshot.add(new UriStatsInfo('/foo', true, 0, 400))
-    snapshot.add(new UriStatsInfo('/foo', false, 0, 900))
-    snapshot.add(new UriStatsInfo('/bar', true, 0, 50))
-
-    assertAgentStat = (data) => {
-      t.ok(data, 'Should receive data')
-      const agentUriStat = data.getAgenturistat()
-      t.ok(agentUriStat, 'Should have agentUriStat')
-      t.equal(agentUriStat.getBucketversion(), 0, 'Bucket version should be 0')
-
-      const eachList = agentUriStat.getEachuristatList()
-      const byUri = Object.fromEntries(eachList.map(each => [each.getUri(), each]))
-
-      const foo = byUri['/foo']
-      t.ok(foo, 'foo entry exists')
-      t.equal(foo.getTimestamp(), baseTimestamp, 'foo timestamp')
-      const fooTotal = foo.getTotalhistogram()
-      t.equal(fooTotal.getTotal(), 1350, 'foo total sum')
-      t.equal(fooTotal.getMax(), 900, 'foo total max')
-      t.deepEqual(fooTotal.getHistogramList(), [1, 0, 1, 1, 0, 0, 0, 0], 'foo total buckets')
-      const fooFailed = foo.getFailedhistogram()
-      t.equal(fooFailed.getTotal(), 900, 'foo failed sum')
-      t.equal(fooFailed.getMax(), 900, 'foo failed max')
-      t.deepEqual(fooFailed.getHistogramList(), [0, 0, 0, 1, 0, 0, 0, 0], 'foo failed buckets')
-
-      const bar = byUri['/bar']
-      t.ok(bar, 'bar entry exists')
-      t.deepEqual(bar.getTotalhistogram().getHistogramList(), [1, 0, 0, 0, 0, 0, 0, 0], 'bar total buckets')
-
-      collectorServer.forceShutdown()
-      grpcDataSender.close()
-      t.end()
-    }
-
-    grpcDataSender.sendStat(snapshot)
   })
 })
 

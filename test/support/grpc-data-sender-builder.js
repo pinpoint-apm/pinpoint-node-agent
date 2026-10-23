@@ -7,7 +7,7 @@
 'use strict'
 
 const { DataSourceCallCountable } = require('./grpc-fixture')
-const agent = require('../support/agent-singleton-mock')
+const agent = require('./agent-singleton-mock')
 const { ClientHeader, makeClientHeaderInterceptor } = require('../../lib/name/client-header')
 
 class GrpcDataSenderBuilder {

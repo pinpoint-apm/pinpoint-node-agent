@@ -16,8 +16,7 @@ const { MongoDBContainer } = require('@testcontainers/mongodb')
 
 const fixtures = path.resolve(__dirname, '..', 'fixtures', 'db')
 
-// Each image starts once per process, on first use, and stops when tape finishes.
-// Every call resets the data, so a test sees the fixture state whatever ran before it.
+// Shared per process: starts on first use, stops when tape finishes, and resets the data on every call.
 async function startMySql() {
     const container = await startOnce('mysql', () => new MySqlContainer('mysql:8.0.31')
         .withCommand(['--default-authentication-plugin=mysql_native_password'])
@@ -58,7 +57,7 @@ async function startRedis() {
             Wait.forLogMessage('Ready to accept connections')
         ]))
         .start())
-    await execOrThrow(container, ['redis-cli', 'FLUSHDB'])
+    await execOrThrow(container, ['redis-cli', 'FLUSHALL'])
     return container
 }
 

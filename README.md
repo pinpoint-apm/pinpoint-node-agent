@@ -28,11 +28,13 @@ With [yarn](https://yarnpkg.com):
 yarn add pinpoint-node-agent
 ```
 
-### 2. Set the Required Names
-The agent identifies itself with `v4` by default, which requires an application name and a service name:
+### 2. Set the Names
+The agent identifies itself with `v4` by default, which requires an application name and a service name. The agent name is recommended; it is shown in the Inspector UI.
 ```sh
 export PINPOINT_APPLICATION_NAME="your-app-name"
 export PINPOINT_SERVICE_NAME="your-service-name"
+export PINPOINT_AGENT_NAME="your-pod-or-host-name"
+export PINPOINT_COLLECTOR_IP="your-collector-host"
 ```
 With `v3`, only the application name is required. See [Agent Identification](#agent-identification-v4-and-v3).
 
@@ -136,6 +138,14 @@ const handler = function(req, res) {
   res.status(200).json({ name: 'custom-uri' })
 }
 ```
+
+#### Leak Detection
+Off by default. Turn them on when you suspect a leak; the values appear in the Inspector.
+
+name | default | description
+-----|---------|------------
+PINPOINT_FEATURES_GC_STATS | false | Memory leak. Set `true` to send GC count and time, shown in the Heap Usage chart. Frequent major GCs while used heap keeps growing suggest a leak. Uses a `perf_hooks` GC observer.
+PINPOINT_FEATURES_FILE_DESCRIPTOR_STATS | false | File or socket leak. Set `true` to send the open file descriptor count on Linux, shown in the Open File Descriptor chart. A steadily growing count leads to `EMFILE: too many open files`.
 
 ### Configuration File (`pinpoint-config.json`)
 The file is optional. If you configure the agent with environment variables, you do not need it.

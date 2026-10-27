@@ -90,6 +90,29 @@ class AgentInfoOnlyDataSource extends DataSourceCallCountable {
     }
 }
 
+test('AgentInfo sends the Node.js version as vmVersion', (t) => {
+    const server = new grpc.Server()
+    server.addService(services.AgentService, {
+        requestAgentInfo: service
+    })
+    let dataSender
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        dataSender = beforeSpecificOne(port, AgentInfoOnlyDataSource)
+
+        fixtureMetadata = []
+        dataSender.sendAgentInfo(agentInfo(), function (error, response) {
+            t.true(response.getSuccess(), 'PResult.success is true')
+            t.equal(getCallRequests()[0].getVmversion(), process.versions.node, 'PAgentInfo.vmVersion is process.versions.node')
+            t.end()
+        })
+    })
+
+    t.teardown(() => {
+        dataSender.close()
+        server.forceShutdown()
+    })
+})
+
 test('AgentInfo with retries enabled but not configured', (t) => {
     const server = new grpc.Server()
     // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts

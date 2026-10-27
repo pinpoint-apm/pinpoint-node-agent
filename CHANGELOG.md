@@ -7,6 +7,12 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
   - `serviceName` / `PINPOINT_SERVICE_NAME` is required
   - The agent ID is always generated; `agentName` defaults to it
   - `applicationName` up to 254 characters
+- [[#522](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/522)] New Inspector system information
+  - Heap max is the V8 heap size limit, and Non-Heap shows external memory
+  - GC count and time: major GC as old GC, minor GC as new GC; opt in with `features.gcStats` / `PINPOINT_FEATURES_GC_STATS` set to `true`
+  - System CPU is no longer 0
+  - Open File Descriptor on Linux; opt in with `features.fileDescriptorStats` / `PINPOINT_FEATURES_FILE_DESCRIPTOR_STATS` set to `true`
+  - AgentInfo sends the Node.js version as `vmVersion`
 
 ### Changed
 - [[#561](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/561)] Send spans with the unary `SendSpanBatch` RPC; requires Collector 3.1.0 or later. Tune with `collector.spanBatch` / `PINPOINT_COLLECTOR_SPAN_BATCH_SIZE`, `PINPOINT_COLLECTOR_SPAN_BATCH_COLLECT_DEADLINE_MILLIS` and `PINPOINT_COLLECTOR_SPAN_BATCH_MAX_CONCURRENT_REQUESTS`
@@ -22,6 +28,14 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 
 ### Security
 - [[#528](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/528)] Bump `@grpc/grpc-js` to `^1.14.6` to resolve **CVE-2026-101916** and **CVE-2026-101915**, and the transitive `protobufjs` to `7.6.6` to resolve **CVE-2026-59877**
+
+## [1.4.4] - 2026-10-21
+### Security
+- [[#543](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/543)] Bump `@grpc/grpc-js` to `^1.14.5` to address CVE-2026-101916 and CVE-2026-101915, and refresh `protobufjs` to address CVE-2026-59877
+
+### Fixed
+- [[#538](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/538)] Do not mark a client disconnect before the response ends as an error (errorCode 1); restores the 1.3.x behavior ([Thanks @chanmo-kim](https://github.com/chanmo-kim))
+- [[#545](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/545)] Trace `mysql2/promise` `createConnection`, `createPool` and `createPoolCluster` on mysql2 3.11.5 and later
 
 ## [1.4.3] - 2026-06-11
 ### Security

@@ -14,3 +14,11 @@ test('Should initialize agent', function (t) {
   t.ok(agent)
   t.equal(new AgentInfo(agent.getConfig(), agent.agentStartTime).agentVersion, '2.0.0', 'agent version from package.json')
 })
+test('AgentInfo sends the Node.js version as vmVersion', (t) => {
+  const agent = require('../../support/agent-singleton-mock')
+
+  const agentInfo = new AgentInfo(agent.getConfig(), agent.agentStartTime)
+
+  t.equal(agentInfo.vmVersion, process.versions.node, 'vmVersion is process.versions.node')
+  t.end()
+})

@@ -30,6 +30,8 @@ const spanMessages = require('../../lib/data/v1/Span_pb')
 const SpanEventRecorderFactory = require('../../lib/context/trace/span-event-recorder-factory')
 const activeRequestRepository = require('../../lib/metric/active-request-repository')
 const AgentStatsMonitor = require('../../lib/metric/agent-stats-monitor')
+const statMessages = require('../../lib/data/v1/Stat_pb')
+const v8 = require('v8')
 const { UriStatsSnapshot } = require('../../lib/metric/uri/uri-stats-snapshot')
 const { UriStatsInfo } = require('../../lib/metric/uri/uri-stats-info-builder')
 const SpanRecorder = require('../../lib/context/trace/span-recorder')
@@ -360,12 +362,14 @@ test('sendStat', (t) => {
         t.equal(actualCached, trace.getTraceRoot(), 'active trace traceRoot is cached')
       })
 
-      const agentStatsMonitor = new AgentStatsMonitor(agent.dataSender, agent.getConfig().getAgentId(), agent.agentStartTime)
+      const agentStatsMonitor = new AgentStatsMonitor(agent.dataSender, agent.getConfig().getAgentId(), agent.agentStartTime, { gcStats: true })
       const origin = agentStatsMonitor.createStatsInfo
       let originalHistogram
-      agentStatsMonitor.createStatsInfo = () => {
-        const result = origin.apply(agentStatsMonitor, arguments)
+      let expectedStats
+      agentStatsMonitor.createStatsInfo = (...args) => {
+        const result = origin.apply(agentStatsMonitor, args)
         originalHistogram = result.activeTrace.histogramValues()
+        expectedStats = result
         res.send('Hello World')
         return result
       }
@@ -374,6 +378,22 @@ test('sendStat', (t) => {
       assertAgentStat = (data) => {
         const actualHistogram = data.getAgentstat().getActivetrace().getHistogram().getActivetracecountList()
         t.deepEqual(originalHistogram, actualHistogram, 'active trace histogram')
+
+        const actualGc = data.getAgentstat().getGc()
+        t.equal(actualGc.getType(), statMessages.PJvmGcType.JVM_GC_TYPE_UNKNOWN, 'PJvmGc.type is JVM_GC_TYPE_UNKNOWN')
+        t.equal(actualGc.getJvmmemoryheapmax(), v8.getHeapStatistics().heap_size_limit, 'PJvmGc.jvmMemoryHeapMax is the V8 heap size limit')
+        t.equal(actualGc.getJvmmemorynonheapused(), expectedStats.memory.nonHeapUsed, 'PJvmGc.jvmMemoryNonHeapUsed is external memory')
+        t.equal(actualGc.getJvmmemorynonheapmax(), -1, 'PJvmGc.jvmMemoryNonHeapMax is uncollected (-1)')
+        t.equal(actualGc.getJvmgcoldcount(), expectedStats.gc.oldCount, 'PJvmGc.jvmGcOldCount is the major GC count')
+        t.equal(actualGc.getJvmgcoldtime(), expectedStats.gc.oldTime, 'PJvmGc.jvmGcOldTime is the major GC time')
+        t.equal(actualGc.getJvmgcdetailed().getJvmgcnewcount(), expectedStats.gc.newCount, 'PJvmGcDetailed.jvmGcNewCount is the minor GC count')
+        t.equal(actualGc.getJvmgcdetailed().getJvmgcnewtime(), expectedStats.gc.newTime, 'PJvmGcDetailed.jvmGcNewTime is the minor GC time')
+
+        const actualCpuLoad = data.getAgentstat().getCpuload()
+        t.equal(actualCpuLoad.getJvmcpuload(), expectedStats.cpu.user, 'PCpuLoad.jvmCpuLoad is the process user cpu')
+        t.equal(actualCpuLoad.getSystemcpuload(), expectedStats.cpu.system, 'PCpuLoad.systemCpuLoad is the system cpu')
+
+        agentStatsMonitor.shutdown()
         agent.dataSender.close()
         server.close(() => {
           t.end()

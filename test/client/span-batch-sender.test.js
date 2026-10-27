@@ -212,7 +212,7 @@ test('the oldest waiting span is discarded when 1000 spans are waiting', (t) => 
     })
 })
 
-test('rejected spans in the response are logged as a warning', (t) => {
+test('rejected spans without an errorId are logged as a warning without the errorId', (t) => {
     const server = new grpc.Server()
     server.addService(services.SpanService, {
         sendSpanBatch: (call, callback) => {
@@ -230,7 +230,42 @@ test('rejected spans in the response are logged as a warning', (t) => {
         const spanClient = new services.SpanClient(`localhost:${port}`, grpc.credentials.createInsecure())
         const sender = new SpanBatchSender(spanClient, { size: 2, collectDeadlineMillis: oneMinuteMillis, maxConcurrentRequests: 10 }, new UnaryDeadlineOptionsBuilder(), logger)
         logger.onWarn = () => {
-            t.equal(logger.warnMessages[0], 'The collector rejected 2 spans: invalid span', 'the warning names the rejected count and the error message')
+            t.equal(logger.warnMessages[0], 'The collector rejected 2 spans: invalid span', 'errorId 0 is left out of the warning')
+            t.end()
+        }
+        sender.push(spanWithId('1'))
+        sender.push(spanWithId('2'))
+
+        t.teardown(() => {
+            sender.end()
+            spanClient.close()
+            server.forceShutdown()
+        })
+    })
+})
+
+test('rejected spans are logged with the errorId in the Java agent base64 form', (t) => {
+    const server = new grpc.Server()
+    server.addService(services.SpanService, {
+        sendSpanBatch: (call, callback) => {
+            const partialSuccess = new spanMessages.PPartialSuccess()
+            partialSuccess.setRejectedSpans(2)
+            partialSuccess.setErrorid('-4821937465512384719')
+            partialSuccess.setErrorMessage('invalid span')
+            const result = new spanMessages.PSpanResultBatch()
+            result.setPartialSuccess(partialSuccess)
+            callback(null, result)
+        }
+    })
+
+    const logger = new CapturingLogger()
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        const spanClient = new services.SpanClient(`localhost:${port}`, grpc.credentials.createInsecure())
+        const responses = captureSendSpanBatchResponses(spanClient)
+        const sender = new SpanBatchSender(spanClient, { size: 2, collectDeadlineMillis: oneMinuteMillis, maxConcurrentRequests: 10 }, new UnaryDeadlineOptionsBuilder(), logger)
+        logger.onWarn = () => {
+            t.equal(responses[0].getPartialSuccess().getErrorid(), '-4821937465512384719', 'the int64 errorId is read as a string without losing precision')
+            t.equal(logger.warnMessages[0], 'The collector rejected 2 spans: errorId=vRUJbD78pzE, invalid span', 'the errorId matches ErrorId.toBase64() of the collector log')
             t.end()
         }
         sender.push(spanWithId('1'))
@@ -379,6 +414,18 @@ function countSendSpanBatchRequests(spanClient) {
         return original.apply(this, arguments)
     }
     return sentRequests
+}
+
+function captureSendSpanBatchResponses(spanClient) {
+    const responses = []
+    const original = spanClient.sendSpanBatch
+    spanClient.sendSpanBatch = function (request, options, callback) {
+        return original.call(this, request, options, (err, response) => {
+            responses.push(response)
+            callback(err, response)
+        })
+    }
+    return responses
 }
 
 function afterSendSpanBatchResponses(spanClient, expectedResponses, afterAllResponses) {

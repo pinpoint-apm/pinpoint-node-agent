@@ -87,7 +87,7 @@ Values are resolved in this order: environment variables, then [`pinpoint-config
 If a required name is missing or invalid, the agent disables itself and lists the errors in the `[Pinpoint Agent] Configuration` log.
 
 ### Agent Identification: `v4` and `v3`
-The agent identifies itself to the collector with `v4` by default, the same scheme as the Java agent 4.0 `pinpoint.modules.uid.version` default. `v4` requires Collector 4.0 or later; for older collectors, set `PINPOINT_COLLECTOR_PROTOCOL_VERSION` (json `collector.protocolVersion`) to `v3`. Any value other than `v3` or `v4` falls back to `v4`.
+The agent identifies itself to the collector with `v4` by default, the same scheme as the Java agent 4.0 `pinpoint.modules.uid.version` default. `v4` requires Collector 4.0 or later; for older collectors, set `PINPOINT_PROTOCOL_VERSION` (json `collector.protocolVersion`) to `v3`. Any value other than `v3` or `v4` falls back to `v4`.
 
 | | `v4` (default) | `v3` |
 |---|---|---|
@@ -111,10 +111,10 @@ PINPOINT_COLLECTOR_IP | localhost | Collector address, e.g. `192.168.0.1`.
 PINPOINT_COLLECTOR_SPAN_PORT | 9993 | Collector span port.
 PINPOINT_COLLECTOR_STAT_PORT | 9992 | Collector stat port.
 PINPOINT_COLLECTOR_TCP_PORT | 9991 | Collector agent and metadata port.
-PINPOINT_COLLECTOR_SPAN_BATCH_SIZE | 20 | Spans and span chunks sent in one `SendSpanBatch` request.
-PINPOINT_COLLECTOR_SPAN_BATCH_COLLECT_DEADLINE_MILLIS | 500 | How long in ms queued spans wait before they are sent in a batch smaller than the size.
-PINPOINT_COLLECTOR_SPAN_BATCH_MAX_CONCURRENT_REQUESTS | 10 | Max `SendSpanBatch` requests awaiting a response. Batches beyond it wait; when 1000 spans are waiting, the oldest is discarded.
-PINPOINT_COLLECTOR_PROTOCOL_VERSION | v4 | `v4` or `v3` (case-insensitive). See [Agent Identification](#agent-identification-v4-and-v3).
+PINPOINT_SPAN_BATCH_SIZE | 20 | Spans and span chunks sent in one `SendSpanBatch` request.
+PINPOINT_SPAN_BATCH_DEADLINE_MILLIS | 500 | How long in ms queued spans wait before they are sent in a batch smaller than the size.
+PINPOINT_SPAN_BATCH_MAX_REQUESTS | 10 | Max `SendSpanBatch` requests awaiting a response. Batches beyond it wait; when 1000 spans are waiting, the oldest is discarded.
+PINPOINT_PROTOCOL_VERSION | v4 | `v4` or `v3` (case-insensitive). See [Agent Identification](#agent-identification-v4-and-v3).
 PINPOINT_ENABLE | true | Set `false` to disable the agent.
 PINPOINT_SAMPLING | true | Set `false` to disable sampling.
 PINPOINT_SAMPLING_RATE | 10 | Sampling ratio `1/N`. `10` samples about 10% of transactions. See [Performance tester](/demo/performance-tester).
@@ -180,7 +180,7 @@ Example `pinpoint-config.json`:
     "tcpPort": 9991,
     "deadlineMinutes": 10,
     "protocolVersion": "v4",
-    "spanBatch": { "size": 20, "collectDeadlineMillis": 500, "maxConcurrentRequests": 10 }
+    "spanBatch": { "size": 20, "deadlineMillis": 500, "maxRequests": 10 }
   },
   "sampling": { "enable": true, "rate": 10 },
   "plugins": {

@@ -6,8 +6,8 @@
         "tcpPort": 9991,
         "spanBatch": {
             "size": 20,
-            "collectDeadlineMillis": 500,
-            "maxConcurrentRequests": 10
+            "deadlineMillis": 500,
+            "maxRequests": 10
         },
         "deadlineMinutes": 10
     },

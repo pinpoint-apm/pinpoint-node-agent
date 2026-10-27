@@ -36,7 +36,7 @@ test('20 spans are sent in one SendSpanBatch request', (t) => {
 
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         const spanClient = new services.SpanClient(`localhost:${port}`, grpc.credentials.createInsecure())
-        const sender = new SpanBatchSender(spanClient, { size: 20, collectDeadlineMillis: oneMinuteMillis, maxConcurrentRequests: 10 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger())
+        const sender = new SpanBatchSender(spanClient, { size: 20, deadlineMillis: oneMinuteMillis, maxRequests: 10 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger())
         for (let sequence = 1; sequence <= 20; sequence++) {
             sender.push(spanWithId(`${sequence}`))
         }
@@ -49,7 +49,7 @@ test('20 spans are sent in one SendSpanBatch request', (t) => {
     })
 })
 
-test('remaining spans are sent collectDeadlineMillis after the first span', (t) => {
+test('remaining spans are sent deadlineMillis after the first span', (t) => {
     const server = new grpc.Server()
     server.addService(services.SpanService, {
         sendSpanBatch: (call, callback) => {
@@ -62,7 +62,7 @@ test('remaining spans are sent collectDeadlineMillis after the first span', (t) 
 
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         const spanClient = new services.SpanClient(`localhost:${port}`, grpc.credentials.createInsecure())
-        const sender = new SpanBatchSender(spanClient, { size: 20, collectDeadlineMillis: 10, maxConcurrentRequests: 10 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger())
+        const sender = new SpanBatchSender(spanClient, { size: 20, deadlineMillis: 10, maxRequests: 10 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger())
         sender.push(spanWithId('1'))
 
         t.teardown(() => {
@@ -90,7 +90,7 @@ test('end() sends all queued spans in one SendSpanBatch request', (t) => {
 
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         const spanClient = new services.SpanClient(`localhost:${port}`, grpc.credentials.createInsecure())
-        const sender = new SpanBatchSender(spanClient, { size: 20, collectDeadlineMillis: oneMinuteMillis, maxConcurrentRequests: 1 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger())
+        const sender = new SpanBatchSender(spanClient, { size: 20, deadlineMillis: oneMinuteMillis, maxRequests: 1 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger())
         for (let sequence = 1; sequence <= 65; sequence++) {
             sender.push(spanWithId(`${sequence}`))
         }
@@ -118,7 +118,7 @@ test('a size above 1000 is capped at 1000 so a full batch is sent before the old
     const logger = new CapturingLogger()
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         const spanClient = new services.SpanClient(`localhost:${port}`, grpc.credentials.createInsecure())
-        const sender = new SpanBatchSender(spanClient, { size: 2000, collectDeadlineMillis: oneMinuteMillis, maxConcurrentRequests: 10 }, new UnaryDeadlineOptionsBuilder(), logger)
+        const sender = new SpanBatchSender(spanClient, { size: 2000, deadlineMillis: oneMinuteMillis, maxRequests: 10 }, new UnaryDeadlineOptionsBuilder(), logger)
         for (let sequence = 1; sequence <= 1000; sequence++) {
             sender.push(spanWithId(`${sequence}`))
         }
@@ -156,7 +156,7 @@ test('the 11th batch waits while 10 SendSpanBatch requests are awaiting a respon
     const logger = new CapturingLogger()
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         const spanClient = new services.SpanClient(`localhost:${port}`, grpc.credentials.createInsecure())
-        const sender = new SpanBatchSender(spanClient, { size: 1, collectDeadlineMillis: 10, maxConcurrentRequests: 10 }, new UnaryDeadlineOptionsBuilder(), logger)
+        const sender = new SpanBatchSender(spanClient, { size: 1, deadlineMillis: 10, maxRequests: 10 }, new UnaryDeadlineOptionsBuilder(), logger)
         for (let sequence = 1; sequence <= 11; sequence++) {
             sender.push(spanWithId(`${sequence}`))
         }
@@ -201,7 +201,7 @@ test('the oldest waiting span is discarded when 1000 spans are waiting', (t) => 
     }
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         const spanClient = new services.SpanClient(`localhost:${port}`, grpc.credentials.createInsecure())
-        sender = new SpanBatchSender(spanClient, { size: 1, collectDeadlineMillis: 10, maxConcurrentRequests: 1 }, new UnaryDeadlineOptionsBuilder(), logger)
+        sender = new SpanBatchSender(spanClient, { size: 1, deadlineMillis: 10, maxRequests: 1 }, new UnaryDeadlineOptionsBuilder(), logger)
         sender.push(spanWithId('1'))
 
         t.teardown(() => {
@@ -228,7 +228,7 @@ test('rejected spans without an errorId are logged as a warning without the erro
     const logger = new CapturingLogger()
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         const spanClient = new services.SpanClient(`localhost:${port}`, grpc.credentials.createInsecure())
-        const sender = new SpanBatchSender(spanClient, { size: 2, collectDeadlineMillis: oneMinuteMillis, maxConcurrentRequests: 10 }, new UnaryDeadlineOptionsBuilder(), logger)
+        const sender = new SpanBatchSender(spanClient, { size: 2, deadlineMillis: oneMinuteMillis, maxRequests: 10 }, new UnaryDeadlineOptionsBuilder(), logger)
         logger.onWarn = () => {
             t.equal(logger.warnMessages[0], 'The collector rejected 2 spans: invalid span', 'errorId 0 is left out of the warning')
             t.end()
@@ -262,7 +262,7 @@ test('rejected spans are logged with the errorId in the Java agent base64 form',
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         const spanClient = new services.SpanClient(`localhost:${port}`, grpc.credentials.createInsecure())
         const responses = captureSendSpanBatchResponses(spanClient)
-        const sender = new SpanBatchSender(spanClient, { size: 2, collectDeadlineMillis: oneMinuteMillis, maxConcurrentRequests: 10 }, new UnaryDeadlineOptionsBuilder(), logger)
+        const sender = new SpanBatchSender(spanClient, { size: 2, deadlineMillis: oneMinuteMillis, maxRequests: 10 }, new UnaryDeadlineOptionsBuilder(), logger)
         logger.onWarn = () => {
             t.equal(responses[0].getPartialSuccess().getErrorid(), '-4821937465512384719', 'the int64 errorId is read as a string without losing precision')
             t.equal(logger.warnMessages[0], 'The collector rejected 2 spans: errorId=vRUJbD78pzE, invalid span', 'the errorId matches ErrorId.toBase64() of the collector log')
@@ -294,7 +294,7 @@ test('an error message without rejected spans is logged as info', (t) => {
     const logger = new CapturingLogger()
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         const spanClient = new services.SpanClient(`localhost:${port}`, grpc.credentials.createInsecure())
-        const sender = new SpanBatchSender(spanClient, { size: 1, collectDeadlineMillis: oneMinuteMillis, maxConcurrentRequests: 10 }, new UnaryDeadlineOptionsBuilder(), logger)
+        const sender = new SpanBatchSender(spanClient, { size: 1, deadlineMillis: oneMinuteMillis, maxRequests: 10 }, new UnaryDeadlineOptionsBuilder(), logger)
         logger.onInfo = () => {
             t.equal(logger.infoMessages[0], 'The collector answered SendSpanBatch with a warning: slow storage', 'the info names the error message')
             t.equal(logger.warnMessages.length, 0, 'no warning without rejected spans')
@@ -320,7 +320,7 @@ test('a collector without SendSpanBatch stops span sending with one default-logg
 
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         const spanClient = new services.SpanClient(`localhost:${port}`, grpc.credentials.createInsecure())
-        const sender = new SpanBatchSender(spanClient, { size: 1, collectDeadlineMillis: oneMinuteMillis, maxConcurrentRequests: 10 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger())
+        const sender = new SpanBatchSender(spanClient, { size: 1, deadlineMillis: oneMinuteMillis, maxRequests: 10 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger())
         const sentRequests = countSendSpanBatchRequests(spanClient)
         afterSendSpanBatchResponses(spanClient, 2, () => {
             t.equal(defaultLoggerWarnings.length, 1, 'one default-logger warning for two UNIMPLEMENTED responses')
@@ -352,7 +352,7 @@ test('a span pushed after end() sends no request', (t) => {
 
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         const spanClient = new services.SpanClient(`localhost:${port}`, grpc.credentials.createInsecure())
-        const sender = new SpanBatchSender(spanClient, { size: 20, collectDeadlineMillis: 10, maxConcurrentRequests: 10 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger())
+        const sender = new SpanBatchSender(spanClient, { size: 20, deadlineMillis: 10, maxRequests: 10 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger())
         const sentRequests = countSendSpanBatchRequests(spanClient)
         sender.end()
         spanClient.close()
@@ -375,7 +375,7 @@ test('a SendSpanBatch call that throws on a closed channel is logged instead of 
 
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
         const spanClient = new services.SpanClient(`localhost:${port}`, grpc.credentials.createInsecure())
-        const sender = new SpanBatchSender(spanClient, { size: 1, collectDeadlineMillis: oneMinuteMillis, maxConcurrentRequests: 1 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger())
+        const sender = new SpanBatchSender(spanClient, { size: 1, deadlineMillis: oneMinuteMillis, maxRequests: 1 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger())
         spanClient.close()
 
         t.doesNotThrow(() => sender.push(spanWithId('1')), 'push on a closed channel does not throw')

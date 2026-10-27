@@ -36,15 +36,15 @@ test('collector.protocolVersion from json config', (t) => {
     t.end()
 })
 
-test('PINPOINT_COLLECTOR_PROTOCOL_VERSION overrides json config', (t) => {
-    process.env.PINPOINT_COLLECTOR_PROTOCOL_VERSION = 'V3'
+test('PINPOINT_PROTOCOL_VERSION overrides json config', (t) => {
+    process.env.PINPOINT_PROTOCOL_VERSION = 'V3'
     let actual = namesAndIdsOf({ collector: { protocolVersion: 'v4' } })
     t.equal(actual.collector.protocolVersion, 'v3', 'env V3 overrides json v4')
 
-    process.env.PINPOINT_COLLECTOR_PROTOCOL_VERSION = 'v4'
+    process.env.PINPOINT_PROTOCOL_VERSION = 'v4'
     actual = namesAndIdsOf({ collector: { protocolVersion: 'v3' } })
     t.equal(actual.collector.protocolVersion, 'v4', 'env v4 overrides json v3')
-    delete process.env.PINPOINT_COLLECTOR_PROTOCOL_VERSION
+    delete process.env.PINPOINT_PROTOCOL_VERSION
     t.end()
 })
 

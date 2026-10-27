@@ -35,16 +35,14 @@ test('setup', async (t) => {
 test('setup: start span collector', (t) => {
     spanCollector = new grpc.Server()
     spanCollector.addService(services.SpanService, {
-        sendSpan: function (call, callback) {
-            call.on('data', (spanMessage) => {
+        sendSpanBatch: function (call, callback) {
+            call.request.getSpanList().forEach((spanMessage) => {
                 const span = spanMessage.getSpan()
                 if (span) {
                     receivedSpans.push(span)
                 }
             })
-            call.on('end', () => {
-                callback?.(null, new Empty())
-            })
+            callback(null, new SpanProto.PSpanResultBatch())
         }
     })
 

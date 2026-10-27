@@ -55,8 +55,8 @@ const getSpanChunk = (asyncId) => {
 
 let spanMessageEndEventCallback
 let dataStreamCount = 0
-const spanMessageStreamService = (call) => {
-    call.on('data', (spanMessage) => {
+const spanMessageBatchService = (call, callback) => {
+    call.request.getSpanList().forEach((spanMessage) => {
         const spanOrSpanChunk = spanMessage.getSpan() ?? spanMessage.getSpanchunk()
         const spanOrSpanChunks = getSpanOrSpanChunks()
         spanOrSpanChunks.push(spanOrSpanChunk)
@@ -64,7 +64,7 @@ const spanMessageStreamService = (call) => {
             spanMessageEndEventCallback?.()
         }
     })
-    call.on('end', () => { })
+    callback(null, new spanMessages.PSpanResultBatch())
 }
 
 function sendAgentStat(call, callback) {
@@ -96,7 +96,7 @@ test(`nested mysql async query with express`, async (t) => {
         sendAgentStat: sendAgentStat
     })
     collectorServer.addService(services.SpanService, {
-        sendSpan: spanMessageStreamService
+        sendSpanBatch: spanMessageBatchService
     })
     collectorServer.addService(services.MetadataService, {
         requestApiMetaData: pResultReturnUnaryService,
@@ -284,7 +284,7 @@ test(`nested mysql2 async query with express`, async (t) => {
         sendAgentStat: sendAgentStat
     })
     collectorServer.addService(services.SpanService, {
-        sendSpan: spanMessageStreamService
+        sendSpanBatch: spanMessageBatchService
     })
     collectorServer.addService(services.MetadataService, {
         requestApiMetaData: pResultReturnUnaryService,

@@ -208,7 +208,7 @@ class MetaInfoOnlyDataSource extends DataSourceCallCountable {
         super(config, interceptors)
     }
     initializeClients() { }
-    initializeSpanStream() { }
+    initializeSpanBatchSender() { }
     initializeStatStream() { }
     initializePingStream() { }
     initializeProfilerClients() { }

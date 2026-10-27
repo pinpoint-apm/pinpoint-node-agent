@@ -29,8 +29,8 @@ test('shimming require(undici) cause by require-in-the-middle package', function
     let actualFetchAPISpan
     let outgoingRequestParentSpanId
     collectorServer.addService(services.SpanService, {
-        sendSpan: function (call) {
-            call.on('data', function (data) {
+        sendSpanBatch: function (call, callback) {
+            call.request.getSpanList().forEach(function (data) {
                 spanCount++
                 t.true(data, 'span.on("data") is not null')
 
@@ -198,6 +198,7 @@ test('shimming require(undici) cause by require-in-the-middle package', function
                     t.fail('span count is over 3')
                 }
             })
+            callback(null, new spanMessages.PSpanResultBatch())
         },
     })
     collectorServer.addService(services.MetadataService, {
@@ -280,8 +281,8 @@ test('shimming undici: requestExceptionMetaData should deliver error.cause chain
     const collectorServer = new grpc.Server()
 
     collectorServer.addService(services.SpanService, {
-        sendSpan: function (call) {
-            call.on('data', function () {})
+        sendSpanBatch: function (call, callback) {
+            callback(null, new spanMessages.PSpanResultBatch())
         },
     })
     collectorServer.addService(services.MetadataService, {
@@ -386,8 +387,8 @@ test('shimming udici by global nodejs fetch', function (t) {
     let actualFetchAPISpan
     let outgoingRequestParentSpanId
     collectorServer.addService(services.SpanService, {
-        sendSpan: function (call) {
-            call.on('data', function (data) {
+        sendSpanBatch: function (call, callback) {
+            call.request.getSpanList().forEach(function (data) {
                 spanCount++
                 t.true(data, 'span.on("data") is not null')
 
@@ -550,6 +551,7 @@ test('shimming udici by global nodejs fetch', function (t) {
                     t.fail('span count is over 3')
                 }
             })
+            callback(null, new spanMessages.PSpanResultBatch())
         },
     })
 

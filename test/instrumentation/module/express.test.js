@@ -1528,13 +1528,11 @@ test('Functional Test: SendSpan with success and failure', (t) => {
   const receivedStats = []
 
   collectorServer.addService(services.SpanService, {
-    sendSpan: (call) => {
-      call.on('data', (spanMessage) => {
+    sendSpanBatch: (call, callback) => {
+      call.request.getSpanList().forEach((spanMessage) => {
         receivedSpans.push(spanMessage)
       })
-      call.on('end', () => {
-        call.end()
-      })
+      callback(null, new spanMessages.PSpanResultBatch())
     }
   })
 

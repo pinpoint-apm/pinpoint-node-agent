@@ -608,8 +608,8 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
   })
 
   collectorServer.addService(services.SpanService, {
-    sendSpan: function (call) {
-      call.on('data', function () {})
+    sendSpanBatch: function (call, callback) {
+      callback(null, new spanMessages.PSpanResultBatch())
     },
   })
   collectorServer.addService(services.MetadataService, {

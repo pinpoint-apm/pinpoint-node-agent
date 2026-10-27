@@ -59,6 +59,21 @@ test('should return the number value when the env value is number type', functio
     t.end()
 })
 
+test('span batch env values set collector.spanBatch', function(t) {
+    process.env['PINPOINT_COLLECTOR_SPAN_BATCH_SIZE'] = "50"
+    process.env['PINPOINT_COLLECTOR_SPAN_BATCH_COLLECT_DEADLINE_MILLIS'] = "300"
+    process.env['PINPOINT_COLLECTOR_SPAN_BATCH_MAX_CONCURRENT_REQUESTS'] = "5"
+
+    const given = givenDefaultIdAndName()
+    t.deepEqual(given.getSpanBatch(), { size: 50, collectDeadlineMillis: 300, maxConcurrentRequests: 5 }, 'given PINPOINT_COLLECTOR_SPAN_BATCH_* env, should equal config')
+
+    delete process.env.PINPOINT_COLLECTOR_SPAN_BATCH_SIZE
+    delete process.env.PINPOINT_COLLECTOR_SPAN_BATCH_COLLECT_DEADLINE_MILLIS
+    delete process.env.PINPOINT_COLLECTOR_SPAN_BATCH_MAX_CONCURRENT_REQUESTS
+
+    t.end()
+})
+
 test('should return the true value when the env value is boolean type', function(t) {
     process.env['PINPOINT_SAMPLING'] = "true"
     process.env['PINPOINT_ENABLE'] = "true"

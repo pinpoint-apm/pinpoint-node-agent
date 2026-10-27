@@ -37,6 +37,28 @@ test('deadline config', (t) => {
   t.equal(conf.collector.deadlineMinutes, 10)
 })
 
+test('span batch config defaults to size 20, collect deadline 500 ms and 10 concurrent requests', (t) => {
+  const json = require('../lib/pinpoint-config-default.json')
+  const conf = new ConfigBuilder().setDefaultJson(json).build()
+
+  t.deepEqual(conf.getSpanBatch(), { size: 20, collectDeadlineMillis: 500, maxConcurrentRequests: 10 })
+  t.end()
+})
+
+test('span batch config uses the default for a non-positive or non-number value', (t) => {
+  const conf = new ConfigBuilder({ collector: { spanBatch: { size: 0, collectDeadlineMillis: -1, maxConcurrentRequests: 'ten' } } }).build()
+
+  t.deepEqual(conf.getSpanBatch(), { size: 20, collectDeadlineMillis: 500, maxConcurrentRequests: 10 })
+  t.end()
+})
+
+test('span batch config uses the default for a non-integer size or max concurrent requests', (t) => {
+  const conf = new ConfigBuilder({ collector: { spanBatch: { size: 0.5, collectDeadlineMillis: 250.5, maxConcurrentRequests: 1.5 } } }).build()
+
+  t.deepEqual(conf.getSpanBatch(), { size: 20, collectDeadlineMillis: 250.5, maxConcurrentRequests: 10 })
+  t.end()
+})
+
 test('ConfigBuilder pathForRequireFunction Learning Test', (t) => {
   let actual = {}.main
   t.true(actual === undefined, '{}.main return value is undefined')

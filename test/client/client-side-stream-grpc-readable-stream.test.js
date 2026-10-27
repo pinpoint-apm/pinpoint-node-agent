@@ -8,7 +8,7 @@
 
 const test = require('tape')
 const grpc = require('@grpc/grpc-js')
-const { beforeSpecificOne, SpanOnlyFunctionalTestableDataSource, spanWithId } = require('../support/grpc-fixture')
+const { beforeSpecificOne, StatOnlyFunctionalTestableDataSource } = require('../support/grpc-fixture')
 const agent = require('../support/agent-singleton-mock')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
@@ -17,24 +17,24 @@ const shimmer = require('@pinpoint-apm/shimmer')
 
 const reconnectTestTimeout = { timeout: 60 * 1000 }
 
-test('span stream retry connection Tests', reconnectTestTimeout, async function (t) {
+function agentStatAt(timestamp) {
+    return { timestamp, collectInterval: 1000, cpu: { user: 0, system: 0 } }
+}
+
+test('stat stream retry connection Tests', reconnectTestTimeout, async function (t) {
     agent.bindHttp()
 
-    const expected1 = spanWithId('1')
+    const expected1 = agentStatAt(1)
 
     const server = new grpc.Server()
-    server.addService(services.SpanService, {
-        sendSpan: function (call) {
-            let spanCallCount = 0
+    server.addService(services.StatService, {
+        sendAgentStat: function (call) {
+            let statCallCount = 0
             call.on('data', (data) => {
-                spanCallCount++
+                statCallCount++
 
-                if (spanCallCount === 1) {
-                    const actualSpan = data.getSpan()
-                    t.equal(actualSpan.getSpanid(), expected1.traceRoot.getTraceId().getSpanId(), `spanId should be '${expected1.traceRoot.getTraceId().getSpanId()}'`)
-                    t.equal(actualSpan.getTransactionid().getAgentid(), agent.getConfig().getAgentId(), `agentId should be ${agent.getConfig().getAgentId()}`)
-                    t.equal(actualSpan.getTransactionid().getAgentstarttime(), expected1.traceRoot.getTraceId().getAgentStartTime(), `agentStartTime should be '${expected1.traceRoot.getTraceId().getAgentStartTime()}'`)
-                    t.equal(actualSpan.getTransactionid().getSequence(), expected1.traceRoot.getTraceId().getTransactionId(), `transactionId should be '${expected1.traceRoot.getTraceId().getTransactionId()}'`)
+                if (statCallCount === 1) {
+                    t.equal(data.getAgentstat().getTimestamp(), expected1.timestamp, `timestamp should be ${expected1.timestamp}`)
 
                     server.forceShutdown()
                 }
@@ -43,86 +43,86 @@ test('span stream retry connection Tests', reconnectTestTimeout, async function 
     })
 
     let dataSender
-    let expectedSpans = []
+    let expectedStats = []
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        dataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
+        dataSender = beforeSpecificOne(port, StatOnlyFunctionalTestableDataSource)
 
         let callCount = 0
-        dataSender.spanStreamBuilder.setCallback(async (err) => {
+        dataSender.statStreamBuilder.setCallback(async (err) => {
             callCount++
             if (callCount === 1) {
                 t.equal(err.code, grpc.status.CANCELLED, `gRPC server is shut down, so the error code should be ${grpc.status.CANCELLED}`)
 
-                dataSender.spanStream.writableStream.on('close', () => {
-                    t.false(dataSender.spanStream.writableStream.writable, `If the stream is errored, the stream should be closed and not writable`)
+                dataSender.statStream.writableStream.on('close', () => {
+                    t.false(dataSender.statStream.writableStream.writable, `If the stream is errored, the stream should be closed and not writable`)
                 })
-                dataSender.spanStream.writableStream.on('unpipe', () => {
-                    t.false(dataSender.spanStream.writableStream.writable, `If the stream is errored, the stream should be unpipe and not writable`)
+                dataSender.statStream.writableStream.on('unpipe', () => {
+                    t.false(dataSender.statStream.writableStream.writable, `If the stream is errored, the stream should be unpipe and not writable`)
                 })
-                t.equal(writableStream, dataSender.spanStream.writableStream, `No change writableStream when gRPC server is shut down`)
+                t.equal(writableStream, dataSender.statStream.writableStream, `No change writableStream when gRPC server is shut down`)
                 t.equal(writableStream.backoffRetry.attempts, 0, `retry connection is not started in callback`)
             } else if (callCount === 2) {
                 t.equal(err.code, grpc.status.UNAVAILABLE, `gRPC server was shut down, so the error code should be ${grpc.status.UNAVAILABLE}`)
                 t.equal(callCount - 1, 1, `1st time retry connection `)
 
-                dataSender.spanStream.writableStream.on('close', () => {
-                    t.true(dataSender.spanStream.writableStream.writableStream.writableEnded, `If the 1st retry created stream is errored, the stream should be closed and writableEnded`)
+                dataSender.statStream.writableStream.on('close', () => {
+                    t.true(dataSender.statStream.writableStream.writableStream.writableEnded, `If the 1st retry created stream is errored, the stream should be closed and writableEnded`)
                 })
-                dataSender.spanStream.writableStream.on('unpipe', () => {
-                    t.true(dataSender.spanStream.writableStream.writableStream.writableEnded, `If the 1st retry created stream is errored, the stream should be unpipe and writableEnded`)
+                dataSender.statStream.writableStream.on('unpipe', () => {
+                    t.true(dataSender.statStream.writableStream.writableStream.writableEnded, `If the 1st retry created stream is errored, the stream should be unpipe and writableEnded`)
                 })
-                t.equal(writableStream, dataSender.spanStream.writableStream, `No change writableStream when 1st retry error`)
+                t.equal(writableStream, dataSender.statStream.writableStream, `No change writableStream when 1st retry error`)
                 t.equal(writableStream.backoffRetry.attempts, 1, `1st retry connection is failed`)
             } else if (callCount === 3) {
                 t.equal(err.code, grpc.status.UNAVAILABLE, `gRPC server was shut down, so the error code should be ${grpc.status.UNAVAILABLE}`)
                 t.equal(callCount - 1, 2, `2nd time retry connection `)
 
-                dataSender.spanStream.writableStream.on('close', () => {
-                    t.true(dataSender.spanStream.writableStream.writableStream.writableEnded, `2nd retry created stream is errored, writableEnded on close event`)
+                dataSender.statStream.writableStream.on('close', () => {
+                    t.true(dataSender.statStream.writableStream.writableStream.writableEnded, `2nd retry created stream is errored, writableEnded on close event`)
                 })
-                dataSender.spanStream.writableStream.on('unpipe', () => {
-                    t.true(dataSender.spanStream.writableStream.writableStream.writableEnded, `2nd retry created stream is errored, writableEnded = true on unpipe event`)
+                dataSender.statStream.writableStream.on('unpipe', () => {
+                    t.true(dataSender.statStream.writableStream.writableStream.writableEnded, `2nd retry created stream is errored, writableEnded = true on unpipe event`)
                 })
-                t.equal(writableStream, dataSender.spanStream.writableStream, `No change writableStream when 2nd retry error`)
+                t.equal(writableStream, dataSender.statStream.writableStream, `No change writableStream when 2nd retry error`)
                 t.equal(writableStream.backoffRetry.attempts, 2, `2nd retry connection is failed`)
             } else if (callCount === 4) {
                 t.equal(err.code, grpc.status.UNAVAILABLE, `gRPC server was shut down, so the error code should be ${grpc.status.UNAVAILABLE}`)
                 t.equal(callCount - 1, 3, `3rd time retry connection`)
 
-                dataSender.spanStream.writableStream.on('close', () => {
-                    t.true(dataSender.spanStream.writableStream.writableStream.writableEnded, `3rd retry created stream is errored, writableEnded = true on close event`)
+                dataSender.statStream.writableStream.on('close', () => {
+                    t.true(dataSender.statStream.writableStream.writableStream.writableEnded, `3rd retry created stream is errored, writableEnded = true on close event`)
                 })
-                dataSender.spanStream.writableStream.on('unpipe', () => {
-                    t.true(dataSender.spanStream.writableStream.writableStream.writableEnded, `3rd retry created stream is errored, writableEnded = true on unpipe event`)
+                dataSender.statStream.writableStream.on('unpipe', () => {
+                    t.true(dataSender.statStream.writableStream.writableStream.writableEnded, `3rd retry created stream is errored, writableEnded = true on unpipe event`)
                 })
-                t.equal(writableStream, dataSender.spanStream.writableStream, `No change writableStream when 3rd retry error`)
+                t.equal(writableStream, dataSender.statStream.writableStream, `No change writableStream when 3rd retry error`)
                 t.equal(writableStream.backoffRetry.attempts, 3, `3rd retry connection is failed`)
 
                 let index = 0
-                for await (const spanStreamWritableEnded of setInterval(1000, dataSender.spanStream.writableStream.ended)) {
+                for await (const statStreamWritableEnded of setInterval(1000, dataSender.statStream.writableStream.ended)) {
                     if (index === 0) {
-                        t.true(spanStreamWritableEnded, `writableEnded = true, When 1st sendSpan call in for loop`)
+                        t.true(statStreamWritableEnded, `writableEnded = true, When 1st sendStat call in for loop`)
                         bindAsyncServer2()
 
-                        shimmer.wrap(dataSender.spanStream, 'pipeWritableStream', function (original) {
+                        shimmer.wrap(dataSender.statStream, 'pipeWritableStream', function (original) {
                             return function () {
                                 if (index === 0) {
-                                    t.true(dataSender.spanStream.writableStream.shouldCreateNewStream(), `availableRetry = true, index=${index}`)
-                                    t.equal(dataSender.spanStream.writableStream.backoffRetry.attempts, 4, `backoffRetry.attempts: ${dataSender.spanStream.writableStream.backoffRetry.attempts}, index=${index}`)
+                                    t.true(dataSender.statStream.writableStream.shouldCreateNewStream(), `availableRetry = true, index=${index}`)
+                                    t.equal(dataSender.statStream.writableStream.backoffRetry.attempts, 4, `backoffRetry.attempts: ${dataSender.statStream.writableStream.backoffRetry.attempts}, index=${index}`)
                                 }
                                 original.apply(this, arguments)
                                 if (index === 0) {
-                                    t.false(dataSender.spanStream.writableStream.shouldCreateNewStream(), `availableRetry = false, index=${index} after pipeWritableStream() call`)
-                                    t.notEqual(writableStream, dataSender.spanStream.writableStream, `new GrpcReadableStream.writableStream, index=${index} after pipeWritableStream() call`)
-                                    writableStream = dataSender.spanStream.writableStream
+                                    t.false(dataSender.statStream.writableStream.shouldCreateNewStream(), `availableRetry = false, index=${index} after pipeWritableStream() call`)
+                                    t.notEqual(writableStream, dataSender.statStream.writableStream, `new GrpcReadableStream.writableStream, index=${index} after pipeWritableStream() call`)
+                                    writableStream = dataSender.statStream.writableStream
                                 }
                             }
                         })
                     }
 
-                    const expected = spanWithId(`1${index}`)
-                    expectedSpans.push(expected)
-                    dataSender.sendSpan(expected)
+                    const expected = agentStatAt(100 + index)
+                    expectedStats.push(expected)
+                    dataSender.sendStat(expected)
 
                     if (index === 10) {
                         break
@@ -131,30 +131,26 @@ test('span stream retry connection Tests', reconnectTestTimeout, async function 
                 }
             }
         })
-        dataSender.sendSpan(expected1)
-        let writableStream = dataSender.spanStream.writableStream
+        dataSender.sendStat(expected1)
+        let writableStream = dataSender.statStream.writableStream
     })
 
     let server2
     function bindAsyncServer2() {
         server2 = new grpc.Server()
-        server2.addService(services.SpanService, {
-            sendSpan: function (call, callback) {
-                let spanCallCount = 0
+        server2.addService(services.StatService, {
+            sendAgentStat: function (call, callback) {
+                let statCallCount = 0
                 call.on('data', (data) => {
-                    const actualSpan = data.getSpan()
-                    const expectedSpan = expectedSpans.find((expectedSpan) => expectedSpan.traceRoot.getTraceId().getSpanId() === actualSpan.getSpanid())
-                    t.equal(actualSpan.getSpanid(), expectedSpan.traceRoot.getTraceId().getSpanId(), `spanId should be '${expectedSpan.traceRoot.getTraceId().getSpanId()}'`)
-                    t.equal(actualSpan.getTransactionid().getAgentid(), agent.getConfig().getAgentId(), `agentId should be ${agent.getConfig().getAgentId()}`)
-                    t.equal(actualSpan.getTransactionid().getAgentstarttime(), expectedSpan.traceRoot.getTraceId().getAgentStartTime(), `agentStartTime should be '${expectedSpan.traceRoot.getTraceId().getAgentStartTime()}'`)
-                    t.equal(actualSpan.getTransactionid().getSequence(), expectedSpan.traceRoot.getTraceId().getTransactionId(), `transactionId should be '${expectedSpan.traceRoot.getTraceId().getTransactionId()}'`)
+                    const actualTimestamp = data.getAgentstat().getTimestamp()
+                    const expectedStat = expectedStats.find((expectedStat) => expectedStat.timestamp === actualTimestamp)
+                    t.equal(actualTimestamp, expectedStat.timestamp, `timestamp should be ${expectedStat.timestamp}`)
 
-                    if (expectedSpan.traceRoot.getTraceId().getTransactionId() === '110') {
-                        // t.equal(dataSender.spanStream.writableStream.backoffRetry.attempts, 3, `backoffRetry.attempts: ${dataSender.spanStream.writableStream.backoffRetry.attempts}`)
-                        t.comment(`expectedSpans.length: ${expectedSpans.length}, spanCallCount: ${spanCallCount}`)
+                    if (expectedStat.timestamp === 110) {
+                        t.comment(`expectedStats.length: ${expectedStats.length}, statCallCount: ${statCallCount}`)
                         t.end()
                     }
-                    spanCallCount++
+                    statCallCount++
                 })
 
                 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/7caf9fb3a650fe7cf7a04c0c65201997874a5f38/examples/src/grpcjs/server.ts#L59
@@ -179,8 +175,8 @@ test('span stream retry connection Tests', reconnectTestTimeout, async function 
 test('client side stream deadline exceeded Tests', reconnectTestTimeout, function (t) {
     const server = new grpc.Server()
     let serverCount = 0
-    server.addService(services.SpanService, {
-        sendSpan: function (call, callback) {
+    server.addService(services.StatService, {
+        sendAgentStat: function (call, callback) {
             call.on('data', (data) => {
                 serverCount++
 
@@ -201,13 +197,13 @@ test('client side stream deadline exceeded Tests', reconnectTestTimeout, functio
     let dataSender
     const deadlines = []
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        dataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
+        dataSender = beforeSpecificOne(port, StatOnlyFunctionalTestableDataSource)
         t.equal(dataSender.clientSideStreamDeadlineOptionsBuilder.deadlineSeconds, agent.getConfig().collector.deadlineMinutes * 60, `clientSideStreamDeadlineOptionsBuilder.deadlineSeconds should be ${agent.getConfig().streamDeadlineMinutesClientSide * 60}`)
 
         dataSender.clientSideStreamDeadlineOptionsBuilder.setSeconds(1)
-        dataSender.initializeSpanStream()
+        dataSender.initializeStatStream()
         let index = 0
-        dataSender.spanStreamBuilder.setCallback((err) => {
+        dataSender.statStreamBuilder.setCallback((err) => {
             if (index === 0) {
                 t.equal(err.code, grpc.status.DEADLINE_EXCEEDED, `grpc.status.DEADLINE_EXCEEDED ${grpc.status.DEADLINE_EXCEEDED}`)
             }
@@ -229,12 +225,10 @@ test('client side stream deadline exceeded Tests', reconnectTestTimeout, functio
             }
         })
 
-        let expected = spanWithId(`1`)
-        dataSender.sendSpan(expected)
+        dataSender.sendStat(agentStatAt(1))
 
         setTimeout(() => {
-            expected = spanWithId(`2`)
-            dataSender.sendSpan(expected)
+            dataSender.sendStat(agentStatAt(2))
         }, 2100)
 
     })

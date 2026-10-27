@@ -87,7 +87,7 @@ class GrpcDataSenderBuilder {
     }
 
     build() {
-        const collector = Object.assign({}, this.config.collector, { ip: 'localhost', spanPort: this.port, statPort: this.port, tcpPort: this.port })
+        const collector = Object.assign({}, this.config.collector, { ip: 'localhost', spanPort: this.port, statPort: this.port, tcpPort: this.port, spanBatch: { collectDeadlineMillis: 10 } })
         const config = Object.assign({}, this.enableMethods, this.config, { collector })
         return new DataSourceCallCountable(config, this.interceptors)
     }

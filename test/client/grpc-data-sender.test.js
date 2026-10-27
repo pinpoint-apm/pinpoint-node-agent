@@ -41,11 +41,10 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 let sendSpanMethodOnDataCallback
-function sendSpan(call) {
-  call.on('error', function (error) {
-    console.log(`error ${error}`)
-  })
-  call.on('data', function (spanMessage) {
+function sendSpanBatch(call, callback) {
+  const callMetadata = getMetadata()
+  callMetadata.push(call.metadata)
+  call.request.getSpanList().forEach(function (spanMessage) {
     let spanOrChunk = spanMessage.getSpan()
     if (!spanOrChunk) {
       spanOrChunk = spanMessage.getSpanchunk()
@@ -54,11 +53,7 @@ function sendSpan(call) {
     callRequests.push(spanOrChunk)
     sendSpanMethodOnDataCallback?.(spanOrChunk)
   })
-  call.on('end', function () {
-    call.end()
-  })
-  const callMetadata = getMetadata()
-  callMetadata.push(call.metadata)
+  callback(null, new spanMessages.PSpanResultBatch())
 }
 
 test('Should send span', function (t) {
@@ -67,7 +62,7 @@ test('Should send span', function (t) {
 
   const server = new grpc.Server()
   server.addService(services.SpanService, {
-    sendSpan: sendSpan
+    sendSpanBatch: sendSpanBatch
   })
   let dataSender
   server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
@@ -150,8 +145,8 @@ test('Should send span', function (t) {
       t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
 
       const callMetadata = getMetadata()
-      t.true(callMetadata.length > 0, 'span stream metadata is collected')
-      t.equal(callMetadata[0].get('servicetype')[0], '1400', 'span stream metadata servicetype is 1400')
+      t.true(callMetadata.length > 0, 'span batch metadata is collected')
+      t.equal(callMetadata[0].get('servicetype')[0], '1400', 'span batch metadata servicetype is 1400')
 
       dataSender.close()
       server.tryShutdown(() => {
@@ -168,7 +163,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
   sendSpanMethodOnDataCallback = null
   const server = new grpc.Server()
   server.addService(services.SpanService, {
-    sendSpan: sendSpan
+    sendSpanBatch: sendSpanBatch
   })
 
   let dataSender
@@ -246,7 +241,7 @@ test('sendSpan', (t) => {
   sendSpanMethodOnDataCallback = null
   const server = new grpc.Server()
   server.addService(services.SpanService, {
-    sendSpan: sendSpan
+    sendSpanBatch: sendSpanBatch
   })
 
   let dataSender

@@ -3,7 +3,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 
 ## [2.0.0] - Unreleased
 ### Added
-- [[#527](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/527)] Pinpoint v4 agent identification, the new default. It requires Collector 4.0; set `collector.protocolVersion` / `PINPOINT_COLLECTOR_PROTOCOL_VERSION` to `v3` for older collectors.
+- [[#527](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/527)] Pinpoint v4 agent identification, the new default. It requires Collector 4.0; set `collector.protocolVersion` / `PINPOINT_PROTOCOL_VERSION` to `v3` for older collectors.
   - `serviceName` / `PINPOINT_SERVICE_NAME` is required
   - The agent ID is always generated; `agentName` defaults to it
   - `applicationName` up to 254 characters
@@ -15,7 +15,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
   - AgentInfo sends the Node.js version as `vmVersion`
 
 ### Changed
-- [[#561](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/561)] Send spans with the unary `SendSpanBatch` RPC; requires Collector 3.1.0 or later. Tune with `collector.spanBatch` / `PINPOINT_COLLECTOR_SPAN_BATCH_SIZE`, `PINPOINT_COLLECTOR_SPAN_BATCH_COLLECT_DEADLINE_MILLIS` and `PINPOINT_COLLECTOR_SPAN_BATCH_MAX_CONCURRENT_REQUESTS`
+- [[#561](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/561)] Send spans with the unary `SendSpanBatch` RPC; requires Collector 3.1.0 or later. Tune with `collector.spanBatch` / `PINPOINT_SPAN_BATCH_SIZE`, `PINPOINT_SPAN_BATCH_DEADLINE_MILLIS` and `PINPOINT_SPAN_BATCH_MAX_REQUESTS`
 - [[#532](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/532)] Require Node.js 20.18.1 or later; Node.js 18 is no longer supported
 
 ### Removed

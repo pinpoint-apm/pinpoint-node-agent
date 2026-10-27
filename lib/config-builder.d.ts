@@ -20,7 +20,7 @@ export class Config {
     getSamplingRate(): number
     getExclusionUrl(): { patterns: string[]; cacheSize?: number }
     getCollector(): { ip: string; spanPort: number; statPort: number; tcpPort: number }
-    getSpanBatch(): { size: number; collectDeadlineMillis: number; maxConcurrentRequests: number }
+    getSpanBatch(): { size: number; deadlineMillis: number; maxRequests: number }
     getDeadlineSeconds(): number
     isSamplingEnabled(): boolean
     getLogLevels(): Record<string, string>

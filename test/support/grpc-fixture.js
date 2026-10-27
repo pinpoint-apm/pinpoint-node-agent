@@ -49,7 +49,7 @@ function beforeSpecificOne(port, one, serviceConfig) {
             'statPort': port,
             'tcpPort': port,
             'spanBatch': {
-                'collectDeadlineMillis': 10,
+                'deadlineMillis': 10,
             },
             'grpcServiceConfig': serviceConfig,
         },

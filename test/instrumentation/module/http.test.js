@@ -8,6 +8,7 @@ const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
 const http = require('node:http')
 const grpc = require('@grpc/grpc-js')
+const spanMessages = require('../../../lib/data/v1/Span_pb')
 const services = require('../../../lib/data/v1/Service_grpc_pb')
 const GrpcDataSenderBuilder = require('../../support/grpc-data-sender-builder')
 const axios = require('axios')
@@ -20,17 +21,15 @@ test('http error status code', (t) => {
     const collectorServer = new grpc.Server()
     let spanOrSpanChunkCallback
     collectorServer.addService(services.SpanService, {
-        sendSpan: (call, callback) => {
-            call.on('data', (data) => {
+        sendSpanBatch: (call, callback) => {
+            call.request.getSpanList().forEach((data) => {
                 let spanOrSpanChunk = data.getSpan()
                 if (!spanOrSpanChunk) {
                     spanOrSpanChunk = data.getSpanchunk()
                 }
                 spanOrSpanChunkCallback?.(spanOrSpanChunk)
             })
-            call.on('end', () => {
-                call.end()
-            })
+            callback(null, new spanMessages.PSpanResultBatch())
         }
     })
 

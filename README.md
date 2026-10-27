@@ -89,7 +89,7 @@ The agent identifies itself to the collector with `v4` by default, the same sche
 
 | | `v4` (default) | `v3` |
 |---|---|---|
-| Collector | 4.0 or later | 2.x or later |
+| Collector | 4.0 or later | 3.1 or later |
 | `protocol.version` gRPC header | `400` | `100` |
 | Agent ID | Always a generated 22-char base64 UUIDv7; `PINPOINT_AGENT_ID` is ignored | `PINPOINT_AGENT_ID` (≤24 chars), or a generated 22-char base64 UUIDv7 if unset |
 | Agent name | Optional, ≤254 chars; defaults to the agent ID | Optional, ≤255 chars; defaults to the agent ID |
@@ -109,6 +109,9 @@ PINPOINT_COLLECTOR_IP | localhost | Collector address, e.g. `192.168.0.1`.
 PINPOINT_COLLECTOR_SPAN_PORT | 9993 | Collector span port.
 PINPOINT_COLLECTOR_STAT_PORT | 9992 | Collector stat port.
 PINPOINT_COLLECTOR_TCP_PORT | 9991 | Collector agent and metadata port.
+PINPOINT_COLLECTOR_SPAN_BATCH_SIZE | 20 | Spans and span chunks sent in one `SendSpanBatch` request.
+PINPOINT_COLLECTOR_SPAN_BATCH_COLLECT_DEADLINE_MILLIS | 500 | How long in ms queued spans wait before they are sent in a batch smaller than the size.
+PINPOINT_COLLECTOR_SPAN_BATCH_MAX_CONCURRENT_REQUESTS | 10 | Max `SendSpanBatch` requests awaiting a response. Batches beyond it wait; when 1000 spans are waiting, the oldest is discarded.
 PINPOINT_COLLECTOR_PROTOCOL_VERSION | v4 | `v4` or `v3` (case-insensitive). See [Agent Identification](#agent-identification-v4-and-v3).
 PINPOINT_ENABLE | true | Set `false` to disable the agent.
 PINPOINT_SAMPLING | true | Set `false` to disable sampling.
@@ -166,7 +169,8 @@ Example `pinpoint-config.json`:
     "statPort": 9992,
     "tcpPort": 9991,
     "deadlineMinutes": 10,
-    "protocolVersion": "v4"
+    "protocolVersion": "v4",
+    "spanBatch": { "size": 20, "collectDeadlineMillis": 500, "maxConcurrentRequests": 10 }
   },
   "sampling": { "enable": true, "rate": 10 },
   "plugins": {
@@ -197,8 +201,10 @@ Example `pinpoint-config.json`:
 Agent Version | Collector 1.x | Collector 2.x | Collector 3.x | Collector 4.0
 ------------- | ------------- | ------------- | ------------- | -------------
 v2.0 with `v4` (default) | no | no | no | yes
-v2.0 with `v3` | no | yes | yes | yes
+v2.0 with `v3` | no | no | 3.1 or later | yes
 v1.4.3 | no | yes | yes | yes
+
+v2.0 sends spans with the unary `SendSpanBatch` RPC, which Collector 3.1.0 and later support. With an older collector, the agent logs a warning once and stops sending spans.
 
 ## Migrating `pinpoint-config.json` to v1.4
 > **If you use environment variables, no migration is needed.**

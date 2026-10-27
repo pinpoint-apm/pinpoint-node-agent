@@ -48,6 +48,9 @@ function beforeSpecificOne(port, one, serviceConfig) {
             'spanPort': port,
             'statPort': port,
             'tcpPort': port,
+            'spanBatch': {
+                'collectDeadlineMillis': 10,
+            },
             'grpcServiceConfig': serviceConfig,
         },
         'features': {
@@ -126,9 +129,9 @@ class DataSourceCallCountable extends GrpcDataSender {
         }
     }
 
-    initializeSpanStream() {
+    initializeSpanBatchSender() {
         if (this.config.sendSpan || this.config.sendSpanChunk) {
-            super.initializeSpanStream()
+            super.initializeSpanBatchSender()
         }
     }
 

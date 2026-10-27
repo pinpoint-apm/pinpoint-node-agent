@@ -4,6 +4,11 @@
         "spanPort": 9993,
         "statPort": 9992,
         "tcpPort": 9991,
+        "spanBatch": {
+            "size": 20,
+            "collectDeadlineMillis": 500,
+            "maxConcurrentRequests": 10
+        },
         "deadlineMinutes": 10
     },
     "sampling": {

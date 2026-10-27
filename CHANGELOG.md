@@ -9,9 +9,11 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
   - `applicationName` up to 254 characters
 
 ### Changed
+- [[#561](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/561)] Send spans with the unary `SendSpanBatch` RPC; requires Collector 3.1.0 or later. Tune with `collector.spanBatch` / `PINPOINT_COLLECTOR_SPAN_BATCH_SIZE`, `PINPOINT_COLLECTOR_SPAN_BATCH_COLLECT_DEADLINE_MILLIS` and `PINPOINT_COLLECTOR_SPAN_BATCH_MAX_CONCURRENT_REQUESTS`
 - [[#532](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/532)] Require Node.js 20.18.1 or later; Node.js 18 is no longer supported
 
 ### Removed
+- [[#561](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/561)] The `SendSpan` gRPC stream
 - [[#531](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/531)] `PINPOINT_SERVICE_TYPE` and json `applicationServiceType`; the application service type is always NODE (1400)
 
 ### Fixed

@@ -64,16 +64,15 @@ class MockGrpcDataSender extends GrpcDataSender {
   initializeMetadataClients() {
   }
 
-  initializeSpanStream() {
+  initializeSpanBatchSender() {
     let self = this
-    this.spanStream = new MockGrpcStream({
-      push: function (span) {
-        self.actualSpans.push(span)
+    this.spanBatchSender = {
+      push: function (spanOrSpanChunk) {
+        self.actualSpans.push(spanOrSpanChunk.toProtocolBuffer())
       },
       end: function () {
-
       }
-    })
+    }
   }
 
   initializeProfilerClients() {

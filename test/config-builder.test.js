@@ -37,6 +37,44 @@ test('deadline config', (t) => {
   t.equal(conf.collector.deadlineMinutes, 10)
 })
 
+test('GC stats are disabled by default', (t) => {
+  const json = require('../lib/pinpoint-config-default.json')
+  const conf = new ConfigBuilder().setDefaultJson(json).build()
+
+  t.equal(conf.isGcStatsEnabled(), false, 'features.gcStats defaults to false')
+  t.end()
+})
+
+test('PINPOINT_FEATURES_GC_STATS=true enables GC stats', (t) => {
+  process.env['PINPOINT_FEATURES_GC_STATS'] = 'true'
+  t.teardown(() => delete process.env.PINPOINT_FEATURES_GC_STATS)
+
+  const json = require('../lib/pinpoint-config-default.json')
+  const conf = new ConfigBuilder().setDefaultJson(json).build()
+
+  t.equal(conf.isGcStatsEnabled(), true, 'features.gcStats is true')
+  t.end()
+})
+
+test('file descriptor stats are disabled by default', (t) => {
+  const json = require('../lib/pinpoint-config-default.json')
+  const conf = new ConfigBuilder().setDefaultJson(json).build()
+
+  t.equal(conf.isFileDescriptorStatsEnabled(), false, 'features.fileDescriptorStats defaults to false')
+  t.end()
+})
+
+test('PINPOINT_FEATURES_FILE_DESCRIPTOR_STATS=true enables file descriptor stats', (t) => {
+  process.env['PINPOINT_FEATURES_FILE_DESCRIPTOR_STATS'] = 'true'
+  t.teardown(() => delete process.env.PINPOINT_FEATURES_FILE_DESCRIPTOR_STATS)
+
+  const json = require('../lib/pinpoint-config-default.json')
+  const conf = new ConfigBuilder().setDefaultJson(json).build()
+
+  t.equal(conf.isFileDescriptorStatsEnabled(), true, 'features.fileDescriptorStats is true')
+  t.end()
+})
+
 test('span batch config defaults to size 20, collect deadline 500 ms and 10 concurrent requests', (t) => {
   const json = require('../lib/pinpoint-config-default.json')
   const conf = new ConfigBuilder().setDefaultJson(json).build()

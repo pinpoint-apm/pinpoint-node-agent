@@ -26,6 +26,8 @@ export class Config {
     getLogLevels(): Record<string, string>
     isDataSendingEnabled(): boolean
     isStatsMonitoringEnabled(): boolean
+    isGcStatsEnabled(): boolean
+    isFileDescriptorStatsEnabled(): boolean
     isContainerEnvironment(): boolean
     getAgentId(): string
     getAgentName(): string

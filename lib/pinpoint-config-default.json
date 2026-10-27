@@ -32,6 +32,8 @@
         "activeThreadCount": true,
         "dataSending": true,
         "statsMonitoring": true,
+        "gcStats": false,
+        "fileDescriptorStats": false,
         "uriStats": {
             "httpMethod": false,
             "capacity": 1000,

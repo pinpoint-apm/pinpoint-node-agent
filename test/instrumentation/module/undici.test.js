@@ -8,6 +8,7 @@
 
 const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
+const { spanMessagesOfCurrentAgent } = require('../../support/collector-span-messages')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../../lib/data/v1/Service_grpc_pb')
 const express = require('express')
@@ -30,7 +31,7 @@ test('shimming require(undici) cause by require-in-the-middle package', function
     let outgoingRequestParentSpanId
     collectorServer.addService(services.SpanService, {
         sendSpanBatch: function (call, callback) {
-            call.request.getSpanList().forEach(function (data) {
+            spanMessagesOfCurrentAgent(call.request).forEach(function (data) {
                 spanCount++
                 t.true(data, 'span.on("data") is not null')
 
@@ -388,7 +389,7 @@ test('shimming udici by global nodejs fetch', function (t) {
     let outgoingRequestParentSpanId
     collectorServer.addService(services.SpanService, {
         sendSpanBatch: function (call, callback) {
-            call.request.getSpanList().forEach(function (data) {
+            spanMessagesOfCurrentAgent(call.request).forEach(function (data) {
                 spanCount++
                 t.true(data, 'span.on("data") is not null')
 

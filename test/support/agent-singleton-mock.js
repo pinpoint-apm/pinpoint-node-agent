@@ -126,6 +126,7 @@ class MockAgent {
 
 
         activeRequestRepository.activeTraceCache.cache.clear()
+        activeRequestRepository.responseTimeCollector.reset()
         transactionIdGenerator.reset()
 
         localStorage.disable()

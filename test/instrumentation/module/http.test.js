@@ -6,6 +6,7 @@
 
 const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
+const { spanMessagesOfCurrentAgent } = require('../../support/collector-span-messages')
 const http = require('node:http')
 const grpc = require('@grpc/grpc-js')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
@@ -22,7 +23,7 @@ test('http error status code', (t) => {
     let spanOrSpanChunkCallback
     collectorServer.addService(services.SpanService, {
         sendSpanBatch: (call, callback) => {
-            call.request.getSpanList().forEach((data) => {
+            spanMessagesOfCurrentAgent(call.request).forEach((data) => {
                 let spanOrSpanChunk = data.getSpan()
                 if (!spanOrSpanChunk) {
                     spanOrSpanChunk = data.getSpanchunk()
@@ -61,34 +62,29 @@ test('http error status code', (t) => {
     })
 
     let actualTrace
-    let callbackCount = 0
     spanOrSpanChunkCallback = (actual) => {
-        callbackCount++
+        const pSpan = actual
+        const actualPTransactionId = pSpan.getTransactionid()
+        const traceRoot = actualTrace.getTraceRoot()
+        t.equal(actualPTransactionId.getAgentid(), traceRoot.getAgentId(), `transactionId agentId should be ${traceRoot.getAgentId()}`)
+        t.equal(actualPTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), `transactionId agentStartTime should be ${traceRoot.getTraceId().getAgentStartTime()}`)
+        t.equal(actualPTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `transactionId should be ${traceRoot.getTraceId().getTransactionId()}`)
+        t.equal(pSpan.getSpanid(), traceRoot.getTraceId().getSpanId(), `spanId should be ${traceRoot.getTraceId().getSpanId()}`)
+        t.equal(pSpan.getParentspanid(), '-1', 'parentSpanId should be -1')
+        t.equal(pSpan.getStarttime(), traceRoot.getTraceStartTime(), `startTime should be ${traceRoot.getTraceStartTime()}`)
 
-        if (callbackCount === 1) {
-            const pSpan = actual
-            const actualPTransactionId = pSpan.getTransactionid()
-            const traceRoot = actualTrace.getTraceRoot()
-            t.equal(actualPTransactionId.getAgentid(), traceRoot.getAgentId(), `transactionId agentId should be ${traceRoot.getAgentId()}`)
-            t.equal(actualPTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), `transactionId agentStartTime should be ${traceRoot.getTraceId().getAgentStartTime()}`)
-            t.equal(actualPTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `transactionId should be ${traceRoot.getTraceId().getTransactionId()}`)
-            t.equal(pSpan.getSpanid(), traceRoot.getTraceId().getSpanId(), `spanId should be ${traceRoot.getTraceId().getSpanId()}`)
-            t.equal(pSpan.getParentspanid(), '-1', 'parentSpanId should be -1')
-            t.equal(pSpan.getStarttime(), traceRoot.getTraceStartTime(), `startTime should be ${traceRoot.getTraceStartTime()}`)
+        const actualSpan = agent.dataSender.getSpan(traceRoot)
+        t.equal(pSpan.getElapsed(), actualSpan.elapsedTime, `elapsedTime should be ${actualSpan.elapsedTime}`)
+        t.equal(pSpan.getApiid(), defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.apiId, `apiId should be ${defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.apiId}`)
+        t.equal(pSpan.getServicetype(), ServiceType.node.code, `serviceType should be ${ServiceType.node.code}`)
 
-            const actualSpan = agent.dataSender.getSpan(traceRoot)
-            t.equal(pSpan.getElapsed(), actualSpan.elapsedTime, `elapsedTime should be ${actualSpan.elapsedTime}`)
-            t.equal(pSpan.getApiid(), defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.apiId, `apiId should be ${defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.apiId}`)
-            t.equal(pSpan.getServicetype(), ServiceType.node.code, `serviceType should be ${ServiceType.node.code}`)
+        const pAcceptEvent = pSpan.getAcceptevent()
+        t.equal(pAcceptEvent.getRpc(), '/', 'rpc should be /')
+        t.equal(pAcceptEvent.getEndpoint(), actualSpan.endPoint, `endpoint should be ${actualSpan.endPoint}`)
+        t.equal(pAcceptEvent.getRemoteaddr(), actualSpan.remoteAddress, `remoteAddress should be ${actualSpan.remoteAddress}`)
 
-            const pAcceptEvent = pSpan.getAcceptevent()
-            t.equal(pAcceptEvent.getRpc(), '/', 'rpc should be /')
-            t.equal(pAcceptEvent.getEndpoint(), actualSpan.endPoint, `endpoint should be ${actualSpan.endPoint}`)
-            t.equal(pAcceptEvent.getRemoteaddr(), actualSpan.remoteAddress, `remoteAddress should be ${actualSpan.remoteAddress}`)
-
-            t.equal(pSpan.getFlag(), 0, 'flag should be 0')
-            t.equal(pSpan.getErr(), 1, 'error should be 1')
-        }
+        t.equal(pSpan.getFlag(), 0, 'flag should be 0')
+        t.equal(pSpan.getErr(), 1, 'error should be 1')
         t.end()
     }
 

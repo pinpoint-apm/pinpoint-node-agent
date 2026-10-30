@@ -6,6 +6,7 @@
 
 const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
+const { spanMessagesOfCurrentAgent } = require('../../support/collector-span-messages')
 const express = require('express')
 const axios = require('axios')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
@@ -56,7 +57,7 @@ const getSpanChunk = (asyncId) => {
 let spanMessageEndEventCallback
 let dataStreamCount = 0
 const spanMessageBatchService = (call, callback) => {
-    call.request.getSpanList().forEach((spanMessage) => {
+    spanMessagesOfCurrentAgent(call.request).forEach((spanMessage) => {
         const spanOrSpanChunk = spanMessage.getSpan() ?? spanMessage.getSpanchunk()
         const spanOrSpanChunks = getSpanOrSpanChunks()
         spanOrSpanChunks.push(spanOrSpanChunk)

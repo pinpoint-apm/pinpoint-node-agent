@@ -494,6 +494,28 @@ test('Next.js: application service type is NODE 1400 even with PINPOINT_SERVICE_
     t.end()
 })
 
+test('Next.js: AgentStat sends the transaction count and response time of completed requests', async (t) => {
+    try {
+        receivedStats = []
+        await waitForAgentStats(1, 15000)
+        receivedStats = []
+
+        await fetch('http://127.0.0.1:3000/api/custom-uri')
+        await fetch('http://127.0.0.1:3000/api/custom-uri')
+        await fetch('http://127.0.0.1:3000/api/custom-uri')
+
+        // A stat collected before the requests can arrive after them, so wait for the count instead of the next stat
+        const agentStats = await waitForAgentStats(1, 15000, (stats) => sumOfSampledCount(stats) >= 3)
+
+        // In the full suite the test process's instrumented fetch can send a Pinpoint trace header, so the requests count as continuations
+        t.equal(sumOfSampledCount(agentStats), 3, 'PTransaction.sampledNewCount + sampledContinuationCount is 3 requests')
+        t.ok(agentStats.some(agentStat => agentStat.getResponsetime().getMax() > 0), 'PResponseTime.max is greater than 0')
+    } catch (err) {
+        t.fail(err.message)
+    }
+    t.end()
+})
+
 test('teardown', async (t) => {
     if (nextServerProcess) {
         nextServerProcess.kill()
@@ -538,6 +560,30 @@ function waitForSpan(predicate, timeoutMs = 5000) {
         }
         check()
     })
+}
+
+function waitForAgentStats(count, timeoutMs, predicate = () => true) {
+    const started = Date.now()
+    return new Promise((resolve, reject) => {
+        const check = () => {
+            const agentStats = receivedStats.map(stat => stat.getAgentstat()).filter(Boolean)
+            if (agentStats.length >= count && predicate(agentStats)) {
+                return resolve(agentStats)
+            }
+            if (Date.now() - started > timeoutMs) {
+                return reject(new Error('Timed out waiting for AgentStat'))
+            }
+            setTimeout(check, 50)
+        }
+        check()
+    })
+}
+
+function sumOfSampledCount(agentStats) {
+    return agentStats.reduce((sum, agentStat) => {
+        const transaction = agentStat.getTransaction()
+        return sum + transaction.getSamplednewcount() + transaction.getSampledcontinuationcount()
+    }, 0)
 }
 
 function getCollectedUriStats() {

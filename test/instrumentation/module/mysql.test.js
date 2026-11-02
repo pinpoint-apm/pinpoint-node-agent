@@ -563,15 +563,17 @@ test('Fix wrong transactionId', (t) => {
         res.send('ok')
     })
 
-    let apiCallCount = 0
+    // Each /test1 calls /api after its MySQL queries, so the /api calls can arrive in either order
+    const apiTransactionIds = []
     app.get('/api', function (req, res) {
         agent.callbackTraceClose((trace) => {
             t.true(!(trace instanceof DisableTrace), 'trace is not DisableTrace')
             t.equal(req.headers['pinpoint-traceid'].split('^')[2], trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `req.headers['pinpoint-traceid'] ${req.headers['pinpoint-traceid'].split('^')[2]}`)
-            t.equal(trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), actualTraces[apiCallCount].spanBuilder.traceRoot.getTransactionId(), `traceRoot.transactionId index ${apiCallCount} is ${trace.spanBuilder.traceRoot.getTraceId().getTransactionId()}`)
 
-            apiCallCount++
-            if (apiCallCount == 2) {
+            apiTransactionIds.push(trace.spanBuilder.traceRoot.getTraceId().getTransactionId())
+            if (apiTransactionIds.length == 2) {
+                const callerTransactionIds = actualTraces.map(trace => trace.spanBuilder.traceRoot.getTransactionId())
+                t.deepEqual(apiTransactionIds.sort(), callerTransactionIds.sort(), `each /api transactionId is the transactionId of one /test1: ${callerTransactionIds}`)
                 t.end()
             }
         })

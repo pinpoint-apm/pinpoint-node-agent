@@ -13,6 +13,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
   - System CPU is no longer 0
   - Open File Descriptor on Linux; opt in with `features.fileDescriptorStats` / `PINPOINT_FEATURES_FILE_DESCRIPTOR_STATS` set to `true`
   - AgentInfo sends the Node.js version as `vmVersion`
+- [[#576](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/576)] Inspector Transactions Per Second and Response Time charts
 
 ### Changed
 - [[#561](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/561)] Send spans with the unary `SendSpanBatch` RPC; requires Collector 3.1.0 or later. Tune with `collector.spanBatch` / `PINPOINT_SPAN_BATCH_SIZE`, `PINPOINT_SPAN_BATCH_DEADLINE_MILLIS` and `PINPOINT_SPAN_BATCH_MAX_REQUESTS`

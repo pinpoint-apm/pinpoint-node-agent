@@ -17,6 +17,8 @@ const grpc = require('@grpc/grpc-js')
 const services = require('../../../lib/data/v1/Service_grpc_pb')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
 const GrpcDataSenderBuilder = require('../../support/grpc-data-sender-builder')
+const { beforeSpecificOne, StatOnlyFunctionalTestableDataSource, waitForAgentStat } = require('../../support/grpc-fixture')
+const AgentStatsMonitor = require('../../../lib/metric/agent-stats-monitor')
 const http = require('http')
 const https = require('https')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
@@ -849,5 +851,58 @@ test('Koa: application service type is NODE 1400 even with PINPOINT_SERVICE_TYPE
       server.close()
       t.end()
     }
+  })
+})
+
+test('Koa: AgentStat sends the transaction count and response time of completed requests', (t) => {
+  const collectorServer = new grpc.Server()
+  const receivedAgentStats = []
+  collectorServer.addService(services.StatService, {
+    sendAgentStat: (call) => {
+      call.on('data', (statMessage) => {
+        if (statMessage.getAgentstat()) {
+          receivedAgentStats.push(statMessage.getAgentstat())
+        }
+      })
+      call.on('end', () => call.end())
+    }
+  })
+
+  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+    const grpcDataSender = beforeSpecificOne(port, StatOnlyFunctionalTestableDataSource)
+    agent.bindHttp(grpcDataSender)
+    const agentStatsMonitor = new AgentStatsMonitor(grpcDataSender, agent.getConfig().getAgentId(), agent.agentStartTime)
+
+    const app = new Koa()
+    const router = new Router()
+    router.get('/tps', async (ctx) => {
+      await new Promise(resolve => setTimeout(resolve, 10))
+      ctx.body = 'ok'
+    })
+    app.use(router.routes())
+
+    const server = app.listen(TEST_ENV.port, async () => {
+      try {
+        await axios.get(getServerUrl('/tps'), { httpAgent: new http.Agent({ keepAlive: false }) })
+        await axios.get(getServerUrl('/tps'), { httpAgent: new http.Agent({ keepAlive: false }) })
+        await axios.get(getServerUrl('/tps'), { httpAgent: new http.Agent({ keepAlive: false }) })
+
+        agentStatsMonitor.send()
+        const pAgentStat = await waitForAgentStat(receivedAgentStats)
+
+        t.equal(pAgentStat.getTransaction().getSamplednewcount(), 3, 'PTransaction.sampledNewCount is 3 requests')
+        t.ok(pAgentStat.getResponsetime().getMax() > 0, 'PResponseTime.max is greater than 0')
+        t.ok(pAgentStat.getCollectinterval() > 0, 'collectInterval is the time since the AgentStatsMonitor was created')
+      } catch (error) {
+        t.fail(error.stack)
+      } finally {
+        agentStatsMonitor.shutdown()
+        server.close(() => {
+          grpcDataSender.close()
+          collectorServer.forceShutdown()
+          t.end()
+        })
+      }
+    })
   })
 })

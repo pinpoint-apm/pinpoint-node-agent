@@ -126,6 +126,7 @@ class MockAgent {
 
 
         activeRequestRepository.activeTraceCache.cache.clear()
+        resetResponseTimeCollector(activeRequestRepository.responseTimeCollector)
         transactionIdGenerator.reset()
 
         localStorage.disable()
@@ -283,6 +284,17 @@ class MockAgent {
     getSpanEventByAsyncId(asyncId) {
         return getSpanEventByAsyncId(asyncId)
     }
+}
+
+function resetResponseTimeCollector(responseTimeCollector) {
+    if (typeof responseTimeCollector.reset !== 'function') {
+        responseTimeCollector.reset = function () {
+            this.totalTime = 0
+            this.count = 0
+            this.max = 0
+        }
+    }
+    responseTimeCollector.reset()
 }
 
 // ref: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/setPrototypeOf

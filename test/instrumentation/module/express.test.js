@@ -7,6 +7,7 @@
 const test = require('tape')
 const axios = require('axios')
 const agent = require('../../support/agent-singleton-mock')
+const { spanMessagesOfCurrentAgent } = require('../../support/collector-span-messages')
 const express = require('express')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
@@ -19,7 +20,8 @@ const grpc = require('@grpc/grpc-js')
 const services = require('../../../lib/data/v1/Service_grpc_pb')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
 const GrpcDataSenderBuilder = require('../../support/grpc-data-sender-builder')
-const { beforeSpecificOne, DataSourceCallCountable } = require('../../support/grpc-fixture')
+const { beforeSpecificOne, DataSourceCallCountable, StatOnlyFunctionalTestableDataSource, waitForAgentStat } = require('../../support/grpc-fixture')
+const AgentStatsMonitor = require('../../../lib/metric/agent-stats-monitor')
 const { ConfigBuilder } = require('../../../lib/config-builder')
 const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
 const { UriStatsMonitor } = require('../../../lib/metric/uri/uri-stats-monitor')
@@ -1529,7 +1531,7 @@ test('Functional Test: SendSpan with success and failure', (t) => {
 
   collectorServer.addService(services.SpanService, {
     sendSpanBatch: (call, callback) => {
-      call.request.getSpanList().forEach((spanMessage) => {
+      spanMessagesOfCurrentAgent(call.request).forEach((spanMessage) => {
         receivedSpans.push(spanMessage)
       })
       callback(null, new spanMessages.PSpanResultBatch())
@@ -2019,5 +2021,56 @@ test('Express: application service type is NODE 1400 even with PINPOINT_SERVICE_
       server.close()
       t.end()
     }
+  })
+})
+
+test('Express: AgentStat sends the transaction count and response time of completed requests', (t) => {
+  const collectorServer = new grpc.Server()
+  const receivedAgentStats = []
+  collectorServer.addService(services.StatService, {
+    sendAgentStat: (call) => {
+      call.on('data', (statMessage) => {
+        if (statMessage.getAgentstat()) {
+          receivedAgentStats.push(statMessage.getAgentstat())
+        }
+      })
+      call.on('end', () => call.end())
+    }
+  })
+
+  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+    const grpcDataSender = beforeSpecificOne(port, StatOnlyFunctionalTestableDataSource)
+    agent.bindHttp(grpcDataSender)
+    const agentStatsMonitor = new AgentStatsMonitor(grpcDataSender, agent.getConfig().getAgentId(), agent.agentStartTime)
+
+    const app = new express()
+    app.get('/tps', async (req, res) => {
+      await new Promise(resolve => setTimeout(resolve, 10))
+      res.send('ok')
+    })
+
+    const server = app.listen(TEST_ENV.port, async () => {
+      try {
+        await axios.get(getServerUrl('/tps'), { httpAgent: new http.Agent({ keepAlive: false }) })
+        await axios.get(getServerUrl('/tps'), { httpAgent: new http.Agent({ keepAlive: false }) })
+        await axios.get(getServerUrl('/tps'), { httpAgent: new http.Agent({ keepAlive: false }) })
+
+        agentStatsMonitor.send()
+        const pAgentStat = await waitForAgentStat(receivedAgentStats)
+
+        t.equal(pAgentStat.getTransaction().getSamplednewcount(), 3, 'PTransaction.sampledNewCount is 3 requests')
+        t.ok(pAgentStat.getResponsetime().getMax() > 0, 'PResponseTime.max is greater than 0')
+        t.ok(pAgentStat.getCollectinterval() > 0, 'collectInterval is the time since the AgentStatsMonitor was created')
+      } catch (error) {
+        t.fail(error.stack)
+      } finally {
+        agentStatsMonitor.shutdown()
+        server.close(() => {
+          grpcDataSender.close()
+          collectorServer.forceShutdown()
+          t.end()
+        })
+      }
+    })
   })
 })

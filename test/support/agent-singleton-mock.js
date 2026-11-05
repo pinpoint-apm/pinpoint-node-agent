@@ -20,7 +20,7 @@ const stringMetaService = require('../../lib/context/string-meta-service')
 const apiMetaService = require('../../lib/context/api-meta-service')
 const activeRequestRepository = require('../../lib/metric/active-request-repository')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
-const { AgentBuilder } = require('../../lib/agent-builder')
+const { ProcessAgentBuilder } = require('./process-agent-builder')
 const { ConfigBuilder } = require('../../lib/config-builder')
 const { UriStatsRepositoryBuilder } = require('../../lib/metric/uri/uri-stats-repository')
 const { UriStatsConfigBuilder } = require('../../lib/metric/uri/uri-stats-config-builder')
@@ -88,17 +88,10 @@ function portProperties(conf) {
     return Object.assign({ collector: collectorConf })
 }
 
-const config = new ConfigBuilder({
-        collector: {
-            spanPort: -1,
-            statPort: -1,
-            tcpPort: -1
-        }
-    })
-    .setDefaultJson(require('../pinpoint-config-test.json'))
-    .build()
+const agentBuilder = new ProcessAgentBuilder({ collector: { spanPort: -1, statPort: -1, tcpPort: -1 } })
+const config = agentBuilder.config
 const initialUriStatsConfig = new UriStatsConfigBuilder(config).build()
-const agentBuilder = new AgentBuilder(config)
+agentBuilder
     .setDataSender(dataSenderMock(config))
     .disablePingScheduler()
     .disableStatsScheduler()

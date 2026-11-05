@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [1.4.5] - 2026-11-05
+### Fixed
+- [[#588](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/588)] Do not throw when recording an exception with error analysis disabled
+
 ## [1.4.4] - 2026-10-21
 ### Security
 - [[#543](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/543)] Bump `@grpc/grpc-js` to `^1.14.5` to address CVE-2026-101916 and CVE-2026-101915, and refresh `protobufjs` to address CVE-2026-59877

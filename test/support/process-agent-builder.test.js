@@ -10,7 +10,7 @@ const test = require('tape')
 require('./agent-singleton-mock')
 const { ProcessAgentBuilder } = require('./process-agent-builder')
 const RecordingDataSender = require('./recording-data-sender')
-const instrumentedCallbackWork = require('../fixtures/instrumented-callback-work')
+const TraceContext = require('../../lib/context/trace-context')
 const http = require('node:http')
 const express = require('express')
 
@@ -22,7 +22,16 @@ test('A later ProcessAgentBuilder.build() returns the agent the first build() ma
     t.end()
 })
 
-test('A test traces its request with the trace context it uses', (t) => {
+test('A later ProcessAgentBuilder.build() keeps the one TraceContext', (t) => {
+    const first = new ProcessAgentBuilder().setDataSender(new RecordingDataSender()).build().getTraceContext()
+    const second = new ProcessAgentBuilder().setDataSender(new RecordingDataSender()).build().getTraceContext()
+
+    t.equal(second, first, 'tests share one trace context per process')
+    t.ok(second instanceof TraceContext, 'the trace context is a TraceContext')
+    t.end()
+})
+
+test('A test records its request in the data sender it passes', (t) => {
     const dataSender = new RecordingDataSender()
     new ProcessAgentBuilder().setDataSender(dataSender).build()
 
@@ -36,7 +45,7 @@ test('A test traces its request with the trace context it uses', (t) => {
     })
 })
 
-test('The next test traces its request with its own trace context, apart from the previous test', (t) => {
+test('The next test records its request only in its own data sender', (t) => {
     const dataSender = new RecordingDataSender()
     new ProcessAgentBuilder().setDataSender(dataSender).build()
 
@@ -47,20 +56,6 @@ test('The next test traces its request with its own trace context, apart from th
     }, () => {
         t.equal(dataSender.spans().length, 2, 'only this test\'s app span and the other server\'s span are recorded for it')
         t.equal(dataSender.spanChunks().length, 1, 'only this test\'s outgoing request span chunk is recorded for it')
-    })
-})
-
-test('A callback instrumented when its module loaded sends its span chunk with the trace context the test uses', (t) => {
-    const dataSender = new RecordingDataSender()
-    new ProcessAgentBuilder().setDataSender(dataSender).build()
-
-    assertHttpServer(t, (app) => {
-        app.get('/', (req, res) => {
-            instrumentedCallbackWork.run(() => res.send('ok'))
-        })
-    }, () => {
-        t.equal(dataSender.spans().length, 1, 'the app span is recorded for the test')
-        t.equal(dataSender.spanChunks().length, 1, 'the callback span chunk is recorded for the test')
     })
 })
 

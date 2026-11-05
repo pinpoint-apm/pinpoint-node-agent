@@ -16,7 +16,6 @@ const { SqlStatsConfigBuilder } = require('../../lib/metric/sql/sql-stats-config
 const TraceSampler = require('../../lib/context/trace/trace-sampler')
 const transactionIdGenerator = require('../../lib/context/sequence-generators').transactionIdGenerator
 const closedTraceWrapped = Symbol('closedTraceWrapped')
-const stringMetaService = require('../../lib/context/string-meta-service')
 const apiMetaService = require('../../lib/context/api-meta-service')
 const activeRequestRepository = require('../../lib/metric/active-request-repository')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
@@ -136,15 +135,11 @@ class MockAgent {
         const spanEventEnricher = errorAnalysisConfig.isErrorAnalysisEnabled() ? new ExceptionEnricher(errorAnalysisConfig) : exceptionEnricherNullObject
 
         const dataSender = dataSenderMock(this.config, grpcDataSender, this.agentStartTime)
-        this.traceContext.dataSender = dataSender
+        new ProcessAgentBuilder().setDataSender(dataSender).build()
         const sqlStatsConfig = new SqlStatsConfigBuilder(config).build()
         const parsingResultFactory = sqlStatsConfig.isSqlStatsEnabled() ? new UidParsingResultFactory() : new IntIdParsingResultFactory()
-        const sqlMetadataService = new SqlMetadataService(dataSender, parsingResultFactory)
+        const sqlMetadataService = new SqlMetadataService(agent.dataSender, parsingResultFactory)
         this.traceContext.spanEventRecorderFactory = new SpanEventRecorderFactory(sqlMetadataService, spanEventEnricher)
-        this.dataSender.close()
-        this.dataSender = dataSender
-        stringMetaService.init(dataSender)
-        apiMetaService.init(dataSender)
 
         resetTraces()
         const findSpanEvents = function () {

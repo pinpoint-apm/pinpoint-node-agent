@@ -28,6 +28,8 @@ const { UriStatsMonitor } = require('../../../lib/metric/uri/uri-stats-monitor')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 const { FixturesUpstreamHeader } = require('../../support/fixtures-upstream-header')
 const { receiverTypeNameOfFunctionMethod } = require('../../support/stack-frame')
+const { ProcessAgentBuilder } = require('../../support/process-agent-builder')
+const RecordingDataSender = require('../../support/recording-data-sender')
 const { startLocalHttpsServer } = require('../../support/local-https-server')
 
 const TEST_ENV = {
@@ -1028,6 +1030,35 @@ test('express should not collect ExceptionMetaData when errorAnalysis is disable
       validateStatus: () => true,
       httpAgent: new http.Agent({ keepAlive: false }),
       httpsAgent: new https.Agent({ keepAlive: false }),
+    })
+  })
+})
+
+test('express with error analysis disabled responds to a throwing handler and records its span', (t) => {
+  const dataSender = new RecordingDataSender()
+  new ProcessAgentBuilder().setDataSender(dataSender).build()
+
+  const app = new express()
+  app.get('/error-analysis-disabled/throw', () => {
+    throw new Error('express error analysis disabled')
+  })
+  app.use((err, req, res, next) => {
+    res.status(500).send('error')
+  })
+
+  const server = app.listen(0, () => {
+    http.get({ port: server.address().port, path: '/error-analysis-disabled/throw' }, (response) => {
+      response.resume()
+      response.on('end', () => setImmediate(() => {
+        t.equal(response.statusCode, 500, 'the error middleware responds 500')
+        t.equal(dataSender.spans().length, 1, 'the span is sent')
+        const span = dataSender.spans()[0]
+        t.equal(span.traceRoot.getShared().getErrorCode(), 1, 'the span is marked as error')
+        t.ok(span.spanEventList.find(spanEvent => spanEvent.exceptionInfo), 'the error middleware span event records the exception info')
+        t.equal(dataSender.exceptionMetaData().length, 0, 'no exception meta data is sent')
+        server.close()
+        t.end()
+      }))
     })
   })
 })

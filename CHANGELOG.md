@@ -26,6 +26,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 ### Fixed
 - [[#537](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/537)] Do not mark a client disconnect before the response ends as an error (errorCode 1); restores the 1.3.x behavior ([Thanks @chanmo-kim](https://github.com/chanmo-kim))
 - [[#544](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/544)] Trace `mysql2/promise` `createConnection`, `createPool` and `createPoolCluster` on mysql2 3.11.5 and later
+- [[#581](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/581)] Do not throw when recording an exception with error analysis disabled
 
 ### Security
 - [[#528](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/528)] Bump `@grpc/grpc-js` to `^1.14.6` to resolve **CVE-2026-101916** and **CVE-2026-101915**, and the transitive `protobufjs` to `7.6.6` to resolve **CVE-2026-59877**

@@ -18,6 +18,7 @@ const services = require('../../../lib/data/v1/Service_grpc_pb')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
 const GrpcDataSenderBuilder = require('../../client/grpc-data-sender-builder')
 const http = require('http')
+const { AgentBuilder } = require('../../../lib/agent-builder')
 const https = require('https')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 
@@ -419,6 +420,47 @@ test('Should aggregate URI stats for DisableTrace in Koa', function (t) {
       server.close()
       t.end()
     }
+  })
+})
+
+// The agent built without an exception enricher is how index.js builds it with error analysis disabled
+test('Koa with error analysis disabled responds to a throwing route and records its span', function (t) {
+  agent.bindHttp()
+  const agentWithoutEnricher = new AgentBuilder(agent.agentInfo)
+    .setConfig(agent.config)
+    .setDataSender(agent.dataSender)
+    .disablePingScheduler()
+    .disableStatsScheduler()
+    .build()
+  agent.traceContext.spanEventRecorderFactory = agentWithoutEnricher.traceContext.spanEventRecorderFactory
+
+  const routeError = new Error('koa error analysis disabled')
+  const app = new Koa()
+  const router = new Router()
+  router.get('/error-analysis-disabled/throw', async () => {
+    throw routeError
+  })
+  app.use(router.routes()).use(router.allowedMethods())
+  let emittedError
+  app.on('error', (error) => {
+    emittedError = error
+  })
+
+  const server = app.listen(0, () => {
+    http.get({ port: server.address().port, path: '/error-analysis-disabled/throw' }, (response) => {
+      response.resume()
+      response.on('end', () => setImmediate(() => {
+        t.equal(response.statusCode, 500, 'Koa responds 500')
+        t.equal(emittedError, routeError, 'Koa emits the error the route threw')
+        t.equal(agent.dataSender.mockSpans.length, 1, 'the span is sent')
+        const span = agent.dataSender.mockSpans[0]
+        t.equal(span.traceRoot.getShared().getErrorCode(), 1, 'the span is marked as error')
+        t.ok(span.spanEventList.find(spanEvent => spanEvent.exceptionInfo), 'the route span event records the exception info')
+        t.equal(agent.dataSender.dataSender.actualExceptionMetaData, undefined, 'no exception meta data is sent')
+        server.close()
+        t.end()
+      }))
+    })
   })
 })
 

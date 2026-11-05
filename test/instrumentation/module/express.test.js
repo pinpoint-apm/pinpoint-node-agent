@@ -14,6 +14,7 @@ const semver = require('semver')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const DisableTrace = require('../../../lib/context/disable-trace')
 const http = require('http')
+const { AgentBuilder } = require('../../../lib/agent-builder')
 const https = require('https')
 const { getTransactionId, getDisabledId } = require('../../../lib/context/trace/id-generator')
 const grpc = require('@grpc/grpc-js')
@@ -991,6 +992,42 @@ test('express should record handler registered with pattern route', (t) => {
   const server = app.listen(TEST_ENV.port, async () => {
     const result = await axios.get(getServerUrl('/users/42/books/abc'))
     t.equal(result.status, 200, 'pattern route responds 200')
+  })
+})
+
+// The agent built without an exception enricher is how index.js builds it with error analysis disabled
+test('express with error analysis disabled responds to a throwing handler and records its span', (t) => {
+  agent.bindHttp()
+  const agentWithoutEnricher = new AgentBuilder(agent.agentInfo)
+    .setConfig(agent.config)
+    .setDataSender(agent.dataSender)
+    .disablePingScheduler()
+    .disableStatsScheduler()
+    .build()
+  agent.traceContext.spanEventRecorderFactory = agentWithoutEnricher.traceContext.spanEventRecorderFactory
+
+  const app = new express()
+  app.get('/error-analysis-disabled/throw', () => {
+    throw new Error('express error analysis disabled')
+  })
+  app.use((err, req, res, next) => {
+    res.status(500).send('error')
+  })
+
+  const server = app.listen(0, () => {
+    http.get({ port: server.address().port, path: '/error-analysis-disabled/throw' }, (response) => {
+      response.resume()
+      response.on('end', () => setImmediate(() => {
+        t.equal(response.statusCode, 500, 'the error middleware responds 500')
+        t.equal(agent.dataSender.mockSpans.length, 1, 'the span is sent')
+        const span = agent.dataSender.mockSpans[0]
+        t.equal(span.traceRoot.getShared().getErrorCode(), 1, 'the span is marked as error')
+        t.ok(span.spanEventList.find(spanEvent => spanEvent.exceptionInfo), 'the error middleware span event records the exception info')
+        t.equal(agent.dataSender.dataSender.actualExceptionMetaData, undefined, 'no exception meta data is sent')
+        server.close()
+        t.end()
+      }))
+    })
   })
 })
 

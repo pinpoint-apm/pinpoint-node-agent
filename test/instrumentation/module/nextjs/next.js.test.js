@@ -445,6 +445,48 @@ test('client disconnect before the /api/client-disconnect response should not re
     t.end()
 })
 
+test('Next.js with error analysis disabled responds to a throwing API route and records its span', async (t) => {
+    const { spawn } = require('child_process')
+    const nextServer = spawn(
+        path.normalize('./node_modules/.bin/next'),
+        ['start', '-H', '127.0.0.1', '-p', '3001'],
+        {
+            cwd: testAppDir,
+            env: Object.assign({}, process.env, {
+                NODE_OPTIONS: '-r ../../../../../index.js',
+                NODE_ENV: 'production',
+                NEXT_TELEMETRY_DISABLED: '1',
+                PINPOINT_APPLICATION_NAME: 'next.js.error-disabled',
+                PINPOINT_COLLECTOR_IP: '127.0.0.1',
+                PINPOINT_COLLECTOR_SPAN_PORT: String(spanCollectorPort),
+                PINPOINT_COLLECTOR_STAT_PORT: String(spanCollectorPort),
+                PINPOINT_COLLECTOR_TCP_PORT: String(spanCollectorPort),
+                PINPOINT_SAMPLING_RATE: '1',
+                PINPOINT_FEATURES_ERROR_ANALYSIS: 'false',
+            }),
+        }
+    )
+    t.teardown(() => nextServer.kill())
+    nextServer.stderr.on('data', (data) => {
+        t.comment('next server stderr: ' + formatForTComment(data))
+    })
+    receivedSpans = []
+    try {
+        await new Promise((resolve, reject) => {
+            waitForNextServerReady(nextServer, (error) => error ? reject(error) : resolve())
+        })
+
+        const response = await fetch('http://127.0.0.1:3001/api/throw')
+        t.equal(response.status, 500, '/api/throw responds 500')
+
+        const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/throw'), 10000)
+        t.equal(span.getErr(), 1, 'the span is marked as error')
+    } catch (err) {
+        t.fail(err.message)
+    }
+    t.end()
+})
+
 test('teardown', async (t) => {
     if (nextServerProcess) {
         nextServerProcess.kill()

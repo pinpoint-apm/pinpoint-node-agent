@@ -154,7 +154,7 @@ test('sendAgentInfo deadline and metadata', retryTestTimeout, (t) => {
         }
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = grpcDataSenderOf(port)
+        const grpcDataSender = buildGrpcDataSender(port)
 
         const agentInfo = Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
             hostname: 'hostname',
@@ -215,7 +215,7 @@ test('sendAgentInfo deadline and no agent name metadata', retryTestTimeout, (t) 
         }
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = grpcDataSenderOf(port)
+        const grpcDataSender = buildGrpcDataSender(port)
 
         grpcDataSender.sendAgentInfo(Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
             hostname: 'hostname',
@@ -274,7 +274,7 @@ test('sendApiMetaInfo deadline', retryTestTimeout, (t) => {
         requestApiMetaData: requestApiMetaData
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = grpcDataSenderOf(port)
+        const grpcDataSender = buildGrpcDataSender(port)
 
         grpcDataSender.sendApiMetaInfo(Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
             hostname: 'hostname',
@@ -330,7 +330,7 @@ test('sendStringMetaInfo deadline', retryTestTimeout, (t) => {
         requestStringMetaData: requestStringMetaData
     })
     server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = grpcDataSenderOf(port)
+        const grpcDataSender = buildGrpcDataSender(port)
         grpcDataSender.sendStringMetaInfo(Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
             hostname: 'hostname',
             "serviceType": 1400,
@@ -362,7 +362,7 @@ test('sendStringMetaInfo deadline', retryTestTimeout, (t) => {
     })
 })
 
-function grpcDataSenderOf(port) {
+function buildGrpcDataSender(port) {
     const collector = Object.assign({}, agent.getConfig().collector, { ip: 'localhost', spanPort: port, statPort: port, tcpPort: port })
     const config = new ConfigBuilder(Object.assign({}, agent.getConfig(), { collector })).build()
     return new GrpcDataSender(config, [makeClientHeaderInterceptor(ClientHeader.make(agent.agentStartTime, agent.getConfig()))])

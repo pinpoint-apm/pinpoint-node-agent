@@ -23,6 +23,8 @@ const http = require('http')
 const https = require('https')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 const { FixturesUpstreamHeader } = require('../../support/fixtures-upstream-header')
+const { ProcessAgentBuilder } = require('../../support/process-agent-builder')
+const RecordingDataSender = require('../../support/recording-data-sender')
 
 
 const TEST_ENV = {
@@ -469,6 +471,40 @@ test('Should not collect ExceptionMetaData when errorAnalysis is disabled in Koa
       server.close()
       t.end()
     }
+  })
+})
+
+test('Koa with error analysis disabled responds to a throwing route and records its span', function (t) {
+  const dataSender = new RecordingDataSender()
+  new ProcessAgentBuilder().setDataSender(dataSender).build()
+
+  const routeError = new Error('koa error analysis disabled')
+  const app = new Koa()
+  const router = new Router()
+  router.get('/error-analysis-disabled/throw', async () => {
+    throw routeError
+  })
+  app.use(router.routes()).use(router.allowedMethods())
+  let emittedError
+  app.on('error', (error) => {
+    emittedError = error
+  })
+
+  const server = app.listen(0, () => {
+    http.get({ port: server.address().port, path: '/error-analysis-disabled/throw' }, (response) => {
+      response.resume()
+      response.on('end', () => setImmediate(() => {
+        t.equal(response.statusCode, 500, 'Koa responds 500')
+        t.equal(emittedError, routeError, 'Koa emits the error the route threw')
+        t.equal(dataSender.spans().length, 1, 'the span is sent')
+        const span = dataSender.spans()[0]
+        t.equal(span.traceRoot.getShared().getErrorCode(), 1, 'the span is marked as error')
+        t.ok(span.spanEventList.find(spanEvent => spanEvent.exceptionInfo), 'the route span event records the exception info')
+        t.equal(dataSender.exceptionMetaData().length, 0, 'no exception meta data is sent')
+        server.close()
+        t.end()
+      }))
+    })
   })
 })
 

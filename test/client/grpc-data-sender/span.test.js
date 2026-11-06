@@ -6,10 +6,8 @@
 
 const test = require('tape')
 const AsyncId = require('../../../lib/context/async-id')
-const grpc = require('@grpc/grpc-js')
-const services = require('../../../lib/data/v1/Service_grpc_pb')
-const { beforeSpecificOne, afterOne, getCallRequests, getMetadata, SpanOnlyFunctionalTestableDataSource } = require('../../support/grpc-data-sources')
-const agent = require('../../support/agent-singleton-mock')
+const { TestGrpcDataSenderBuilder, SpanAdaptor } = require('../../support/test-grpc-data-sender')
+const { ProcessAgentBuilder } = require('../../support/process-agent-builder')
 const RemoteTraceRootBuilder = require('../../../lib/context/remote-trace-root-builder')
 const SpanBuilder = require('../../../lib/context/span-builder')
 const AsyncSpanChunkBuilder = require('../../../lib/context/trace/async-span-chunk-builder')
@@ -21,296 +19,253 @@ const Trace = require('../../../lib/context/trace/trace')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const RecordingDataSender = require('../../support/recording-data-sender')
 const DataSender = require('../../../lib/client/data-sender')
-const spanMessages = require('../../../lib/data/v1/Span_pb')
 const SpanEventRecorderFactory = require('../../../lib/context/trace/span-event-recorder-factory')
 const SpanRecorder = require('../../../lib/context/trace/span-recorder')
 
-let sendSpanMethodOnDataCallback
-function sendSpanBatch(call, callback) {
-  const callMetadata = getMetadata()
-  callMetadata.push(call.metadata)
-  call.request.getSpanList().forEach(function (spanMessage) {
-    let spanOrChunk = spanMessage.getSpan()
-    if (!spanOrChunk) {
-      spanOrChunk = spanMessage.getSpanchunk()
-    }
-    const callRequests = getCallRequests()
-    callRequests.push(spanOrChunk)
-    sendSpanMethodOnDataCallback?.(spanOrChunk)
-  })
-  callback(null, new spanMessages.PSpanResultBatch())
-}
-
-test('Should send span', function (t) {
-  agent.bindHttp()
-  sendSpanMethodOnDataCallback = null
-
-  const server = new grpc.Server()
-  server.addService(services.SpanService, {
-    sendSpanBatch: sendSpanBatch
-  })
-  let dataSender
-  server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-    const grpcDataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
-    const traceRoot = new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '5').build()
-    dataSender = new RecordingDataSender(new DataSender(agent.getConfig(), grpcDataSender))
-    const spanBuilder = new SpanBuilder(traceRoot)
-    spanBuilder.setServiceType(1400)
-    spanBuilder.setEndPoint('localhost:3000')
-    spanBuilder.setRemoteAddress('::1')
-    spanBuilder.markAfterTime()
-    spanBuilder.setApiId(1)
-    spanBuilder.setRpc('/')
-    spanBuilder.setApplicationServiceType(1400)
-    const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
-    const repository = new SpanRepository(spanChunkBuilder, dataSender)
-    const spanRecorder = new SpanRecorder(spanBuilder, agent.getConfig())
-    const trace = new Trace(spanBuilder, repository, spanRecorder, new SpanEventRecorderFactory())
-
-    const spanEventRecorder = trace.traceBlockBegin()
-    spanEventRecorder.spanEventBuilder.setSequence(10)
-    spanEventRecorder.spanEventBuilder.setDepth(1)
-    spanEventRecorder.recordApiDesc('http.request')
-    spanEventRecorder.spanEventBuilder.startTime = spanBuilder.startTime + 72
-    spanEventRecorder.recordServiceType(serviceType.asyncHttpClientInternal)
-
-    setTimeout(() => {
-      trace.traceBlockEnd(spanEventRecorder)
-      agent.completeTraceObject(trace)
-    }, 1000)
-
-    sendSpanMethodOnDataCallback = (actual) => {
-      t.equal(actual.getVersion(), 1, `spanChunk version is ${actual.getVersion()}`)
-
-      const actualTransactionId = actual.getTransactionid()
-      t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), `agentId ${traceRoot.getAgentId()}`)
-      t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), 'agent start time')
-      t.equal(actualTransactionId.getSequence(), traceRoot.getTransactionId(), `sequence ${traceRoot.getTransactionId()}`)
-      t.equal(actual.getSpanid(), traceRoot.getTraceId().getSpanId(), 'span ID')
-      t.equal(actual.getParentspanid(), traceRoot.getTraceId().getParentSpanId(), 'parent span ID')
-
-      t.equal(actual.getStarttime(), spanBuilder.startTime, 'startTimeStamp')
-      t.equal(actual.getElapsed(), spanBuilder.elapsedTime, 'elapsed time')
-      t.equal(actual.getApiid(), 1, 'api ID')
-
-      t.equal(actual.getServicetype(), 1400, 'service type')
-
-      const actualAcceptEvent = actual.getAcceptevent()
-      t.equal(actualAcceptEvent.getRpc(), '/', 'rpc')
-      t.equal(actualAcceptEvent.getEndpoint(), 'localhost:3000', 'endPoint')
-      t.equal(actualAcceptEvent.getRemoteaddr(), '::1', 'remoteAddr')
-
-      t.equal(actual.getFlag(), 0, 'flag')
-
-      const actualSpanEvents = actual.getSpaneventList()
-      actualSpanEvents.forEach(pSpanEvent => {
-        t.equal(pSpanEvent.getSequence(), 10, 'sequence')
-        t.equal(pSpanEvent.getDepth(), 1, 'depth')
-
-        t.equal(pSpanEvent.getStartelapsed(), 72, 'startElapsed')
-        t.equal(pSpanEvent.getEndelapsed(), dataSender.findSpan(traceRoot).spanEventList[0].elapsedTime, 'endElapsed')
-
-        t.equal(pSpanEvent.getServicetype(), 9057, 'serviceType')
-
-        const pAnnotations = pSpanEvent.getAnnotationList()
-        pAnnotations.forEach(annotation => {
-          t.equal(annotation.getKey(), 12, 'annotation key')
-          const pAnnotationValue = annotation.getValue()
-          t.equal(pAnnotationValue.getStringvalue(), 'http.request', 'annotation string value')
-        })
-      })
-
-      t.equal(actual.getExceptioninfo(), undefined, 'span exceptionInfo')
-
-      t.equal(actual.getApplicationservicetype(), 1400, 'applicaiton service type')
-      t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
-
-      const callMetadata = getMetadata()
-      t.equal(callMetadata[0].get('servicetype')[0], '1400', 'span batch metadata servicetype is 1400')
-
-      dataSender.close()
-      server.tryShutdown(() => {
-        afterOne(t)
-      })
-    }
-  })
+test('Should send span', async function (t) {
+  const spanAdaptor = new SpanAdaptor()
+  const grpcDataSender = await new TestGrpcDataSenderBuilder()
+    .addAdaptor(spanAdaptor)
+    .build()
   t.teardown(() => {
+    grpcDataSender.close()
   })
-})
+  const dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
-test('sendSpanChunk redis.SET.end', function (t) {
-  agent.bindHttp()
-  sendSpanMethodOnDataCallback = null
-  const server = new grpc.Server()
-  server.addService(services.SpanService, {
-    sendSpanBatch: sendSpanBatch
-  })
+  const traceRoot = new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '5').build()
+  const spanBuilder = new SpanBuilder(traceRoot)
+  spanBuilder.setServiceType(1400)
+  spanBuilder.setEndPoint('localhost:3000')
+  spanBuilder.setRemoteAddress('::1')
+  spanBuilder.markAfterTime()
+  spanBuilder.setApiId(1)
+  spanBuilder.setRpc('/')
+  spanBuilder.setApplicationServiceType(1400)
+  const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
+  const repository = new SpanRepository(spanChunkBuilder, dataSender)
+  const spanRecorder = new SpanRecorder(spanBuilder, agent.getConfig())
+  const trace = new Trace(spanBuilder, repository, spanRecorder, new SpanEventRecorderFactory())
 
-  let dataSender
-  server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-    const grpcDataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
-    const traceRoot = new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '5').build()
-    const asyncId = AsyncId.make()
-    dataSender = new RecordingDataSender(new DataSender(agent.getConfig(), grpcDataSender))
-    const spanChunkBuilder = new AsyncSpanChunkBuilder(traceRoot, asyncId)
-    const repository = new SpanRepository(spanChunkBuilder, dataSender)
-    const childTraceBuilder = new ChildTraceBuilder(traceRoot, repository, asyncId, new SpanEventRecorderFactory())
+  const spanEventRecorder = trace.traceBlockBegin()
+  spanEventRecorder.spanEventBuilder.setSequence(10)
+  spanEventRecorder.spanEventBuilder.setDepth(1)
+  spanEventRecorder.recordApiDesc('http.request')
+  spanEventRecorder.spanEventBuilder.startTime = spanBuilder.startTime + 72
+  spanEventRecorder.recordServiceType(serviceType.asyncHttpClientInternal)
 
-    const spanEventRecorder = childTraceBuilder.traceBlockBegin()
-    spanEventRecorder.recordServiceType(serviceType.redis)
-    spanEventRecorder.recordApiDesc('redis.SET.end')
-    childTraceBuilder.traceBlockEnd(spanEventRecorder)
-
-    agent.completeTraceObject(childTraceBuilder)
-
-    sendSpanMethodOnDataCallback = (actualSpanChunk) => {
-      t.plan(20)
-      t.equal(actualSpanChunk.getVersion(), 1, 'spanChunk version is 1')
-
-      const actualTransactionId = actualSpanChunk.getTransactionid()
-      t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), 'gRPC agentId')
-      t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), 'agent start time')
-      t.equal(actualTransactionId.getSequence(), traceRoot.getTransactionId(), 'sequence')
-
-      t.equal(actualSpanChunk.getSpanid(), traceRoot.getTraceId().getSpanId(), 'span ID')
-      t.equal(actualSpanChunk.getEndpoint(), '', 'endpoint')
-
-      const actualLocalAsyncId = actualSpanChunk.getLocalasyncid()
-      t.equal(actualLocalAsyncId.getAsyncid(), asyncId.getAsyncId(), 'local async id')
-      t.equal(actualLocalAsyncId.getSequence(), asyncId.getSequence(), 'local async id sequence')
-
-      t.equal(actualSpanChunk.getKeytime(), spanChunkBuilder.keyTime, 'keytime')
-      const actualSpanEvents = actualSpanChunk.getSpaneventList()
-      actualSpanEvents.forEach((pSpanEvent, index) => {
-        if (index == 0) {
-          t.equal(pSpanEvent.getSequence(), 0, 'sequence')
-          t.equal(pSpanEvent.getDepth(), 1, 'depth')
-          t.equal(pSpanEvent.getServicetype(), 100, 'serviceType')
-          t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
-        } else if (index == 1) {
-          t.equal(pSpanEvent.getSequence(), 1, 'sequence')
-          t.equal(pSpanEvent.getDepth(), 2, 'depth')
-
-          const expectedSpanChunk = repository.dataSender.findSpanChunk(childTraceBuilder.localAsyncId)
-          const expectedSpanEvent = expectedSpanChunk.spanEventList[1]
-          t.equal(pSpanEvent.getStartelapsed(), expectedSpanEvent.startElapsedTime, `pSpanEvent.getStartelapsed() : ${pSpanEvent.getStartelapsed()}, expectedSpanEvent.startElapsedTime : ${expectedSpanEvent.startElapsedTime}`)
-          t.equal(pSpanEvent.getEndelapsed(), expectedSpanEvent.elapsedTime, `pSpanEvent.getEndelapsed() : ${pSpanEvent.getEndelapsed()}, expectedSpanEvent.elapsedTime : ${expectedSpanEvent.elapsedTime}`)
-          t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
-
-          const pAnnotations = pSpanEvent.getAnnotationList()
-          pAnnotations.forEach(annotation => {
-            t.equal(annotation.getKey(), 12, 'annotation key')
-            const pAnnotationValue = annotation.getValue()
-            t.equal(pAnnotationValue.getStringvalue(), 'redis.SET.end', 'annotation string value')
-          })
-        }
-      })
-      afterOne(t)
-    }
-  })
-  t.teardown(() => {
-    dataSender.close()
-    server.forceShutdown()
-  })
-})
-
-test('sendSpan', (t) => {
-  agent.bindHttp()
-  sendSpanMethodOnDataCallback = null
-  const server = new grpc.Server()
-  server.addService(services.SpanService, {
-    sendSpanBatch: sendSpanBatch
-  })
-
-  let dataSender
-  server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-    const grpcDataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
-    const traceRoot = new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '5').build()
-    dataSender = new RecordingDataSender(new DataSender(agent.getConfig(), grpcDataSender))
-    const spanBuilder = new SpanBuilder(traceRoot)
-    const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
-    const repository = new SpanRepository(spanChunkBuilder, dataSender)
-    const spanRecorder = new SpanRecorder(spanBuilder, agent.getConfig())
-    const trace = new Trace(spanBuilder, repository, spanRecorder, new SpanEventRecorderFactory())
-    trace.spanRecorder.recordApi(defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor)
-    trace.spanRecorder.recordServiceType(serviceType.node)
-    trace.spanRecorder.recordRpc('/')
-    trace.spanRecorder.recordEndPoint('localhost:3000')
-    trace.spanRecorder.recordRemoteAddress('::1')
-    spanBuilder.setApplicationServiceType(1400)
-
-    let spanEventRecorder = trace.traceBlockBegin()
-    spanEventRecorder.spanEventBuilder.startTime = spanBuilder.startTime + 3
+  setTimeout(() => {
     trace.traceBlockEnd(spanEventRecorder)
-
-    spanEventRecorder = trace.traceBlockBegin()
-    trace.traceBlockEnd(spanEventRecorder)
-
-    spanEventRecorder = trace.traceBlockBegin()
-    trace.traceBlockEnd(spanEventRecorder)
-
-    spanEventRecorder = trace.traceBlockBegin()
-    trace.traceBlockEnd(spanEventRecorder)
-
-    spanEventRecorder = trace.traceBlockBegin()
-    trace.traceBlockEnd(spanEventRecorder)
-
-    spanEventRecorder = trace.traceBlockBegin()
-    trace.traceBlockEnd(spanEventRecorder)
-
-    spanEventRecorder = trace.traceBlockBegin()
-    const asyncId = spanEventRecorder.getNextAsyncId()
-    trace.traceBlockEnd(spanEventRecorder)
-
     agent.completeTraceObject(trace)
+  }, 1000)
 
-    sendSpanMethodOnDataCallback = (actualSpan) => {
-      t.plan(22)
-      t.equal(actualSpan.getVersion(), 1, 'version')
+  const actual = await spanAdaptor.span(traceRoot)
+  t.equal(actual.getVersion(), 1, `spanChunk version is ${actual.getVersion()}`)
 
-      const actualTransactionId = actualSpan.getTransactionid()
-      t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), 'gRPC agentId')
-      t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), 'agent start time')
-      t.equal(actualTransactionId.getSequence(), traceRoot.getTransactionId(), 'sequence')
+  const actualTransactionId = actual.getTransactionid()
+  t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), `agentId ${traceRoot.getAgentId()}`)
+  t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), 'agent start time')
+  t.equal(actualTransactionId.getSequence(), traceRoot.getTransactionId(), `sequence ${traceRoot.getTransactionId()}`)
+  t.equal(actual.getSpanid(), traceRoot.getTraceId().getSpanId(), 'span ID')
+  t.equal(actual.getParentspanid(), traceRoot.getTraceId().getParentSpanId(), 'parent span ID')
 
-      t.equal(actualSpan.getSpanid(), traceRoot.getTraceId().getSpanId(), 'span ID')
-      t.equal(actualSpan.getParentspanid(), traceRoot.getTraceId().getParentSpanId(), 'span.parentspanid')
+  t.equal(actual.getStarttime(), spanBuilder.startTime, 'startTimeStamp')
+  t.equal(actual.getElapsed(), spanBuilder.elapsedTime, 'elapsed time')
+  t.equal(actual.getApiid(), 1, 'api ID')
 
-      t.equal(actualSpan.getStarttime(), spanBuilder.startTime, 'span.startTime')
-      t.equal(actualSpan.getElapsed(), spanBuilder.elapsedTime, 'span.elapsed')
-      t.equal(actualSpan.getApiid(), 1, 'span.apiid')
+  t.equal(actual.getServicetype(), 1400, 'service type')
 
-      t.equal(actualSpan.getServicetype(), 1400, 'span.servicetype')
+  const actualAcceptEvent = actual.getAcceptevent()
+  t.equal(actualAcceptEvent.getRpc(), '/', 'rpc')
+  t.equal(actualAcceptEvent.getEndpoint(), 'localhost:3000', 'endPoint')
+  t.equal(actualAcceptEvent.getRemoteaddr(), '::1', 'remoteAddr')
 
-      const actualAcceptEvent = actualSpan.getAcceptevent()
-      t.equal(actualAcceptEvent.getRpc(), '/', 'rpc')
-      t.equal(actualAcceptEvent.getEndpoint(), 'localhost:3000', 'endPoint')
-      t.equal(actualAcceptEvent.getRemoteaddr(), '::1', 'remoteAddr')
+  t.equal(actual.getFlag(), 0, 'flag')
 
-      t.equal(actualSpan.getFlag(), 0, 'flag')
-      t.equal(actualSpan.getErr(), 0, 'Error')
+  const actualSpanEvents = actual.getSpaneventList()
+  actualSpanEvents.forEach(pSpanEvent => {
+    t.equal(pSpanEvent.getSequence(), 10, 'sequence')
+    t.equal(pSpanEvent.getDepth(), 1, 'depth')
 
-      t.equal(actualSpan.getExceptioninfo(), undefined, 'span exceptionInfo')
+    t.equal(pSpanEvent.getStartelapsed(), 72, 'startElapsed')
+    t.equal(pSpanEvent.getEndelapsed(), dataSender.findSpan(traceRoot).spanEventList[0].elapsedTime, 'endElapsed')
 
-      t.equal(actualSpan.getApplicationservicetype(), 1400, 'applicaiton service type')
-      t.equal(actualSpan.getLoggingtransactioninfo(), 0, 'logging transaction info')
+    t.equal(pSpanEvent.getServicetype(), 9057, 'serviceType')
 
-      const actualSpanEvents = actualSpan.getSpaneventList()
-      actualSpanEvents.forEach((pSpanEvent, index) => {
-        if (index == 0) {
-          t.equal(pSpanEvent.getSequence(), 0, 'sort span events')
-          t.equal(pSpanEvent.getDepth(), 1, 'depth')
-          t.equal(pSpanEvent.getStartelapsed(), 3, 'startElapsed')
-        }
-        if (pSpanEvent.getSequence() == 6) {
-          t.equal(pSpanEvent.getAsyncevent(), asyncId.getAsyncId(), 'async event')
-        }
+    const pAnnotations = pSpanEvent.getAnnotationList()
+    pAnnotations.forEach(annotation => {
+      t.equal(annotation.getKey(), 12, 'annotation key')
+      const pAnnotationValue = annotation.getValue()
+      t.equal(pAnnotationValue.getStringvalue(), 'http.request', 'annotation string value')
+    })
+  })
+
+  t.equal(actual.getExceptioninfo(), undefined, 'span exceptionInfo')
+
+  t.equal(actual.getApplicationservicetype(), 1400, 'applicaiton service type')
+  t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
+
+  t.equal(spanAdaptor.metadata[0].get('servicetype')[0], '1400', 'span batch metadata servicetype is 1400')
+  t.end()
+})
+
+test('sendSpanChunk redis.SET.end', async function (t) {
+  t.plan(20)
+  const spanAdaptor = new SpanAdaptor()
+  const grpcDataSender = await new TestGrpcDataSenderBuilder()
+    .addAdaptor(spanAdaptor)
+    .build()
+  t.teardown(() => {
+    grpcDataSender.close()
+  })
+  const dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+
+  const traceRoot = new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '5').build()
+  const asyncId = AsyncId.make()
+  const spanChunkBuilder = new AsyncSpanChunkBuilder(traceRoot, asyncId)
+  const repository = new SpanRepository(spanChunkBuilder, dataSender)
+  const childTraceBuilder = new ChildTraceBuilder(traceRoot, repository, asyncId, new SpanEventRecorderFactory())
+
+  const spanEventRecorder = childTraceBuilder.traceBlockBegin()
+  spanEventRecorder.recordServiceType(serviceType.redis)
+  spanEventRecorder.recordApiDesc('redis.SET.end')
+  childTraceBuilder.traceBlockEnd(spanEventRecorder)
+
+  agent.completeTraceObject(childTraceBuilder)
+
+  const actualSpanChunk = await spanAdaptor.spanChunk(asyncId)
+  t.equal(actualSpanChunk.getVersion(), 1, 'spanChunk version is 1')
+
+  const actualTransactionId = actualSpanChunk.getTransactionid()
+  t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), 'gRPC agentId')
+  t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), 'agent start time')
+  t.equal(actualTransactionId.getSequence(), traceRoot.getTransactionId(), 'sequence')
+
+  t.equal(actualSpanChunk.getSpanid(), traceRoot.getTraceId().getSpanId(), 'span ID')
+  t.equal(actualSpanChunk.getEndpoint(), '', 'endpoint')
+
+  const actualLocalAsyncId = actualSpanChunk.getLocalasyncid()
+  t.equal(actualLocalAsyncId.getAsyncid(), asyncId.getAsyncId(), 'local async id')
+  t.equal(actualLocalAsyncId.getSequence(), asyncId.getSequence(), 'local async id sequence')
+
+  t.equal(actualSpanChunk.getKeytime(), spanChunkBuilder.keyTime, 'keytime')
+  const actualSpanEvents = actualSpanChunk.getSpaneventList()
+  actualSpanEvents.forEach((pSpanEvent, index) => {
+    if (index == 0) {
+      t.equal(pSpanEvent.getSequence(), 0, 'sequence')
+      t.equal(pSpanEvent.getDepth(), 1, 'depth')
+      t.equal(pSpanEvent.getServicetype(), 100, 'serviceType')
+      t.equal(pSpanEvent.getStartelapsed(), 0, 'startElapsed')
+    } else if (index == 1) {
+      t.equal(pSpanEvent.getSequence(), 1, 'sequence')
+      t.equal(pSpanEvent.getDepth(), 2, 'depth')
+
+      const expectedSpanChunk = repository.dataSender.findSpanChunk(childTraceBuilder.localAsyncId)
+      const expectedSpanEvent = expectedSpanChunk.spanEventList[1]
+      t.equal(pSpanEvent.getStartelapsed(), expectedSpanEvent.startElapsedTime, `pSpanEvent.getStartelapsed() : ${pSpanEvent.getStartelapsed()}, expectedSpanEvent.startElapsedTime : ${expectedSpanEvent.startElapsedTime}`)
+      t.equal(pSpanEvent.getEndelapsed(), expectedSpanEvent.elapsedTime, `pSpanEvent.getEndelapsed() : ${pSpanEvent.getEndelapsed()}, expectedSpanEvent.elapsedTime : ${expectedSpanEvent.elapsedTime}`)
+      t.equal(pSpanEvent.getServicetype(), 8200, 'serviceType')
+
+      const pAnnotations = pSpanEvent.getAnnotationList()
+      pAnnotations.forEach(annotation => {
+        t.equal(annotation.getKey(), 12, 'annotation key')
+        const pAnnotationValue = annotation.getValue()
+        t.equal(pAnnotationValue.getStringvalue(), 'redis.SET.end', 'annotation string value')
       })
-      afterOne(t)
     }
   })
+})
+
+test('sendSpan', async (t) => {
+  t.plan(22)
+  const spanAdaptor = new SpanAdaptor()
+  const grpcDataSender = await new TestGrpcDataSenderBuilder()
+    .addAdaptor(spanAdaptor)
+    .build()
   t.teardown(() => {
-    dataSender.close()
-    server.forceShutdown()
+    grpcDataSender.close()
+  })
+  const dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+
+  const traceRoot = new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '5').build()
+  const spanBuilder = new SpanBuilder(traceRoot)
+  const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
+  const repository = new SpanRepository(spanChunkBuilder, dataSender)
+  const spanRecorder = new SpanRecorder(spanBuilder, agent.getConfig())
+  const trace = new Trace(spanBuilder, repository, spanRecorder, new SpanEventRecorderFactory())
+  trace.spanRecorder.recordApi(defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor)
+  trace.spanRecorder.recordServiceType(serviceType.node)
+  trace.spanRecorder.recordRpc('/')
+  trace.spanRecorder.recordEndPoint('localhost:3000')
+  trace.spanRecorder.recordRemoteAddress('::1')
+  spanBuilder.setApplicationServiceType(1400)
+
+  let spanEventRecorder = trace.traceBlockBegin()
+  spanEventRecorder.spanEventBuilder.startTime = spanBuilder.startTime + 3
+  trace.traceBlockEnd(spanEventRecorder)
+
+  spanEventRecorder = trace.traceBlockBegin()
+  trace.traceBlockEnd(spanEventRecorder)
+
+  spanEventRecorder = trace.traceBlockBegin()
+  trace.traceBlockEnd(spanEventRecorder)
+
+  spanEventRecorder = trace.traceBlockBegin()
+  trace.traceBlockEnd(spanEventRecorder)
+
+  spanEventRecorder = trace.traceBlockBegin()
+  trace.traceBlockEnd(spanEventRecorder)
+
+  spanEventRecorder = trace.traceBlockBegin()
+  trace.traceBlockEnd(spanEventRecorder)
+
+  spanEventRecorder = trace.traceBlockBegin()
+  const asyncId = spanEventRecorder.getNextAsyncId()
+  trace.traceBlockEnd(spanEventRecorder)
+
+  agent.completeTraceObject(trace)
+
+  const actualSpan = await spanAdaptor.span(traceRoot)
+  t.equal(actualSpan.getVersion(), 1, 'version')
+
+  const actualTransactionId = actualSpan.getTransactionid()
+  t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), 'gRPC agentId')
+  t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), 'agent start time')
+  t.equal(actualTransactionId.getSequence(), traceRoot.getTransactionId(), 'sequence')
+
+  t.equal(actualSpan.getSpanid(), traceRoot.getTraceId().getSpanId(), 'span ID')
+  t.equal(actualSpan.getParentspanid(), traceRoot.getTraceId().getParentSpanId(), 'span.parentspanid')
+
+  t.equal(actualSpan.getStarttime(), spanBuilder.startTime, 'span.startTime')
+  t.equal(actualSpan.getElapsed(), spanBuilder.elapsedTime, 'span.elapsed')
+  t.equal(actualSpan.getApiid(), 1, 'span.apiid')
+
+  t.equal(actualSpan.getServicetype(), 1400, 'span.servicetype')
+
+  const actualAcceptEvent = actualSpan.getAcceptevent()
+  t.equal(actualAcceptEvent.getRpc(), '/', 'rpc')
+  t.equal(actualAcceptEvent.getEndpoint(), 'localhost:3000', 'endPoint')
+  t.equal(actualAcceptEvent.getRemoteaddr(), '::1', 'remoteAddr')
+
+  t.equal(actualSpan.getFlag(), 0, 'flag')
+  t.equal(actualSpan.getErr(), 0, 'Error')
+
+  t.equal(actualSpan.getExceptioninfo(), undefined, 'span exceptionInfo')
+
+  t.equal(actualSpan.getApplicationservicetype(), 1400, 'applicaiton service type')
+  t.equal(actualSpan.getLoggingtransactioninfo(), 0, 'logging transaction info')
+
+  const actualSpanEvents = actualSpan.getSpaneventList()
+  actualSpanEvents.forEach((pSpanEvent, index) => {
+    if (index == 0) {
+      t.equal(pSpanEvent.getSequence(), 0, 'sort span events')
+      t.equal(pSpanEvent.getDepth(), 1, 'depth')
+      t.equal(pSpanEvent.getStartelapsed(), 3, 'startElapsed')
+    }
+    if (pSpanEvent.getSequence() == 6) {
+      t.equal(pSpanEvent.getAsyncevent(), asyncId.getAsyncId(), 'async event')
+    }
   })
 })

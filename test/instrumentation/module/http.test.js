@@ -8,10 +8,8 @@ const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
 const { spanMessagesOfCurrentAgent } = require('../../support/collector-span-messages')
 const http = require('node:http')
-const grpc = require('@grpc/grpc-js')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
-const services = require('../../../lib/data/v1/Service_grpc_pb')
-const GrpcDataSenderBuilder = require('../../support/grpc-data-sender-builder')
+const { TestGrpcDataSenderBuilder, SpanAdaptor, MetadataAdaptor } = require('../../support/test-grpc-data-sender')
 const axios = require('axios')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const ServiceType = require('../../../lib/context/service-type')
@@ -30,9 +28,8 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 test('http error status code', (t) => {
-    const collectorServer = new grpc.Server()
     let spanOrSpanChunkCallback
-    collectorServer.addService(services.SpanService, {
+    const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new SpanAdaptor({
         sendSpanBatch: (call, callback) => {
             spanMessagesOfCurrentAgent(call.request).forEach((data) => {
                 let spanOrSpanChunk = data.getSpan()
@@ -43,15 +40,13 @@ test('http error status code', (t) => {
             })
             callback(null, new spanMessages.PSpanResultBatch())
         }
-    })
+    })).addAdaptor(new MetadataAdaptor())
 
-    let dataSender
-    collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        dataSender = new GrpcDataSenderBuilder(port)
-            .enableSpan()
-            .enableSpanChunk()
-            .build()
-        agent.bindHttp(dataSender)
+    grpcDataSenderBuilder.build().then((grpcDataSender) => {
+        agent.bindHttp(grpcDataSender)
+        t.teardown(() => {
+            grpcDataSender.close()
+        })
 
         const server = http.createServer((req, res) => {
             agent.callbackTraceClose((trace) => {
@@ -98,11 +93,6 @@ test('http error status code', (t) => {
         t.equal(pSpan.getErr(), 1, 'error should be 1')
         t.end()
     }
-
-    t.teardown(() => {
-        collectorServer.forceShutdown()
-        dataSender.close()
-    })
 })
 test('http should not mark a client disconnect before the response as an error', (t) => {
     agent.bindHttp()

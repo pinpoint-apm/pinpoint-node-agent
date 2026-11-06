@@ -7,173 +7,119 @@
 'use strict'
 
 const test = require('tape')
-const grpc = require('@grpc/grpc-js')
-const services = require('../../../lib/data/v1/Service_grpc_pb')
-const { beforeSpecificOne, DataSourceCallCountable } = require('../../support/grpc-data-sources')
+const { TestGrpcDataSenderBuilder, PingAdaptor } = require('../../support/test-grpc-data-sender')
 const shimmer = require('@pinpoint-apm/shimmer')
 
 const reconnectTestTimeout = { timeout: 60 * 1000 }
 
-class PingOnlyDataSource extends DataSourceCallCountable {
-    constructor(config, interceptors) {
-        config = Object.assign({}, config, {
-            sendPing: true,
-        })
-        super(config, interceptors)
-    }
-}
-
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('If grpc server is ended, and then retry to connect Pinpoint server', reconnectTestTimeout, (t) => {
-    const server = new grpc.Server()
-    let grpcServerCount = 0
-    server.addService(services.AgentService, {
-        pingSession: function (call) {
-            call.on('data', (ping) => {
-                grpcServerCount++
-                if (grpcServerCount === 1) {
-                    t.true(ping, '1st ping is not null in grpc server')
-                    call.write(ping)
-                } else if (grpcServerCount === 2) {
-                    t.true(ping, '2nd ping is not null in grpc server')
-                    call.write(ping)
-                    call.end()
-                }
-            })
-            call.on('end', () => {
-                if (grpcServerCount === 2) {
-                    t.fail('2nd ping call.end is not server call stream in grpc server')
-                }
-            })
-        }
+test('If grpc server is ended, and then retry to connect Pinpoint server', reconnectTestTimeout, async (t) => {
+    const pingAdaptor = new PingAdaptor().endStreamAfter(2)
+    const dataSender = await new TestGrpcDataSenderBuilder()
+        .addAdaptor(pingAdaptor)
+        .build()
+    t.teardown(() => {
+        dataSender.close()
     })
 
-    let dataSender
-    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        dataSender = beforeSpecificOne(port, PingOnlyDataSource)
+    const pingWritableStream = dataSender.pingStream.writableStream
+    pingWritableStream.count = 0
+    pingWritableStream.on('data', (ping) => {
+        pingWritableStream.count++
 
-        const pingWritableStream = dataSender.pingStream.writableStream
-        pingWritableStream.count = 0
-        pingWritableStream.on('data', (ping) => {
-            pingWritableStream.count++
+        if (pingWritableStream.count === 1) {
+            t.true(ping, '1st ping is not null in writableStream')
+            dataSender.sendPing()
+        } else if (pingWritableStream.count === 2) {
+            t.true(ping, '2nd ping is not null in writableStream')
+        }
+    })
+    pingWritableStream.on('end', async function () {
+        t.true(pingWritableStream.count === 2, 'grpc server pingStream network stream ended')
+        t.true(pingWritableStream.writableStream.readableEnded, 'pingDuplexStream.readableStreamEnded is true, grpc server pingStream ended')
+        t.false(pingWritableStream.writableStream.writableEnded, 'pingDuplexStream.writableStreamEnded is false, grpc server pingStream ended')
 
-            if (pingWritableStream.count === 1) {
-                t.true(ping, '1st ping is not null in writableStream')
-                dataSender.sendPing()
-            } else if (pingWritableStream.count === 2) {
-                t.true(ping, '2nd ping is not null in writableStream')
+        const socketId = await pingAdaptor.connection(1)
+        const [firstPing, secondPing] = pingAdaptor.pings(socketId)
+        t.true(firstPing, '1st ping is not null in grpc server')
+        t.true(secondPing, '2nd ping is not null in grpc server')
+        t.false(pingAdaptor.clientEnded, 'the client does not end the ping stream that the grpc server ended')
+        t.end()
+    })
+    dataSender.sendPing()
+})
+
+test('ping stream reconnects after the collector comes back', reconnectTestTimeout, async (t) => {
+    const pingAdaptor = new PingAdaptor()
+    const dataSender = await new TestGrpcDataSenderBuilder()
+        .addAdaptor(pingAdaptor)
+        .build()
+    pingAdaptor.connection(1).then(() => {
+        dataSender.disconnect()
+    })
+    const actualPort = dataSender.port
+
+    let createdStreamCount = 0
+    function firstPingEvents(pingWritableStream) {
+        createdStreamCount++
+        pingWritableStream.on('error', function (error) {
+            if (createdStreamCount === 1) {
+                t.false(pingWritableStream.closed, 'The First created gRPC Writable stream has closed=false in error event')
+                t.equal(pingWritableStream.errored, null, 'The First created gRPC Writable stream has errored=null in error event')
+            } else if (createdStreamCount === 4) {
+                runSecondPing(firstWritableStream)
             }
         })
         pingWritableStream.on('end', function () {
-            t.true(pingWritableStream.count === 2, 'grpc server pingStream network stream ended')
-            t.true(pingWritableStream.writableStream.readableEnded, 'pingDuplexStream.readableStreamEnded is true, grpc server pingStream ended')
-            t.false(pingWritableStream.writableStream.writableEnded, 'pingDuplexStream.writableStreamEnded is false, grpc server pingStream ended')
+            t.fail('pingWritableStream should not call end event', pingWritableStream.writableStream)
+        })
+        pingWritableStream.on('close', function () {
+            t.fail('pingWritableStream should not call close event', pingWritableStream.writableStream)
+        })
+        pingWritableStream.on('unpipe', function () {
+            if (createdStreamCount === 1) {
+                t.true(pingWritableStream.writable, 'The first created gRPC Writable stream has writable=true in unpipe event')
+            } else if (createdStreamCount === 2) {
+                t.true(pingWritableStream.writable, 'The second created gRPC Writable stream has writable=true in unpipe event')
+            } else if (createdStreamCount === 3) {
+                t.true(pingWritableStream.writable, 'The third created gRPC Writable stream has writable=true in unpipe event')
+            } else if (createdStreamCount === 4) {
+                t.true(pingWritableStream.writable, 'The fourth created gRPC Writable stream has writable=true in unpipe event')
+            } else {
+                t.fail('pingWritableStream should not call unpipe event', pingWritableStream.writableStream)
+            }
+        })
+    }
 
+    shimmer.wrap(dataSender.pingStream.writableStream, 'connect', function (original) {
+        return function () {
+            const result = original.apply(this, arguments)
+            firstPingEvents(result)
+            return result
+        }
+    })
+    dataSender.sendPing()
+    const firstWritableStream = dataSender.pingStream.writableStream
+    firstPingEvents(firstWritableStream.writableStream)
+
+    let intervalId
+    async function runSecondPing(firstWritableStream) {
+        const restartedPingAdaptor = new PingAdaptor()
+        const port = await dataSender.restart(restartedPingAdaptor)
+        restartedPingAdaptor.connection(1).then(() => {
             t.end()
         })
         dataSender.sendPing()
-    })
+        t.equal(actualPort, port, 'Server port is the same as the first one')
+        t.notEqual(dataSender.pingStream.writableStream, firstWritableStream, 'The second created Writable stream is not the same as the first one that was ExponentialBackoffRetry failed')
 
-    t.teardown(() => {
-        dataSender.close()
-        server.forceShutdown()
-    })
-})
-
-test('ping stream retry', reconnectTestTimeout, (t) => {
-    const server = new grpc.Server()
-    let grpcServerCount = 0
-    server.addService(services.AgentService, {
-        pingSession: function (call) {
-            call.on('data', (ping) => {
-                grpcServerCount++
-                if (grpcServerCount === 1) {
-                    server.forceShutdown()
-                }
-            })
-        }
-    })
-
-    let dataSender
-    let actualPort
-    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        dataSender = beforeSpecificOne(port, PingOnlyDataSource)
-        actualPort = port
-
-        let createdStreamCount = 0
-        function firstPingEvents(pingWritableStream) {
-            createdStreamCount++
-            pingWritableStream.on('error', function (error) {
-                if (createdStreamCount === 1) {
-                    t.false(pingWritableStream.closed, 'The First created gRPC Writable stream has closed=false in error event')
-                    t.equal(pingWritableStream.errored, null, 'The First created gRPC Writable stream has errored=null in error event')
-                } else if (createdStreamCount === 4) {
-                    runSecondPing(firstWritableStream)
-                }
-            })
-            pingWritableStream.on('end', function () {
-                t.fail('pingWritableStream should not call end event', pingWritableStream.writableStream)
-            })
-            pingWritableStream.on('close', function () {
-                t.fail('pingWritableStream should not call close event', pingWritableStream.writableStream)
-            })
-            pingWritableStream.on('unpipe', function () {
-                if (createdStreamCount === 1) {
-                    t.true(pingWritableStream.writable, 'The first created gRPC Writable stream has writable=true in unpipe event')
-                } else if (createdStreamCount === 2) {
-                    t.true(pingWritableStream.writable, 'The second created gRPC Writable stream has writable=true in unpipe event')
-                } else if (createdStreamCount === 3) {
-                    t.true(pingWritableStream.writable, 'The third created gRPC Writable stream has writable=true in unpipe event')
-                } else if (createdStreamCount === 4) {
-                    t.true(pingWritableStream.writable, 'The fourth created gRPC Writable stream has writable=true in unpipe event')
-                } else {
-                    t.fail('pingWritableStream should not call unpipe event', pingWritableStream.writableStream)
-                }
-            })
-        }
-
-        shimmer.wrap(dataSender.pingStream.writableStream, 'connect', function (original) {
-            return function () {
-                const result = original.apply(this, arguments)
-                firstPingEvents(result)
-                return result
-            }
-        })
-        dataSender.sendPing()
-        const firstWritableStream = dataSender.pingStream.writableStream
-        firstPingEvents(firstWritableStream.writableStream)
-    })
-
-    let server2
-    let intervalId
-    function runSecondPing(firstWritableStream) {
-        server2 = new grpc.Server()
-        let grpcServerCount2 = 0
-        server2.addService(services.AgentService, {
-            pingSession: function (call) {
-                call.on('data', (ping) => {
-                    grpcServerCount2++
-                    if (grpcServerCount2 === 1) {
-                        call.write(ping)
-                        t.end()
-                    }
-                })
-            }
-        })
-        server2.bindAsync(`localhost:${actualPort}`, grpc.ServerCredentials.createInsecure(), (err, port) => {
+        intervalId = setInterval(() => {
             dataSender.sendPing()
-            t.equal(actualPort, port, 'Server port is the same as the first one')
-            t.notEqual(dataSender.pingStream.writableStream, firstWritableStream, 'The second created Writable stream is not the same as the first one that was ExponentialBackoffRetry failed')
-
-            intervalId = setInterval(() => {
-                dataSender.sendPing()
-            }, 1000)
-        })
+        }, 1000)
     }
 
     t.teardown(() => {
         clearInterval(intervalId)
         dataSender.close()
-        server2.forceShutdown()
     })
 })

@@ -44,14 +44,10 @@ const headerInterceptor = function (options, nextCall) {
 let statClient
 
 function callStat(t) {
-    const call = statClient.sendAgentStat((err, response) => {
+    const call = statClient.sendAgentStat((err) => {
         if (err) {
             log.error(`statStream callback err: ${err}`)
             return
-        }
-
-        if (response) {
-            t.true(response, 'response is true')
         }
     })
     t.true(typeof call.call.nextCall.call.channel.subchannelPool.pool[`dns:localhost:${actualPort}`] === 'undefined', 'subchannel pool no related to call.write')

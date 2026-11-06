@@ -63,7 +63,6 @@ test('stat stream retry connection Tests', reconnectTestTimeout, async function 
                 t.equal(writableStream.backoffRetry.attempts, 0, `retry connection is not started in callback`)
             } else if (callCount === 2) {
                 t.equal(err.code, grpc.status.UNAVAILABLE, `gRPC server was shut down, so the error code should be ${grpc.status.UNAVAILABLE}`)
-                t.equal(callCount - 1, 1, `1st time retry connection `)
 
                 dataSender.statStream.writableStream.on('close', () => {
                     t.true(dataSender.statStream.writableStream.writableStream.writableEnded, `If the 1st retry created stream is errored, the stream should be closed and writableEnded`)
@@ -75,7 +74,6 @@ test('stat stream retry connection Tests', reconnectTestTimeout, async function 
                 t.equal(writableStream.backoffRetry.attempts, 1, `1st retry connection is failed`)
             } else if (callCount === 3) {
                 t.equal(err.code, grpc.status.UNAVAILABLE, `gRPC server was shut down, so the error code should be ${grpc.status.UNAVAILABLE}`)
-                t.equal(callCount - 1, 2, `2nd time retry connection `)
 
                 dataSender.statStream.writableStream.on('close', () => {
                     t.true(dataSender.statStream.writableStream.writableStream.writableEnded, `2nd retry created stream is errored, writableEnded on close event`)
@@ -87,7 +85,6 @@ test('stat stream retry connection Tests', reconnectTestTimeout, async function 
                 t.equal(writableStream.backoffRetry.attempts, 2, `2nd retry connection is failed`)
             } else if (callCount === 4) {
                 t.equal(err.code, grpc.status.UNAVAILABLE, `gRPC server was shut down, so the error code should be ${grpc.status.UNAVAILABLE}`)
-                t.equal(callCount - 1, 3, `3rd time retry connection`)
 
                 dataSender.statStream.writableStream.on('close', () => {
                     t.true(dataSender.statStream.writableStream.writableStream.writableEnded, `3rd retry created stream is errored, writableEnded = true on close event`)

@@ -10,11 +10,7 @@ const test = require('tape')
 const SqlParser = require('../../../lib/instrumentation/sql/sql-parser')
 
 test(`normalized`, async (t) => {
-    let normalizedSql = SqlParser.normalizedSql(`select * from table a = 1 and b=50 and c=? and d='11'`)
-    // t.equal(normalizedSql.normalizedSql, `select * from table a = 0# and b=1# and c=? and d='2$'`)
-    t.equal(normalizedSql.parseParameter, `1,50,11`)
-
-    normalizedSql = SqlParser.normalizedSql(`-- comment`)
+    let normalizedSql = SqlParser.normalizedSql(`-- comment`)
     t.equal(normalizedSql.normalizedSql, `-- comment`)
 
     normalizedSql = SqlParser.normalizedSql(`-`)

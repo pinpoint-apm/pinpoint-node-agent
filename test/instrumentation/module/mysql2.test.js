@@ -183,7 +183,6 @@ test(`Connection Pool with query hooking`, async (t) => {
             t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType in Pool.query() spanEvent')
 
             let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualSpanEvent.asyncId)
-            t.equal(actualSpanChunk.traceRoot.getTraceId().getSpanId(), trace.spanBuilder.getTraceRoot().getTraceId().getSpanId(), 'spanId in spanChunk in Pool.getConnection()')
             t.equal(actualSpanChunk.getTraceRoot(), trace.getTraceRoot(), 'transactionIdObject in spanChunk in Pool.getConnection()')
             t.equal(actualSpanChunk.localAsyncId.getAsyncId(), actualSpanEvent.asyncId.getAsyncId(), 'localAsyncId asyncId in spanChunk in Pool.getConnection()')
             t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId sequence in spanChunk in Pool.getConnection()')
@@ -380,7 +379,6 @@ test(`Cluster with query`, async (t) => {
 
             let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualSpanEvent.asyncId)
             t.equal(actualSpanChunk.getTraceRoot(), trace.spanBuilder.getTraceRoot(), 'spanId in spanChunk in PoolCluster.getConnection()')
-            t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), trace.spanBuilder.getTraceRoot().getTransactionId(), 'transactionIdObject in spanChunk in PoolCluster.getConnection()')
             t.equal(actualSpanChunk.localAsyncId.asyncId, actualSpanEvent.asyncId.asyncId, 'localAsyncId asyncId in spanChunk in PoolCluster.getConnection()')
             t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId sequence in spanChunk in PoolCluster.getConnection()')
             t.equal(actualSpanChunk.spanEventList[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationMethodDescriptor.apiId, 'apiId in spanChunk in PoolCluster.getConnection()')
@@ -399,7 +397,6 @@ test(`Cluster with query`, async (t) => {
 
             actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualSpanEvent.asyncId)
             t.equal(actualSpanChunk.getTraceRoot(), trace.spanBuilder.getTraceRoot(), 'spanId in spanChunk in PoolConnection.query()')
-            t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), trace.spanBuilder.getTraceRoot().getTransactionId(), 'transactionIdObject in spanChunk in PoolConnection.query()')
             t.equal(actualSpanChunk.localAsyncId.asyncId, actualSpanEvent.asyncId.asyncId, 'localAsyncId asyncId in spanChunk in PoolConnection.query()')
             t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId sequence in spanChunk in PoolConnection.query()')
             t.equal(actualSpanChunk.spanEventList[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationMethodDescriptor.apiId, 'apiId in spanChunk in PoolConnection.query()')

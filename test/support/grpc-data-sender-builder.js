@@ -31,26 +31,6 @@ class GrpcDataSenderBuilder {
         }
     }
 
-    enableApiMetaInfo() {
-        this.enableMethods.sendApiMetaInfo = true
-        return this
-    }
-
-    enableStringMetaInfo() {
-        this.enableMethods.sendStringMetaInfo = true
-        return this
-    }
-
-    enableSqlMetaInfo() {
-        this.enableMethods.sendSqlMetaInfo = true
-        return this
-    }
-
-    enableSqlUidMetaData() {
-        this.enableMethods.sendSqlUidMetaData = true
-        return this
-    }
-
     enableExceptionMetaData() {
         this.enableMethods.sendExceptionMetaData = true
         return this
@@ -63,26 +43,6 @@ class GrpcDataSenderBuilder {
 
     enableSpanChunk() {
         this.enableMethods.sendSpanChunk = true
-        return this
-    }
-
-    enableStat() {
-        this.enableMethods.sendStat = true
-        return this
-    }
-
-    enableSupportedServicesCommand() {
-        this.enableMethods.sendSupportedServicesCommand = true
-        return this
-    }
-
-    enablePing() {
-        this.enableMethods.sendPing = true
-        return this
-    }
-
-    enableAgentInfoScheduler() {
-        this.enableMethods.agentInfoScheduler = true
         return this
     }
 

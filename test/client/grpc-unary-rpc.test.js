@@ -7,7 +7,6 @@
 const test = require('tape')
 
 const services = require('../../lib/data/v1/Service_grpc_pb')
-const MethodType = require('../../lib/constant/method-type')
 const grpc = require('@grpc/grpc-js')
 const spanMessages = require('../../lib/data/v1/Span_pb')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
@@ -253,53 +252,6 @@ class MetaInfoOnlyDataSource extends DataSourceCallCountable {
             })
     }
 }
-// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-test('sendApiMetaInfo retry', retryTestTimeout, (t) => {
-    const server = new grpc.Server()
-    server.addService(services.MetadataService, {
-        requestApiMetaData: service
-    })
-    let dataSender
-    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-        fixtureMetadata = []
-        dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource, fastRetryServiceConfig)
-        const callRequests = getCallRequests()
-        const callMetadata = getMetadata()
-
-        let actual = new ApiMetaInfo(1, 'ApiDescriptor', MethodType.DEFAULT)
-        dataSender.sendApiMetaInfo(actual, function (error, response) {
-            t.true(response.getSuccess(), '1st PResult.success is true')
-
-            const metadata = callMetadata[0]
-            t.deepEqual(metadata.get('grpc.built-in.retry'), ['true'], '1st metadata.get("grpc.built-in.retry") is "true"')
-            t.equal(metadata.get('servicetype')[0], '1400', '1st metadata.get("servicetype") is 1400')
-            t.deepEqual(metadata.get('protocol.version'), ['400'], '1st metadata has v4 protocol.version 400')
-            afterOne(t)
-        })
-
-        actual = new ApiMetaInfo(2, 'ApiDescriptor2', MethodType.DEFAULT)
-        fixtureMetadata = [{ 'succeed-on-retry-attempt': '2', 'respond-with-status': '14' }]
-        dataSender.initializeMetadataClients()
-        dataSender.sendApiMetaInfo(actual, function (error, response) {
-            t.true(response.getSuccess(), '2nd PResult.success is true')
-            t.equal(response.getMessage(), 'succeed-on-retry-attempt: 2, grpc-previous-rpc-attempts: 2', '2nd PResult.message is "succeed-on-retry-attempt: 2, grpc-previous-rpc-attempts: 2"')
-
-            t.equal(callRequests.length, 2, '2nd callRequests.length is 2')
-            t.equal(callRequests[1].getApiid(), 2, '2nd callRequests[1].apiId is 2')
-            t.equal(callRequests[1].getApiinfo(), 'ApiDescriptor2', '2nd callRequests[1].apiInfo is "ApiDescriptor2"')
-            t.equal(callRequests[1].getType(), MethodType.DEFAULT, '2nd callRequests[1].type is MethodType.DEFAULT')
-
-            const metadata = callMetadata[1]
-            t.deepEqual(metadata.get('grpc.built-in.retry'), ['true'], '2nd metadata.get("grpc.built-in.retry") is "true"')
-            afterOne(t)
-        })
-
-        t.teardown(() => {
-            dataSender.close()
-            server.forceShutdown()
-        })
-    })
-})
 
 test('sendApiMetaInfo lineNumber and location', (t) => {
     const server = new grpc.Server()
@@ -351,7 +303,9 @@ test('sendApiMetaInfo lineNumber and location', (t) => {
         dataSender.initializeMetadataClients()
         dataSender.sendApiMetaInfo(apiMetaInfoActual, function (error, response) {
             t.true(response.getSuccess(), '2nd PResult.success is true')
+            t.equal(response.getMessage(), 'succeed-on-retry-attempt: 2, grpc-previous-rpc-attempts: 2', '2nd PResult.message is "succeed-on-retry-attempt: 2, grpc-previous-rpc-attempts: 2"')
 
+            t.equal(callRequests.length, 2, '2nd callRequests.length is 2')
             const data = callRequests[1]
             t.equal(data.getApiid(), 2, 'apiId')
             t.equal(data.getApiinfo(), 'Router.post', 'Apiinfo')

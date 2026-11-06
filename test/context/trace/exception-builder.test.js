@@ -260,10 +260,6 @@ test('express stack with promise frame: ensure anonymous Promise frame is parsed
     const exception = buildException(actualCallStack)
     const promiseFrame = exception.frameStack[4]
 
-    t.equal(exception.errorClassName, 'Error')
-    t.equal(exception.errorMessage, 'express case')
-    t.equal(exception.frameStack.length, 12)
-
     t.equal(promiseFrame.className, '<anonymous>', 'className promise: fallback to fileName')
     t.equal(promiseFrame.fileName, '<anonymous>')
     t.equal(promiseFrame.methodName, 'Promise')

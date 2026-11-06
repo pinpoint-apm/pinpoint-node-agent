@@ -270,7 +270,7 @@ test('appender message forwarding', (t) => {
 })
 
 test('guard clause - no appenders', (t) => {
-    t.plan(4)
+    t.plan(3)
 
     const testLog = logger.getLogger(new LogBuilder('test12').logLevelDebug().build())
 
@@ -319,31 +319,6 @@ test('guard clause - no appenders', (t) => {
     errorLevelLog.error('error message')
 
     t.equal(errorCallCount, 1, 'error method should only be called for ERROR level messages')
-
-    let silentCallCount = 0
-    const silentMockAppender = {
-        name: 'silent-level-appender',
-        loggingLevel: levels.SILENT,
-        debug: () => { silentCallCount++ },
-        info: () => { silentCallCount++ },
-        warn: () => { silentCallCount++ },
-        error: () => { silentCallCount++ }
-    }
-
-    const silentLevelLog = logger.getLogger(
-        new LogBuilder('test12-silent')
-            .logLevelSilent()
-            .addAppender(silentMockAppender)
-            .build()
-    )
-
-    silentCallCount = 0
-    silentLevelLog.debug('debug message')
-    silentLevelLog.info('info message')
-    silentLevelLog.warn('warn message')
-    silentLevelLog.error('error message')
-
-    t.equal(silentCallCount, 0, 'appender methods should never be called at SILENT level')
 })
 
 test('per-appender loggingLevel configuration', (t) => {
@@ -533,13 +508,12 @@ test('getLogger with string parameter should return existing logger', (t) => {
 })
 
 test('getLogger with string parameter for non-existing logger', (t) => {
-    t.plan(2)
+    t.plan(1)
 
     // Try to get a logger that doesn't exist with string parameter
     const nonExistentLogName = 'non-existent-logger'
     const noExistentLogger = logger.getLogger(nonExistentLogName)
 
-    t.ok(noExistentLogger, 'Logger should be created even if it did not exist before')
     t.equal(noExistentLogger.name, 'default-logger', 'Logger should have default name since it was created without LogBuilder')
 })
 

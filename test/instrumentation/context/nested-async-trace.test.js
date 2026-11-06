@@ -173,7 +173,6 @@ test(`nested mysql async query with express`, async (t) => {
                 let actualNextAsyncId = actualSpanEvent.asyncId
 
                 let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
-                t.equal(actualSpanChunk.traceRoot.getTraceId().getSpanId(), trace.spanBuilder.getTraceRoot().getTraceId().getSpanId(), 'spanId is equal')
                 t.equal(actualSpanChunk.getTraceRoot(), trace.getTraceRoot(), 'traceRoot is equal')
                 t.equal(actualSpanChunk.localAsyncId.getAsyncId(), actualSpanEvent.asyncId.getAsyncId(), 'localAsyncId is equal')
                 t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence is equal')
@@ -194,7 +193,6 @@ test(`nested mysql async query with express`, async (t) => {
 
                 actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
                 t.equal(actualSpanChunk.getTraceRoot(), trace.spanBuilder.getTraceRoot(), 'traceRoot is equal')
-                t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), trace.spanBuilder.getTraceRoot().getTransactionId(), 'transactionIdObject is equal')
                 t.equal(actualSpanChunk.localAsyncId.asyncId, actualSpanEvent.asyncId.asyncId, 'localAsyncId is equal')
                 t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence is equal')
                 t.equal(actualSpanChunk.spanEventList[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'apiId is equal')
@@ -213,7 +211,6 @@ test(`nested mysql async query with express`, async (t) => {
                 actualNextAsyncId = actualSpanEvent.asyncId
 
                 actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
-                t.equal(actualSpanChunk.spanId, actualSpanEvent.spanId, 'spanId is equal')
                 t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), trace.spanBuilder.getTraceRoot().getTransactionId(), 'transactionIdObject is equal')
                 t.equal(actualSpanChunk.localAsyncId.asyncId, actualNextAsyncId.asyncId, 'localAsyncId is equal')
                 t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence is equal')
@@ -376,7 +373,6 @@ test(`nested mysql2 async query with express`, async (t) => {
                 let actualNextAsyncId = actualSpanEvent.asyncId
 
                 let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
-                t.equal(actualSpanChunk.spanId, actualSpanEvent.spanId, 'spanId is equal')
                 t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), trace.spanBuilder.getTraceRoot().getTransactionId(), 'transactionIdObject is equal')
                 t.equal(actualSpanChunk.localAsyncId.asyncId, actualSpanEvent.asyncId.asyncId, 'localAsyncId is equal')
                 t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence is equal')
@@ -396,7 +392,6 @@ test(`nested mysql2 async query with express`, async (t) => {
                 actualNextAsyncId = actualSpanEvent.asyncId
 
                 actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
-                t.equal(actualSpanChunk.spanId, actualSpanEvent.spanId, 'spanId is equal')
                 t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), trace.spanBuilder.getTraceRoot().getTransactionId(), 'transactionIdObject is equal')
                 t.equal(actualSpanChunk.localAsyncId.asyncId, actualNextAsyncId.asyncId, 'localAsyncId is equal')
                 t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence is equal')
@@ -416,7 +411,6 @@ test(`nested mysql2 async query with express`, async (t) => {
                 actualNextAsyncId = actualSpanEvent.asyncId
 
                 actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
-                t.equal(actualSpanChunk.spanId, actualSpanEvent.spanId, 'spanId is equal')
                 t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), trace.spanBuilder.getTraceRoot().getTransactionId(), 'transactionIdObject is equal')
                 t.equal(actualSpanChunk.localAsyncId.asyncId, actualNextAsyncId.asyncId, 'localAsyncId is equal')
                 t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence is equal')

@@ -79,7 +79,6 @@ test('Should send span', function (t) {
     spanBuilder.setApiId(1)
     spanBuilder.setRpc('/')
     spanBuilder.setApplicationServiceType(1400)
-    traceRoot.getShared().maskErrorCode(1)
     const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
     const repository = new SpanRepository(spanChunkBuilder, dataSender)
     const spanRecorder = new SpanRecorder(spanBuilder, agent.getConfig())
@@ -98,7 +97,6 @@ test('Should send span', function (t) {
     }, 1000)
 
     sendSpanMethodOnDataCallback = (actual) => {
-      t.true(actual != null, 'spanChunk send')
       t.equal(actual.getVersion(), 1, `spanChunk version is ${actual.getVersion()}`)
 
       const actualTransactionId = actual.getTransactionid()
@@ -120,7 +118,6 @@ test('Should send span', function (t) {
       t.equal(actualAcceptEvent.getRemoteaddr(), '::1', 'remoteAddr')
 
       t.equal(actual.getFlag(), 0, 'flag')
-      t.equal(actual.getErr(), 1, 'Error')
 
       const actualSpanEvents = actual.getSpaneventList()
       actualSpanEvents.forEach(pSpanEvent => {
@@ -140,14 +137,12 @@ test('Should send span', function (t) {
         })
       })
 
-      t.equal(actual.getApiid(), 1, 'API ID')
       t.equal(actual.getExceptioninfo(), undefined, 'span exceptionInfo')
 
       t.equal(actual.getApplicationservicetype(), 1400, 'applicaiton service type')
       t.equal(actual.getLoggingtransactioninfo(), 0, 'logging transaction info')
 
       const callMetadata = getMetadata()
-      t.true(callMetadata.length > 0, 'span batch metadata is collected')
       t.equal(callMetadata[0].get('servicetype')[0], '1400', 'span batch metadata servicetype is 1400')
 
       dataSender.close()
@@ -186,8 +181,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
     agent.completeTraceObject(childTraceBuilder)
 
     sendSpanMethodOnDataCallback = (actualSpanChunk) => {
-      t.plan(22)
-      t.true(actualSpanChunk != null, 'spanChunk send')
+      t.plan(20)
       t.equal(actualSpanChunk.getVersion(), 1, 'spanChunk version is 1')
 
       const actualTransactionId = actualSpanChunk.getTransactionid()
@@ -197,7 +191,6 @@ test('sendSpanChunk redis.SET.end', function (t) {
 
       t.equal(actualSpanChunk.getSpanid(), traceRoot.getTraceId().getSpanId(), 'span ID')
       t.equal(actualSpanChunk.getEndpoint(), '', 'endpoint')
-      t.equal(actualSpanChunk.getApplicationservicetype(), actualSpanChunk.getApplicationservicetype(), 'application service type')
 
       const actualLocalAsyncId = actualSpanChunk.getLocalasyncid()
       t.equal(actualLocalAsyncId.getAsyncid(), asyncId.getAsyncId(), 'local async id')

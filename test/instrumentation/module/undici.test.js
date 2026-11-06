@@ -193,8 +193,6 @@ test('shimming require(undici) cause by require-in-the-middle package', function
                             t.equal(pAnnotationValue.getStringvalue(), annotation.value, `annotation value is ${annotation.value}`)
                         })
                     })
-
-                    // t.end()
                 } else {
                     t.fail('span count is over 3')
                 }

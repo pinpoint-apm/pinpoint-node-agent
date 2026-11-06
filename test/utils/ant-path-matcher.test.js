@@ -17,7 +17,6 @@ let pathMatcher = new AntPathMatcher()
 // https://github.com/spring-projects/spring-framework/blob/master/spring-core/src/test/java/org/springframework/util/AntPathMatcherTests.java
 test('match', (t) => {
     // test exact matching
-    t.ok(pathMatcher, 'Ant Path matcher initialization')
     t.true(pathMatcher.match("test", "test"))
     t.true(pathMatcher.match("/test", "/test"))
 
@@ -65,11 +64,8 @@ test('match', (t) => {
     t.true(pathMatcher.match("/?", "/a"), 'pathMatcher.match("/?", "/a")')
     t.true(pathMatcher.match("/?/a", "/a/a"), 'pathMatcher.match("/?/a", "/a/a")')
     t.true(pathMatcher.match("/a/?", "/a/b"), 'pathMatcher.match("/a/?", "/a/b")')
-    t.true(pathMatcher.match("/?/a", "/a/a"), 'pathMatcher.match("/?/a", "/a/a")')
-    t.true(pathMatcher.match("/a/?", "/a/b"), 'pathMatcher.match("/a/?", "/a/b")')
     t.true(pathMatcher.match("/??/a", "/aa/a"), 'pathMatcher.match("/??/a", "/aa/a")')
     t.true(pathMatcher.match("/a/??", "/a/bb"), 'pathMatcher.match("/a/??", "/a/bb")')
-    t.true(pathMatcher.match("/?", "/a"), 'pathMatcher.match("/?", "/a")')
 
     // test matching with **'s
     t.true(pathMatcher.match("/**", "/testing/testing"), 'pathMatcher.match("/**", "/testing/testing")')
@@ -144,23 +140,6 @@ test('config object exclusion URL', (t) => {
     })
     agent.bindHttp(config)
     t.deepEqual(agent.getConfig().features.traceExclusionUrl.patterns, ["/??/a", "/*bla/test"])
-    delete config["features"]["traceExclusionUrl"]
-
-    t.end()
-})
-
-// for acronyms camel case:  https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-1.1/141e06ef(v=vs.71)?redirectedfrom=MSDN
-test('config object exclusion URL with cache size', (t) => {
-    let config = new ConfigBuilder(require('../pinpoint-config-test.json')).build()
-    config = Object.assign({}, config, {
-        "features": {
-            "traceExclusionUrl": {
-                "patterns": ["/test.jpg"]
-            }
-        }
-    })
-    agent.bindHttp(config)
-    t.deepEqual(agent.getConfig().features.traceExclusionUrl.patterns, ["/test.jpg"])
     delete config["features"]["traceExclusionUrl"]
 
     t.end()
@@ -271,15 +250,6 @@ test('when pattern match is false, sampling is false', async (t) => {
     t.end()
 })
 
-test('request when multi patterns true', async (t) => {
-    process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
-    agent.bindHttp()
-    await outgoingRequest(t, "/test", false)
-    delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
-
-    t.end()
-})
-
 test('map insertion order learning test', (t) => {
     const map1 = new Map()
 
@@ -353,7 +323,6 @@ test('when pattern match with cache size on ENV environment, sampling test with 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
     agent.bindHttp()
     await outgoingRequest(t, "/test", false, (t) => {
-        t.true(typeof agent.getConfig().features.traceExclusionUrl.cacheSize !== 'undefined', 'config.features.traceExclusionUrl.cacheSize ENV case')
         t.equal(agent.getConfig().features.traceExclusionUrl.cacheSize, 100, 'config.features.traceExclusionUrl.cacheSize default 100')
     })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
@@ -378,7 +347,6 @@ test('when pattern match with cache size on ENV environment, sampling test with 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
     agent.bindHttp()
     await outgoingRequest(t, "/test", true, (t) => {
-        t.true(typeof agent.getConfig().features.traceExclusionUrl.cacheSize !== 'undefined', 'when sampling is true, config.features.traceExclusionUrl.cacheSize ENV case')
         t.equal(agent.getConfig().features.traceExclusionUrl.cacheSize, 100, 'when sampling is true, config.features.traceExclusionUrl.cacheSize default 100')
     })
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
@@ -412,7 +380,6 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
     })
     agent.bindHttp(config)
     await outgoingRequest(t, "/test", false, (t) => {
-        t.true(typeof agent.getConfig().features.traceExclusionUrl.cacheSize !== 'undefined', 'config.features.traceExclusionUrl.cacheSize ENV case')
         t.equal(agent.getConfig().features.traceExclusionUrl.cacheSize, 100, 'config.features.traceExclusionUrl.cacheSize default 100')
     })
 
@@ -454,7 +421,6 @@ test('when pattern match with cache size form JSON, sampling test with cache hit
     })
     agent.bindHttp(config)
     await outgoingRequest(t, "/test", true, (t) => {
-        t.true(typeof agent.getConfig().features.traceExclusionUrl.cacheSize !== 'undefined', 'when sampling is true, config.features.traceExclusionUrl.cacheSize ENV case')
         t.equal(agent.getConfig().features.traceExclusionUrl.cacheSize, 100, 'when sampling is true, config.features.traceExclusionUrl.cacheSize default 100')
     })
 

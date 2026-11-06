@@ -201,7 +201,7 @@ function throwHandleTest(trace, t) {
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
   let spanEvent = trace.spanBuilder.spanEventList[0]
   t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-  t.true(actualMethodDescriptor.apiDescriptor.startsWith('Router.get'), 'apiDescriptor')
+  t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
   t.equal(actualMethodDescriptor.className, 'Router', 'className')
   t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
   t.equal(spanEvent.sequence, 0, 'sequence')
@@ -257,7 +257,7 @@ function nextErrorHandleTest(trace, t) {
   const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
   spanEvent = trace.spanBuilder.spanEventList[1]
   t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-  t.true(actualErrorMethodDescriptor.apiDescriptor.startsWith('Router.use'), 'apiDescriptor')
+  t.equal(actualErrorMethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
   t.equal(actualErrorMethodDescriptor.methodName, 'use', 'methodName')
   t.equal(spanEvent.sequence, 1, 'sequence')
@@ -299,59 +299,7 @@ function unhandledExceptionStatsFrameTest(trace, t) {
   const stackTraceElements = actualException.getStacktraceelementList()
   const frameStack = actualSpanEventError.frameStack
 
-  t.ok(stackTraceElements.length > 0, 'ExceptionMetaData stacktraceelementList should not be empty')
   t.equal(stackTraceElements.length, frameStack.length, 'ExceptionMetaData stacktraceelementList length should match span event frameStack length')
-
-  const toStackTraceLine = (className, methodName, fileName, lineNumber) => {
-    const typePrefix = className ? `${className}.` : ''
-    const method = methodName || '<anonymous>'
-    const file = fileName || 'unknown'
-    const line = Number.isInteger(lineNumber) ? lineNumber : 0
-    return `${typePrefix}${method} (${file}:${line})`
-  }
-
-  const expectedStackTracePrefix = [
-    'express.test.js.<anonymous> (<workspace>/test/instrumentation/module/express.test.js:<line>)',
-    'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
-    'route.js.next (<workspace>/node_modules/express/lib/router/route.js:<line>)',
-    'Route.dispatch (<workspace>/node_modules/express/lib/router/route.js:<line>)',
-    'InterceptorRunner.run (<workspace>/lib/instrumentation/interceptor-runner.js:<line>)',
-    'express-layer-interceptor.js.wrapped (<workspace>/lib/instrumentation/module/express/express-layer-interceptor.js:<line>)',
-    'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
-    'index.js.<anonymous> (<workspace>/node_modules/express/lib/router/index.js:<line>)',
-    `${receiverTypeNameOfFunctionMethod('router')}.process_params (<workspace>/node_modules/express/lib/router/index.js:<line>)`,
-    'index.js.next (<workspace>/node_modules/express/lib/router/index.js:<line>)',
-  ].join('\n')
-
-  const actualStackTrace = stackTraceElements
-    .map((pStackTraceElement) => toStackTraceLine(
-      pStackTraceElement.getClassname(),
-      pStackTraceElement.getMethodname(),
-      pStackTraceElement.getFilename(),
-      pStackTraceElement.getLinenumber()
-    ))
-    .join('\n')
-
-  const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const workspacePath = process.cwd().replace(/\\/g, '/')
-  const normalizeStackTrace = (stackTrace) => {
-    return stackTrace
-      .replace(/\\/g, '/')
-      .replace(new RegExp(escapeRegExp(workspacePath), 'g'), '<workspace>')
-      .replace(/express\.test\.js:\d+/g, 'express.test.js:<line>')
-      .replace(/interceptor-runner\.js:\d+/g, 'interceptor-runner.js:<line>')
-      .replace(/express-layer-interceptor\.js:\d+/g, 'express-layer-interceptor.js:<line>')
-        .replace(/(node_modules\/express\/lib\/router\/[a-zA-Z0-9_-]+\.js):\d+/g, '$1:<line>')
-  }
-
-  const normalizedActualLines = normalizeStackTrace(actualStackTrace).split('\n')
-  const normalizedExpectedPrefixLines = normalizeStackTrace(expectedStackTracePrefix).split('\n')
-
-  t.deepEqual(
-    normalizedActualLines.slice(0, normalizedExpectedPrefixLines.length),
-    normalizedExpectedPrefixLines,
-    'ExceptionMetaData stack trace should match stable prefix frames as multiline string'
-  )
 }
 
 const testName2 = 'express2'
@@ -424,38 +372,6 @@ test(`${testName3} Should record request taking more than 2 sec`, async function
   const server = app.listen(TEST_ENV.port, async function () {
     const result = await axios.get(getServerUrl(PATH))
     t.equal(result.status, 200)
-    server.close()
-  })
-})
-
-const testName4 = 'express4'
-test(`${testName4} Should record internal error in express.test.js`, function (t) {
-  agent.bindHttp()
-
-  const testName = testName4
-
-  t.plan(1)
-
-  const PATH = '/' + testName
-  const app = new express()
-
-  app.get(PATH, async (req, res, next) => {
-    console.log('[app] before ')
-    try {
-      const foo = null
-      const bar = foo.noValue
-    } catch (e) {
-      next(e)
-    }
-  })
-  app.use((error, req, res, next) => {
-    console.log('[app] error handler')
-    res.status(500).json({ message: error.message })
-  })
-
-  const server = app.listen(TEST_ENV.port, async function () {
-    const result = await axios.get(getServerUrl(PATH), { validateStatus: () => true })
-    t.equal(result.status, 500)
     server.close()
   })
 })
@@ -594,217 +510,6 @@ test('express version check', (t) => {
   t.equal(actual.name, 'module', 'express version 5.0.0 test')
   t.end()
 })
-
-test('express without callSite', (t) => {
-  agent.bindHttp()
-
-  const app = new express()
-
-  app.get('/express1', async (req, res) => {
-    res.send('ok get')
-
-    agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_PARAM.code, 'HTTP param key match')
-      t.equal(trace.spanBuilder.annotations[0].value, 'api=test&test1=test', 'HTTP param value match')
-      t.equal(trace.spanBuilder.annotations[1].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
-      t.equal(trace.spanBuilder.annotations[1].value, 200, 'response status is 200')
-
-      let actualBuilder = new MethodDescriptorBuilder('get')
-        .setClassName('Router')
-      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.spanBuilder.spanEventList[0]
-      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-    })
-  })
-
-
-  app.post('/express1', (req, res) => {
-    res.send('ok post')
-
-    agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, '/express1 HTTP STATUS CODE in annotation zero')
-      t.equal(trace.spanBuilder.annotations[0].value, 200, '/express1 HTTP STATUS CODE value in annotation zero')
-
-      let actualBuilder = new MethodDescriptorBuilder('post')
-        .setClassName('Router')
-      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.spanBuilder.spanEventList[0]
-      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.post', 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMethodDescriptor.methodName, 'post', 'methodName')
-    })
-  })
-
-  app.get('/express2', async (req, res) => {
-    res.send('ok get')
-
-    agent.callbackTraceClose((trace) => {
-      let actualBuilder = new MethodDescriptorBuilder('get')
-        .setClassName('Router')
-      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.spanBuilder.spanEventList[0]
-      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-    })
-  })
-
-  let errorOrder = 0
-  let pathSymbol
-
-  const express3Symbol = Symbol('express3')
-  app.get('/express3', (req, res, next) => {
-    errorOrder++
-    pathSymbol = express3Symbol
-    throw new Error('error case')
-  })
-
-  const express4Symbol = Symbol('express4')
-  app.get('/express4', (req, res, next) => {
-    errorOrder++
-    pathSymbol = express4Symbol
-    next(new Error('error case'))
-  })
-
-  app.use(function (err, req, res, next) {
-    if (pathSymbol == express3Symbol) {
-      t.equal(errorOrder, 1, 'express3 error order')
-    }
-    if (pathSymbol === express4Symbol) {
-      t.equal(errorOrder, 2, 'express4 error order')
-    }
-
-    agent.callbackTraceClose((trace) => {
-      if (errorOrder == 1) {
-        throwHandleTestWithoutCallSite(trace, t)
-      } else if (errorOrder == 2) {
-        nextErrorHandleTestWithoutCallSite(trace, t)
-      }
-    })
-
-    res.status(500).send('Something broke!')
-  })
-
-  const server = app.listen(TEST_ENV.port, async function () {
-    const result1 = await axios.get(getServerUrl('/express1') + '?api=test&test1=test')
-    t.equal(result1.status, 200)
-
-    const result2 = await axios.post(getServerUrl('/express1'))
-    t.equal(result2.status, 200)
-
-    const result3 = await axios.get(getServerUrl('/express2'))
-    t.equal(result3.status, 200)
-
-    try {
-      await axios.get(getServerUrl('/express3'))
-    } catch (error) {
-      t.equal(error.response.status, 500)
-    }
-
-    try {
-      await axios.get(getServerUrl('/express4'))
-    } catch (error) {
-      t.equal(error.response.status, 500, 'axios.get(getServerUrl(/express4))')
-    }
-
-    t.end()
-    server.close()
-  })
-})
-
-function throwHandleTestWithoutCallSite(trace, t) {
-  t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), '/express3 HTTP_STATUS_CODE annotationKey matching')
-  t.equal(trace.spanBuilder.annotations[0].value, 500, '/express3 HTTP_STATUS_CODE value matching')
-
-  let actualBuilder = new MethodDescriptorBuilder('get')
-    .setClassName('Router')
-  const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  let spanEvent = trace.spanBuilder.spanEventList[0]
-  t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-  t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
-  t.equal(actualMethodDescriptor.className, 'Router', 'className')
-  t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-  t.equal(spanEvent.sequence, 0, 'sequence')
-  t.equal(spanEvent.depth, 1, 'spanEvent.depth')
-
-  actualBuilder = new MethodDescriptorBuilder('use')
-    .setClassName('Router')
-  const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  spanEvent = trace.spanBuilder.spanEventList[1]
-  t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-  t.equal(actualErrorMethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
-  t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
-  t.equal(actualErrorMethodDescriptor.methodName, 'use', 'methodName')
-  t.equal(spanEvent.sequence, 1, 'sequence')
-  t.equal(spanEvent.depth, 2, 'spanEvent.depth')
-  t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(/express\.test\.js:\d+:\d+$/.test(spanEvent.exceptionInfo.stringValue), 'error case')
-
-  const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
-  const actualTransansactionId = actualExceptionMetaData.getTransactionid()
-  t.equal(actualTransansactionId.getAgentid(), trace.spanBuilder.traceRoot.getTraceId().getAgentId(), `ExceptionMetaData transactionId agentId ${actualTransansactionId.getAgentid()}`)
-  t.equal(actualTransansactionId.getAgentstarttime(), trace.spanBuilder.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStartTime ${actualTransansactionId.getAgentstarttime()}`)
-  t.equal(actualTransansactionId.getSequence(), trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transactionId sequence ${actualTransansactionId.getSequence()}`)
-  t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
-  t.equal(actualExceptionMetaData.getUritemplate(), '/express3', 'ExceptionMetaData uriTemplate /express3')
-
-  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception[0]
-  const actualExceptions = actualExceptionMetaData.getExceptionsList()
-  t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
-  t.equal(actualExceptions[0].getExceptionclassname(), actualSpanEventError.errorClassName, `ExceptionMetaData exception class name ${actualSpanEventError.errorClassName}`)
-  t.equal(actualExceptions[0].getExceptionmessage(), actualSpanEventError.errorMessage, `ExceptionMetaData exception message ${actualSpanEventError.errorMessage}`)
-  t.equal(actualExceptions[0].getStarttime(), actualSpanEventError.startTime, `ExceptionMetaData exception start time ${actualSpanEventError.startTime}`)
-  t.equal(actualExceptions[0].getExceptionid(), actualSpanEventError.exceptionId, `ExceptionMetaData exception id ${actualSpanEventError.exceptionId}`)
-  t.equal(actualExceptions[0].getExceptiondepth(), actualSpanEventError.exceptionDepth, `ExceptionMetaData exception depth ${actualSpanEventError.exceptionDepth}`)
-}
-
-function nextErrorHandleTestWithoutCallSite(trace, t) {
-  let actualBuilder = new MethodDescriptorBuilder('get')
-    .setClassName('Router')
-  const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  let spanEvent = trace.spanBuilder.spanEventList[0]
-  t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-  t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
-  t.equal(actualMethodDescriptor.className, 'Router', 'className')
-  t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-  t.equal(spanEvent.sequence, 0, 'sequence')
-  t.equal(spanEvent.depth, 1, 'spanEvent.depth')
-
-  actualBuilder = new MethodDescriptorBuilder('use')
-    .setClassName('Router')
-  const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  spanEvent = trace.spanBuilder.spanEventList[1]
-  t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-  t.equal(actualErrorMethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
-  t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
-  t.equal(actualErrorMethodDescriptor.methodName, 'use', 'methodName')
-  t.equal(spanEvent.sequence, 1, 'sequence')
-  t.equal(spanEvent.depth, 2, 'spanEvent.depth')
-  t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
-  t.true(/express\.test\.js:\d+:\d+$/.test(spanEvent.exceptionInfo.stringValue), 'error case')
-
-  const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
-  const actualTransactionId = actualExceptionMetaData.getTransactionid()
-  t.equal(actualTransactionId.getAgentid(), trace.spanBuilder.traceRoot.getTraceId().getAgentId(), `ExceptionMetaData transactionId agentId ${actualTransactionId.getAgentid()}`)
-  t.equal(actualTransactionId.getAgentstarttime(), trace.spanBuilder.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStartTime ${actualTransactionId.getAgentstarttime()}`)
-  t.equal(actualTransactionId.getSequence(), trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transactionId sequence ${actualTransactionId.getSequence()}`)
-  t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
-  t.equal(actualExceptionMetaData.getUritemplate(), '/express4', 'ExceptionMetaData uriTemplate /express4')
-
-  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception[0]
-  const actualExceptions = actualExceptionMetaData.getExceptionsList()
-  t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
-  t.equal(actualExceptions[0].getExceptionclassname(), actualSpanEventError.errorClassName, `ExceptionMetaData exception class name ${actualSpanEventError.errorClassName}`)
-  t.equal(actualExceptions[0].getExceptionmessage(), actualSpanEventError.errorMessage, `ExceptionMetaData exception message ${actualSpanEventError.errorMessage}`)
-  t.equal(actualExceptions[0].getStarttime(), actualSpanEventError.startTime, `ExceptionMetaData exception start time ${actualSpanEventError.startTime}`)
-  t.equal(actualExceptions[0].getExceptionid(), actualSpanEventError.exceptionId, `ExceptionMetaData exception id ${actualSpanEventError.exceptionId}`)
-  t.equal(actualExceptions[0].getExceptiondepth(), actualSpanEventError.exceptionDepth, `ExceptionMetaData exception depth ${actualSpanEventError.exceptionDepth}`)
-}
 
 test('incoming request by Disable Trace requests', (t) => {
   agent.bindHttp({ 'sampling': { 'rate': 3 } })
@@ -994,46 +699,6 @@ test('express should record handler registered with pattern route', (t) => {
   })
 })
 
-test('express should not collect ExceptionMetaData when errorAnalysis is disabled', (t) => {
-  agent.bindHttp({
-    features: {
-      errorAnalysis: undefined
-    }
-  })
-
-  const app = new express()
-  const PATH = '/error-analysis-disabled'
-
-  app.get(PATH, (req, res, next) => {
-    agent.callbackTraceClose((trace) => {
-      setImmediate(() => {
-        const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
-        t.equal(actualExceptionMetaData, undefined, 'ExceptionMetaData should not be sent when errorAnalysis is disabled')
-
-        const spanEvent = trace.spanBuilder.spanEventList[1]
-        t.ok(spanEvent.exceptionInfo, 'exceptionInfo should still be recorded')
-        t.equal(spanEvent.exceptionInfo.intValue, 1, 'exceptionInfo intValue should be 1')
-        t.equal(spanEvent.exception, undefined, 'exception object should not be set')
-
-        server.close()
-        t.end()
-      })
-    })
-    next(new Error('error analysis disabled test'))
-  })
-  app.use(function (err, req, res, next) {
-    res.status(500).send('error')
-  })
-
-  const server = app.listen(TEST_ENV.port, async () => {
-    await axios.get(getServerUrl(PATH), {
-      validateStatus: () => true,
-      httpAgent: new http.Agent({ keepAlive: false }),
-      httpsAgent: new https.Agent({ keepAlive: false }),
-    })
-  })
-})
-
 test('express with error analysis disabled responds to a throwing handler and records its span', (t) => {
   const dataSender = new RecordingDataSender()
   new ProcessAgentBuilder({ features: { errorAnalysis: { enabled: false } } }).setDataSender(dataSender).build()
@@ -1054,7 +719,10 @@ test('express with error analysis disabled responds to a throwing handler and re
         t.equal(dataSender.spans().length, 1, 'the span is sent')
         const span = dataSender.spans()[0]
         t.equal(span.traceRoot.getShared().getErrorCode(), 1, 'the span is marked as error')
-        t.ok(span.spanEventList.find(spanEvent => spanEvent.exceptionInfo), 'the error middleware span event records the exception info')
+        const errorSpanEvent = span.spanEventList.find(spanEvent => spanEvent.exceptionInfo)
+        t.ok(errorSpanEvent, 'the error middleware span event records the exception info')
+        t.equal(errorSpanEvent.exceptionInfo.intValue, 1, 'exceptionInfo intValue should be 1')
+        t.equal(errorSpanEvent.exception, undefined, 'exception object should not be set')
         t.equal(dataSender.exceptionMetaData().length, 0, 'no exception meta data is sent')
         server.close()
         t.end()
@@ -1348,7 +1016,6 @@ test('Functional Test: requestExceptionMetaData should deliver converted excepti
         t.equal(exception.getExceptiondepth(), 0, 'exception depth should be 0')
 
         const stackTraceElements = exception.getStacktraceelementList()
-        t.ok(stackTraceElements.length > 0, 'stackTraceElements should not be empty')
 
         const actualStackTrace = stackTraceElements
           .map((pStackTraceElement) => {

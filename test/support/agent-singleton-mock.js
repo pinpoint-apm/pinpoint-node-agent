@@ -8,28 +8,12 @@
 
 const dataSenderMock = require('./data-sender-mock')
 const shimmer = require('@pinpoint-apm/shimmer')
-const localStorage = require('../../lib/instrumentation/context/local-storage')
-const { SqlMetadataService } = require('../../lib/instrumentation/sql/sql-metadata-service')
-const { IntIdParsingResultFactory } = require('../../lib/context/trace/parsing-result-factory')
-const { UidParsingResultFactory } = require('../../lib/metric/sql/uid-parsing-result-factory')
-const { SqlStatsConfigBuilder } = require('../../lib/metric/sql/sql-stats-config-builder')
-const TraceSampler = require('../../lib/context/trace/trace-sampler')
 const transactionIdGenerator = require('../../lib/context/sequence-generators').transactionIdGenerator
 const closedTraceWrapped = Symbol('closedTraceWrapped')
 const apiMetaService = require('../../lib/context/api-meta-service')
 const activeRequestRepository = require('../../lib/metric/active-request-repository')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
 const { ProcessAgentBuilder } = require('./process-agent-builder')
-const { ConfigBuilder } = require('../../lib/config-builder')
-const { UriStatsRepositoryBuilder } = require('../../lib/metric/uri/uri-stats-repository')
-const { UriStatsConfigBuilder } = require('../../lib/metric/uri/uri-stats-config-builder')
-const { SpanRecorderFactory } = require('../../lib/context/trace/span-recorder-factory')
-const { UriStatsSpanRecorderFactory } = require('../../lib/metric/uri/uri-stats-span-recorder-factory')
-const { TraceCompletionEnricher } = require('../../lib/metric/uri/trace-completion-enricher')
-const { ErrorAnalysisConfigBuilder } = require('../../lib/context/trace/error-analysis-config-builder')
-const { ExceptionEnricher, exceptionEnricherNullObject } = require('../../lib/context/trace/exception-enricher')
-const SpanEventRecorderFactory = require('../../lib/context/trace/span-event-recorder-factory')
-const { CompositeTraceCompletionEnricher } = require('../../lib/context/trace/composite-trace-completion-enricher')
 
 let traces = []
 const resetTraces = () => {
@@ -88,14 +72,10 @@ function portProperties(conf) {
 }
 
 const agentBuilder = new ProcessAgentBuilder({ collector: { spanPort: -1, statPort: -1, tcpPort: -1 } })
-const config = agentBuilder.config
-const initialUriStatsConfig = new UriStatsConfigBuilder(config).build()
 agentBuilder
-    .setDataSender(dataSenderMock(config))
+    .setDataSender(dataSenderMock(agentBuilder.config))
     .disablePingScheduler()
     .disableStatsScheduler()
-    .setSpanRecorderFactory(new UriStatsSpanRecorderFactory(config, initialUriStatsConfig))
-    .addEnricher(new TraceCompletionEnricher(new UriStatsRepositoryBuilder(initialUriStatsConfig).build()))
 const agent = agentBuilder.build()
 
 class MockAgent {
@@ -105,41 +85,13 @@ class MockAgent {
             grpcDataSender = json
             json = undefined
         }
-        json = portProperties(json)
-        if (!json) {
-            json = require('../pinpoint-config-test.json')
-        } else {
-            json = Object.assign({}, require('../pinpoint-config-test.json'), json)
-        }
-        const config = new ConfigBuilder(json).build()
-        const uriStatsConfig = new UriStatsConfigBuilder(config).build()
-        const uriStatsRepository = new UriStatsRepositoryBuilder(uriStatsConfig).build()
-        this.config = config
-
-
         activeRequestRepository.activeTraceCache.cache.clear()
         resetResponseTimeCollector(activeRequestRepository.responseTimeCollector)
         transactionIdGenerator.reset()
 
-        localStorage.disable()
-
-        this.traceContext.traceSampler = new TraceSampler(config, this.agentStartTime)
-        this.traceContext.config = config
-        this.traceContext.traceCompletionEnricher = uriStatsConfig.isUriStatsEnabled()
-            ? new CompositeTraceCompletionEnricher([new TraceCompletionEnricher(uriStatsRepository)])
-            : new CompositeTraceCompletionEnricher([])
-        this.traceContext.spanRecorderFactory = uriStatsConfig.isUriStatsEnabled()
-            ? new UriStatsSpanRecorderFactory(config, uriStatsConfig)
-            : new SpanRecorderFactory(config)
-        const errorAnalysisConfig = new ErrorAnalysisConfigBuilder(config).build()
-        const spanEventEnricher = errorAnalysisConfig.isErrorAnalysisEnabled() ? new ExceptionEnricher(errorAnalysisConfig) : exceptionEnricherNullObject
-
-        const dataSender = dataSenderMock(this.config, grpcDataSender, this.agentStartTime)
-        new ProcessAgentBuilder().setDataSender(dataSender).build()
-        const sqlStatsConfig = new SqlStatsConfigBuilder(config).build()
-        const parsingResultFactory = sqlStatsConfig.isSqlStatsEnabled() ? new UidParsingResultFactory() : new IntIdParsingResultFactory()
-        const sqlMetadataService = new SqlMetadataService(agent.dataSender, parsingResultFactory)
-        this.traceContext.spanEventRecorderFactory = new SpanEventRecorderFactory(sqlMetadataService, spanEventEnricher)
+        const builder = new ProcessAgentBuilder(portProperties(json))
+        builder.setDataSender(dataSenderMock(builder.config, grpcDataSender, this.agentStartTime)).build()
+        const sqlMetadataService = this.traceContext.spanEventRecorderFactory.sqlMetadataService
 
         resetTraces()
         const findSpanEvents = function () {

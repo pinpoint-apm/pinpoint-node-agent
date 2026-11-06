@@ -476,7 +476,7 @@ test('Should not collect ExceptionMetaData when errorAnalysis is disabled in Koa
 
 test('Koa with error analysis disabled responds to a throwing route and records its span', function (t) {
   const dataSender = new RecordingDataSender()
-  new ProcessAgentBuilder().setDataSender(dataSender).build()
+  new ProcessAgentBuilder({ features: { errorAnalysis: { enabled: false } } }).setDataSender(dataSender).build()
 
   const routeError = new Error('koa error analysis disabled')
   const app = new Koa()

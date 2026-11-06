@@ -6,7 +6,7 @@
 
 'use strict'
 
-const { DataSourceCallCountable } = require('./grpc-fixture')
+const { DataSourceCallCountable } = require('./grpc-data-sources')
 const agent = require('./agent-singleton-mock')
 const { ClientHeader, makeClientHeaderInterceptor } = require('../../lib/name/client-header')
 

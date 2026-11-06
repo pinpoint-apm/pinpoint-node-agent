@@ -15,7 +15,7 @@ const spanMessages = require('../../../lib/data/v1/Span_pb')
 const { MongoClient } = require('mongodb')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
-const { beforeSpecificOne, MetaInfoOnlyDataSource } = require('../../support/grpc-fixture')
+const { beforeSpecificOne, MetaInfoOnlyDataSource } = require('../../support/grpc-data-sources')
 
 test('mongodb query', async (t) => {
     const collectorServer = new grpc.Server()

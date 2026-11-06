@@ -13,7 +13,7 @@ const services = require('../../lib/data/v1/Service_grpc_pb')
 const spanMessages = require('../../lib/data/v1/Span_pb')
 const SpanBatchSender = require('../../lib/client/span-batch-sender')
 const UnaryDeadlineOptionsBuilder = require('../../lib/client/unary-deadline-options-builder')
-const { spanWithId } = require('../support/grpc-fixture')
+const { spanWithId } = require('../fixtures/span-with-id')
 
 const oneMinuteMillis = 60 * 1000
 

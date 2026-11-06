@@ -12,7 +12,8 @@ const SqlMetaData = require('../../lib/client/sql-meta-data')
 const SqlUidMetaData = require('../../lib/client/sql-uid-meta-data')
 
 class RecordingDataSender {
-    constructor() {
+    constructor(dataSender) {
+        this.dataSender = dataSender
         this.sentSpans = []
         this.sentSpanChunks = []
         this.sentApiMetaInfos = []
@@ -23,6 +24,31 @@ class RecordingDataSender {
     }
 
     send(data) {
+        if (this.closed) {
+            return
+        }
+        this.record(data)
+        this.dataSender?.send(data)
+    }
+
+    sendStat(stats) {
+        this.dataSender?.sendStat(stats)
+    }
+
+    sendPing() {
+        this.dataSender?.sendPing()
+    }
+
+    sendSupportedServicesCommand() {
+        this.dataSender?.sendSupportedServicesCommand()
+    }
+
+    close() {
+        this.closed = true
+        this.dataSender?.close()
+    }
+
+    record(data) {
         if (data?.isSpan?.()) {
             this.sentSpans.push(data)
         } else if (data?.isSpanChunk?.()) {
@@ -40,15 +66,20 @@ class RecordingDataSender {
         }
     }
 
-    close() {
-    }
-
     findSpan(traceRoot) {
         return this.sentSpans.find(span => span.traceRoot === traceRoot)
     }
 
     findSpanChunks(traceRoot) {
         return this.sentSpanChunks.filter(spanChunk => spanChunk.traceRoot === traceRoot)
+    }
+
+    findSpanChunk(asyncId) {
+        return this.sentSpanChunks.find(spanChunk => spanChunk.localAsyncId?.getAsyncId() === asyncId.getAsyncId())
+    }
+
+    findExceptionMetaData(traceRoot) {
+        return this.sentExceptionMetaData.find(exceptionMetaData => exceptionMetaData.traceRoot === traceRoot)
     }
 
     spans() {

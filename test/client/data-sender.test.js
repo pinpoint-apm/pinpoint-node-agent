@@ -19,7 +19,7 @@ test('Should send api meta info', function (t) {
   const apiMetaInfo = ApiMetaInfo.create(methodDescriptor)
   agent.dataSender.send(apiMetaInfo)
 
-  t.equal(agent.dataSender.mockAPIMetaInfos[0], apiMetaInfo, "span is equal in datasender")
+  t.equal(agent.dataSender.apiMetaInfos()[0], apiMetaInfo, "span is equal in datasender")
 })
 
 test('Should send string meta info', function (t) {
@@ -29,5 +29,5 @@ test('Should send string meta info', function (t) {
   const stringMetaInfo = StringMetaInfo.create('1', 'test string')
   agent.dataSender.send(stringMetaInfo)
 
-  t.deepEqual(agent.dataSender.mockMetaInfo, stringMetaInfo, "agentInfo is equal in datasender")
+  t.deepEqual(agent.dataSender.stringMetaInfos().at(-1), stringMetaInfo, "agentInfo is equal in datasender")
 })

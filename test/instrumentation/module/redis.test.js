@@ -64,7 +64,7 @@ test(`${testName1} should Record the connections between express and redis.`, as
       }
 
       agent.callbackTraceClose((childTrace) => {
-        let actualSpanChunk = childTrace.repository.dataSender.mockSpanChunks[0]
+        let actualSpanChunk = childTrace.repository.dataSender.findSpanChunks(childTrace.getTraceRoot())[0]
         t.equal(actualSpanChunk.getTraceRoot(), childTrace.getTraceRoot(), 'transactionId')
         t.equal(actualSpanChunk.localAsyncId.asyncId, childTrace.localAsyncId.asyncId, 'localAsyncId.asyncId')
         t.equal(actualSpanChunk.localAsyncId.sequence, childTrace.localAsyncId.sequence, 'localAsyncId.sequence')
@@ -106,7 +106,7 @@ test(`${testName1} should Record the connections between express and redis.`, as
       })
 
       const childTrace = agent.currentTraceObject()
-      const actualHttpCallbackNextAsyncId = childTrace.repository.dataSender.mockSpanChunks[1].localAsyncId
+      const actualHttpCallbackNextAsyncId = childTrace.repository.dataSender.findSpanChunks(childTrace.getTraceRoot())[1].localAsyncId
       const actualHttpCallbackSpanChunk = childTrace.repository.dataSender.findSpanChunk(actualHttpCallbackNextAsyncId)
       t.equal(actualHttpCallbackSpanChunk.getTraceRoot(), childTrace.getTraceRoot(), 'HTTP request callback transactionId')
       t.equal(actualHttpCallbackSpanChunk.localAsyncId.asyncId, actualHttpCallbackNextAsyncId.asyncId, 'HTTP request callback localAsyncId.asyncId')
@@ -383,7 +383,7 @@ test(`${testName1} await connections between express and redis.`, async function
         return
       }
       agent.callbackTraceClose(async childTrace => {
-        let actualSpanChunk = childTrace.repository.dataSender.mockSpanChunks[0]
+        let actualSpanChunk = childTrace.repository.dataSender.findSpanChunks(childTrace.getTraceRoot())[0]
         let actualNextAsyncId = trace.repository.buffer.find(spanEvent => spanEvent.sequence === 1).asyncId
         t.equal(actualSpanChunk.getTraceRoot(), trace.getTraceRoot(), 'transactionId')
         t.equal(actualSpanChunk.localAsyncId.asyncId, actualNextAsyncId.asyncId, 'localAsyncId.asyncId')

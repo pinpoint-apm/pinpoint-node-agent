@@ -22,7 +22,8 @@ const serviceType = require('../../lib/context/service-type')
 const SpanChunkBuilder = require('../../lib/context/span-chunk-builder')
 const Trace = require('../../lib/context/trace/trace')
 const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
-const dataSenderMock = require('../support/data-sender-mock')
+const RecordingDataSender = require('../support/recording-data-sender')
+const DataSender = require('../../lib/client/data-sender')
 const axios = require('axios')
 const express = require('express')
 const http = require('http')
@@ -70,7 +71,7 @@ test('Should send span', function (t) {
   server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
     const grpcDataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
     const traceRoot = new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '5').build()
-    dataSender = dataSenderMock(agent.getConfig(), grpcDataSender)
+    dataSender = new RecordingDataSender(new DataSender(agent.getConfig(), grpcDataSender))
     const spanBuilder = new SpanBuilder(traceRoot)
     spanBuilder.setServiceType(1400)
     spanBuilder.setEndPoint('localhost:3000')
@@ -125,7 +126,7 @@ test('Should send span', function (t) {
         t.equal(pSpanEvent.getDepth(), 1, 'depth')
 
         t.equal(pSpanEvent.getStartelapsed(), 72, 'startElapsed')
-        t.equal(pSpanEvent.getEndelapsed(), dataSender.mockSpan.spanEventList[0].elapsedTime, 'endElapsed')
+        t.equal(pSpanEvent.getEndelapsed(), dataSender.findSpan(traceRoot).spanEventList[0].elapsedTime, 'endElapsed')
 
         t.equal(pSpanEvent.getServicetype(), 9057, 'serviceType')
 
@@ -168,7 +169,7 @@ test('sendSpanChunk redis.SET.end', function (t) {
     const grpcDataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
     const traceRoot = new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '5').build()
     const asyncId = AsyncId.make()
-    dataSender = dataSenderMock(agent.getConfig(), grpcDataSender)
+    dataSender = new RecordingDataSender(new DataSender(agent.getConfig(), grpcDataSender))
     const spanChunkBuilder = new AsyncSpanChunkBuilder(traceRoot, asyncId)
     const repository = new SpanRepository(spanChunkBuilder, dataSender)
     const childTraceBuilder = new ChildTraceBuilder(traceRoot, repository, asyncId, new SpanEventRecorderFactory())
@@ -243,7 +244,7 @@ test('sendSpan', (t) => {
   server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
     const grpcDataSender = beforeSpecificOne(port, SpanOnlyFunctionalTestableDataSource)
     const traceRoot = new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '5').build()
-    dataSender = dataSenderMock(agent.getConfig(), grpcDataSender)
+    dataSender = new RecordingDataSender(new DataSender(agent.getConfig(), grpcDataSender))
     const spanBuilder = new SpanBuilder(traceRoot)
     const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
     const repository = new SpanRepository(spanChunkBuilder, dataSender)

@@ -52,7 +52,7 @@ test("ioredis destination id", async function (t) {
             t.equal(data, "value", "redis value validation")
 
             setImmediate(async () => {
-                t.true(agent.dataSender.mockSpanChunks[0].spanEventList.length > 0, "a spanEventList should has one chunk")
+                t.true(agent.dataSender.findSpanChunks(trace.getTraceRoot())[0].spanEventList.length > 0, "a spanEventList should has one chunk")
 
                 const spanevent = trace.repository.buffer[0]
                 t.equal(spanevent.destinationId, "Redis", "Redis destionation ID check")

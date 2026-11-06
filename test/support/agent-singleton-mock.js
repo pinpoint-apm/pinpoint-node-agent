@@ -6,7 +6,9 @@
 
 'use strict'
 
-const dataSenderMock = require('./data-sender-mock')
+const RecordingDataSender = require('./recording-data-sender')
+const DataSender = require('../../lib/client/data-sender')
+const { ClientHeader, makeClientHeaderInterceptor } = require('../../lib/name/client-header')
 const shimmer = require('@pinpoint-apm/shimmer')
 const transactionIdGenerator = require('../../lib/context/sequence-generators').transactionIdGenerator
 const closedTraceWrapped = Symbol('closedTraceWrapped')
@@ -71,9 +73,20 @@ function portProperties(conf) {
     return Object.assign({ collector: collectorConf })
 }
 
+// A GrpcDataSender passed to bindHttp(), or a collector port in its config, sends to a local gRPC server as well
+function recordingDataSender(config, grpcDataSender, agentStartTime) {
+    if (grpcDataSender) {
+        return new RecordingDataSender(new DataSender(config, grpcDataSender))
+    }
+    if (config.collector.spanPort > 0) {
+        return new RecordingDataSender(new DataSender(config, new GrpcDataSender(config, [makeClientHeaderInterceptor(ClientHeader.make(agentStartTime, config))])))
+    }
+    return new RecordingDataSender()
+}
+
 const agentBuilder = new ProcessAgentBuilder({ collector: { spanPort: -1, statPort: -1, tcpPort: -1 } })
 agentBuilder
-    .setDataSender(dataSenderMock(agentBuilder.config))
+    .setDataSender(new RecordingDataSender())
     .disablePingScheduler()
     .disableStatsScheduler()
 const agent = agentBuilder.build()
@@ -90,7 +103,7 @@ class MockAgent {
         transactionIdGenerator.reset()
 
         const builder = new ProcessAgentBuilder(portProperties(json))
-        builder.setDataSender(dataSenderMock(builder.config, grpcDataSender, this.agentStartTime)).build()
+        builder.setDataSender(recordingDataSender(builder.config, grpcDataSender, this.agentStartTime)).build()
         const sqlMetadataService = this.traceContext.spanEventRecorderFactory.sqlMetadataService
 
         resetTraces()

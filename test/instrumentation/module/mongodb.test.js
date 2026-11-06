@@ -39,7 +39,7 @@ test('mongodb query', async (t) => {
                 t.true(result.insertedId, `insertedId is ${result.insertedId}`)
                 t.deepEqual(result.insertedId, findOneResult._id, `findOne result is ${findOneResult._id}`)
 
-                let actualSpan = trace.repository.dataSender.mockSpan
+                let actualSpan = trace.repository.dataSender.findSpan(trace.getTraceRoot())
                 let expectedBuilder = new MethodDescriptorBuilder().setApiDescriptor('Node Server Process')
                 let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(expectedBuilder)
                 t.equal(actualSpan.apiId, actualMethodDescriptor.apiId, 'apiId is equal')

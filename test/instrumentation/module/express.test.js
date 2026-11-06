@@ -1036,7 +1036,7 @@ test('express should not collect ExceptionMetaData when errorAnalysis is disable
 
 test('express with error analysis disabled responds to a throwing handler and records its span', (t) => {
   const dataSender = new RecordingDataSender()
-  new ProcessAgentBuilder().setDataSender(dataSender).build()
+  new ProcessAgentBuilder({ features: { errorAnalysis: { enabled: false } } }).setDataSender(dataSender).build()
 
   const app = new express()
   app.get('/error-analysis-disabled/throw', () => {

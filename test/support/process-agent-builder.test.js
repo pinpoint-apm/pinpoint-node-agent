@@ -59,8 +59,50 @@ test('The next test records its request only in its own data sender', (t) => {
     })
 })
 
+test('A later ProcessAgentBuilder.build() samples by the config it is given', (t) => {
+    const dataSender = new RecordingDataSender()
+    new ProcessAgentBuilder({ sampling: { enable: false } }).setDataSender(dataSender).build()
+
+    assertHttpServer(t, (app, requestOutgoing) => {
+        app.get('/', (req, res) => {
+            requestOutgoing(() => res.send('ok'))
+        })
+    }, () => {
+        t.equal(dataSender.spans().length, 0, 'no span is recorded when sampling is disabled')
+    })
+})
+
+test('A later ProcessAgentBuilder.build() gives the agent the config it is given', (t) => {
+    const dataSender = new RecordingDataSender()
+    new ProcessAgentBuilder({ applicationName: 'other.application' }).setDataSender(dataSender).build()
+
+    assertHttpServer(t, (app, requestOutgoing) => {
+        app.get('/', (req, res) => {
+            requestOutgoing(() => res.send('ok'))
+        })
+    }, (otherRequestHeaders) => {
+        t.equal(otherRequestHeaders['pinpoint-pappname'], 'other.application', 'the outgoing request carries the given application name')
+    })
+})
+
+test('A later ProcessAgentBuilder.build() without json goes back to the default config', (t) => {
+    const dataSender = new RecordingDataSender()
+    new ProcessAgentBuilder().setDataSender(dataSender).build()
+
+    assertHttpServer(t, (app, requestOutgoing) => {
+        app.get('/', (req, res) => {
+            requestOutgoing(() => res.send('ok'))
+        })
+    }, (otherRequestHeaders) => {
+        t.equal(dataSender.spans().length, 2, 'the app span and the other server\'s span are recorded')
+        t.equal(otherRequestHeaders['pinpoint-pappname'], 'test.application.name', 'the outgoing request carries the default application name')
+    })
+})
+
 function assertHttpServer(t, routes, asserts) {
+    let otherRequestHeaders
     const otherServer = http.createServer((req, res) => {
+        otherRequestHeaders = req.headers
         res.end('ok')
     })
     otherServer.listen(0, () => {
@@ -76,7 +118,7 @@ function assertHttpServer(t, routes, asserts) {
             http.get({ port: server.address().port, path: '/' }, (response) => {
                 response.resume()
                 response.on('end', () => setImmediate(() => {
-                    asserts()
+                    asserts(otherRequestHeaders)
                     t.end()
                 }))
             })

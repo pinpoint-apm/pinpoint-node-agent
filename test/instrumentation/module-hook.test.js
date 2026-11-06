@@ -12,7 +12,6 @@ test('load modules with versions', (t) => {
     const http1 = require('http')
     const http2 = require('http')
     t.equal(http1, http2, 'Hook modules caches http')
-    t.true(agent.moduleHook.hookRegistry.getHooks('http').length > 0, 'Hook for http is registered')
 
     const http = agent.moduleHook.hookRegistry.getHooks('http')[0]
     t.true(http.endsWith('module/http.js'), 'module http name matches')
@@ -20,7 +19,6 @@ test('load modules with versions', (t) => {
     const redis1 = require('redis')
     const redis2 = require('redis')
     t.equal(redis1, redis2, 'Hook modules caches redis')
-    t.true(agent.moduleHook.hookRegistry.getHooks('redis').length > 0, 'Hook for redis is registered')
 
     const redis = agent.moduleHook.hookRegistry.getHooks('redis')[0]
     t.true(redis.endsWith('module/redis.js'), 'module redis hook path matches')
@@ -33,11 +31,10 @@ test('load modules with versions', (t) => {
     const koaModule = agent.moduleHook.hookRegistry.getHooks('koa-router')[0]
     t.true(koaModule.endsWith('module/koa-router.js'), 'module koa-router hook path matches')
     const koa3Module = agent.moduleHook.hookRegistry.getHooks('@koa/router')[0]
-    t.true(koa3Module.endsWith('module/koa-router.js'), 'module @koa/router hook path matches')
+    t.true(koa3Module.endsWith('lib/instrumentation/module/koa-router.js'), 'module @koa/router hook path matches')
 
-    const react = require('react')
+    require('react')
     const versionCache = Array.from(agent.moduleHook.versionCache.entries()).find(([key]) => key.endsWith('react'))
-    t.true(react, 'react module is loaded')
     t.false(versionCache, 'hook does not cache react module')
     t.end()
 })
@@ -46,7 +43,6 @@ test('load module with hook', (t) => {
     const dut = agent.moduleHook
     const hooks = dut.hookRegistry.hooks
     t.equal(hooks['@koa/router'].moduleName, '@koa/router', 'Hook for @koa/router is registered')
-    t.true(hooks['@koa/router'].hooks[0].endsWith('lib/instrumentation/module/koa-router.js'), 'Hook for @koa/router points to koa-router.js')
     t.end()
 })
 

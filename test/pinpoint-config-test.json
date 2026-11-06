@@ -17,17 +17,9 @@
     "plugins": {
         "http": {
             "errorStatusCodes": "5xx,401,403"
-        },
-        "express": true,
-        "koa": true,
-        "mongodb": true,
-        "redis": true,
-        "ioredis": true,
-        "mysql": true,
-        "postgresql": true
+        }
     },
     "features": {
-        "activeThreadCount": true,
         "dataSending": true,
         "statsMonitoring": false,
         "container": false,

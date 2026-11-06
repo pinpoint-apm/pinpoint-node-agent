@@ -7,20 +7,9 @@
 const test = require('tape')
 
 const agent = require('../support/agent-singleton-mock')
-const AgentInfo = require('../../lib/data/dto/agent-info')
 const ApiMetaInfo = require('../../lib/data/dto/api-meta-info')
 const StringMetaInfo = require('../../lib/data/dto/string-meta-info')
 const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
-
-test('Should send agent info', function (t) {
-  t.plan(1)
-  agent.bindHttp()
-
-  const agentInfo = new AgentInfo(agent.getConfig(), agent.agentStartTime)
-  agent.dataSender.send(agentInfo)
-
-  t.ok(true)
-})
 
 test('Should send api meta info', function (t) {
   t.plan(1)

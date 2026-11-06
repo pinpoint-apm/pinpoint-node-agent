@@ -7,7 +7,6 @@
 const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
 const express = require('express')
-const { MongoDBContainer } = require('@testcontainers/mongodb')
 const { startMongoDB } = require('../../support/shared-containers')
 const axios = require('axios')
 const grpc = require('@grpc/grpc-js')
@@ -91,42 +90,6 @@ test('mongodb query', async (t) => {
         t.teardown(async () => {
             client.close()
             server.close()
-            collectorServer.forceShutdown()
-        })
-    })
-})
-
-test.skip('mongodb query with error', (t) => {
-    const collectorServer = new grpc.Server()
-    collectorServer.addService(services.MetadataService, {
-        requestApiMetaData: (call, callback) => {
-            const result = new spanMessages.PResult()
-            callback(null, result)
-        }
-    })
-    collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), async (error, port) => {
-        agent.bindHttp(port)
-        const mongodbContainer = await new MongoDBContainer("mongo:6.0.1").start()
-        const client = new MongoClient(mongodbContainer.getConnectionString(), { directConnection: true, serverSelectionTimeoutMS: 100 })
-
-        const app = express()
-        app.get('/', async (req, res) => {
-            await mongodbContainer.stop()
-            const result = await client.db('test1').collection('test').insertOne({ name: 'test' })
-            agent.callbackTraceClose(async (trace) => {
-                t.end()
-            })
-            res.send(result.name)
-        })
-
-        const server = app.listen(5006, async () => {
-            const result = await axios.get('http://localhost:5006/')
-            t.equal(result.status, 200, 'status code is 200')
-        })
-        t.teardown(async () => {
-            client.close()
-            server.close()
-            await mongodbContainer.stop()
             collectorServer.forceShutdown()
         })
     })

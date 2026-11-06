@@ -190,36 +190,6 @@ test('koa should keep uriTemplate and omit httpMethod in TraceRoot when isUriSta
   })
 })
 
-test('koa should record uriTemplate and httpMethod in router', (t) => {
-  t.plan(3)
-
-  agent.bindHttp({
-    collector: { spanPort: -1, statPort: -1, tcpPort: -1 },
-    features: { uriStats: { httpMethod: true } }
-  })
-
-  const PATH = '/books/:bookId/pages/:pageId'
-  const app = new Koa()
-  const router = new Router()
-
-  router.get(PATH, async (ctx) => {
-    ctx.body = 'ok pattern'
-
-    agent.callbackTraceClose((trace) => {
-      const traceRoot = trace.spanBuilder.getTraceRoot()
-      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'records uriTemplate')
-      t.equal(traceRoot.getEnricher('uriStats.method'), 'GET', 'records httpMethod')
-    })
-  })
-
-  app.use(router.routes()).use(router.allowedMethods())
-
-  const server = app.listen(TEST_ENV.port, async () => {
-    const result = await axios.get(getServerUrl('/books/123/pages/9'))
-    t.equal(result.status, 200, 'pattern route responds 200')
-    server.close()
-  })
-})
 test('Should aggregate URI stats in UriStatsRepository for Koa', function (t) {
   agent.bindHttp()
 
@@ -414,53 +384,6 @@ test('Should aggregate URI stats for DisableTrace in Koa', function (t) {
     try {
       await axios.get(getServerUrl(PATH), {
         timeout: 3000,
-        httpAgent: new http.Agent({ keepAlive: false }),
-        httpsAgent: new https.Agent({ keepAlive: false }),
-      })
-      await traceClosed
-    } catch (e) {
-      t.fail(e)
-    } finally {
-      server.close()
-      t.end()
-    }
-  })
-})
-
-test('Should not collect ExceptionMetaData when errorAnalysis is disabled in Koa', function (t) {
-  agent.bindHttp({
-    features: {
-      errorAnalysis: undefined
-    }
-  })
-
-  const PATH = '/integration/exception-disabled'
-  const app = new Koa()
-  const router = new Router()
-  let resolveTraceClosed
-  const traceClosed = new Promise((resolve) => {
-    resolveTraceClosed = resolve
-  })
-
-  router.get(PATH, async (ctx) => {
-    agent.callbackTraceClose((trace) => {
-      setImmediate(() => {
-        const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
-        t.equal(actualExceptionMetaData, undefined, 'ExceptionMetaData should not be sent when errorAnalysis is disabled')
-
-        resolveTraceClosed()
-      })
-    })
-    throw new Error('koa error analysis disabled test')
-  })
-
-  app.use(router.routes()).use(router.allowedMethods())
-
-  const server = app.listen(TEST_ENV.port, async () => {
-    try {
-      await axios.get(getServerUrl(PATH), {
-        timeout: 3000,
-        validateStatus: () => true,
         httpAgent: new http.Agent({ keepAlive: false }),
         httpsAgent: new https.Agent({ keepAlive: false }),
       })

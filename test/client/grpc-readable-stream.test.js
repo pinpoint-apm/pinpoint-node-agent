@@ -309,7 +309,6 @@ test('When gRPC server shutdown and then node agent grpcStream on error fired an
                     loadGrpcServerCallback(err, port)
                 })
             })
-            // endCallback(null, new cmdMessage.PResult())
         }
 
 

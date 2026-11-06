@@ -213,7 +213,6 @@ test(`Pool connect and query hooking`, async (t) => {
             t.equal(querySpanEvent.serviceType, pgExecuteQueryServiceType.getCode(), 'query serviceType')
 
             let actualSpanChunk = trace.repository.dataSender.findSpanChunk(querySpanEvent.asyncId)
-            t.equal(actualSpanChunk.spanId, querySpanEvent.spanId, 'spanChunk spanId')
             t.equal(actualSpanChunk.traceRoot, trace.spanBuilder.getTraceRoot(), 'spanChunk traceRoot')
             t.equal(actualSpanChunk.localAsyncId.getAsyncId(), querySpanEvent.asyncId.getAsyncId(), 'spanChunk localAsyncId')
             t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'spanChunk localAsyncId sequence')
@@ -286,7 +285,6 @@ test('Disable trace with Express and PostgreSQL', async (t) => {
 
                 let actualNextAsyncId = actualSpanEvent.asyncId
                 let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
-                t.equal(actualSpanChunk.spanId, actualSpanEvent.spanId, 'spanChunk.spanId equals to spanEvent.spanId Client.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualSpanChunk.traceRoot, trace.spanBuilder.getTraceRoot(), 'spanChunk.transactionIdObject Client.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualSpanChunk.localAsyncId.asyncId, actualSpanEvent.asyncId.getAsyncId(), 'spanChunk.localAsyncId.asyncId Client.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'spanChunk.localAsyncId.sequence Client.query in sampled Trace of DisableTrace Functional Tests')

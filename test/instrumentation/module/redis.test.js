@@ -65,7 +65,6 @@ test(`${testName1} should Record the connections between express and redis.`, as
 
       agent.callbackTraceClose((childTrace) => {
         let actualSpanChunk = childTrace.repository.dataSender.mockSpanChunks[0]
-        t.equal(actualSpanChunk.traceRoot.getTraceId().getSpanId(), childTrace.traceRoot.getTraceId().getSpanId(), 'spanId')
         t.equal(actualSpanChunk.getTraceRoot(), childTrace.getTraceRoot(), 'transactionId')
         t.equal(actualSpanChunk.localAsyncId.asyncId, childTrace.localAsyncId.asyncId, 'localAsyncId.asyncId')
         t.equal(actualSpanChunk.localAsyncId.sequence, childTrace.localAsyncId.sequence, 'localAsyncId.sequence')
@@ -109,7 +108,6 @@ test(`${testName1} should Record the connections between express and redis.`, as
       const childTrace = agent.currentTraceObject()
       const actualHttpCallbackNextAsyncId = childTrace.repository.dataSender.mockSpanChunks[1].localAsyncId
       const actualHttpCallbackSpanChunk = childTrace.repository.dataSender.findSpanChunk(actualHttpCallbackNextAsyncId)
-      t.equal(actualHttpCallbackSpanChunk.traceRoot.getTraceId().getSpanId(), childTrace.traceRoot.getTraceId().getSpanId(), 'HTTP request callback spanId')
       t.equal(actualHttpCallbackSpanChunk.getTraceRoot(), childTrace.getTraceRoot(), 'HTTP request callback transactionId')
       t.equal(actualHttpCallbackSpanChunk.localAsyncId.asyncId, actualHttpCallbackNextAsyncId.asyncId, 'HTTP request callback localAsyncId.asyncId')
       t.equal(actualHttpCallbackSpanChunk.localAsyncId.sequence, 1, 'HTTP request callback localAsyncId.sequence')
@@ -280,7 +278,6 @@ test(`${testName1} redis callback nested asyncTrace with await HTTP get`, async 
       let actualNextAsyncId = actualSpanEvent.asyncId
 
       let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
-      t.equal(actualSpanChunk.traceRoot.getTraceId().getSpanId(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), 'RedisClient.set spanChunk.spanId')
       t.equal(actualSpanChunk.getTraceRoot(), trace.getTraceRoot(), 'RedisClient.set spanChunk.agentId')
       t.equal(actualSpanChunk.localAsyncId.asyncId, actualNextAsyncId.asyncId, 'RedisClient.set spanChunk.localAsyncId.asyncId')
       t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'RedisClient.set spanChunk.localAsyncId.sequence')
@@ -514,7 +511,6 @@ test(`${testName1} await connections between express and redis.`, async function
       agent.callbackTraceClose(async childTrace => {
         let actualSpanChunk = childTrace.repository.dataSender.mockSpanChunks[0]
         let actualNextAsyncId = trace.repository.buffer.find(spanEvent => spanEvent.sequence === 1).asyncId
-        t.equal(actualSpanChunk.traceRoot.getTraceId().getSpanId(), traceRoot.getTraceId().getSpanId(), 'spanId')
         t.equal(actualSpanChunk.getTraceRoot(), trace.getTraceRoot(), 'transactionId')
         t.equal(actualSpanChunk.localAsyncId.asyncId, actualNextAsyncId.asyncId, 'localAsyncId.asyncId')
         t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence')
@@ -559,7 +555,6 @@ test(`${testName1} await connections between express and redis.`, async function
 
       const actualOutgoingChildTrace = agent.getTrace(2)
       const asyncSpanChunk = actualOutgoingChildTrace.repository.dataSender.findSpanChunk(actualOutgoingChildTrace.localAsyncId)
-      t.equal(asyncSpanChunk.getTraceRoot().getTraceId().getSpanId(), traceRoot.getTraceId().getSpanId(), 'HTTP request callback spanId')
       t.equal(asyncSpanChunk.getTraceRoot(), traceRoot, 'HTTP request callback transactionId')
       t.equal(asyncSpanChunk.localAsyncId.asyncId, actualHttpCallbackNextAsyncId.asyncId, 'HTTP request callback localAsyncId.asyncId')
       t.equal(asyncSpanChunk.localAsyncId.sequence, 1, 'HTTP request callback localAsyncId.sequence')

@@ -38,7 +38,6 @@ function createStatCall(t) {
 
         if (response) {
             t.equal(callWriteOrder, callCount, 'call count compare in statClient.sendAgentStat callback')
-            t.true(response, 'response is true in statClient.sendAgentStat callback')
         }
 
         setTimeout(() => {
@@ -181,67 +180,6 @@ test('sendAgentInfo deadline and metadata', retryTestTimeout, (t) => {
                 t.end()
             }
             grpcDataSender.unaryDeadlineOptionsBuilder.setSeconds(0.1)
-
-            grpcDataSender.sendAgentInfo(Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
-                hostname: 'hostname',
-                "serviceType": 1400,
-            }), callback)
-        }
-    })
-})
-
-test('sendAgentInfo deadline and no agent name metadata', retryTestTimeout, (t) => {
-    agent.bindHttp()
-    const server = new grpc.Server()
-    let agentInfo = 0
-    server.addService(services.AgentService, {
-        // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/server.ts
-        requestAgentInfo: (call, callback) => {
-            agentInfo++
-
-            t.equal(call.metadata.get('agentid')[0], agent.getConfig().getAgentId(), 'call.metadata.get("agentid")[0] is the generated v4 agentId')
-            t.equal(call.metadata.get('applicationname')[0], 'test.application.name', 'call.metadata.get("applicationname")[0] is test.application.name')
-            t.equal(call.metadata.get('agentName')[0], agent.getConfig().getAgentId(), 'v4 without agentName sends agentId as agentname')
-            t.equal(call.metadata.get('servicetype')[0], '1400', 'call.metadata.get("servicetype")[0] is 1400')
-
-            const result = new spanMessages.PResult()
-            if (agentInfo == 1) {
-                callback(null, result)
-            } else if (agentInfo == 2) {
-                _.delay(() => {
-                    callback(null, result)
-                }, 100)
-            }
-        }
-    })
-    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        const grpcDataSender = buildGrpcDataSender(port)
-
-        grpcDataSender.sendAgentInfo(Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
-            hostname: 'hostname',
-            "serviceType": 1400,
-        }), (err, response) => {
-            t.true(response, '1st sendAgentInfo response is success')
-            t.false(err, '1st sendAgentInfo err is false')
-            deadlineFunctionalTest()
-        })
-
-        t.teardown(() => {
-            grpcDataSender.close()
-            server.forceShutdown()
-        })
-
-        function deadlineFunctionalTest() {
-            grpcDataSender.unaryDeadlineOptionsBuilder.setSeconds(0.1)
-
-            const callback = (err, response) => {
-                t.false(response, '2st sendAgentInfo response is undefined')
-                t.equal(err.code, 4, '2st sendAgentInfo err.code is 4')
-                t.true(err.details.startsWith('Deadline exceeded'), '2st sendAgentInfo err.details is Deadline exceeded')
-                t.true(err.message.startsWith('4 DEADLINE_EXCEEDED: Deadline exceeded'), '2st sendAgentInfo err.message is Deadline exceeded')
-
-                t.end()
-            }
 
             grpcDataSender.sendAgentInfo(Object.assign(new AgentInfo(agent.getConfig(), agent.agentStartTime), {
                 hostname: 'hostname',

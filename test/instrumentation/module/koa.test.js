@@ -13,11 +13,8 @@ const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
-const grpc = require('@grpc/grpc-js')
-const services = require('../../../lib/data/v1/Service_grpc_pb')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
-const GrpcDataSenderBuilder = require('../../support/grpc-data-sender-builder')
-const { beforeSpecificOne, StatOnlyFunctionalTestableDataSource } = require('../../support/grpc-data-sources')
+const { TestGrpcDataSenderBuilder, SpanAdaptor, StatAdaptor, MetadataAdaptor } = require('../../support/test-grpc-data-sender')
 const { waitForAgentStat } = require('../../support/wait-for-agent-stat')
 const AgentStatsMonitor = require('../../../lib/metric/agent-stats-monitor')
 const http = require('http')
@@ -562,19 +559,16 @@ test('Should count failure in URI stats for DisableTrace in Koa', function (t) {
 })
 
 test('Functional Test: requestExceptionMetaData should deliver error.cause chain in Koa', (t) => {
-  const collectorServer = new grpc.Server()
-  let dataSender
   let metadataReceived
   const metadataReceivedPromise = new Promise((resolve, reject) => {
     metadataReceived = { resolve, reject }
   })
 
-  collectorServer.addService(services.SpanService, {
+  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new SpanAdaptor({
     sendSpanBatch: function (call, callback) {
       callback(null, new spanMessages.PSpanResultBatch())
     },
-  })
-  collectorServer.addService(services.MetadataService, {
+  })).addAdaptor(new MetadataAdaptor({
     requestExceptionMetaData: (call, callback) => {
       callback(null, new spanMessages.PResult())
 
@@ -603,20 +597,10 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
         metadataReceived.reject(error)
       }
     }
-  })
+  }))
 
-  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-    if (err) {
-      t.fail(err)
-      collectorServer.forceShutdown()
-      t.end()
-      return
-    }
-
-    dataSender = new GrpcDataSenderBuilder(port)
-      .enableExceptionMetaData()
-      .build()
-    agent.bindHttp(dataSender)
+  grpcDataSenderBuilder.build().then((grpcDataSender) => {
+    agent.bindHttp(grpcDataSender)
 
     const app = new Koa()
     const router = new Router()
@@ -641,8 +625,7 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
         t.fail(error?.stack || error?.message || String(error))
       } finally {
         server.close(() => {
-          dataSender?.close()
-          collectorServer.forceShutdown()
+          grpcDataSender.close()
           t.end()
         })
       }
@@ -815,9 +798,8 @@ test('Koa: application service type is NODE 1400 even with PINPOINT_SERVICE_TYPE
 })
 
 test('Koa: AgentStat sends the transaction count and response time of completed requests', (t) => {
-  const collectorServer = new grpc.Server()
   const receivedAgentStats = []
-  collectorServer.addService(services.StatService, {
+  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new StatAdaptor({
     sendAgentStat: (call) => {
       call.on('data', (statMessage) => {
         if (statMessage.getAgentstat()) {
@@ -826,10 +808,10 @@ test('Koa: AgentStat sends the transaction count and response time of completed 
       })
       call.on('end', () => call.end())
     }
-  })
+  })).addAdaptor(new SpanAdaptor())
+    .addAdaptor(new MetadataAdaptor())
 
-  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-    const grpcDataSender = beforeSpecificOne(port, StatOnlyFunctionalTestableDataSource)
+  grpcDataSenderBuilder.build().then((grpcDataSender) => {
     agent.bindHttp(grpcDataSender)
     const agentStatsMonitor = new AgentStatsMonitor(grpcDataSender, agent.getConfig().getAgentId(), agent.agentStartTime)
 
@@ -859,7 +841,6 @@ test('Koa: AgentStat sends the transaction count and response time of completed 
         agentStatsMonitor.shutdown()
         server.close(() => {
           grpcDataSender.close()
-          collectorServer.forceShutdown()
           t.end()
         })
       }

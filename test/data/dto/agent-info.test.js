@@ -13,8 +13,7 @@ const generatedAgentIdPattern = /^[A-Za-z0-9_-]{22}$/
 test('Should initialize agent', function (t) {
   t.plan(1)
 
-  const agent = require('../../support/agent-singleton-mock')
-  t.equal(new AgentInfo(agent.getConfig(), agent.agentStartTime).agentVersion, '2.0.0', 'agent version from package.json')
+  t.equal(new AgentInfo(buildConfig({}), '1700000000000').agentVersion, '2.0.0', 'agent version from package.json')
 })
 
 test('json applicationServiceType and PINPOINT_SERVICE_TYPE are ignored and AgentInfo is NODE 1400', (t) => {

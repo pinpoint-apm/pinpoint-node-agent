@@ -84,12 +84,9 @@ function recordingDataSender(config, grpcDataSender, agentStartTime) {
     return new RecordingDataSender()
 }
 
-const agentBuilder = new ProcessAgentBuilder({ collector: { spanPort: -1, statPort: -1, tcpPort: -1 } })
-agentBuilder
+const agent = new ProcessAgentBuilder({ collector: { spanPort: -1, statPort: -1, tcpPort: -1 } })
     .setDataSender(new RecordingDataSender())
-    .disablePingScheduler()
-    .disableStatsScheduler()
-const agent = agentBuilder.build()
+    .build()
 
 class MockAgent {
     bindHttp(json = { collector: { spanPort: -1, statPort: -1, tcpPort: -1 } }) {
@@ -254,6 +251,5 @@ function resetResponseTimeCollector(responseTimeCollector) {
 // ref: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Inheritance_and_the_prototype_chain
 Object.setPrototypeOf(MockAgent.prototype, agent)
 const mockAgent = new MockAgent()
-mockAgent.start()
 
 module.exports = mockAgent

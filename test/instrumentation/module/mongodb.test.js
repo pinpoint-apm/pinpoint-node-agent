@@ -9,25 +9,17 @@ const agent = require('../../support/agent-singleton-mock')
 const express = require('express')
 const { startMongoDB } = require('../../support/shared-containers')
 const axios = require('axios')
-const grpc = require('@grpc/grpc-js')
-const services = require('../../../lib/data/v1/Service_grpc_pb')
-const spanMessages = require('../../../lib/data/v1/Span_pb')
 const { MongoClient } = require('mongodb')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
-const { beforeSpecificOne, MetaInfoOnlyDataSource } = require('../../support/grpc-data-sources')
+const { TestGrpcDataSenderBuilder, MetadataAdaptor, SpanAdaptor } = require('../../support/test-grpc-data-sender')
 
 test('mongodb query', async (t) => {
-    const collectorServer = new grpc.Server()
-    collectorServer.addService(services.MetadataService, {
-        requestApiMetaData: (call, callback) => {
-            const result = new spanMessages.PResult()
-            callback(null, result)
-        }
-    })
-    collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), async (error, port) => {
-        const dataSender = beforeSpecificOne(port, MetaInfoOnlyDataSource)
-        agent.bindHttp(dataSender)
+    const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder()
+        .addAdaptor(new MetadataAdaptor())
+        .addAdaptor(new SpanAdaptor())
+    grpcDataSenderBuilder.build().then(async (grpcDataSender) => {
+        agent.bindHttp(grpcDataSender)
         const mongodbContainer = await startMongoDB()
         const client = new MongoClient(mongodbContainer.getConnectionString(), { directConnection: true })
 
@@ -90,7 +82,7 @@ test('mongodb query', async (t) => {
         t.teardown(async () => {
             client.close()
             server.close()
-            collectorServer.forceShutdown()
+            grpcDataSender.close()
         })
     })
 })

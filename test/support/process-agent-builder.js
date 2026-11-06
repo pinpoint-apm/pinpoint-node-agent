@@ -18,6 +18,7 @@ const { SqlStatsConfigBuilder } = require('../../lib/metric/sql/sql-stats-config
 const { UidParsingResultFactory } = require('../../lib/metric/sql/uid-parsing-result-factory')
 const { ErrorAnalysisConfigBuilder } = require('../../lib/context/trace/error-analysis-config-builder')
 const { ExceptionEnricher } = require('../../lib/context/trace/exception-enricher')
+const RecordingDataSender = require('./recording-data-sender')
 
 let processAgent
 let dataSenderInUse
@@ -55,12 +56,11 @@ class ProcessAgentBuilder extends AgentBuilder {
         }
     }
 
+    // The first build() in the process also starts the agent of the test process, which turns its ModuleHook on,
+    // so a test file that loads an instrumented module calls build() before it requires that module
     build() {
         if (!processAgent) {
-            dataSenderInUse = this.dataSender
-            this.dataSender = forwardingDataSender
-            processAgent = super.build()
-            return processAgent
+            processAgent = startProcessAgent(this.config)
         }
         localStorage.disable()
         dataSenderInUse.close()
@@ -75,6 +75,19 @@ class ProcessAgentBuilder extends AgentBuilder {
         processAgent.config = this.config
         return processAgent
     }
+}
+
+// Starts the agent with a sender of its own, so the start data (AgentInfo, the supported services command)
+// does not reach the sender of whichever test builds first
+function startProcessAgent(config) {
+    dataSenderInUse = new RecordingDataSender()
+    const agent = new AgentBuilder(config)
+        .setDataSender(forwardingDataSender)
+        .disablePingScheduler()
+        .disableStatsScheduler()
+        .build()
+    agent.start()
+    return agent
 }
 
 module.exports = {

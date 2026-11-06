@@ -8,21 +8,17 @@
 
 const test = require('tape')
 const grpc = require('@grpc/grpc-js')
-const { beforeSpecificOne, getCallRequests, getMetadata } = require('../../support/grpc-data-sources')
-const services = require('../../../lib/data/v1/Service_grpc_pb')
+const { TestGrpcDataSenderBuilder, CommandAdaptor } = require('../../support/test-grpc-data-sender')
 const cmdMessage = require('../../../lib/data/v1/Cmd_pb')
-const { ProfilerDataSource } = require('../../support/grpc-data-sources')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const shimmer = require('@pinpoint-apm/shimmer')
 const GrpcReadableStream = require('../../../lib/client/grpc-readable-stream')
-const CommandType = require('../../../lib/client/command/command-type')
-const spanMessages = require('../../../lib/data/v1/Span_pb')
 
 const reconnectTestTimeout = { timeout: 60 * 1000 }
 
-test('If you run the ActiveRequest function, and then Node agent send the second piece of data, and the Pinpoint server fails, the ActiveRequest gRPC Stream closes and the for statement stops', reconnectTestTimeout, (t) => {
+test('If you run the ActiveRequest function, and then Node agent send the second piece of data, and the Pinpoint server fails, the ActiveRequest gRPC Stream closes and the for statement stops', reconnectTestTimeout, async (t) => {
     t.plan(29)
-    const server = new grpc.Server()
+    let dataSender
     let requestId = 1
     let activeRequestCount = 0
     const profilerServices = {
@@ -41,7 +37,7 @@ test('If you run the ActiveRequest function, and then Node agent send the second
                     t.equal(commonStream.getSequenceid(), activeRequestCount, `sequenceId is ${activeRequestCount}`)
 
                     if (activeRequestCount === 2) {
-                        server.forceShutdown()
+                        dataSender.disconnect()
                     }
 
                     if (activeRequestCount > 2) {
@@ -59,124 +55,117 @@ test('If you run the ActiveRequest function, and then Node agent send the second
             })
         }
     }
-    server.addService(services.ProfilerCommandServiceService, profilerServices)
-
-    let dataSender
-    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        dataSender = beforeSpecificOne(port, ProfilerDataSource)
-        let handleCommandCallCount = 0
-        shimmer.wrap(dataSender.profilerClient, 'handleCommand', function (original) {
-            return function () {
-                handleCommandCallCount++
-                const result = original.apply(this, arguments)
-                result.on('end', () => {
-                    if (handleCommandCallCount === 3) {
-                        server2 = new grpc.Server()
-                        server2.addService(services.ProfilerCommandServiceService, profilerServices)
-                        server2.bindAsync(`localhost:${port}`, grpc.ServerCredentials.createInsecure(), (err, port) => {
-                            requestId = 2
-                        })
-                    }
-                    if (handleCommandCallCount > 4) {
-                        t.fail('The for statement should stop when the server fails')
-                    }
-                })
-                return result
-            }
-        })
-
-        let makeCallMethodCallCount = 0
-        let commandStream1st
-        let activeRequestStream1st
-        shimmer.wrap(GrpcReadableStream.prototype, 'pipeWritableStream', function (original) {
-            return function () {
-                makeCallMethodCallCount++
-
-                const result = original.apply(this, arguments)
-                if (makeCallMethodCallCount === 1) {
-                    commandStream1st = this
-                    t.equal(commandStream1st.name, '', '1st created commandStream is creating writable stream')
-                    commandStream1st.writableStream.on('end', () => {
-                        t.true(firedError, 'The first commandStream is end method called by writable stream of first commandStream error')
-                    })
-                    let firedError
-                    commandStream1st.writableStream.on('error', (error) => {
-                        firedError = error
-                        t.equal(error.code, grpc.status.CANCELLED, 'The first commandStream is end method called by writable stream of first commandStream error')
-                    })
-                } else if (makeCallMethodCallCount === 2) {
-                    activeRequestStream1st = this
-                    t.equal(activeRequestStream1st.name, 'activeThreadCountStream', '2nd created stream is activeRequestStream')
-                    activeRequestStream1st.writableStream.on('end', () => {
-                        t.fail('ActiveThreadCountStream writableStream is the Server side stream, so it call directly end method')
-                    })
-                    shimmer.wrap(activeRequestStream1st.writableStream, 'end', function (original) {
-                        return function () {
-                            const result = original.apply(this, arguments)
-                            t.false(firedError, 'The first activeRequestStream is end method called by Readable Stream ended')
-                            t.equal(activeRequestStream1st.writableStream, this, 'The first activeRequestStream is end method called by Readable Stream ended')
-                            return result
-                        }
-                    })
-                    let firedError
-                    activeRequestStream1st.writableStream.on('error', (error) => {
-                        firedError = error
-                        t.fail('ActiveThreadCountStream writableStream is the Server side stream, so it call directly method with error argument')
-                        t.equal(error.code, grpc.status.CANCELLED, 'The first activeRequestStream is end method called by writable stream of first activeRequestStream error')
-                    })
-                } else if (makeCallMethodCallCount === 3) {
-                    const commandStream2nd = this
-                    t.equal(commandStream2nd.name, '', '3rd created stream is 2nd commandStream')
-                    commandStream2nd.writableStream.on('end', () => {
-                        t.true(firedError, 'The second commandStream is end method called by writable stream of second commandStream error')
-                    })
-                    let firedError
-                    commandStream2nd.writableStream.on('error', (error) => {
-                        firedError = error
-                        t.equal(error.code, grpc.status.UNAVAILABLE, 'The second commandStream is end method called by writable stream of second commandStream error')
-                    })
-                } else if (makeCallMethodCallCount === 4) {
-                    const commandStream3rd = this
-                    t.equal(commandStream3rd.name, '', '4th created stream is 3rd commandStream')
-                    commandStream3rd.writableStream.on('end', () => {
-                        t.true(firedError, 'The third commandStream is end method called by writable stream of third commandStream')
-                    })
-                    let firedError
-                    commandStream3rd.writableStream.on('error', (error) => {
-                        firedError = error
-                        t.equal(error.code, grpc.status.UNAVAILABLE, 'The third commandStream is end method called by writable stream of third commandStream error')
-                    })
-                } else if (makeCallMethodCallCount === 5) {
-                    const commandStream4th = this
-                    t.equal(commandStream4th.name, '', '5th created stream is 4th commandStream')
-                    commandStream4th.writableStream.on('end', () => {
-                        t.pass('The fourth commandStream is end method called by writable stream of fourth commandStream')
-                        t.end()
-                    })
-                    commandStream4th.writableStream.on('error', (error) => {
-                        t.equal(error.code, grpc.status.CANCELLED, 'The fourth commandStream is ended by Collector server shutdown')
+    dataSender = await new TestGrpcDataSenderBuilder()
+        .addAdaptor(new CommandAdaptor(profilerServices))
+        .build()
+    let handleCommandCallCount = 0
+    shimmer.wrap(dataSender.profilerClient, 'handleCommand', function (original) {
+        return function () {
+            handleCommandCallCount++
+            const result = original.apply(this, arguments)
+            result.on('end', () => {
+                if (handleCommandCallCount === 3) {
+                    dataSender.restart(new CommandAdaptor(profilerServices)).then(() => {
+                        requestId = 2
                     })
                 }
-                return result
-            }
-        })
+                if (handleCommandCallCount > 4) {
+                    t.fail('The for statement should stop when the server fails')
+                }
+            })
+            return result
+        }
+    })
 
-        let callCountHandleCommand = 0
-        let server2
-        dataSender.sendSupportedServicesCommand((err) => {
-            callCountHandleCommand++
-            if (callCountHandleCommand == 1) {
-                t.equal(err.code, 1, 'When the server is down, the error code is 1')
-                t.equal(activeRequestCount, 2, 'ended activeRequestCount is 2')
-            } else if (callCountHandleCommand === 2) {
-                process.nextTick(() => {
-                    dataSender.close()
-                    handleCommandCall.end()
-                    shimmer.unwrap(GrpcReadableStream.prototype, 'pipeWritableStream')
-                    server2.forceShutdown()
+    let makeCallMethodCallCount = 0
+    let commandStream1st
+    let activeRequestStream1st
+    shimmer.wrap(GrpcReadableStream.prototype, 'pipeWritableStream', function (original) {
+        return function () {
+            makeCallMethodCallCount++
+
+            const result = original.apply(this, arguments)
+            if (makeCallMethodCallCount === 1) {
+                commandStream1st = this
+                t.equal(commandStream1st.name, '', '1st created commandStream is creating writable stream')
+                commandStream1st.writableStream.on('end', () => {
+                    t.true(firedError, 'The first commandStream is end method called by writable stream of first commandStream error')
+                })
+                let firedError
+                commandStream1st.writableStream.on('error', (error) => {
+                    firedError = error
+                    t.equal(error.code, grpc.status.CANCELLED, 'The first commandStream is end method called by writable stream of first commandStream error')
+                })
+            } else if (makeCallMethodCallCount === 2) {
+                activeRequestStream1st = this
+                t.equal(activeRequestStream1st.name, 'activeThreadCountStream', '2nd created stream is activeRequestStream')
+                activeRequestStream1st.writableStream.on('end', () => {
+                    t.fail('ActiveThreadCountStream writableStream is the Server side stream, so it call directly end method')
+                })
+                shimmer.wrap(activeRequestStream1st.writableStream, 'end', function (original) {
+                    return function () {
+                        const result = original.apply(this, arguments)
+                        t.false(firedError, 'The first activeRequestStream is end method called by Readable Stream ended')
+                        t.equal(activeRequestStream1st.writableStream, this, 'The first activeRequestStream is end method called by Readable Stream ended')
+                        return result
+                    }
+                })
+                let firedError
+                activeRequestStream1st.writableStream.on('error', (error) => {
+                    firedError = error
+                    t.fail('ActiveThreadCountStream writableStream is the Server side stream, so it call directly method with error argument')
+                    t.equal(error.code, grpc.status.CANCELLED, 'The first activeRequestStream is end method called by writable stream of first activeRequestStream error')
+                })
+            } else if (makeCallMethodCallCount === 3) {
+                const commandStream2nd = this
+                t.equal(commandStream2nd.name, '', '3rd created stream is 2nd commandStream')
+                commandStream2nd.writableStream.on('end', () => {
+                    t.true(firedError, 'The second commandStream is end method called by writable stream of second commandStream error')
+                })
+                let firedError
+                commandStream2nd.writableStream.on('error', (error) => {
+                    firedError = error
+                    t.equal(error.code, grpc.status.UNAVAILABLE, 'The second commandStream is end method called by writable stream of second commandStream error')
+                })
+            } else if (makeCallMethodCallCount === 4) {
+                const commandStream3rd = this
+                t.equal(commandStream3rd.name, '', '4th created stream is 3rd commandStream')
+                commandStream3rd.writableStream.on('end', () => {
+                    t.true(firedError, 'The third commandStream is end method called by writable stream of third commandStream')
+                })
+                let firedError
+                commandStream3rd.writableStream.on('error', (error) => {
+                    firedError = error
+                    t.equal(error.code, grpc.status.UNAVAILABLE, 'The third commandStream is end method called by writable stream of third commandStream error')
+                })
+            } else if (makeCallMethodCallCount === 5) {
+                const commandStream4th = this
+                t.equal(commandStream4th.name, '', '5th created stream is 4th commandStream')
+                commandStream4th.writableStream.on('end', () => {
+                    t.pass('The fourth commandStream is end method called by writable stream of fourth commandStream')
+                    t.end()
+                })
+                commandStream4th.writableStream.on('error', (error) => {
+                    t.equal(error.code, grpc.status.CANCELLED, 'The fourth commandStream is ended by Collector server shutdown')
                 })
             }
-        })
+            return result
+        }
+    })
+
+    let callCountHandleCommand = 0
+    dataSender.sendSupportedServicesCommand((err) => {
+        callCountHandleCommand++
+        if (callCountHandleCommand == 1) {
+            t.equal(err.code, 1, 'When the server is down, the error code is 1')
+            t.equal(activeRequestCount, 2, 'ended activeRequestCount is 2')
+        } else if (callCountHandleCommand === 2) {
+            process.nextTick(() => {
+                dataSender.close()
+                handleCommandCall.end()
+                shimmer.unwrap(GrpcReadableStream.prototype, 'pipeWritableStream')
+            })
+        }
     })
 })
 
@@ -189,8 +178,7 @@ function callHandleCommandStream(requestId) {
     handleCommandCall.write(result)
 }
 
-test('If you run the ActiveRequest function, and deadline occurs, the ActiveRequest reconnection is successful', reconnectTestTimeout, (t) => {
-    const server = new grpc.Server()
+test('If you run the ActiveRequest function, and deadline occurs, the ActiveRequest reconnection is successful', reconnectTestTimeout, async (t) => {
     let activeRequestCallCount = 0
     const profilerServices = {
         handleCommand: (call) => {
@@ -214,233 +202,132 @@ test('If you run the ActiveRequest function, and deadline occurs, the ActiveRequ
             })
         }
     }
-    server.addService(services.ProfilerCommandServiceService, profilerServices)
-    let dataSender
-    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        dataSender = beforeSpecificOne(port, ProfilerDataSource)
-        let makeCallMethodCallCount = 0
-        shimmer.wrap(GrpcReadableStream.prototype, 'pipeWritableStream', function (original) {
-            return function () {
-                makeCallMethodCallCount++
-                const result = original.apply(this, arguments)
-                if (makeCallMethodCallCount === 1) {
-                    const commandStream1st = this
-                    t.equal(commandStream1st.name, '', '1st created stream is commandStream creating writable stream')
-                    commandStream1st.writableStream.on('end', () => {
-                        t.true(firedError, 'The first commandStream is ended by Functional Test is Ended')
-                    })
-                    let firedError
-                    commandStream1st.writableStream.on('error', (error) => {
-                        firedError = error
-                        t.equal(error.code, grpc.status.CANCELLED, 'The first commandStream is end method called by writable stream of first commandStream error')
-                    })
-                } else if (makeCallMethodCallCount === 2) {
-                    const activeRequestStream1st = this
-                    t.equal(activeRequestStream1st.name, 'activeThreadCountStream', '2nd created stream is activeRequestStream')
-                    const firstActiveRequestWritableStream = activeRequestStream1st.writableStream
-                    firstActiveRequestWritableStream.on('end', () => {
-                        t.fail('The first activeRequestStream end event is no called')
-                    })
-                    firstActiveRequestWritableStream.on('status', (status) => {
-                        t.true(firstActiveRequestWritableStream.writable, 'writableStream.writable in status event is true')
-                        t.false(firstActiveRequestWritableStream.writableEnded, 'writableStream.writableEnded in status event is false')
-                        t.equal(status.code, grpc.status.UNKNOWN, 'The status code is Unknown')
-                        t.equal(sendSupportedServicesCommandError.code, status.code, 'The status code is equal to the error code of stub method callback error')
-                        t.equal(sendSupportedServicesCommandError.details, status.details, 'The status details is Server Unknown errors Functional Test is Ended')
-                    })
-                    firstActiveRequestWritableStream.on('error', () => {
-                        t.fail('The first activeRequestStream error event is not call')
-                    })
-                    activeRequestStream1st.readableStream.on('end', () => {
-                        t.false(activeRequestStream1st.readableStream.readable, 'The readableStream.readable of first activeRequestStream is false')
-                        t.true(activeRequestStream1st.readableStream.readableEnded, 'The readableStream.readableEnded of first activeRequestStream is true')
-                        t.false(firstActiveRequestWritableStream.writableStream, 'The writableStream.writableStream of first activeRequestStream is false')
-                        t.true(firstActiveRequestWritableStream.writableEnded, 'The writableStream.writableEnded of first activeRequestStream is true')
-                        t.equal(endEventListenerWritableStream, firstActiveRequestWritableStream, 'The End method called this by writableStream.end() is equal to grpcReadableStream.writableStream.end()')
-                        t.end()
-                    })
-
-                    let endEventListenerWritableStream
-                    shimmer.wrap(firstActiveRequestWritableStream, 'end', function (original) {
-                        return function () {
-                            const result = original.apply(this, arguments)
-                            endEventListenerWritableStream = this
-                            t.false(this.writable, 'The first writableStream.writable is false end method called by writableStream.end() is called by retryConnectionWritableStream()')
-                            t.true(this.writableEnded, 'The first writableStream.writableEnded is true end method called by writableStream.end() is called by retryConnectionWritableStream()')
-                            return result
-                        }
-                    })
-                }
-                return result
-            }
-        })
-        let sendSupportedServicesCommandError
-        dataSender.sendSupportedServicesCommand((err) => {
-            if (err) {
-                sendSupportedServicesCommandError = err
-            }
-        })
-    })
+    const dataSender = await new TestGrpcDataSenderBuilder()
+        .addAdaptor(new CommandAdaptor(profilerServices))
+        .build()
     t.teardown(() => {
         dataSender.close()
         handleCommandCall.end()
         shimmer.unwrap(GrpcReadableStream.prototype, 'pipeWritableStream')
-        server.forceShutdown()
+    })
+    let makeCallMethodCallCount = 0
+    shimmer.wrap(GrpcReadableStream.prototype, 'pipeWritableStream', function (original) {
+        return function () {
+            makeCallMethodCallCount++
+            const result = original.apply(this, arguments)
+            if (makeCallMethodCallCount === 1) {
+                const commandStream1st = this
+                t.equal(commandStream1st.name, '', '1st created stream is commandStream creating writable stream')
+                commandStream1st.writableStream.on('end', () => {
+                    t.true(firedError, 'The first commandStream is ended by Functional Test is Ended')
+                })
+                let firedError
+                commandStream1st.writableStream.on('error', (error) => {
+                    firedError = error
+                    t.equal(error.code, grpc.status.CANCELLED, 'The first commandStream is end method called by writable stream of first commandStream error')
+                })
+            } else if (makeCallMethodCallCount === 2) {
+                const activeRequestStream1st = this
+                t.equal(activeRequestStream1st.name, 'activeThreadCountStream', '2nd created stream is activeRequestStream')
+                const firstActiveRequestWritableStream = activeRequestStream1st.writableStream
+                firstActiveRequestWritableStream.on('end', () => {
+                    t.fail('The first activeRequestStream end event is no called')
+                })
+                firstActiveRequestWritableStream.on('status', (status) => {
+                    t.true(firstActiveRequestWritableStream.writable, 'writableStream.writable in status event is true')
+                    t.false(firstActiveRequestWritableStream.writableEnded, 'writableStream.writableEnded in status event is false')
+                    t.equal(status.code, grpc.status.UNKNOWN, 'The status code is Unknown')
+                    t.equal(sendSupportedServicesCommandError.code, status.code, 'The status code is equal to the error code of stub method callback error')
+                    t.equal(sendSupportedServicesCommandError.details, status.details, 'The status details is Server Unknown errors Functional Test is Ended')
+                })
+                firstActiveRequestWritableStream.on('error', () => {
+                    t.fail('The first activeRequestStream error event is not call')
+                })
+                activeRequestStream1st.readableStream.on('end', () => {
+                    t.false(activeRequestStream1st.readableStream.readable, 'The readableStream.readable of first activeRequestStream is false')
+                    t.true(activeRequestStream1st.readableStream.readableEnded, 'The readableStream.readableEnded of first activeRequestStream is true')
+                    t.false(firstActiveRequestWritableStream.writableStream, 'The writableStream.writableStream of first activeRequestStream is false')
+                    t.true(firstActiveRequestWritableStream.writableEnded, 'The writableStream.writableEnded of first activeRequestStream is true')
+                    t.equal(endEventListenerWritableStream, firstActiveRequestWritableStream, 'The End method called this by writableStream.end() is equal to grpcReadableStream.writableStream.end()')
+                    t.end()
+                })
+
+                let endEventListenerWritableStream
+                shimmer.wrap(firstActiveRequestWritableStream, 'end', function (original) {
+                    return function () {
+                        const result = original.apply(this, arguments)
+                        endEventListenerWritableStream = this
+                        t.false(this.writable, 'The first writableStream.writable is false end method called by writableStream.end() is called by retryConnectionWritableStream()')
+                        t.true(this.writableEnded, 'The first writableStream.writableEnded is true end method called by writableStream.end() is called by retryConnectionWritableStream()')
+                        return result
+                    }
+                })
+            }
+            return result
+        }
+    })
+    let sendSupportedServicesCommandError
+    dataSender.sendSupportedServicesCommand((err) => {
+        if (err) {
+            sendSupportedServicesCommandError = err
+        }
     })
 })
 
-let requestId = 0
-const handleCommandV2Service = (call) => {
-    const callRequests = getCallRequests()
-    const callMetadata = getMetadata()
-    callRequests.push(call.request)
-    callMetadata.push(call.metadata)
+test('sendSupportedServicesCommand and commandEcho', async (t) => {
+    const commandAdaptor = new CommandAdaptor().writeEcho()
+    const dataSender = await new TestGrpcDataSenderBuilder()
+        .addAdaptor(commandAdaptor)
+        .build()
 
-    handleCommandCall = call
+    dataSender.sendSupportedServicesCommand(async function () {
+        const cmdEchoResponse = await commandAdaptor.echoResponse(commandAdaptor.requestId)
+        const commonResponse = cmdEchoResponse.getCommonresponse()
+        t.equal(commonResponse.getResponseid(), commandAdaptor.requestId, 'response id matches request id')
+        t.equal(commonResponse.getStatus(), 0, 'status is success')
+        t.equal(commonResponse.getMessage().getValue(), '', 'message is empty')
 
-    requestId++
-    serverCallWriter(CommandType.echo)
-}
-
-const serverCallWriter = (commandType) => {
-    const result = new cmdMessage.PCmdRequest()
-    result.setRequestid(requestId)
-
-    if (commandType === CommandType.activeThreadCount) {
-        const commandActiveThreadCount = new cmdMessage.PCmdActiveThreadCount()
-        result.setCommandactivethreadcount(commandActiveThreadCount)
-    } else {
-        const message = new cmdMessage.PCmdEcho()
-        message.setMessage('echo')
-        result.setCommandecho(message)
-    }
-
-    handleCommandCall.write(result)
-}
-
-let dataCallbackOnServerCall
-const emptyResponseService = (call, callback) => {
-    call.on('data', (data) => {
-        if (typeof dataCallbackOnServerCall === 'function') {
-            dataCallbackOnServerCall(data)
-        }
-    })
-
-    const succeedOnRetryAttempt = call.metadata.get('succeed-on-retry-attempt')
-    const previousAttempts = call.metadata.get('grpc-previous-rpc-attempts')
-    const callRequests = getCallRequests()
-    const callMetadata = getMetadata()
-    // console.debug(`succeed-on-retry-attempt: ${succeedOnRetryAttempt[0]}, grpc-previous-rpc-attempts: ${previousAttempts[0]}`)
-    if (succeedOnRetryAttempt.length === 0 || (previousAttempts.length > 0 && previousAttempts[0] === succeedOnRetryAttempt[0])) {
-        callRequests.push(call.request)
-        callMetadata.push(call.metadata)
-        callback(null, new Empty())
-    } else {
-        const statusCode = call.metadata.get('respond-with-status')
-        const code = statusCode[0] ? Number.parseInt(statusCode[0]) : grpc.status.UNKNOWN
-        callback({ code: code, details: `Failed on retry ${previousAttempts[0] ?? 0}` })
-    }
-}
-
-test('sendSupportedServicesCommand and commandEcho', (t) => {
-    dataCallbackOnServerCall = null
-    const server = new grpc.Server()
-    server.addService(services.ProfilerCommandServiceService, {
-        handleCommandV2: handleCommandV2Service,
-        handleCommand: handleCommandV2Service,
-        commandEcho: emptyResponseService
-    })
-    server.addService(services.MetadataService, {
-        requestApiMetaData: (call, callback) => {
-            const result = new spanMessages.PResult()
-            callback(null, result)
-        }
-    })
-
-    let dataSender
-    server.bindAsync('127.0.0.1:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-        dataSender = beforeSpecificOne(port, ProfilerDataSource)
-        dataSender.sendSupportedServicesCommand(function () {
-            const callRequests = getCallRequests()
-            const commonResponse = callRequests[1].getCommonresponse()
-            t.equal(commonResponse.getResponseid(), requestId, 'response id matches request id')
-            t.equal(commonResponse.getStatus(), 0, 'status is success')
-            t.equal(commonResponse.getMessage().getValue(), '', 'message is empty')
-
-            const cmdEchoResponse = callRequests[1]
-            t.equal(cmdEchoResponse.getMessage(), 'echo', 'echo message')
-            dataSender.commandStream.writableStream.on('finish', () => {
-                server.forceShutdown()
-                t.end()
-            })
-            dataSender.close()
+        t.equal(cmdEchoResponse.getMessage(), 'echo', 'echo message')
+        dataSender.commandStream.writableStream.on('finish', () => {
+            dataSender.disconnect()
+            t.end()
         })
-        dataSender.commandStream.writableStream.on('data', (cmdRequest) => {
-            const actualRequestId = cmdRequest.getRequestid()
-            t.equal(actualRequestId, requestId, 'request id matches')
-            t.equal(cmdRequest.getCommandecho().getMessage(), 'echo', 'echo message')
-        })
+        dataSender.close()
+    })
+    dataSender.commandStream.writableStream.on('data', (cmdRequest) => {
+        const actualRequestId = cmdRequest.getRequestid()
+        t.equal(actualRequestId, commandAdaptor.requestId, 'request id matches')
+        t.equal(cmdRequest.getCommandecho().getMessage(), 'echo', 'echo message')
     })
 })
 
-
-
-test('CommandStreamActiveThreadCount', (t) => {
-    const server = new grpc.Server()
-    let interval
-    let ended = false
-    server.addService(services.ProfilerCommandServiceService, {
-        handleCommandV2: handleCommandV2Service,
-        handleCommand: handleCommandV2Service,
-        commandEcho: emptyResponseService,
-        commandStreamActiveThreadCount: (call, callback) => {
-            call.on('data', (data) => {
-                dataCallbackOnServerCall(data)
-            })
-            interval = setInterval(() => {
-                if (ended) {
-                    callback(null, new Empty())
-                    process.nextTick(() => {
-                        t.end()
-                    })
-                }
-            }, 1000)
-        }
+test('CommandStreamActiveThreadCount', async (t) => {
+    const commandAdaptor = new CommandAdaptor().writeEcho()
+    const dataSender = await new TestGrpcDataSenderBuilder()
+        .addAdaptor(commandAdaptor)
+        .build()
+    t.teardown(() => {
+        dataSender.close()
     })
-    let dataSender
-    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-        dataSender = beforeSpecificOne(port, ProfilerDataSource)
 
-        let callCount = 0
-        dataCallbackOnServerCall = (data) => {
-            ++callCount
+    let once
+    dataSender.sendSupportedServicesCommand(function () {
+        if (once) {
+            return
+        }
+        once = true
+
+        process.nextTick(async () => {
+            commandAdaptor.writeActiveThreadCount()
+            const data = await commandAdaptor.activeThreadCountResponse(commandAdaptor.requestId)
             const commonStreamResponse = data.getCommonstreamresponse()
-            t.equal(commonStreamResponse.getResponseid(), requestId, 'response id matches request id')
-            t.equal(commonStreamResponse.getSequenceid(), callCount, `sequenceid is ${callCount}`)
+            t.equal(commonStreamResponse.getResponseid(), commandAdaptor.requestId, 'response id matches request id')
+            t.equal(commonStreamResponse.getSequenceid(), 1, 'sequenceid is 1')
             t.equal(commonStreamResponse.getMessage().getValue(), '', 'message is empty')
 
             t.equal(data.getHistogramschematype(), 2, 'histogram schema type')
             t.equal(data.getActivethreadcountList()[0], 0, 'active thread count')
-
-            ended = true
-        }
-
-        let once
-        dataSender.sendSupportedServicesCommand(function () {
-            if (once) {
-                return
-            }
-            once = true
-
-            process.nextTick(() => {
-                serverCallWriter(CommandType.activeThreadCount)
-            })
+            t.end()
         })
-    })
-
-    t.teardown(() => {
-        clearInterval(interval)
-        dataSender.close()
-        server.forceShutdown()
     })
 })

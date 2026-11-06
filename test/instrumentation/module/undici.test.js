@@ -9,10 +9,8 @@
 const test = require('tape')
 const agent = require('../../support/agent-singleton-mock')
 const { spanMessagesOfCurrentAgent } = require('../../support/collector-span-messages')
-const grpc = require('@grpc/grpc-js')
-const services = require('../../../lib/data/v1/Service_grpc_pb')
 const express = require('express')
-const GrpcDataSenderBuilder = require('../../support/grpc-data-sender-builder')
+const { TestGrpcDataSenderBuilder, SpanAdaptor, MetadataAdaptor } = require('../../support/test-grpc-data-sender')
 const axios = require('axios')
 const http = require('http')
 const ServiceType = require('../../../lib/context/service-type')
@@ -24,12 +22,12 @@ const spanMessages = require('../../../lib/data/v1/Span_pb')
 // The testcontainer calls require('undici') in http-wait-strategy.js
 test('shimming require(undici) cause by require-in-the-middle package', function (t) {
     const { request } = require('undici')
-    const collectorServer = new grpc.Server()
+    const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder()
     let spanCount = 0
     let actualTestSpan
     let actualFetchAPISpan
     let outgoingRequestParentSpanId
-    collectorServer.addService(services.SpanService, {
+    grpcDataSenderBuilder.addAdaptor(new SpanAdaptor({
         sendSpanBatch: function (call, callback) {
             spanMessagesOfCurrentAgent(call.request).forEach(function (data) {
                 spanCount++
@@ -199,8 +197,8 @@ test('shimming require(undici) cause by require-in-the-middle package', function
             })
             callback(null, new spanMessages.PSpanResultBatch())
         },
-    })
-    collectorServer.addService(services.MetadataService, {
+    }))
+    grpcDataSenderBuilder.addAdaptor(new MetadataAdaptor({
         requestExceptionMetaData: (call, callback) => {
             const result = new spanMessages.PResult()
             callback(null, result)
@@ -231,16 +229,13 @@ test('shimming require(undici) cause by require-in-the-middle package', function
             })
             t.end()
         }
-    })
+    }))
 
-    let dataSender
-    collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        dataSender = new GrpcDataSenderBuilder(port)
-            .enableSpan()
-            .enableSpanChunk()
-            .enableExceptionMetaData()
-            .build()
-        agent.bindHttp(dataSender)
+    grpcDataSenderBuilder.build().then((grpcDataSender) => {
+        agent.bindHttp(grpcDataSender)
+        t.teardown(() => {
+            grpcDataSender.close()
+        })
 
         const app = new express()
         app.get('/test', async (req, res) => {
@@ -269,22 +264,17 @@ test('shimming require(undici) cause by require-in-the-middle package', function
             server.close()
         })
     })
-
-    t.teardown(() => {
-        dataSender.close()
-        collectorServer.forceShutdown()
-    })
 })
 
 test('shimming undici: requestExceptionMetaData should deliver error.cause chain', function (t) {
-    const collectorServer = new grpc.Server()
+    const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder()
 
-    collectorServer.addService(services.SpanService, {
+    grpcDataSenderBuilder.addAdaptor(new SpanAdaptor({
         sendSpanBatch: function (call, callback) {
             callback(null, new spanMessages.PSpanResultBatch())
         },
-    })
-    collectorServer.addService(services.MetadataService, {
+    }))
+    grpcDataSenderBuilder.addAdaptor(new MetadataAdaptor({
         requestExceptionMetaData: (call, callback) => {
             const result = new spanMessages.PResult()
             callback(null, result)
@@ -306,15 +296,13 @@ test('shimming undici: requestExceptionMetaData should deliver error.cause chain
             t.equal(top.getExceptionid(), cause.getExceptionid(), 'shared exceptionId')
             t.end()
         }
-    })
+    }))
 
-    let dataSender
-    collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        dataSender = new GrpcDataSenderBuilder(port)
-            .enableSpan()
-            .enableExceptionMetaData()
-            .build()
-        agent.bindHttp(dataSender)
+    grpcDataSenderBuilder.build().then((grpcDataSender) => {
+        agent.bindHttp(grpcDataSender)
+        t.teardown(() => {
+            grpcDataSender.close()
+        })
 
         const app = new express()
         app.get('/cause-outgoing', (req, res) => {
@@ -332,11 +320,6 @@ test('shimming undici: requestExceptionMetaData should deliver error.cause chain
             })
             server.close()
         })
-    })
-
-    t.teardown(() => {
-        dataSender.close()
-        collectorServer.forceShutdown()
     })
 })
 
@@ -380,12 +363,12 @@ test('shimming undici: should not collect ExceptionMetaData when errorAnalysis i
 
 // https://nodejs.org/en/learn/getting-started/fetch
 test('shimming udici by global nodejs fetch', function (t) {
-    const collectorServer = new grpc.Server()
+    const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder()
     let spanCount = 0
     let actualTestSpan
     let actualFetchAPISpan
     let outgoingRequestParentSpanId
-    collectorServer.addService(services.SpanService, {
+    grpcDataSenderBuilder.addAdaptor(new SpanAdaptor({
         sendSpanBatch: function (call, callback) {
             spanMessagesOfCurrentAgent(call.request).forEach(function (data) {
                 spanCount++
@@ -552,15 +535,13 @@ test('shimming udici by global nodejs fetch', function (t) {
             })
             callback(null, new spanMessages.PSpanResultBatch())
         },
-    })
+    })).addAdaptor(new MetadataAdaptor())
 
-    let dataSender
-    collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        dataSender = new GrpcDataSenderBuilder(port)
-            .enableSpan()
-            .enableSpanChunk()
-            .build()
-        agent.bindHttp(dataSender)
+    grpcDataSenderBuilder.build().then((grpcDataSender) => {
+        agent.bindHttp(grpcDataSender)
+        t.teardown(() => {
+            grpcDataSender.close()
+        })
 
         const app = new express()
         app.get('/test', async (req, res) => {
@@ -584,10 +565,5 @@ test('shimming udici by global nodejs fetch', function (t) {
             t.equal(result.data, 'test', 'response text is test')
             server.close()
         })
-    })
-
-    t.teardown(() => {
-        dataSender.close()
-        collectorServer.forceShutdown()
     })
 })

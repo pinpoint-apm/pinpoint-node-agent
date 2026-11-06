@@ -16,14 +16,11 @@ const DisableTrace = require('../../../lib/context/disable-trace')
 const http = require('http')
 const https = require('https')
 const { getTransactionId, getDisabledId } = require('../../../lib/context/trace/id-generator')
-const grpc = require('@grpc/grpc-js')
-const services = require('../../../lib/data/v1/Service_grpc_pb')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
-const GrpcDataSenderBuilder = require('../../support/grpc-data-sender-builder')
-const { beforeSpecificOne, DataSourceCallCountable, StatOnlyFunctionalTestableDataSource } = require('../../support/grpc-data-sources')
+const { TestGrpcDataSenderBuilder, SpanAdaptor, StatAdaptor, MetadataAdaptor } = require('../../support/test-grpc-data-sender')
 const { waitForAgentStat } = require('../../support/wait-for-agent-stat')
 const AgentStatsMonitor = require('../../../lib/metric/agent-stats-monitor')
-const { ConfigBuilder } = require('../../../lib/config-builder')
+const DataSender = require('../../../lib/client/data-sender')
 const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
 const { UriStatsMonitor } = require('../../../lib/metric/uri/uri-stats-monitor')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
@@ -989,14 +986,12 @@ test('Should aggregate URI stats for DisableTrace in Express', function (t) {
 })
 
 test('Functional Test: requestExceptionMetaData should deliver converted exception stack for /exception/unhandled', (t) => {
-  const collectorServer = new grpc.Server()
-  let dataSender
   let metadataReceived
   const metadataReceivedPromise = new Promise((resolve, reject) => {
     metadataReceived = { resolve, reject }
   })
 
-  collectorServer.addService(services.MetadataService, {
+  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new MetadataAdaptor({
     requestExceptionMetaData: (call, callback) => {
       callback(null, new spanMessages.PResult())
 
@@ -1069,20 +1064,10 @@ test('Functional Test: requestExceptionMetaData should deliver converted excepti
         metadataReceived.reject(error)
       }
     }
-  })
+  })).addAdaptor(new SpanAdaptor())
 
-  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-    if (err) {
-      t.fail(err)
-      collectorServer.forceShutdown()
-      t.end()
-      return
-    }
-
-    dataSender = new GrpcDataSenderBuilder(port)
-      .enableExceptionMetaData()
-      .build()
-    agent.bindHttp(dataSender)
+  grpcDataSenderBuilder.build().then((grpcDataSender) => {
+    agent.bindHttp(grpcDataSender)
 
     const app = new express()
     app.get('/exception/unhandled', function (req, res, next) {
@@ -1109,8 +1094,7 @@ test('Functional Test: requestExceptionMetaData should deliver converted excepti
         t.fail(error?.stack || error?.message || String(error))
       } finally {
         server.close(() => {
-          dataSender?.close()
-          collectorServer.forceShutdown()
+          grpcDataSender.close()
           t.end()
         })
       }
@@ -1119,14 +1103,12 @@ test('Functional Test: requestExceptionMetaData should deliver converted excepti
 })
 
 test('Functional Test: requestExceptionMetaData should deliver error.cause chain', (t) => {
-  const collectorServer = new grpc.Server()
-  let dataSender
   let metadataReceived
   const metadataReceivedPromise = new Promise((resolve, reject) => {
     metadataReceived = { resolve, reject }
   })
 
-  collectorServer.addService(services.MetadataService, {
+  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new MetadataAdaptor({
     requestExceptionMetaData: (call, callback) => {
       callback(null, new spanMessages.PResult())
 
@@ -1155,20 +1137,10 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
         metadataReceived.reject(error)
       }
     }
-  })
+  })).addAdaptor(new SpanAdaptor())
 
-  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-    if (err) {
-      t.fail(err)
-      collectorServer.forceShutdown()
-      t.end()
-      return
-    }
-
-    dataSender = new GrpcDataSenderBuilder(port)
-      .enableExceptionMetaData()
-      .build()
-    agent.bindHttp(dataSender)
+  grpcDataSenderBuilder.build().then((grpcDataSender) => {
+    agent.bindHttp(grpcDataSender)
 
     const app = new express()
     app.get('/exception/cause-chain', function (req, res, next) {
@@ -1196,8 +1168,7 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
         t.fail(error?.stack || error?.message || String(error))
       } finally {
         server.close(() => {
-          dataSender?.close()
-          collectorServer.forceShutdown()
+          grpcDataSender.close()
           t.end()
         })
       }
@@ -1205,39 +1176,18 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
   })
 })
 
-class SpanAndStatDataSource extends DataSourceCallCountable {
-  constructor(config, interceptors) {
-    config = Object.assign({}, config, {
-      sendSpan: true,
-      sendSpanChunk: true,
-      sendStat: true,
-    })
-    config = new ConfigBuilder(config).build()
-    super(config, interceptors)
-  }
-
-  send(data) {
-    if (data && typeof data.isUriStatsSnapshot === 'function' && data.isUriStatsSnapshot()) {
-      this.sendStat(data)
-    }
-  }
-}
-
 test('Functional Test: SendSpan with success and failure', (t) => {
-  const collectorServer = new grpc.Server()
   const receivedSpans = []
   const receivedStats = []
 
-  collectorServer.addService(services.SpanService, {
+  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new SpanAdaptor({
     sendSpanBatch: (call, callback) => {
       spanMessagesOfCurrentAgent(call.request).forEach((spanMessage) => {
         receivedSpans.push(spanMessage)
       })
       callback(null, new spanMessages.PSpanResultBatch())
     }
-  })
-
-  collectorServer.addService(services.StatService, {
+  })).addAdaptor(new StatAdaptor({
     sendAgentStat: (call) => {
       call.on('data', (statMessage) => {
         receivedStats.push(statMessage)
@@ -1246,10 +1196,9 @@ test('Functional Test: SendSpan with success and failure', (t) => {
         call.end()
       })
     }
-  })
+  })).addAdaptor(new MetadataAdaptor())
 
-  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-    const grpcDataSender = beforeSpecificOne(port, SpanAndStatDataSource)
+  grpcDataSenderBuilder.build().then((grpcDataSender) => {
     agent.bindHttp(grpcDataSender)
 
     const app = new express()
@@ -1309,7 +1258,7 @@ test('Functional Test: SendSpan with success and failure', (t) => {
 
       const repository = getUriStatsRepository()
       repository.timeWindow = 1000
-      const monitor = new UriStatsMonitor(grpcDataSender, repository)
+      const monitor = new UriStatsMonitor(new DataSender(grpcDataSender.config, grpcDataSender), repository)
       monitor.start()
 
       setTimeout(() => {
@@ -1412,7 +1361,6 @@ test('Functional Test: SendSpan with success and failure', (t) => {
         monitor.stop()
 
         server.close()
-        collectorServer.forceShutdown()
         grpcDataSender.close()
         t.end()
       }, 5000)
@@ -1724,9 +1672,8 @@ test('Express: application service type is NODE 1400 even with PINPOINT_SERVICE_
 })
 
 test('Express: AgentStat sends the transaction count and response time of completed requests', (t) => {
-  const collectorServer = new grpc.Server()
   const receivedAgentStats = []
-  collectorServer.addService(services.StatService, {
+  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new StatAdaptor({
     sendAgentStat: (call) => {
       call.on('data', (statMessage) => {
         if (statMessage.getAgentstat()) {
@@ -1735,10 +1682,10 @@ test('Express: AgentStat sends the transaction count and response time of comple
       })
       call.on('end', () => call.end())
     }
-  })
+  })).addAdaptor(new SpanAdaptor())
+    .addAdaptor(new MetadataAdaptor())
 
-  collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
-    const grpcDataSender = beforeSpecificOne(port, StatOnlyFunctionalTestableDataSource)
+  grpcDataSenderBuilder.build().then((grpcDataSender) => {
     agent.bindHttp(grpcDataSender)
     const agentStatsMonitor = new AgentStatsMonitor(grpcDataSender, agent.getConfig().getAgentId(), agent.agentStartTime)
 
@@ -1766,7 +1713,6 @@ test('Express: AgentStat sends the transaction count and response time of comple
         agentStatsMonitor.shutdown()
         server.close(() => {
           grpcDataSender.close()
-          collectorServer.forceShutdown()
           t.end()
         })
       }

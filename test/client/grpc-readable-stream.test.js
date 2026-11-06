@@ -10,13 +10,7 @@ const test = require('tape')
 const GrpcReadableStream = require('../../lib/client/grpc-readable-stream')
 const { Writable } = require('node:stream')
 const { spanMessageWithId } = require('../fixtures/span-with-id')
-const { beforeSpecificOne } = require('../support/grpc-data-sources')
-const grpc = require('@grpc/grpc-js')
-const services = require('../../lib/data/v1/Service_grpc_pb')
-const cmdMessage = require('../../lib/data/v1/Cmd_pb')
-const { ProfilerDataSource } = require('../support/grpc-data-sources')
-const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
-const agent = require('../support/agent-singleton-mock')
+const { TestGrpcDataSenderBuilder, CommandAdaptor } = require('../support/test-grpc-data-sender')
 
 const reconnectTestTimeout = { timeout: 60 * 1000 }
 
@@ -256,72 +250,31 @@ test('Max buffer size', (t) => {
     t.end()
 })
 
-test('When gRPC server shutdown and then node agent grpcStream on error fired and then reconnection gRPC call and then check errored stream going end stream', reconnectTestTimeout, (t) => {
+test('When gRPC server shutdown and then node agent grpcStream on error fired and then reconnection gRPC call and then check errored stream going end stream', reconnectTestTimeout, async (t) => {
     t.plan(3)
-    let server = new grpc.Server()
-    let requestId = 0
-    let handleCommandCallback
-    server.addService(services.ProfilerCommandServiceService, {
-        handleCommand: (call, callback) => {
-            const metadata = call.metadata
-            t.equal(metadata.get('agentid').toString(), agent.getConfig().getAgentId(), 'metadata agentid')
-            t.equal(metadata.get('servicetype')[0], '1400', 'metadata servicetype is 1400')
-            if (typeof handleCommandCallback === 'function') {
-                handleCommandCallback(call, callback)
-            }
-        },
-        commandEcho: (call, callback) => {
-            callback(null, new Empty())
-        }
+    const commandAdaptor = new CommandAdaptor().writeEcho()
+    const dataSender = await new TestGrpcDataSenderBuilder()
+        .addAdaptor(commandAdaptor)
+        .build()
+
+    dataSender.sendSupportedServicesCommand(() => {
+        const metadata = commandAdaptor.metadata[0]
+        t.equal(metadata.get('agentid').toString(), dataSender.config.getAgentId(), 'metadata agentid')
+        t.equal(metadata.get('servicetype')[0], '1400', 'metadata servicetype is 1400')
+        dataSender.disconnect()
     })
 
-    let dataSender
-    const loadGrpcServerCallback = (err, port) => {
-        if (loadCount === 1) {
-            dataSender = beforeSpecificOne(port, ProfilerDataSource)
-            handleCommandCallback = (call) => {
-                requestId++
-                const result = new cmdMessage.PCmdRequest()
-                result.setRequestid(requestId)
-                const message = new cmdMessage.PCmdEcho()
-                message.setMessage('echo')
-                result.setCommandecho(message)
-                call.write(result)
-            }
-            dataSender.sendSupportedServicesCommand(() => {
-                server.forceShutdown()
-            })
+    const commandStream = dataSender.commandStream
+    let actualErroredStream
+    commandStream.writableStream.on('error', function (error) {
+        actualErroredStream = this
+    })
+    commandStream.writableStream.on('end', function () {
+        t.equal(actualErroredStream, this, 'error stream should be close stream')
 
-            const commandStream = dataSender.commandStream
-            let actualErroredStream
-            commandStream.writableStream.on('error', function (error) {
-                actualErroredStream = this
-            })
-            commandStream.writableStream.on('end', function () {
-                t.equal(actualErroredStream, this, 'error stream should be close stream')
-
-                server = new grpc.Server()
-                server.addService(services.ProfilerCommandServiceService, {
-                    handleCommand: () => {
-                    }
-                })
-                server.bindAsync(`localhost:${port}`, grpc.ServerCredentials.createInsecure(), (err, port) => {
-                    loadCount++
-                    loadGrpcServerCallback(err, port)
-                })
-            })
-        }
-
-
-        if (loadCount === 2) {
+        dataSender.restart(new CommandAdaptor()).then(() => {
             dataSender.close()
-            server.forceShutdown()
             t.end()
-        }
-    }
-    let loadCount = 0
-    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (err, port) => {
-        loadCount++
-        loadGrpcServerCallback(err, port)
+        })
     })
 })

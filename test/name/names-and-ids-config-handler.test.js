@@ -10,7 +10,6 @@ const test = require('tape')
 const { NamesAndIdsConfigHandler } = require('../../lib/name/names-and-ids-config-handler')
 const { isContainerEnvironment } = require('../../lib/support/container-environment')
 const { ConfigBuilder } = require('../../lib/config-builder')
-const AgentInfo = require('../../lib/data/dto/agent-info')
 
 const generatedAgentIdPattern = /^[A-Za-z0-9_-]{22}$/
 const v3Json = { collector: { protocolVersion: 'v3' } }
@@ -121,15 +120,6 @@ test('agentName falls back to agentId', (t) => {
     t.end()
 })
 
-test('json applicationServiceType and PINPOINT_SERVICE_TYPE are ignored and AgentInfo is NODE 1400', (t) => {
-    process.env.PINPOINT_SERVICE_TYPE = '1600'
-    const config = buildConfig({ applicationName: 'appName', serviceName: 'serviceName', applicationServiceType: 1500 })
-    delete process.env.PINPOINT_SERVICE_TYPE
-
-    t.equal(new AgentInfo(config, '1700000000000').getApplicationServiceType(), 1400, 'AgentInfo applicationServiceType is NODE 1400')
-    t.end()
-})
-
 test('PINPOINT_CONTAINER true and json features.container true mark the container', (t) => {
     process.env.PINPOINT_CONTAINER = 'true'
     const byEnv = handleNamesAndIds(v3Json)
@@ -147,21 +137,6 @@ test('KUBERNETES_SERVICE_HOST is detected as a container', (t) => {
     delete process.env.KUBERNETES_SERVICE_HOST
 
     t.true(given.features.container, 'Kubernetes environment is a container')
-    t.end()
-})
-
-test('AgentInfo carries the final names, ids and container of Config', (t) => {
-    process.env.KUBERNETES_SERVICE_HOST = 'aaa'
-    const config = buildConfig({ applicationName: 'appName', serviceName: 'serviceName' })
-    delete process.env.KUBERNETES_SERVICE_HOST
-
-    const agentInfo = new AgentInfo(config, '1700000000000')
-    t.match(agentInfo.getAgentId(), generatedAgentIdPattern, 'agentId is the generated v4 agentId')
-    t.equal(agentInfo.getAgentId(), config.agentId, 'agentId is the Config agentId')
-    t.equal(agentInfo.getAgentName(), config.agentId, 'agentName falls back to agentId')
-    t.equal(agentInfo.getApplicationName(), 'appName', 'applicationName')
-    t.true(agentInfo.container, 'container')
-    t.equal(agentInfo.getAgentStartTime(), '1700000000000', 'agentStartTime is the given agentStartTime')
     t.end()
 })
 

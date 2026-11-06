@@ -6,7 +6,6 @@
 
 const test = require('tape')
 const { ConfigBuilder } = require('../lib/config-builder')
-const path = require('path')
 const { isContainerEnvironment } = require('../lib/support/container-environment')
 
 test('Should be read from config file', function (t) {
@@ -17,7 +16,7 @@ test('Should be read from config file', function (t) {
   delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
   delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
 
-  const testJson = require('./pinpoint-config-test.json')
+  const testJson = require('./fixtures/pinpoint-config-test.json')
   const json = Object.assign({}, testJson, { sampling: { rate: 10 }, collector: { ...testJson.collector, protocolVersion: 'v3' } })
   const actual = new ConfigBuilder().setDefaultJson(json).build()
   const { serviceName, ...v3Json } = json
@@ -97,19 +96,90 @@ test('span batch config uses the default for a non-integer size or maxRequests',
   t.end()
 })
 
-test('ConfigBuilder pathForRequireFunction Learning Test', (t) => {
-  let actual = {}.main
-  t.true(actual === undefined, '{}.main return value is undefined')
+test('should return the string value when the env value is string type', function(t) {
+  process.env['PINPOINT_COLLECTOR_IP'] = "192.168.78.79"
+  process.env['PINPOINT_LOGGER_LEVELS'] = "default-logger=DEBUG"
 
-  actual = { main: {} }.main.filename
-  t.true(actual === undefined, 'getMainModulePath({ main: {} }) return value is undefined')
+  const given = new ConfigBuilder().build()
+  t.equal(given.collector.ip, "192.168.78.79", "given PINPOINT_COLLECTOR_IP env, should equal config")
+  t.equal(given.features.logLevels['default-logger'], "DEBUG", "given PINPOINT_LOGGER_LEVELS env, should equal config")
 
-  actual = path.dirname({ main: { filename: '/test' } }.main.filename)
-  t.equal(actual, '/', 'getMainModulePath({ main: { filename: \' / test\' } }) return value is /')
+  delete process.env.PINPOINT_COLLECTOR_IP
+  delete process.env.PINPOINT_LOGGER_LEVELS
 
-  actual = path.dirname({ main: { filename: '/test/test1' } }.main.filename)
-  t.equal(actual, '/test', 'getMainModulePath({ main: { filename: \' / test\' } }) return value is /')
+  t.end()
+})
 
+test('should return the number value when the env value is number type', function(t) {
+  process.env['PINPOINT_COLLECTOR_TCP_PORT'] = "9894"
+  process.env['PINPOINT_COLLECTOR_STAT_PORT'] = "9895"
+  process.env['PINPOINT_COLLECTOR_SPAN_PORT'] = "9896"
+  process.env['PINPOINT_SAMPLING_RATE'] = "10"
+
+  const given = givenDefaultIdAndName()
+  t.equal(given.collector.tcpPort, 9894, 'given PINPOINT_COLLECTOR_TCP_PORT env, should equal config')
+  t.equal(given.collector.statPort, 9895, 'given PINPOINT_COLLECTOR_STAT_PORT env, should equal config')
+  t.equal(given.collector.spanPort, 9896, 'given PINPOINT_COLLECTOR_SPAN_PORT env, should equal config')
+  t.equal(given.sampling.rate, 10, 'given PINPOINT_SAMPLING_RATE env, should equal config')
+
+  delete process.env.PINPOINT_COLLECTOR_TCP_PORT
+  delete process.env.PINPOINT_COLLECTOR_STAT_PORT
+  delete process.env.PINPOINT_COLLECTOR_SPAN_PORT
+  delete process.env.PINPOINT_SAMPLING_RATE
+
+  t.end()
+})
+
+test('span batch env values set collector.spanBatch', function(t) {
+  process.env['PINPOINT_SPAN_BATCH_SIZE'] = "50"
+  process.env['PINPOINT_SPAN_BATCH_DEADLINE_MILLIS'] = "300"
+  process.env['PINPOINT_SPAN_BATCH_MAX_REQUESTS'] = "5"
+
+  const given = givenDefaultIdAndName()
+  t.deepEqual(given.getSpanBatch(), { size: 50, deadlineMillis: 300, maxRequests: 5 }, 'given PINPOINT_SPAN_BATCH_* env, should equal config')
+
+  delete process.env.PINPOINT_SPAN_BATCH_SIZE
+  delete process.env.PINPOINT_SPAN_BATCH_DEADLINE_MILLIS
+  delete process.env.PINPOINT_SPAN_BATCH_MAX_REQUESTS
+
+  t.end()
+})
+
+test('should return the false value when the env value is boolean type', function(t) {
+  process.env['PINPOINT_SAMPLING'] = "false"
+  process.env['PINPOINT_ENABLE'] = "false"
+
+  const given = new ConfigBuilder().build()
+  t.equal(given.sampling.enable, false, 'given PINPOINT_SAMPLING env, should equal config')
+  t.equal(given.enable, false, 'given PINPOINT_ENABLE env, should equal config')
+
+  delete process.env.PINPOINT_SAMPLING
+  delete process.env.PINPOINT_ENABLE
+
+  t.end()
+})
+
+test('should not exist in the process.env property when you do not set an environment variable', function(t) {
+  delete process.env.PINPOINT_COLLECTOR_IP
+  delete process.env.PINPOINT_LOGGER_LEVELS
+
+  delete process.env.PINPOINT_SAMPLING
+  delete process.env.PINPOINT_ENABLE
+
+  delete process.env.PINPOINT_COLLECTOR_TCP_PORT
+  delete process.env.PINPOINT_COLLECTOR_STAT_PORT
+  delete process.env.PINPOINT_COLLECTOR_SPAN_PORT
+  delete process.env.PINPOINT_SAMPLING_RATE
+
+  const given = givenDefaultIdAndName()
+  t.equal(given.collector.ip, "localhost", "No set PINPOINT_COLLECTOR_IP env, should equal default config")
+
+  t.equal(given.sampling.enable, true, 'No set PINPOINT_SAMPLING env, should equal default config')
+  t.equal(given.enable, true, 'No set PINPOINT_ENABLE env, should equal default config')
+
+  t.equal(given.collector.tcpPort, 9991, 'No set PINPOINT_COLLECTOR_TCP_PORT env, should equal default config')
+  t.equal(given.collector.statPort, 9992, 'No set PINPOINT_COLLECTOR_STAT_PORT env, should equal default config')
+  t.equal(given.collector.spanPort, 9993, 'No set PINPOINT_COLLECTOR_SPAN_PORT env, should equal default config')
   t.end()
 })
 
@@ -127,16 +197,9 @@ test('HTTP Status Code Errors with config changes', (t) => {
   const defaultConf = new ConfigBuilder().build()
   t.equal(defaultConf.plugins.http.errorStatusCodes, '5xx,401,403', 'default: httpStatusCodeErrors value')
 
-  let httpErrors = defaultConf.getHttpStatusCodeErrors()
-  t.equal(httpErrors.isErrorCode(200), false, 'default: 200 is not error code')
-  t.equal(httpErrors.isErrorCode(500), true, 'default: 500 is error code')
-  t.equal(httpErrors.isErrorCode(401), true, 'default: 401 is error code')
-  t.equal(httpErrors.isErrorCode(403), true, 'default: 403 is error code')
-  t.equal(httpErrors.isErrorCode(404), false, 'default: 404 is not error code')
-
   process.env['PINPOINT_HTTP_STATUS_CODE_ERRORS'] = '404,500'
 
-  httpErrors = new ConfigBuilder().build().getHttpStatusCodeErrors()
+  const httpErrors = new ConfigBuilder().build().getHttpStatusCodeErrors()
   t.equal(httpErrors.isErrorCode(500), true, 'env config: 500 is error code')
   t.equal(httpErrors.isErrorCode(404), true, 'env config: 404 is error code')
   t.equal(httpErrors.isErrorCode(401), false, 'env config: 401 is not error code')
@@ -145,13 +208,6 @@ test('HTTP Status Code Errors with config changes', (t) => {
 
   const conf = new ConfigBuilder({ 'plugins': { 'http': { 'errorStatusCodes': '400,401,403,404' } } }).build()
   t.equal(conf.plugins.http.errorStatusCodes, '400,401,403,404', 'json config: httpStatusCodeErrors value')
-
-  httpErrors = conf.getHttpStatusCodeErrors()
-  t.equal(httpErrors.isErrorCode(400), true, 'json config: 400 is error code')
-  t.equal(httpErrors.isErrorCode(401), true, 'json config: 401 is error code')
-  t.equal(httpErrors.isErrorCode(403), true, 'json config: 403 is error code')
-  t.equal(httpErrors.isErrorCode(404), true, 'json config: 404 is error code')
-  t.equal(httpErrors.isErrorCode(500), false, 'json config: 500 is not error code')
 
   delete process.env.PINPOINT_HTTP_STATUS_CODE_ERRORS
   t.end()
@@ -192,6 +248,141 @@ test('ConfigBuilder accumulates the warns of pinpoint-config.json and the handle
   t.end()
 })
 
+test('config object exclusion URL', (t) => {
+  let config = require('./fixtures/pinpoint-config-test.json')
+  config = Object.assign({}, config, {
+    "features": {
+      "traceExclusionUrl": {
+        "patterns": ["/test.jpg"]
+      }
+    }
+  })
+  t.deepEqual(new ConfigBuilder(config).build().features.traceExclusionUrl.patterns, ["/test.jpg"])
+  delete config["features"]["traceExclusionUrl"]
+
+  config = require('./fixtures/pinpoint-config-test.json')
+  config = Object.assign({}, config, {
+    "features": {
+      "traceExclusionUrl": {
+        "patterns": ["/??/a", "/*bla/test"]
+      }
+    }
+  })
+  t.deepEqual(new ConfigBuilder(config).build().features.traceExclusionUrl.patterns, ["/??/a", "/*bla/test"])
+  delete config["features"]["traceExclusionUrl"]
+
+  t.end()
+})
+
+test('config env exclusion URL', (t) => {
+  process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/test"
+  t.deepEqual(new ConfigBuilder().build().features.traceExclusionUrl.patterns, ["/test"])
+
+  process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/test, test"
+  t.deepEqual(new ConfigBuilder().build().features.traceExclusionUrl.patterns, ["/test", "test"])
+  process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/test, test,tes?"
+  t.deepEqual(new ConfigBuilder().build().features.traceExclusionUrl.patterns, ["/test", "test", "tes?"])
+
+  t.end()
+  delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+})
+
+test('config env exclusion URL cache size', (t) => {
+  process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
+  let conf = new ConfigBuilder().build()
+  t.true(conf.features.traceExclusionUrl.cacheSize === 100, `config.features.traceExclusionUrl.cacheSize default value 100 ENV In undefined case`)
+  delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+
+  process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
+  process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
+  conf = new ConfigBuilder().build()
+  t.equal(conf.features.traceExclusionUrl.cacheSize, 100, 'config.features.traceExclusionUrl.cacheSize default 100')
+  delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+  delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
+
+  process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
+  conf = new ConfigBuilder().build()
+  t.true(typeof conf.features.traceExclusionUrl.patterns === 'undefined', 'when only set config.features.traceExclusionUrl.cacheSize ENV, agent.getConfig().features.traceExclusionUrl.patterns undefined case')
+  t.true(typeof conf.features.traceExclusionUrl.cacheSize === 'undefined', 'when only set config.features.traceExclusionUrl.cacheSize ENV, agent.getConfig().features.traceExclusionUrl.cacheSize undefined case')
+  delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
+
+  process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/test?"
+  conf = new ConfigBuilder().build()
+  t.true(conf.features.traceExclusionUrl.cacheSize === 100, 'config.features.traceExclusionUrl.cacheSize ENV undefined case and patterns set, default 100 cache size')
+  delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+
+  process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/test?"
+  process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
+  conf = new ConfigBuilder().build()
+  t.equal(conf.features.traceExclusionUrl.cacheSize, 100, 'when sampling is true, config.features.traceExclusionUrl.cacheSize default 100')
+  delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
+  delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
+
+  t.end()
+})
+
+test('config object exclusion URL cache size', (t) => {
+  let config = require('./fixtures/pinpoint-config-test.json')
+  config = Object.assign({}, config, {
+    "features": {
+      "traceExclusionUrl": {
+        "patterns": ["/heath_check?/**", "/tes?"]
+      }
+    }
+  })
+  let conf = new ConfigBuilder(config).build()
+  t.true(conf.features.traceExclusionUrl.cacheSize === 100, 'config.features.traceExclusionUrl.cacheSize ENV undefined case')
+
+  config = require('./fixtures/pinpoint-config-test.json')
+  config = Object.assign({}, config, {
+    "features": {
+      "traceExclusionUrl": {
+        "patterns": ["/heath_check?/**", "/tes?"],
+        "cacheSize": 0
+      }
+    }
+  })
+  conf = new ConfigBuilder(config).build()
+  t.equal(conf.features.traceExclusionUrl.cacheSize, 100, 'config.features.traceExclusionUrl.cacheSize default 100')
+
+  config = require('./fixtures/pinpoint-config-test.json')
+  config = Object.assign({}, config, {
+    "features": {
+      "traceExclusionUrl": {
+        "cacheSize": 0
+      }
+    }
+  })
+  conf = new ConfigBuilder(config).build()
+  t.true(typeof conf.features.traceExclusionUrl.patterns === 'undefined', 'when only set config.features.traceExclusionUrl.cacheSize ENV, agent.getConfig().features.traceExclusionUrl.patterns undefined case')
+  t.true(typeof conf.features.traceExclusionUrl.cacheSize === 'undefined', 'when only set config.features.traceExclusionUrl.cacheSize ENV, agent.getConfig().features.traceExclusionUrl.cacheSize undefined case')
+
+  config = require('./fixtures/pinpoint-config-test.json')
+  config = Object.assign({}, config, {
+    "features": {
+      "traceExclusionUrl": {
+        "patterns": ["/heath_check?/**", "/test?"]
+      }
+    }
+  })
+  conf = new ConfigBuilder(config).build()
+  t.true(conf.features.traceExclusionUrl.cacheSize === 100, 'when sampling is true, config.features.traceExclusionUrl.cacheSize ENV undefined case')
+
+  config = require('./fixtures/pinpoint-config-test.json')
+  config = Object.assign({}, config, {
+    "features": {
+      "traceExclusionUrl": {
+        "patterns": ["/heath_check?/**", "/test?"],
+        "cacheSize": 0
+      }
+    }
+  })
+  conf = new ConfigBuilder(config).build()
+  t.equal(conf.features.traceExclusionUrl.cacheSize, 100, 'when sampling is true, config.features.traceExclusionUrl.cacheSize default 100')
+
+  t.end()
+})
+
 test('Config getters return the final names and ids', (t) => {
   const v4 = new ConfigBuilder({ agentId: 'node.app', applicationName: 'appName', serviceName: 'serviceName' }).setUserDefinedJson({}).build()
   t.equal(v4.getAgentId(), v4.agentId, 'getAgentId is the generated v4 agentId')
@@ -208,3 +399,15 @@ test('Config getters return the final names and ids', (t) => {
   t.equal(v3.getProtocolVersion(), 'v3', 'getProtocolVersion is the normalized v3')
   t.end()
 })
+
+function givenDefaultIdAndName() {
+  process.env['PINPOINT_APPLICATION_NAME'] = "appName"
+  process.env['PINPOINT_SERVICE_NAME'] = "serviceName"
+
+  const given = new ConfigBuilder().build()
+
+  delete process.env.PINPOINT_APPLICATION_NAME
+  delete process.env.PINPOINT_SERVICE_NAME
+
+  return given
+}

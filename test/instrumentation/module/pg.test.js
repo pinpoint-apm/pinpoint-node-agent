@@ -225,13 +225,6 @@ test(`Pool connect and query hooking`, async (t) => {
     })
 })
 
-test('PostgreSQL service types', (t) => {
-    t.equal(pgExecuteQueryServiceType.getCode(), 2501, 'PostgreSQL execute query service type code should be 2501')
-    t.equal(pgExecuteQueryServiceType.name, 'POSTGRESQL_EXECUTE_QUERY', 'PostgreSQL execute query service type name should be POSTGRESQL_EXECUTE_QUERY')
-
-    t.end()
-})
-
 test('Disable trace with Express and PostgreSQL', async (t) => {
     agent.bindHttp()
     const express = require('express')

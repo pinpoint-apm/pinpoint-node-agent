@@ -3,4 +3,4 @@
 *.proto
 
 # Exclude nextjs-app-router
-test/instrumentation/module/nextjs/nextjs-app-router/
+test/fixtures/nextjs-app-router/

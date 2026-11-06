@@ -8,18 +8,18 @@
 
 const test = require('tape')
 const path = require('path')
-const { startMySql } = require('../../../support/shared-containers')
-const testAppDir = path.join(__dirname, 'nextjs-app-router')
+const { startMySql } = require('../../support/shared-containers')
+const testAppDir = path.join(__dirname, '../../fixtures/nextjs-app-router')
 const fs = require('fs')
 const grpc = require('@grpc/grpc-js')
-const services = require('../../../../lib/data/v1/Service_grpc_pb')
+const services = require('../../../lib/data/v1/Service_grpc_pb')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
-const SpanProto = require('../../../../lib/data/v1/Span_pb')
-const StatProto = require('../../../../lib/data/v1/Stat_pb')
-const CmdProto = require('../../../../lib/data/v1/Cmd_pb')
-const AnnotationKey = require('../../../../lib/constant/annotation-key')
-const { sendRequestOverRawSocket } = require('../../../support/raw-http-client')
-const { FixturesUpstreamHeader } = require('../../../support/fixtures-upstream-header')
+const SpanProto = require('../../../lib/data/v1/Span_pb')
+const StatProto = require('../../../lib/data/v1/Stat_pb')
+const CmdProto = require('../../../lib/data/v1/Cmd_pb')
+const AnnotationKey = require('../../../lib/constant/annotation-key')
+const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
+const { ParentTraceHeader } = require('../../fixtures/parent-trace-header')
 
 let container
 let spanCollector
@@ -168,14 +168,14 @@ test('Next.JS Production Server start', (suite) => {
                 cwd: testAppDir,
                 env: Object.assign({}, process.env, {
                     PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT: 'true',
-                    NODE_OPTIONS: '-r ../../../../../index.js',
+                    NODE_OPTIONS: '-r ../../../index.js',
                     NODE_ENV: 'production',
                     DB_HOST: container.getHost(),
                     DB_PORT: container.getPort(3306),
                     DB_USER: container.getUsername(),
                     DB_PASSWORD: container.getUserPassword(),
                     NEXT_TELEMETRY_DISABLED: '1',
-                    PINPOINT_APPLICATION_NAME: 'next.js.test.js',
+                    PINPOINT_APPLICATION_NAME: 'nextjs.test.js',
                     PINPOINT_SERVICE_NAME: 'next.js.service',
                     PINPOINT_SERVICE_TYPE: '1600',
                     PINPOINT_COLLECTOR_IP: '127.0.0.1',
@@ -445,7 +445,7 @@ test('Next.js: v4 serviceName is sent as Pinpoint-pServiceName and an inbound on
     await new Promise(resolve => outgoingServer.listen(0, '127.0.0.1', resolve))
     try {
         const target = `http://127.0.0.1:${outgoingServer.address().port}/outgoing`
-        const client = sendRequestOverRawSocket(3000, `/api/parent-service-name?target=${encodeURIComponent(target)}`, FixturesUpstreamHeader.header('pinpoint-pservicename', 'upstream.service'))
+        const client = sendRequestOverRawSocket(3000, `/api/parent-service-name?target=${encodeURIComponent(target)}`, ParentTraceHeader.header('pinpoint-pservicename', 'parent.service'))
         client.setTimeout(10000, () => client.destroy())
         let response = ''
         client.on('data', (chunk) => response += chunk)
@@ -455,7 +455,7 @@ test('Next.js: v4 serviceName is sent as Pinpoint-pServiceName and an inbound on
         t.equal(outgoingRequestHeaders['pinpoint-pservicename'], 'next.js.service', 'outgoing request has Pinpoint-pServiceName header of PINPOINT_SERVICE_NAME')
 
         const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/parent-service-name'), 10000)
-        t.equal(span.getAcceptevent().getParentinfo().getParentservicename(), 'upstream.service', 'PParentInfo.parentServiceName is the inbound Pinpoint-pServiceName')
+        t.equal(span.getAcceptevent().getParentinfo().getParentservicename(), 'parent.service', 'PParentInfo.parentServiceName is the inbound Pinpoint-pServiceName')
     } catch (err) {
         t.fail(err.message)
     } finally {
@@ -524,7 +524,7 @@ test('Next.js with error analysis disabled responds to a throwing API route and 
         {
             cwd: testAppDir,
             env: Object.assign({}, process.env, {
-                NODE_OPTIONS: '-r ../../../../../index.js',
+                NODE_OPTIONS: '-r ../../../index.js',
                 NODE_ENV: 'production',
                 NEXT_TELEMETRY_DISABLED: '1',
                 PINPOINT_APPLICATION_NAME: 'next.js.error-analysis-disabled',

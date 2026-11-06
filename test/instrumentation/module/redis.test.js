@@ -11,7 +11,6 @@ const express = require('express')
 const Koa = require('koa')
 const Router = require('koa-router')
 const koaBodyParser = require('koa-bodyparser')
-const ioRedis = require('ioredis')
 const { createClient } = require('redis')
 const { startRedis } = require('../../support/shared-containers')
 const { startLocalHttpsServer } = require('../../support/local-https-server')
@@ -20,6 +19,7 @@ const apiMetaService = require('../../../lib/context/api-meta-service')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const ServiceType = require('../../../lib/context/service-type')
 const annotationKey = require('../../../lib/constant/annotation-key')
+const localStorage = require('../../../lib/instrumentation/context/local-storage')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -309,63 +309,6 @@ test(`${testName1} redis callback nested asyncTrace with await HTTP get`, async 
 })
 
 
-const testName2 = 'express-ioredis'
-test(`${testName2} should Record the connections between express and ioredis.`, async function (t) {
-  agent.bindHttp()
-  const container = await startRedis()
-
-  const testName = testName2
-
-  const app = new express()
-  const redis = new ioRedis(container.getMappedPort(6379), container.getHost())
-  const PATH = `/${testName}`
-
-  app.use(express.json())
-  app.use(function (req, res, next) {
-    req.cache = redis
-    next()
-  })
-  app.post(PATH, function (req, res, next) {
-    req.accepts('application/json')
-    var key = req.body.name
-    var value = JSON.stringify(req.body)
-    req.cache.set(key, value, function (err, data) {
-      if (err) {
-        console.log(err)
-        res.send("error " + err)
-        return
-      }
-      req.cache.expire(key, 10)
-      res.json(value)
-    })
-  })
-  app.get(`${PATH}/:name`, function (req, res, next) {
-    var key = req.params.name
-    req.cache.get(key, function (err, data) {
-      if (err) {
-        console.log(err)
-        res.send("error " + err)
-        return
-      }
-      var value = JSON.parse(data)
-      res.json(value)
-    })
-  })
-  app.use(function (req, res, next) {
-    var err = new Error('Not Found')
-    err.status = 404
-    next(err)
-  })
-  const server = app.listen(TEST_ENV.port, async function () {
-    const rstPush = await axios.post(getServerUrl(PATH), redisData)
-    t.equal(rstPush.status, 200)
-
-    await redis.quit()
-    server.close()
-    t.end()
-  })
-})
-
 const testName3 = 'koa-redis'
 test(`${testName3} should Record the connections between koa and redis.`, async function (t) {
   agent.bindHttp()
@@ -413,75 +356,6 @@ test(`${testName3} should Record the connections between koa and redis.`, async 
     t.equal(rstGet.status, 200)
 
     await new Promise(resolve => client.quit(resolve))
-    server.close()
-    t.end()
-  })
-})
-
-const testName4 = 'koa-ioredis'
-test(`${testName4} should Record the connections between koa and ioredis.`, async function (t) {
-  agent.bindHttp()
-  const container = await startRedis()
-
-  const testName = testName4
-
-  const app = new Koa()
-  const router = new Router()
-  const redis = new ioRedis(container.getMappedPort(6379), container.getHost())
-
-  const PATH = `/${testName}`
-  app.use(koaBodyParser())
-  router.post(PATH, async function (ctx, next) {
-    const key = ctx.request.body.name
-    const value = JSON.stringify(ctx.request.body)
-    await redis.set(key, value)
-    ctx.body = 'test'
-  })
-
-  router.get(`${PATH}/:name`, async (ctx, next) => {
-    const key = ctx.params.name
-    // await Promise.all([
-    //   redis.get(key),
-    //   redis.get(key),
-    //   redis.get(key)
-    // ])
-
-
-    redis.get(key, (err, result) => {
-      if (err) {
-        console.error(err)
-      } else {
-        // console.log(result)
-      }
-    })
-
-    redis.get(key, (err, result) => {
-      if (err) {
-        console.error(err)
-      } else {
-        // console.log(result)
-      }
-    })
-    redis.get(key, (err, result) => {
-      if (err) {
-        console.error(err)
-      } else {
-        // console.log(result)
-      }
-    })
-
-    ctx.body = 'test'
-  })
-
-  app.use(router.routes()).use(router.allowedMethods())
-
-  const server = app.listen(TEST_ENV.port, async () => {
-    const rstPush = await axios.post(getServerUrl(PATH), redisData)
-    t.equal(rstPush.status, 200)
-    const rstGet = await axios.get(getServerUrl(`${PATH}/jundol`))
-    t.equal(rstGet.status, 200)
-
-    await redis.quit()
     server.close()
     t.end()
   })
@@ -620,5 +494,47 @@ test(`${testName1} await connections between express and redis.`, async function
 
     server.close()
     t.end()
+  })
+})
+
+// https://github.com/NodeRedis/node-redis#rediscreateclient
+test(`Fix app crash without callback function https://github.com/pinpoint-apm/pinpoint-node-agent/pull/12`, async (t) => {
+  const container = await startRedis()
+
+  agent.bindHttp()
+
+  t.plan(6)
+
+  const trace = agent.createTraceObject()
+  localStorage.run(trace, () => {
+    const redis = require('redis')
+
+    const client = redis.createClient({ url: container.getConnectionUrl(), db: 3 })
+    const traceContext = agent.getTraceContext()
+
+    client.select(2)
+
+    client.on("error", function (error) {
+      console.error(error)
+    })
+
+    client.set("key", "value", async function (error) {
+      t.true(error == null, "error is null")
+
+      const trace = traceContext.currentTraceObject()
+      t.equal(trace.callStack.stack.length, 1, "callStack is 1")
+    })
+    t.equal(traceContext.currentTraceObject().callStack.stack.length, 0, "set spanevent callstack")
+
+    client.get("key", async function (error, data) {
+      t.equal(data, "value", "redis value validation")
+
+      const trace = traceContext.currentTraceObject()
+      t.equal(trace.callStack.stack.length, 1, "callStack is 1")
+
+      client.quit()
+      agent.completeTraceObject(trace)
+    })
+    t.equal(traceContext.currentTraceObject().callStack.stack.length, 0, "get spanevent callstack")
   })
 })

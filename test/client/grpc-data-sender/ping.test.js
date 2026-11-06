@@ -8,8 +8,8 @@
 
 const test = require('tape')
 const grpc = require('@grpc/grpc-js')
-const services = require('../../lib/data/v1/Service_grpc_pb')
-const { beforeSpecificOne, DataSourceCallCountable } = require('../support/grpc-fixture')
+const services = require('../../../lib/data/v1/Service_grpc_pb')
+const { beforeSpecificOne, DataSourceCallCountable } = require('../../support/grpc-data-sources')
 const shimmer = require('@pinpoint-apm/shimmer')
 
 const reconnectTestTimeout = { timeout: 60 * 1000 }

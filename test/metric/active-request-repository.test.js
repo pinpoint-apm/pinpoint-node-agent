@@ -8,6 +8,16 @@ const test = require('tape')
 const activeRequestRepository = require('../../lib/metric/active-request-repository')
 const TraceRoot = require('../../lib/context/trace/trace-root')
 
+test('A registered trace is cached by its transaction id as an active trace', (t) => {
+    const traceRoot = new TraceRoot('agentId', 1000, 'registered')
+
+    activeRequestRepository.register(traceRoot)
+
+    t.equal(activeRequestRepository.activeTraceCache.get(traceRoot.getTransactionId()), traceRoot, 'the trace root is cached')
+    activeRequestRepository.remove(traceRoot, 1010)
+    t.end()
+})
+
 test('An active trace records its response time when it is removed', (t) => {
     activeRequestRepository.collectResponseTime()
     const traceRoot = new TraceRoot('agentId', 1000, 'active-trace')

@@ -9,8 +9,8 @@
 const agent = require('./agent-singleton-mock')
 const { ClientHeader, makeClientHeaderInterceptor } = require('../../lib/name/client-header')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
-const SpanBuilder = require('../../lib/context/span-builder')
-const RemoteTraceRootBuilder = require('../../lib/context/remote-trace-root-builder')
+const grpc = require('@grpc/grpc-js')
+const spanMessages = require('../../lib/data/v1/Span_pb')
 const { ConfigBuilder } = require('../../lib/config-builder')
 
 let callCount = 0
@@ -219,14 +219,6 @@ class DataSourceCallCountable extends GrpcDataSender {
     }
 }
 
-function spanWithId(transactionId) {
-    return new SpanBuilder(new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, transactionId).build()).build()
-}
-
-function spanMessageWithId(spanId) {
-    return spanWithId(spanId).toProtocolBuffer()
-}
-
 class ProfilerDataSource extends DataSourceCallCountable {
     constructor(config, interceptors) {
         config = Object.assign({}, config, {
@@ -272,20 +264,32 @@ class MetaInfoOnlyDataSource extends DataSourceCallCountable {
     }
 }
 
-function waitForAgentStat(receivedAgentStats, timeoutMillis = 5000) {
-    return new Promise((resolve, reject) => {
-        const startTime = Date.now()
-        const check = () => {
-            if (receivedAgentStats.length > 0) {
-                resolve(receivedAgentStats[0])
-            } else if (Date.now() - startTime > timeoutMillis) {
-                reject(new Error('no AgentStat received'))
-            } else {
-                setTimeout(check, 50)
-            }
-        }
-        check()
-    })
+// https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
+// Succeeds on the attempt named in the succeed-on-retry-attempt metadata and records the request
+function retryTestService(call, callback) {
+    const succeedOnRetryAttempt = call.metadata.get('succeed-on-retry-attempt')
+    const previousAttempts = call.metadata.get('grpc-previous-rpc-attempts')
+    const callRequests = getCallRequests()
+    const callMetadata = getMetadata()
+    // console.debug(`succeed-on-retry-attempt: ${succeedOnRetryAttempt[0]}, grpc-previous-rpc-attempts: ${previousAttempts[0]}`)
+    if (succeedOnRetryAttempt.length === 0 || (previousAttempts.length > 0 && previousAttempts[0] === succeedOnRetryAttempt[0])) {
+        const result = new spanMessages.PResult()
+        result.setSuccess(true)
+        result.setMessage(`succeed-on-retry-attempt: ${succeedOnRetryAttempt[0]}, grpc-previous-rpc-attempts: ${previousAttempts[0]}`)
+        callRequests.push(call.request)
+        callMetadata.push(call.metadata)
+        callback(null, result)
+    } else {
+        const statusCode = call.metadata.get('respond-with-status')
+        const code = statusCode[0] ? Number.parseInt(statusCode[0]) : grpc.status.UNKNOWN
+        callback({ code: code, details: `Failed on retry ${previousAttempts[0] ?? 0}` })
+    }
+}
+
+function buildGrpcDataSender(port) {
+    const collector = Object.assign({}, agent.getConfig().collector, { ip: 'localhost', spanPort: port, statPort: port, tcpPort: port })
+    const config = new ConfigBuilder(Object.assign({}, agent.getConfig(), { collector })).build()
+    return new GrpcDataSender(config, [makeClientHeaderInterceptor(ClientHeader.make(agent.agentStartTime, agent.getConfig()))])
 }
 
 module.exports = {
@@ -294,12 +298,11 @@ module.exports = {
     afterOne,
     getCallRequests,
     getMetadata,
+    retryTestService,
+    buildGrpcDataSender,
     DataSourceCallCountable,
     ProfilerDataSource,
     SpanOnlyFunctionalTestableDataSource,
-    spanWithId,
-    spanMessageWithId,
     StatOnlyFunctionalTestableDataSource,
     MetaInfoOnlyDataSource,
-    waitForAgentStat,
 }

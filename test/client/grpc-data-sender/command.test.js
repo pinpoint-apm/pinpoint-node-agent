@@ -8,13 +8,15 @@
 
 const test = require('tape')
 const grpc = require('@grpc/grpc-js')
-const { beforeSpecificOne } = require('../support/grpc-fixture')
-const services = require('../../lib/data/v1/Service_grpc_pb')
-const cmdMessage = require('../../lib/data/v1/Cmd_pb')
-const { ProfilerDataSource } = require('../support/grpc-fixture')
+const { beforeSpecificOne, getCallRequests, getMetadata } = require('../../support/grpc-data-sources')
+const services = require('../../../lib/data/v1/Service_grpc_pb')
+const cmdMessage = require('../../../lib/data/v1/Cmd_pb')
+const { ProfilerDataSource } = require('../../support/grpc-data-sources')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const shimmer = require('@pinpoint-apm/shimmer')
-const GrpcReadableStream = require('../../lib/client/grpc-readable-stream')
+const GrpcReadableStream = require('../../../lib/client/grpc-readable-stream')
+const CommandType = require('../../../lib/client/command/command-type')
+const spanMessages = require('../../../lib/data/v1/Span_pb')
 
 const reconnectTestTimeout = { timeout: 60 * 1000 }
 
@@ -283,6 +285,162 @@ test('If you run the ActiveRequest function, and deadline occurs, the ActiveRequ
         dataSender.close()
         handleCommandCall.end()
         shimmer.unwrap(GrpcReadableStream.prototype, 'pipeWritableStream')
+        server.forceShutdown()
+    })
+})
+
+let requestId = 0
+const handleCommandV2Service = (call) => {
+    const callRequests = getCallRequests()
+    const callMetadata = getMetadata()
+    callRequests.push(call.request)
+    callMetadata.push(call.metadata)
+
+    handleCommandCall = call
+
+    requestId++
+    serverCallWriter(CommandType.echo)
+}
+
+const serverCallWriter = (commandType) => {
+    const result = new cmdMessage.PCmdRequest()
+    result.setRequestid(requestId)
+
+    if (commandType === CommandType.activeThreadCount) {
+        const commandActiveThreadCount = new cmdMessage.PCmdActiveThreadCount()
+        result.setCommandactivethreadcount(commandActiveThreadCount)
+    } else {
+        const message = new cmdMessage.PCmdEcho()
+        message.setMessage('echo')
+        result.setCommandecho(message)
+    }
+
+    handleCommandCall.write(result)
+}
+
+let dataCallbackOnServerCall
+const emptyResponseService = (call, callback) => {
+    call.on('data', (data) => {
+        if (typeof dataCallbackOnServerCall === 'function') {
+            dataCallbackOnServerCall(data)
+        }
+    })
+
+    const succeedOnRetryAttempt = call.metadata.get('succeed-on-retry-attempt')
+    const previousAttempts = call.metadata.get('grpc-previous-rpc-attempts')
+    const callRequests = getCallRequests()
+    const callMetadata = getMetadata()
+    // console.debug(`succeed-on-retry-attempt: ${succeedOnRetryAttempt[0]}, grpc-previous-rpc-attempts: ${previousAttempts[0]}`)
+    if (succeedOnRetryAttempt.length === 0 || (previousAttempts.length > 0 && previousAttempts[0] === succeedOnRetryAttempt[0])) {
+        callRequests.push(call.request)
+        callMetadata.push(call.metadata)
+        callback(null, new Empty())
+    } else {
+        const statusCode = call.metadata.get('respond-with-status')
+        const code = statusCode[0] ? Number.parseInt(statusCode[0]) : grpc.status.UNKNOWN
+        callback({ code: code, details: `Failed on retry ${previousAttempts[0] ?? 0}` })
+    }
+}
+
+test('sendSupportedServicesCommand and commandEcho', (t) => {
+    dataCallbackOnServerCall = null
+    const server = new grpc.Server()
+    server.addService(services.ProfilerCommandServiceService, {
+        handleCommandV2: handleCommandV2Service,
+        handleCommand: handleCommandV2Service,
+        commandEcho: emptyResponseService
+    })
+    server.addService(services.MetadataService, {
+        requestApiMetaData: (call, callback) => {
+            const result = new spanMessages.PResult()
+            callback(null, result)
+        }
+    })
+
+    let dataSender
+    server.bindAsync('127.0.0.1:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        dataSender = beforeSpecificOne(port, ProfilerDataSource)
+        dataSender.sendSupportedServicesCommand(function () {
+            const callRequests = getCallRequests()
+            const commonResponse = callRequests[1].getCommonresponse()
+            t.equal(commonResponse.getResponseid(), requestId, 'response id matches request id')
+            t.equal(commonResponse.getStatus(), 0, 'status is success')
+            t.equal(commonResponse.getMessage().getValue(), '', 'message is empty')
+
+            const cmdEchoResponse = callRequests[1]
+            t.equal(cmdEchoResponse.getMessage(), 'echo', 'echo message')
+            dataSender.commandStream.writableStream.on('finish', () => {
+                server.forceShutdown()
+                t.end()
+            })
+            dataSender.close()
+        })
+        dataSender.commandStream.writableStream.on('data', (cmdRequest) => {
+            const actualRequestId = cmdRequest.getRequestid()
+            t.equal(actualRequestId, requestId, 'request id matches')
+            t.equal(cmdRequest.getCommandecho().getMessage(), 'echo', 'echo message')
+        })
+    })
+})
+
+
+
+test('CommandStreamActiveThreadCount', (t) => {
+    const server = new grpc.Server()
+    let interval
+    let ended = false
+    server.addService(services.ProfilerCommandServiceService, {
+        handleCommandV2: handleCommandV2Service,
+        handleCommand: handleCommandV2Service,
+        commandEcho: emptyResponseService,
+        commandStreamActiveThreadCount: (call, callback) => {
+            call.on('data', (data) => {
+                dataCallbackOnServerCall(data)
+            })
+            interval = setInterval(() => {
+                if (ended) {
+                    callback(null, new Empty())
+                    process.nextTick(() => {
+                        t.end()
+                    })
+                }
+            }, 1000)
+        }
+    })
+    let dataSender
+    server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        dataSender = beforeSpecificOne(port, ProfilerDataSource)
+
+        let callCount = 0
+        dataCallbackOnServerCall = (data) => {
+            ++callCount
+            const commonStreamResponse = data.getCommonstreamresponse()
+            t.equal(commonStreamResponse.getResponseid(), requestId, 'response id matches request id')
+            t.equal(commonStreamResponse.getSequenceid(), callCount, `sequenceid is ${callCount}`)
+            t.equal(commonStreamResponse.getMessage().getValue(), '', 'message is empty')
+
+            t.equal(data.getHistogramschematype(), 2, 'histogram schema type')
+            t.equal(data.getActivethreadcountList()[0], 0, 'active thread count')
+
+            ended = true
+        }
+
+        let once
+        dataSender.sendSupportedServicesCommand(function () {
+            if (once) {
+                return
+            }
+            once = true
+
+            process.nextTick(() => {
+                serverCallWriter(CommandType.activeThreadCount)
+            })
+        })
+    })
+
+    t.teardown(() => {
+        clearInterval(interval)
+        dataSender.close()
         server.forceShutdown()
     })
 })

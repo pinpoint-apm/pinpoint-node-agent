@@ -8,14 +8,26 @@
 
 const test = require('tape')
 const grpc = require('@grpc/grpc-js')
-const { beforeSpecificOne, StatOnlyFunctionalTestableDataSource } = require('../support/grpc-fixture')
-const agent = require('../support/agent-singleton-mock')
-const services = require('../../lib/data/v1/Service_grpc_pb')
+const { beforeSpecificOne, StatOnlyFunctionalTestableDataSource } = require('../../support/grpc-data-sources')
+const agent = require('../../support/agent-singleton-mock')
+const services = require('../../../lib/data/v1/Service_grpc_pb')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
 const { setInterval } = require('node:timers/promises')
 const shimmer = require('@pinpoint-apm/shimmer')
+const express = require('express')
+const axios = require('axios')
+const http = require('http')
+const AgentStatsMonitor = require('../../../lib/metric/agent-stats-monitor')
+const { UriStatsSnapshot } = require('../../../lib/metric/uri/uri-stats-snapshot')
+const { UriStatsInfo } = require('../../../lib/metric/uri/uri-stats-info-builder')
 
 const reconnectTestTimeout = { timeout: 60 * 1000 }
+
+const TEST_ENV = {
+    host: 'localhost',
+    port: 5005,
+}
+const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 function agentStatAt(timestamp) {
     return { timestamp, collectInterval: 1000, cpu: { user: 0, system: 0 } }
@@ -232,5 +244,121 @@ test('client side stream deadline exceeded Tests', reconnectTestTimeout, functio
     t.teardown(() => {
         dataSender.close()
         server.forceShutdown()
+    })
+})
+
+test('sendStat', (t) => {
+    const collectorServer = new grpc.Server()
+    let assertAgentStat
+    collectorServer.addService(services.StatService, {
+        sendAgentStat: (call) => {
+            t.equal(call.metadata.get('servicetype')[0], '1400', 'stat stream metadata servicetype is 1400')
+            call.on('data', (data) => {
+                assertAgentStat?.(data)
+            })
+            // callback(null, new Empty())
+        }
+    })
+    collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        const grpcDataSender = beforeSpecificOne(port, StatOnlyFunctionalTestableDataSource)
+        agent.bindHttp(grpcDataSender)
+
+        const app = new express()
+        app.get('/', (req, res) => {
+            const agentStatsMonitor = new AgentStatsMonitor(agent.dataSender, agent.getConfig().getAgentId(), agent.agentStartTime)
+            const origin = agentStatsMonitor.createStatsInfo
+            let originalHistogram
+            agentStatsMonitor.createStatsInfo = (...args) => {
+                const result = origin.apply(agentStatsMonitor, args)
+                originalHistogram = result.activeTrace.histogramValues()
+                res.send('Hello World')
+                return result
+            }
+            agentStatsMonitor.send()
+
+            assertAgentStat = (data) => {
+                const actualHistogram = data.getAgentstat().getActivetrace().getHistogram().getActivetracecountList()
+                t.deepEqual(originalHistogram, actualHistogram, 'active trace histogram')
+
+
+                agentStatsMonitor.shutdown()
+                agent.dataSender.close()
+                server.close(() => {
+                    t.end()
+                })
+            }
+        })
+
+        const server = app.listen(TEST_ENV.port, async () => {
+            const result = await axios.get(getServerUrl('/'), { httpAgent: new http.Agent({ keepAlive: false }) })
+            t.equal(result.status, 200, 'status code is 200')
+        })
+    })
+
+    t.teardown(() => {
+        collectorServer.forceShutdown()
+    })
+})
+
+test('sendStat with UriStatsSnapshot', (t) => {
+    const collectorServer = new grpc.Server()
+    let assertAgentStat
+
+    collectorServer.addService(services.StatService, {
+        sendAgentStat: (call) => {
+            call.on('data', (data) => {
+                assertAgentStat?.(data)
+            })
+        }
+    })
+
+    collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+        const grpcDataSender = beforeSpecificOne(port, StatOnlyFunctionalTestableDataSource)
+        const baseTimestamp = Date.now()
+        const snapshot = new UriStatsSnapshot(baseTimestamp, 10)
+        snapshot.add(new UriStatsInfo('/foo', true, 0, 50))
+        snapshot.add(new UriStatsInfo('/foo', true, 0, 400))
+        snapshot.add(new UriStatsInfo('/foo', false, 0, 900))
+        snapshot.add(new UriStatsInfo('/bar', true, 0, 50))
+
+        assertAgentStat = (data) => {
+            t.ok(data, 'Should receive data')
+            const agentUriStat = data.getAgenturistat()
+            t.ok(agentUriStat, 'Should have agentUriStat')
+            t.equal(agentUriStat.getBucketversion(), 0, 'Bucket version should be 0')
+
+            const eachList = agentUriStat.getEachuristatList()
+            const byUri = Object.fromEntries(eachList.map(each => [each.getUri(), each]))
+
+            const foo = byUri['/foo']
+            t.ok(foo, 'foo entry exists')
+            t.equal(foo.getTimestamp(), baseTimestamp, 'foo timestamp')
+            const fooTotal = foo.getTotalhistogram()
+            t.equal(fooTotal.getTotal(), 1350, 'foo total sum')
+            t.equal(fooTotal.getMax(), 900, 'foo total max')
+            t.deepEqual(fooTotal.getHistogramList(), [1, 0, 1, 1, 0, 0, 0, 0], 'foo total buckets')
+            const fooFailed = foo.getFailedhistogram()
+            t.equal(fooFailed.getTotal(), 900, 'foo failed sum')
+            t.equal(fooFailed.getMax(), 900, 'foo failed max')
+            t.deepEqual(fooFailed.getHistogramList(), [0, 0, 0, 1, 0, 0, 0, 0], 'foo failed buckets')
+
+            const bar = byUri['/bar']
+            t.ok(bar, 'bar entry exists')
+            t.equal(bar.getTimestamp(), baseTimestamp, 'bar timestamp')
+            const barTotal = bar.getTotalhistogram()
+            t.equal(barTotal.getTotal(), 50, 'bar total sum')
+            t.equal(barTotal.getMax(), 50, 'bar total max')
+            t.deepEqual(barTotal.getHistogramList(), [1, 0, 0, 0, 0, 0, 0, 0], 'bar total buckets')
+            const barFailed = bar.getFailedhistogram()
+            t.equal(barFailed.getTotal(), 0, 'bar failed sum')
+            t.equal(barFailed.getMax(), 0, 'bar failed max')
+            t.deepEqual(barFailed.getHistogramList(), [0, 0, 0, 0, 0, 0, 0, 0], 'bar failed buckets')
+
+            grpcDataSender.close()
+            collectorServer.forceShutdown()
+            t.end()
+        }
+
+        grpcDataSender.sendStat(snapshot)
     })
 })

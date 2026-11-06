@@ -218,7 +218,7 @@ test('mysql uid query', async (t) => {
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_UID.getCode(), 'query annotation key is sql in mysql uid functional test')
             t.equal(actualParsingResult.sql.normalizedSql, 'SELECT * FROM member', 'query normalizedSql is SELECT * FROM member in mysql uid functional test')
 
-            let actualGrpcSpanEvent = trace.repository.dataSender.mockSpan.spanEventList[2]
+            let actualGrpcSpanEvent = trace.repository.dataSender.findSpan(trace.getTraceRoot()).spanEventList[2]
             t.equal(actualQueryAnnotation.key, actualGrpcSpanEvent.annotations[0].key, 'query annotation key is same that grpc in mysql uid functional test')
             t.equal(actualQueryAnnotation.value, actualGrpcSpanEvent.annotations[0].value, 'query annotation value is same that grpc in mysql uid functional test')
 

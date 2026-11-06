@@ -22,7 +22,7 @@ const { ExceptionEnricher } = require('../../lib/context/trace/exception-enriche
 let processAgent
 let dataSenderInUse
 
-// Mock tests read a sender's fields through what holds it (agent.dataSender.mockSpans),
+// Tests read the test's sender through what holds it (agent.dataSender.findSpan(traceRoot)),
 // so the sender the process agent keeps forwards every field to the test's sender
 const forwardingDataSender = new Proxy({}, {
     get(target, property) {

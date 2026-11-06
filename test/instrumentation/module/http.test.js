@@ -84,7 +84,7 @@ test('http error status code', (t) => {
         t.equal(pSpan.getParentspanid(), '-1', 'parentSpanId should be -1')
         t.equal(pSpan.getStarttime(), traceRoot.getTraceStartTime(), `startTime should be ${traceRoot.getTraceStartTime()}`)
 
-        const actualSpan = agent.dataSender.getSpan(traceRoot)
+        const actualSpan = agent.dataSender.findSpan(traceRoot)
         t.equal(pSpan.getElapsed(), actualSpan.elapsedTime, `elapsedTime should be ${actualSpan.elapsedTime}`)
         t.equal(pSpan.getApiid(), defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.apiId, `apiId should be ${defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.apiId}`)
         t.equal(pSpan.getServicetype(), ServiceType.node.code, `serviceType should be ${ServiceType.node.code}`)
@@ -274,8 +274,10 @@ test('incomming request by User', (t) => {
     let expectedTransactionId
     let expectedSpanId
     let expectedFlags
+    let incomingTraceRoot
     app.get(PATH, async (req, res) => {
         const trace = agent.currentTraceObject()
+        incomingTraceRoot = trace.getTraceRoot()
 
         expectedTransactionId = trace.getTraceId().toStringDelimiterFormatted()
         expectedSpanId = trace.getTraceId().spanId
@@ -321,10 +323,11 @@ test('incomming request by User', (t) => {
     const server = app.listen(TEST_ENV.port, async () => {
         const result1 = await axios.get(getServerUrl(PATH))
         t.equal(result1.status, 200)
-        t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getSpanId(), 'string')
-        t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getParentSpanId(), 'string')
-        t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().agentStartTime, 'string')
-        t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getTransactionId(), 'string')
+        const actualTraceId = agent.dataSender.findSpan(incomingTraceRoot).traceRoot.getTraceId()
+        t.equal(typeof actualTraceId.getSpanId(), 'string')
+        t.equal(typeof actualTraceId.getParentSpanId(), 'string')
+        t.equal(typeof actualTraceId.agentStartTime, 'string')
+        t.equal(typeof actualTraceId.getTransactionId(), 'string')
         server.close()
         t.end()
     })
@@ -357,8 +360,10 @@ function incomingRequest(t, sampled) {
     const PATH = '/incommingrequest'
     let expectedTransactionId
     let expectedSpanId
+    let incomingTraceRoot
     app.get(PATH, async (req, res) => {
         const trace = agent.currentTraceObject()
+        incomingTraceRoot = trace.getTraceRoot()
         const headers = config.headers
 
         expectedTransactionId = trace.getTraceRoot().getTraceId().toStringDelimiterFormatted()
@@ -411,10 +416,11 @@ function incomingRequest(t, sampled) {
         const result1 = await axios.get(getServerUrl(PATH), config)
         t.equal(result1.status, 200)
         if (sampled) {
-            t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getSpanId(), 'string')
-            t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getParentSpanId(), 'string')
-            t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getAgentStartTime(), 'string')
-            t.equal(typeof agent.dataSender.mockSpan.traceRoot.getTraceId().getTransactionId(), 'string')
+            const actualTraceId = agent.dataSender.findSpan(incomingTraceRoot).traceRoot.getTraceId()
+            t.equal(typeof actualTraceId.getSpanId(), 'string')
+            t.equal(typeof actualTraceId.getParentSpanId(), 'string')
+            t.equal(typeof actualTraceId.getAgentStartTime(), 'string')
+            t.equal(typeof actualTraceId.getTransactionId(), 'string')
         }
         server.close()
         t.end()

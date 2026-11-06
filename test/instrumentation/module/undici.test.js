@@ -105,7 +105,7 @@ test('shimming require(undici) cause by require-in-the-middle package', function
                     t.equal(actualTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `child trace by undici transaction id is ${traceRoot.getTransactionId()}`)
                     t.equal(actualPChildTraceByUndici.getSpanid(), traceRoot.getTraceId().getSpanId(), `child trace by undici span id is ${traceRoot.getTraceId().getSpanId()}`)
 
-                    const actualSpanChunk = agent.dataSender.getSpanChunk(traceRoot)
+                    const actualSpanChunk = agent.dataSender.findSpanChunks(traceRoot)[0]
                     t.equal(actualPChildTraceByUndici.getEndpoint(), actualSpanChunk.endPoint ?? '', `child trace by undici endpoint is ${actualSpanChunk.endPoint}`)
                     t.equal(actualPChildTraceByUndici.getApplicationservicetype(), actualSpanChunk.applicationServiceType, `child trace by undici application service type is ${actualSpanChunk.applicationServiceType}`)
                     t.equal(actualPChildTraceByUndici.getKeytime(), actualSpanChunk.keyTime, `child trace by undici key time is ${actualSpanChunk.keyTime}`)
@@ -245,7 +245,7 @@ test('shimming require(undici) cause by require-in-the-middle package', function
         const app = new express()
         app.get('/test', async (req, res) => {
             agent.callbackTraceClose((trace) => {
-                actualTestSpan = agent.dataSender.getSpan(trace.spanBuilder.traceRoot)
+                actualTestSpan = agent.dataSender.findSpan(trace.spanBuilder.traceRoot)
             })
             const { body } = await request('http://localhost:5006/outgoing')
             const text = await body.text()
@@ -254,7 +254,7 @@ test('shimming require(undici) cause by require-in-the-middle package', function
 
         app.get('/outgoing', (req, res) => {
             agent.callbackTraceClose((trace) => {
-                actualFetchAPISpan = agent.dataSender.getSpan(trace.spanBuilder.traceRoot)
+                actualFetchAPISpan = agent.dataSender.findSpan(trace.spanBuilder.traceRoot)
             })
             throw new Error('test')
         })
@@ -358,7 +358,7 @@ test('shimming undici: should not collect ExceptionMetaData when errorAnalysis i
     app.get('/disabled-outgoing', (req, res) => {
         agent.callbackTraceClose((trace) => {
             setImmediate(() => {
-                const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
+                const actualExceptionMetaData = trace.repository.dataSender.findExceptionMetaData(trace.getTraceRoot())
                 t.equal(actualExceptionMetaData, undefined, 'ExceptionMetaData should not be sent when errorAnalysis is disabled')
                 server.close()
                 t.end()
@@ -456,7 +456,7 @@ test('shimming udici by global nodejs fetch', function (t) {
                     t.equal(actualTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `child trace by undici transaction id is ${traceRoot.getTransactionId()}`)
                     t.equal(actualPChildTraceByUndici.getSpanid(), traceRoot.getTraceId().getSpanId(), `child trace by undici span id is ${traceRoot.getTraceId().getSpanId()}`)
 
-                    const actualSpanChunk = agent.dataSender.getSpanChunk(traceRoot)
+                    const actualSpanChunk = agent.dataSender.findSpanChunks(traceRoot)[0]
                     t.equal(actualPChildTraceByUndici.getEndpoint(), actualSpanChunk.endPoint ?? '', `child trace by undici endpoint is ${actualSpanChunk.endPoint}`)
                     t.equal(actualPChildTraceByUndici.getApplicationservicetype(), actualSpanChunk.applicationServiceType, `child trace by undici application service type is ${actualSpanChunk.applicationServiceType}`)
                     t.equal(actualPChildTraceByUndici.getKeytime(), actualSpanChunk.keyTime, `child trace by undici key time is ${actualSpanChunk.keyTime}`)
@@ -565,7 +565,7 @@ test('shimming udici by global nodejs fetch', function (t) {
         const app = new express()
         app.get('/test', async (req, res) => {
             agent.callbackTraceClose((trace) => {
-                actualTestSpan = agent.dataSender.getSpan(trace.spanBuilder.traceRoot)
+                actualTestSpan = agent.dataSender.findSpan(trace.spanBuilder.traceRoot)
             })
             const response = await fetch('http://localhost:5006/outgoing')
             const text = await response.text()
@@ -574,7 +574,7 @@ test('shimming udici by global nodejs fetch', function (t) {
 
         app.get('/outgoing', (req, res) => {
             agent.callbackTraceClose((trace) => {
-                actualFetchAPISpan = agent.dataSender.getSpan(trace.spanBuilder.traceRoot)
+                actualFetchAPISpan = agent.dataSender.findSpan(trace.spanBuilder.traceRoot)
             })
             res.send('test')
         })

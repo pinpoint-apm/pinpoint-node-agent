@@ -445,7 +445,7 @@ test('Should record ExceptionMetaData with uriTemplate when route throws in Koa'
   router.get(PATH, async (ctx) => {
     agent.callbackTraceClose((trace) => {
       setImmediate(() => {
-        const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
+        const actualExceptionMetaData = trace.repository.dataSender.findExceptionMetaData(trace.getTraceRoot())?.valueOfProtocolBuffer()
         t.ok(actualExceptionMetaData, 'ExceptionMetaData should be sent')
 
         if (actualExceptionMetaData) {
@@ -720,11 +720,11 @@ test('Koa: v4 serviceName is sent as Pinpoint-pServiceName and an inbound one is
 
       t.equal(outgoingRequestHeaders['pinpoint-pservicename'], 'koa.service', 'outgoing request has Pinpoint-pServiceName header of the Config serviceName')
 
-      const span = agent.dataSender.mockSpans.find(span => span.rpc === PATH)
+      const span = agent.dataSender.spans().find(span => span.rpc === PATH)
       t.equal(span.parentServiceName, 'parent.service', 'span parentServiceName is the inbound Pinpoint-pServiceName')
       t.equal(span.toProtocolBuffer().getSpan().getAcceptevent().getParentinfo().getParentservicename(), 'parent.service', 'PParentInfo.parentServiceName is the inbound Pinpoint-pServiceName')
 
-      const outgoingSpan = agent.dataSender.mockSpans.find(span => span.rpc === OUTGOING_PATH)
+      const outgoingSpan = agent.dataSender.spans().find(span => span.rpc === OUTGOING_PATH)
       t.equal(outgoingSpan.parentServiceName, 'koa.service', 'next hop span parentServiceName is this agent serviceName')
     } catch (error) {
       t.fail(error.stack)
@@ -760,7 +760,7 @@ test('Koa: v3 sends no Pinpoint-pServiceName and an inbound request without it l
       t.equal(outgoingRequestHeaders['pinpoint-pappname'], 'test.application.name', 'outgoing request has Pinpoint-pAppName header')
       t.equal(outgoingRequestHeaders['pinpoint-pservicename'], undefined, 'v3 outgoing request has no Pinpoint-pServiceName header even with serviceName set')
 
-      const span = agent.dataSender.mockSpans.find(span => span.rpc === PATH)
+      const span = agent.dataSender.spans().find(span => span.rpc === PATH)
       t.equal(span.parentApplicationName, 'parent.application', 'span parentApplicationName is the inbound Pinpoint-pAppName')
       t.equal(span.parentServiceName, undefined, 'span parentServiceName is unset')
       t.equal(span.toProtocolBuffer().getSpan().getAcceptevent().getParentinfo().getParentservicename(), '', 'PParentInfo.parentServiceName is unset')
@@ -799,10 +799,10 @@ test('Koa: application service type is NODE 1400 even with PINPOINT_SERVICE_TYPE
 
       t.equal(outgoingRequestHeaders['pinpoint-papptype'], '1400', 'outgoing request has Pinpoint-pAppType header of NODE 1400')
 
-      const span = agent.dataSender.mockSpans.find(span => span.rpc === PATH)
+      const span = agent.dataSender.spans().find(span => span.rpc === PATH)
       t.equal(span.toProtocolBuffer().getSpan().getApplicationservicetype(), 1400, 'PSpan.applicationServiceType is NODE 1400')
 
-      const outgoingSpan = agent.dataSender.mockSpans.find(span => span.rpc === OUTGOING_PATH)
+      const outgoingSpan = agent.dataSender.spans().find(span => span.rpc === OUTGOING_PATH)
       t.equal(outgoingSpan.parentApplicationType, 1400, 'next hop span parentApplicationType is NODE 1400')
     } catch (error) {
       t.fail(error.stack)

@@ -220,7 +220,7 @@ function throwHandleTest(trace, t) {
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
   t.true(/express\.test\.js:\d+:\d+$/.test(spanEvent.exceptionInfo.stringValue), 'error case')
 
-  const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
+  const actualExceptionMetaData = trace.repository.dataSender.findExceptionMetaData(trace.getTraceRoot()).valueOfProtocolBuffer()
   const actualTransactionId = actualExceptionMetaData.getTransactionid()
   t.equal(actualTransactionId.getAgentid(), trace.spanBuilder.traceRoot.getTraceId().getAgentId(), `ExceptionMetaData transactionId agentId ${actualTransactionId.getAgentid()}`)
   t.equal(actualTransactionId.getAgentstarttime(), trace.spanBuilder.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStarttime ${actualTransactionId.getAgentstarttime()}`)
@@ -265,7 +265,7 @@ function nextErrorHandleTest(trace, t) {
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
   t.true(/express\.test\.js:\d+:\d+$/.test(spanEvent.exceptionInfo.stringValue), 'error case')
 
-  const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
+  const actualExceptionMetaData = trace.repository.dataSender.findExceptionMetaData(trace.getTraceRoot()).valueOfProtocolBuffer()
   const actualTransactionId = actualExceptionMetaData.getTransactionid()
   t.equal(actualTransactionId.getAgentid(), trace.spanBuilder.traceRoot.getTraceId().getAgentId(), `ExceptionMetaData transactionId agentId ${actualTransactionId.getAgentid()}`)
   t.equal(actualTransactionId.getAgentstarttime(), trace.spanBuilder.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStarttime ${actualTransactionId.getAgentstarttime()}`)
@@ -284,7 +284,7 @@ function nextErrorHandleTest(trace, t) {
 }
 
 function unhandledExceptionStatsFrameTest(trace, t) {
-  const actualExceptionMetaData = trace.repository.dataSender.dataSender.actualExceptionMetaData
+  const actualExceptionMetaData = trace.repository.dataSender.findExceptionMetaData(trace.getTraceRoot())?.valueOfProtocolBuffer()
   t.ok(actualExceptionMetaData, 'ExceptionMetaData should be sent')
 
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
@@ -1633,11 +1633,11 @@ test('Express: v4 serviceName is sent as Pinpoint-pServiceName and an inbound on
 
       t.equal(outgoingRequestHeaders['pinpoint-pservicename'], 'express.service', 'outgoing request has Pinpoint-pServiceName header of the Config serviceName')
 
-      const span = agent.dataSender.mockSpans.find(span => span.rpc === PATH)
+      const span = agent.dataSender.spans().find(span => span.rpc === PATH)
       t.equal(span.parentServiceName, 'parent.service', 'span parentServiceName is the inbound Pinpoint-pServiceName')
       t.equal(span.toProtocolBuffer().getSpan().getAcceptevent().getParentinfo().getParentservicename(), 'parent.service', 'PParentInfo.parentServiceName is the inbound Pinpoint-pServiceName')
 
-      const outgoingSpan = agent.dataSender.mockSpans.find(span => span.rpc === OUTGOING_PATH)
+      const outgoingSpan = agent.dataSender.spans().find(span => span.rpc === OUTGOING_PATH)
       t.equal(outgoingSpan.parentServiceName, 'express.service', 'next hop span parentServiceName is this agent serviceName')
     } catch (error) {
       t.fail(error.stack)
@@ -1671,7 +1671,7 @@ test('Express: v3 sends no Pinpoint-pServiceName and an inbound request without 
       t.equal(outgoingRequestHeaders['pinpoint-pappname'], 'test.application.name', 'outgoing request has Pinpoint-pAppName header')
       t.equal(outgoingRequestHeaders['pinpoint-pservicename'], undefined, 'v3 outgoing request has no Pinpoint-pServiceName header even with serviceName set')
 
-      const span = agent.dataSender.mockSpans.find(span => span.rpc === PATH)
+      const span = agent.dataSender.spans().find(span => span.rpc === PATH)
       t.equal(span.parentApplicationName, 'parent.application', 'span parentApplicationName is the inbound Pinpoint-pAppName')
       t.equal(span.parentServiceName, undefined, 'span parentServiceName is unset')
       t.equal(span.toProtocolBuffer().getSpan().getAcceptevent().getParentinfo().getParentservicename(), '', 'PParentInfo.parentServiceName is unset')
@@ -1708,10 +1708,10 @@ test('Express: application service type is NODE 1400 even with PINPOINT_SERVICE_
 
       t.equal(outgoingRequestHeaders['pinpoint-papptype'], '1400', 'outgoing request has Pinpoint-pAppType header of NODE 1400')
 
-      const span = agent.dataSender.mockSpans.find(span => span.rpc === PATH)
+      const span = agent.dataSender.spans().find(span => span.rpc === PATH)
       t.equal(span.toProtocolBuffer().getSpan().getApplicationservicetype(), 1400, 'PSpan.applicationServiceType is NODE 1400')
 
-      const outgoingSpan = agent.dataSender.mockSpans.find(span => span.rpc === OUTGOING_PATH)
+      const outgoingSpan = agent.dataSender.spans().find(span => span.rpc === OUTGOING_PATH)
       t.equal(outgoingSpan.parentApplicationType, 1400, 'next hop span parentApplicationType is NODE 1400')
     } catch (error) {
       t.fail(error.stack)

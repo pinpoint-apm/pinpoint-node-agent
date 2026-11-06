@@ -157,6 +157,76 @@ test(`connection with query`, async (t) => {
     })
 })
 
+test('mysql uid query', async (t) => {
+    agent.bindHttp({
+        "features": {
+            "sqlStats": true
+        }
+    })
+    const container = await startMySql()
+
+    const trace = agent.createTraceObject()
+    localStorage.run(trace, () => {
+        const connection = mysql.createConnection({
+            host: container.getHost(),
+            port: container.getPort(),
+            database: 'test',
+            user: container.getUsername(),
+            password: container.getUserPassword(),
+            acquireTimeout: 1000000,
+            timezone: '+09:00'
+        })
+
+        connection.connect(function (err) {
+            if (err) {
+                console.error('error connecting: ' + err)
+                return
+            }
+        })
+        connection.query(`SELECT * FROM member`, async function (error, results) {
+            if (error) throw error
+            t.equal(results[0].id, 'a', 'SELECT * FROM member results[0].id is a in mysql uid functional test')
+            t.equal(results[0].name, 'name1', 'SELECT * FROM member results[0].name is b in mysql uid functional test')
+
+            trace.close()
+            connection.end()
+
+            let actualBuilder = new MethodDescriptorBuilder('createConnection')
+            let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+            const createConnectionSpanEvent = trace.spanBuilder.spanEventList[0]
+            t.equal(createConnectionSpanEvent.endPoint, container.getHost(), 'createConnection endPoint is localhost in mysql uid functional test')
+            t.equal(createConnectionSpanEvent.destinationId, 'test', 'createConnection destinationId is test in mysql uid functional test')
+            t.equal(createConnectionSpanEvent.apiId, actualMethodDescriptor.apiId, 'createConnection apiId is same in mysql uid functional test')
+
+            actualBuilder = new MethodDescriptorBuilder('connect')
+                .setClassName('Connection')
+            actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+            const connectionSpanEvent = trace.spanBuilder.spanEventList[1]
+            t.equal(connectionSpanEvent.depth, 1, 'connection depth is 1 in mysql uid functional test')
+            t.equal(connectionSpanEvent.sequence, 1, 'connection sequence is 1 in mysql uid functional test')
+
+            actualBuilder = new MethodDescriptorBuilder('query')
+                .setClassName('Connection')
+            actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+            const querySpanEvent = trace.spanBuilder.spanEventList[2]
+            t.equal(querySpanEvent.depth, 1, 'query depth is 1 in mysql uid functional test')
+            t.equal(querySpanEvent.sequence, 2, 'query sequence is 2 in mysql uid functional test')
+            t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, 'query apiId is same in mysql uid functional test')
+
+            let actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM member')
+            let actualQueryAnnotation = querySpanEvent.annotations[0]
+            t.equal(actualQueryAnnotation.key, annotationKey.SQL_UID.getCode(), 'query annotation key is sql in mysql uid functional test')
+            t.equal(actualParsingResult.sql.normalizedSql, 'SELECT * FROM member', 'query normalizedSql is SELECT * FROM member in mysql uid functional test')
+
+            let actualGrpcSpanEvent = trace.repository.dataSender.mockSpan.spanEventList[2]
+            t.equal(actualQueryAnnotation.key, actualGrpcSpanEvent.annotations[0].key, 'query annotation key is same that grpc in mysql uid functional test')
+            t.equal(actualQueryAnnotation.value, actualGrpcSpanEvent.annotations[0].value, 'query annotation value is same that grpc in mysql uid functional test')
+
+            t.end()
+        })
+    })
+})
+
 test(`Connection Pool with query`, async (t) => {
     agent.bindHttp()
     const container = await startMySql()

@@ -66,7 +66,7 @@ function portProperties(conf) {
         return Object.assign(conf, { collector: collectorConf })
     }
     const portNumber = conf
-    const baseCollector = require('../pinpoint-config-test.json').collector
+    const baseCollector = require('../fixtures/pinpoint-config-test.json').collector
     const collectorConf = Object.assign({}, baseCollector, { 'spanPort': portNumber, 'statPort': portNumber, 'tcpPort': portNumber })
     return Object.assign({ collector: collectorConf })
 }

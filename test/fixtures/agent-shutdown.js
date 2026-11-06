@@ -5,7 +5,7 @@
  */
 
 // Runs in its own process: Agent.shutdown() cancels the process-wide undici instrumentation
-// that other test files share, so test/agent/agent-shutdown.test.js starts the agent here.
+// that other test files share, so test/agent-builder.test.js starts the agent here.
 const { ConfigBuilder } = require('../../lib/config-builder')
 const { AgentBuilder } = require('../../lib/agent-builder')
 

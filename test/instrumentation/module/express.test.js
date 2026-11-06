@@ -26,7 +26,7 @@ const { ConfigBuilder } = require('../../../lib/config-builder')
 const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
 const { UriStatsMonitor } = require('../../../lib/metric/uri/uri-stats-monitor')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
-const { FixturesUpstreamHeader } = require('../../support/fixtures-upstream-header')
+const { ParentTraceHeader } = require('../../fixtures/parent-trace-header')
 const { receiverTypeNameOfFunctionMethod } = require('../../support/stack-frame')
 const { ProcessAgentBuilder } = require('../../support/process-agent-builder')
 const RecordingDataSender = require('../../support/recording-data-sender')
@@ -1629,13 +1629,13 @@ test('Express: v4 serviceName is sent as Pinpoint-pServiceName and an inbound on
 
   const server = app.listen(TEST_ENV.port, async () => {
     try {
-      await axios.get(getServerUrl(PATH), { headers: FixturesUpstreamHeader.header('pinpoint-pservicename', 'upstream.service'), httpAgent: new http.Agent({ keepAlive: false }) })
+      await axios.get(getServerUrl(PATH), { headers: ParentTraceHeader.header('pinpoint-pservicename', 'parent.service'), httpAgent: new http.Agent({ keepAlive: false }) })
 
       t.equal(outgoingRequestHeaders['pinpoint-pservicename'], 'express.service', 'outgoing request has Pinpoint-pServiceName header of the Config serviceName')
 
       const span = agent.dataSender.mockSpans.find(span => span.rpc === PATH)
-      t.equal(span.parentServiceName, 'upstream.service', 'span parentServiceName is the inbound Pinpoint-pServiceName')
-      t.equal(span.toProtocolBuffer().getSpan().getAcceptevent().getParentinfo().getParentservicename(), 'upstream.service', 'PParentInfo.parentServiceName is the inbound Pinpoint-pServiceName')
+      t.equal(span.parentServiceName, 'parent.service', 'span parentServiceName is the inbound Pinpoint-pServiceName')
+      t.equal(span.toProtocolBuffer().getSpan().getAcceptevent().getParentinfo().getParentservicename(), 'parent.service', 'PParentInfo.parentServiceName is the inbound Pinpoint-pServiceName')
 
       const outgoingSpan = agent.dataSender.mockSpans.find(span => span.rpc === OUTGOING_PATH)
       t.equal(outgoingSpan.parentServiceName, 'express.service', 'next hop span parentServiceName is this agent serviceName')
@@ -1666,13 +1666,13 @@ test('Express: v3 sends no Pinpoint-pServiceName and an inbound request without 
 
   const server = app.listen(TEST_ENV.port, async () => {
     try {
-      await axios.get(getServerUrl(PATH), { headers: FixturesUpstreamHeader.header('pinpoint-pappname', 'upstream.application'), httpAgent: new http.Agent({ keepAlive: false }) })
+      await axios.get(getServerUrl(PATH), { headers: ParentTraceHeader.header('pinpoint-pappname', 'parent.application'), httpAgent: new http.Agent({ keepAlive: false }) })
 
       t.equal(outgoingRequestHeaders['pinpoint-pappname'], 'test.application.name', 'outgoing request has Pinpoint-pAppName header')
       t.equal(outgoingRequestHeaders['pinpoint-pservicename'], undefined, 'v3 outgoing request has no Pinpoint-pServiceName header even with serviceName set')
 
       const span = agent.dataSender.mockSpans.find(span => span.rpc === PATH)
-      t.equal(span.parentApplicationName, 'upstream.application', 'span parentApplicationName is the inbound Pinpoint-pAppName')
+      t.equal(span.parentApplicationName, 'parent.application', 'span parentApplicationName is the inbound Pinpoint-pAppName')
       t.equal(span.parentServiceName, undefined, 'span parentServiceName is unset')
       t.equal(span.toProtocolBuffer().getSpan().getAcceptevent().getParentinfo().getParentservicename(), '', 'PParentInfo.parentServiceName is unset')
     } catch (error) {

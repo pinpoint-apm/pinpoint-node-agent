@@ -32,3 +32,15 @@ test('collectInterval is the time since the previous stat', (t) => {
     agentStatsMonitor.shutdown()
     t.end()
 })
+
+test('AgentStatsMonitor does not send a stat collected before shutdown', async (t) => {
+    const sentStats = []
+    const agentStatsMonitor = new AgentStatsMonitor({ sendStat: (stat) => sentStats.push(stat) }, 'agentId', 1)
+
+    agentStatsMonitor.send()
+    agentStatsMonitor.shutdown()
+    await new Promise(resolve => setTimeout(resolve, 1100))
+
+    t.deepEqual(sentStats, [], 'no stat is sent after shutdown')
+    t.end()
+})

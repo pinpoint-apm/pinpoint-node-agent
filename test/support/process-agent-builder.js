@@ -38,7 +38,7 @@ const forwardingDataSender = new Proxy({}, {
 
 class ProcessAgentBuilder extends AgentBuilder {
     constructor(json = {}) {
-        const config = new ConfigBuilder(Object.assign({}, require('../pinpoint-config-test.json'), json)).build()
+        const config = new ConfigBuilder(Object.assign({}, require('../fixtures/pinpoint-config-test.json'), json)).build()
         super(config)
 
         const uriStatsConfig = new UriStatsConfigBuilder(config).build()

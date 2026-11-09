@@ -5,7 +5,9 @@
  */
 
 const test = require('tape')
-const agent = require('../support/agent-singleton-mock')
+const { ProcessAgentBuilder } = require('../support/process-agent-builder')
+const { dataSenderNullObject } = require('../support/data-sender-null-object')
+const agent = new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
 const { ModuleHook, HookRegistry } = require('../../lib/instrumentation/module-hook')
 
 test('load modules with versions', (t) => {

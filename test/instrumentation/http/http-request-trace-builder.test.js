@@ -7,9 +7,10 @@
 'use strict'
 
 const test = require('tape')
+const { startAgent, nullDataSenderAgent } = require('../../support/process-agent-builder')
+startAgent()
 const axios = require('axios')
 const http = require('http')
-const agent = require('../../support/agent-singleton-mock')
 const HttpRequestTraceBuilder = require('../../../lib/instrumentation/http/http-request-trace-builder')
 const TraceHeaderBuilder = require('../../../lib/instrumentation/http/trace-header-builder')
 const TraceIdBuilder = require('../../../lib/context/trace/trace-id-builder')
@@ -24,7 +25,7 @@ const endPoint = 'localhost:5005'
 const rpcName = '/tests/123'
 
 test('Should read pinpoint header', async function (t) {
-  agent.bindHttp()
+  const agent = nullDataSenderAgent()
   const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' })
     res.end('hello')

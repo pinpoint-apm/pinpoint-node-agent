@@ -21,6 +21,7 @@ class RecordingDataSender {
         this.sentSqlMetaData = []
         this.sentSqlUidMetaData = []
         this.sentExceptionMetaData = []
+        this.spanWaiters = []
     }
 
     send(data) {
@@ -51,6 +52,7 @@ class RecordingDataSender {
     record(data) {
         if (data?.isSpan?.()) {
             this.sentSpans.push(data)
+            this.resolveSpanWaiters(data)
         } else if (data?.isSpanChunk?.()) {
             this.sentSpanChunks.push(data)
         } else if (data instanceof ApiMetaInfo) {
@@ -64,6 +66,21 @@ class RecordingDataSender {
         } else if (data?.isExceptionMetaData?.()) {
             this.sentExceptionMetaData.push(data)
         }
+    }
+
+    resolveSpanWaiters(span) {
+        this.spanWaiters
+            .filter(waiter => waiter.traceRoot === span.traceRoot)
+            .forEach(waiter => waiter.resolve(span))
+        this.spanWaiters = this.spanWaiters.filter(waiter => waiter.traceRoot !== span.traceRoot)
+    }
+
+    waitForSpan(traceRoot) {
+        const span = this.findSpan(traceRoot)
+        if (span) {
+            return Promise.resolve(span)
+        }
+        return new Promise(resolve => this.spanWaiters.push({ traceRoot, resolve }))
     }
 
     findSpan(traceRoot) {

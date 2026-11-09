@@ -5,7 +5,8 @@
  */
 
 const test = require('tape')
-const agent = require('../../support/agent-singleton-mock')
+const { ProcessAgentBuilder, startAgent } = require('../../support/process-agent-builder')
+startAgent()
 const { startMySql } = require('../../support/shared-containers')
 const mysql = require('mysql2')
 const mysqlp = require('mysql2/promise')
@@ -17,10 +18,12 @@ const mysqlExecuteQueryServiceType = require('../../../lib/instrumentation/modul
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const ServiceType = require('../../../lib/context/service-type')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
+const RecordingDataSender = require('../../support/recording-data-sender')
 
 
 test(`getConnection query hooking`, async (t) => {
-    agent.bindHttp()
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
     const container = await startMySql()
 
     const trace = agent.createTraceObject()
@@ -54,14 +57,14 @@ test(`getConnection query hooking`, async (t) => {
             if (err) throw err
 
             setImmediate(() => {
-                trace.close()
+                agent.completeTraceObject(trace)
             })
         })
 
-        agent.callbackTraceClose((trace) => {
+        dataSender.waitForSpan(trace.getTraceRoot()).then((span) => {
             let actualBuilder = new MethodDescriptorBuilder('createConnection')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            const createConnectionSpanEvent = trace.spanBuilder.spanEventList[0]
+            const createConnectionSpanEvent = span.spanEventList[0]
             t.equal(createConnectionSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in createConnection spanEvent')
             t.equal(createConnectionSpanEvent.endPoint, container.getHost(), 'endPoint in createConnection spanEvent')
             t.equal(createConnectionSpanEvent.destinationId, 'test', 'destinationId in createConnection spanEvent')
@@ -69,12 +72,12 @@ test(`getConnection query hooking`, async (t) => {
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            let querySpanEvent = trace.spanBuilder.spanEventList[1]
+            let querySpanEvent = span.spanEventList[1]
             t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in query spanEvent')
             t.equal(querySpanEvent.endPoint, container.getHost(), 'endPoint in query spanEvent')
             t.equal(querySpanEvent.destinationId, 'test', 'destinationId in query spanEvent')
 
-            let actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = ?')
+            let actualParsingResult = agent.getTraceContext().spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = ?')
             let actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'intValue in query annotation')
@@ -85,12 +88,12 @@ test(`getConnection query hooking`, async (t) => {
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            querySpanEvent = trace.spanBuilder.spanEventList[2]
+            querySpanEvent = span.spanEventList[2]
             t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in query spanEvent')
             t.equal(querySpanEvent.endPoint, container.getHost(), 'endPoint in query spanEvent')
             t.equal(querySpanEvent.destinationId, 'test', 'destinationId in query spanEvent')
 
-            actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('INSERT INTO member (id, name, joined) VALUES (?, ?, ?)')
+            actualParsingResult = agent.getTraceContext().spanEventRecorderFactory.sqlMetadataService.cacheSql('INSERT INTO member (id, name, joined) VALUES (?, ?, ?)')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'intValue in query annotation')
@@ -101,12 +104,12 @@ test(`getConnection query hooking`, async (t) => {
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            querySpanEvent = trace.spanBuilder.spanEventList[3]
+            querySpanEvent = span.spanEventList[3]
             t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in query spanEvent')
             t.equal(querySpanEvent.endPoint, container.getHost(), 'endPoint in query spanEvent')
             t.equal(querySpanEvent.destinationId, 'test', 'destinationId in query spanEvent')
 
-            actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('UPDATE member SET name = ? WHERE id = ?')
+            actualParsingResult = agent.getTraceContext().spanEventRecorderFactory.sqlMetadataService.cacheSql('UPDATE member SET name = ? WHERE id = ?')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'intValue in query annotation')
@@ -117,12 +120,12 @@ test(`getConnection query hooking`, async (t) => {
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            querySpanEvent = trace.spanBuilder.spanEventList[4]
+            querySpanEvent = span.spanEventList[4]
             t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in query spanEvent')
             t.equal(querySpanEvent.endPoint, container.getHost(), 'endPoint in query spanEvent')
             t.equal(querySpanEvent.destinationId, 'test', 'destinationId in query spanEvent')
 
-            actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('DELETE FROM member WHERE id = ?')
+            actualParsingResult = agent.getTraceContext().spanEventRecorderFactory.sqlMetadataService.cacheSql('DELETE FROM member WHERE id = ?')
             actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'intValue in query annotation')
@@ -140,7 +143,8 @@ test(`getConnection query hooking`, async (t) => {
 })
 
 test(`Connection Pool with query hooking`, async (t) => {
-    agent.bindHttp()
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
     const container = await startMySql()
 
     const trace = agent.createTraceObject()
@@ -160,10 +164,10 @@ test(`Connection Pool with query hooking`, async (t) => {
         t.equal(rows[0].name, 'name1', 'name in SELECT query hooking')
         t.equal(rows[0].joined.toISOString().slice(0, 10), '2023-01-17', 'joined in SELECT query hooking')
 
-        agent.callbackTraceClose((trace) => {
+        dataSender.waitForSpan(trace.getTraceRoot()).then((span) => {
             let actualBuilder = new MethodDescriptorBuilder('createPool')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            let actualSpanEvent = trace.spanBuilder.spanEventList.find( spanEvent => spanEvent.sequence == 0)
+            let actualSpanEvent = span.spanEventList.find( spanEvent => spanEvent.sequence == 0)
             t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in createPool spanEvent')
             t.equal(actualSpanEvent.endPoint, container.getHost(), 'endPoint in createPool spanEvent')
             t.equal(actualSpanEvent.destinationId, 'test', 'destinationId in createPool spanEvent')
@@ -174,7 +178,7 @@ test(`Connection Pool with query hooking`, async (t) => {
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('PoolConnection')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            actualSpanEvent = trace.spanBuilder.spanEventList.find( spanEvent => spanEvent.sequence == 1)
+            actualSpanEvent = span.spanEventList.find( spanEvent => spanEvent.sequence == 1)
             t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in Pool.getConnection() spanEvent')
             t.equal(actualSpanEvent.endPoint, container.getHost(), 'endPoint in Pool.getConnection() spanEvent')
             t.equal(actualSpanEvent.destinationId, 'test', 'destinationId in Pool.getConnection() spanEvent')
@@ -182,7 +186,7 @@ test(`Connection Pool with query hooking`, async (t) => {
             t.equal(actualSpanEvent.depth, 1, 'depth in Pool.getConnection() spanEvent')
             t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType in Pool.query() spanEvent')
 
-            let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualSpanEvent.asyncId)
+            let actualSpanChunk = dataSender.findSpanChunk(actualSpanEvent.asyncId)
             t.equal(actualSpanChunk.getTraceRoot(), trace.getTraceRoot(), 'transactionIdObject in spanChunk in Pool.getConnection()')
             t.equal(actualSpanChunk.localAsyncId.getAsyncId(), actualSpanEvent.asyncId.getAsyncId(), 'localAsyncId asyncId in spanChunk in Pool.getConnection()')
             t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId sequence in spanChunk in Pool.getConnection()')
@@ -193,7 +197,7 @@ test(`Connection Pool with query hooking`, async (t) => {
         })
 
         setImmediate(() => {
-            trace.close()
+            agent.completeTraceObject(trace)
             pool.end(() => {
                 t.end()
             })
@@ -205,7 +209,8 @@ test(`Connection Pool with query hooking`, async (t) => {
 })
 
 test(`mysql2/promise createConnection with query hooking`, async (t) => {
-    agent.bindHttp()
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
     const container = await startMySql()
 
     const trace = agent.createTraceObject()
@@ -224,10 +229,10 @@ test(`mysql2/promise createConnection with query hooking`, async (t) => {
         t.equal(rows[0].name, 'name1', 'name in SELECT query hooking')
         t.equal(rows[0].joined.toISOString().slice(0, 10), '2023-01-17', 'joined in SELECT query hooking')
 
-        agent.callbackTraceClose((trace) => {
+        dataSender.waitForSpan(trace.getTraceRoot()).then((span) => {
             let actualBuilder = new MethodDescriptorBuilder('createConnection')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            const createConnectionSpanEvent = trace.spanBuilder.spanEventList[0]
+            const createConnectionSpanEvent = span.spanEventList[0]
             t.equal(createConnectionSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in createConnection spanEvent')
             t.equal(createConnectionSpanEvent.endPoint, container.getHost(), 'endPoint in createConnection spanEvent')
             t.equal(createConnectionSpanEvent.destinationId, 'test', 'destinationId in createConnection spanEvent')
@@ -236,13 +241,13 @@ test(`mysql2/promise createConnection with query hooking`, async (t) => {
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('Connection')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            const querySpanEvent = trace.spanBuilder.spanEventList[1]
+            const querySpanEvent = span.spanEventList[1]
             t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in query spanEvent')
             t.equal(querySpanEvent.endPoint, container.getHost(), 'endPoint in query spanEvent')
             t.equal(querySpanEvent.destinationId, 'test', 'destinationId in query spanEvent')
             t.equal(querySpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType in query spanEvent')
 
-            const actualParsingResult = agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = ?')
+            const actualParsingResult = agent.getTraceContext().spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = ?')
             const actualQueryAnnotation = querySpanEvent.annotations[0]
             t.equal(actualQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'key in query annotation')
             t.equal(actualQueryAnnotation.value.intValue, actualParsingResult.sqlId, 'intValue in query annotation')
@@ -252,7 +257,7 @@ test(`mysql2/promise createConnection with query hooking`, async (t) => {
         })
 
         setImmediate(async () => {
-            trace.close()
+            agent.completeTraceObject(trace)
             await connection.end()
             t.end()
         })
@@ -263,7 +268,8 @@ test(`mysql2/promise createConnection with query hooking`, async (t) => {
 })
 
 test(`mysql2/promise createPool with query hooking`, async (t) => {
-    agent.bindHttp()
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
     const container = await startMySql()
 
     const trace = agent.createTraceObject()
@@ -281,10 +287,10 @@ test(`mysql2/promise createPool with query hooking`, async (t) => {
         t.equal(rows[0].id, 'a', 'id in SELECT query hooking')
         t.equal(rows[0].name, 'name1', 'name in SELECT query hooking')
 
-        agent.callbackTraceClose((trace) => {
+        dataSender.waitForSpan(trace.getTraceRoot()).then((span) => {
             let actualBuilder = new MethodDescriptorBuilder('createPool')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            let actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence == 0)
+            let actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence == 0)
             t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in createPool spanEvent')
             t.equal(actualSpanEvent.endPoint, container.getHost(), 'endPoint in createPool spanEvent')
             t.equal(actualSpanEvent.destinationId, 'test', 'destinationId in createPool spanEvent')
@@ -294,7 +300,7 @@ test(`mysql2/promise createPool with query hooking`, async (t) => {
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('PoolConnection')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence == 1)
+            actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence == 1)
             t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in Pool.query() spanEvent')
             t.equal(actualSpanEvent.endPoint, container.getHost(), 'endPoint in Pool.query() spanEvent')
             t.equal(actualSpanEvent.destinationId, 'test', 'destinationId in Pool.query() spanEvent')
@@ -303,7 +309,7 @@ test(`mysql2/promise createPool with query hooking`, async (t) => {
         })
 
         setImmediate(async () => {
-            trace.close()
+            agent.completeTraceObject(trace)
             await pool.end()
             t.end()
         })
@@ -314,7 +320,8 @@ test(`mysql2/promise createPool with query hooking`, async (t) => {
 })
 
 test(`Cluster with query`, async (t) => {
-    agent.bindHttp()
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
     const container = await startMySql()
 
     const trace = agent.createTraceObject()
@@ -351,10 +358,10 @@ test(`Cluster with query`, async (t) => {
         t.equal(results[0].name, 'name1', 'name in SELECT query hooking')
         t.equal(results[0].joined.toISOString().slice(0, 10), '2023-01-17', 'joined in SELECT query hooking')
 
-        agent.callbackTraceClose((trace) => {
+        dataSender.waitForSpan(trace.getTraceRoot()).then((span) => {
             let actualBuilder = new MethodDescriptorBuilder('createPoolCluster')
             let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            let actualSpanEvent = trace.spanBuilder.spanEventList[0]
+            let actualSpanEvent = span.spanEventList[0]
             t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in createPoolCluster spanEvent')
             t.equal(actualSpanEvent.sequence, 0, 'sequence in createPoolCluster spanEvent')
             t.equal(actualSpanEvent.depth, 1, 'depth in createPoolCluster spanEvent')
@@ -362,7 +369,7 @@ test(`Cluster with query`, async (t) => {
 
             actualBuilder = new MethodDescriptorBuilder('of')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            actualSpanEvent = trace.spanBuilder.spanEventList[1]
+            actualSpanEvent = span.spanEventList[1]
             t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in PoolCluster.of() spanEvent')
             t.equal(actualSpanEvent.sequence, 1, 'sequence in PoolCluster.of() spanEvent')
             t.equal(actualSpanEvent.depth, 1, 'depth in PoolCluster.of() spanEvent')
@@ -371,14 +378,14 @@ test(`Cluster with query`, async (t) => {
             actualBuilder = new MethodDescriptorBuilder('getConnection')
                 .setClassName('Pool')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            actualSpanEvent = trace.spanBuilder.spanEventList[2]
+            actualSpanEvent = span.spanEventList[2]
             t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in Pool.getConnection() spanEvent')
             t.equal(actualSpanEvent.sequence, 2, 'sequence in Pool.getConnection() spanEvent')
             t.equal(actualSpanEvent.depth, 1, 'depth in Pool.getConnection() spanEvent')
             t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'serviceType in Pool.getConnection() spanEvent')
 
-            let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualSpanEvent.asyncId)
-            t.equal(actualSpanChunk.getTraceRoot(), trace.spanBuilder.getTraceRoot(), 'spanId in spanChunk in PoolCluster.getConnection()')
+            let actualSpanChunk = dataSender.findSpanChunk(actualSpanEvent.asyncId)
+            t.equal(actualSpanChunk.getTraceRoot(), span.traceRoot, 'spanId in spanChunk in PoolCluster.getConnection()')
             t.equal(actualSpanChunk.localAsyncId.asyncId, actualSpanEvent.asyncId.asyncId, 'localAsyncId asyncId in spanChunk in PoolCluster.getConnection()')
             t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId sequence in spanChunk in PoolCluster.getConnection()')
             t.equal(actualSpanChunk.spanEventList[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationMethodDescriptor.apiId, 'apiId in spanChunk in PoolCluster.getConnection()')
@@ -389,14 +396,14 @@ test(`Cluster with query`, async (t) => {
             actualBuilder = new MethodDescriptorBuilder('query')
                 .setClassName('PoolConnection')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            actualSpanEvent = trace.spanBuilder.spanEventList[3]
+            actualSpanEvent = span.spanEventList[3]
             t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in PoolConnection.query() spanEvent')
             t.equal(actualSpanEvent.sequence, 3, 'sequence in PoolConnection.query() spanEvent')
             t.equal(actualSpanEvent.depth, 1, 'depth in PoolConnection.query() spanEvent')
             t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType in PoolConnection.query() spanEvent')
 
-            actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualSpanEvent.asyncId)
-            t.equal(actualSpanChunk.getTraceRoot(), trace.spanBuilder.getTraceRoot(), 'spanId in spanChunk in PoolConnection.query()')
+            actualSpanChunk = dataSender.findSpanChunk(actualSpanEvent.asyncId)
+            t.equal(actualSpanChunk.getTraceRoot(), span.traceRoot, 'spanId in spanChunk in PoolConnection.query()')
             t.equal(actualSpanChunk.localAsyncId.asyncId, actualSpanEvent.asyncId.asyncId, 'localAsyncId asyncId in spanChunk in PoolConnection.query()')
             t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId sequence in spanChunk in PoolConnection.query()')
             t.equal(actualSpanChunk.spanEventList[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationMethodDescriptor.apiId, 'apiId in spanChunk in PoolConnection.query()')
@@ -407,7 +414,7 @@ test(`Cluster with query`, async (t) => {
         })
 
         setImmediate(() => {
-            trace.close()
+            agent.completeTraceObject(trace)
             connection.release()
         })
     })

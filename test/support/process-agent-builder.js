@@ -19,6 +19,7 @@ const { UidParsingResultFactory } = require('../../lib/metric/sql/uid-parsing-re
 const { ErrorAnalysisConfigBuilder } = require('../../lib/context/trace/error-analysis-config-builder')
 const { ExceptionEnricher } = require('../../lib/context/trace/exception-enricher')
 const RecordingDataSender = require('./recording-data-sender')
+const { dataSenderNullObject } = require('./data-sender-null-object')
 
 let processAgent
 let dataSenderInUse
@@ -77,6 +78,14 @@ class ProcessAgentBuilder extends AgentBuilder {
     }
 }
 
+function startAgent() {
+    return nullDataSenderAgent()
+}
+
+function nullDataSenderAgent(json) {
+    return new ProcessAgentBuilder(json).setDataSender(dataSenderNullObject).build()
+}
+
 // Starts the agent with a sender of its own, so the start data (AgentInfo, the supported services command)
 // does not reach the sender of whichever test builds first
 function startProcessAgent(config) {
@@ -92,4 +101,6 @@ function startProcessAgent(config) {
 
 module.exports = {
     ProcessAgentBuilder,
+    startAgent,
+    nullDataSenderAgent,
 }

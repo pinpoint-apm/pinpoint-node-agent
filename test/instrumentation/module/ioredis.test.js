@@ -5,8 +5,9 @@
  */
 
 const test = require('tape')
+const { ProcessAgentBuilder, startAgent, nullDataSenderAgent } = require('../../support/process-agent-builder')
+startAgent()
 const axios = require('axios')
-const agent = require('../../support/agent-singleton-mock')
 const express = require('express')
 const Koa = require('koa')
 const Router = require('koa-router')
@@ -14,6 +15,7 @@ const koaBodyParser = require('koa-bodyparser')
 const ioRedis = require('ioredis')
 const { startRedis } = require('../../support/shared-containers')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
+const RecordingDataSender = require('../../support/recording-data-sender')
 
 const TEST_ENV = {
     host: 'localhost',
@@ -30,7 +32,8 @@ const redisData = {
 test("ioredis destination id", async function (t) {
     const container = await startRedis()
 
-    agent.bindHttp()
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
     t.plan(5)
 
@@ -52,7 +55,7 @@ test("ioredis destination id", async function (t) {
             t.equal(data, "value", "redis value validation")
 
             setImmediate(async () => {
-                t.true(agent.dataSender.findSpanChunks(trace.getTraceRoot())[0].spanEventList.length > 0, "a spanEventList should has one chunk")
+                t.true(dataSender.findSpanChunks(trace.getTraceRoot())[0].spanEventList.length > 0, "a spanEventList should has one chunk")
 
                 const spanevent = trace.repository.buffer[0]
                 t.equal(spanevent.destinationId, "Redis", "Redis destionation ID check")
@@ -67,7 +70,7 @@ test("ioredis destination id", async function (t) {
 
 const testName2 = 'express-ioredis'
 test(`${testName2} should Record the connections between express and ioredis.`, async function (t) {
-    agent.bindHttp()
+    nullDataSenderAgent()
     const container = await startRedis()
 
     const testName = testName2
@@ -124,7 +127,7 @@ test(`${testName2} should Record the connections between express and ioredis.`, 
 
 const testName4 = 'koa-ioredis'
 test(`${testName4} should Record the connections between koa and ioredis.`, async function (t) {
-    agent.bindHttp()
+    nullDataSenderAgent()
     const container = await startRedis()
 
     const testName = testName4

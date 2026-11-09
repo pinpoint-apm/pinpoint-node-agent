@@ -7,7 +7,8 @@
 'use strict'
 
 const test = require('tape')
-const agent = require('../../support/agent-singleton-mock')
+const { ProcessAgentBuilder, startAgent } = require('../../support/process-agent-builder')
+startAgent()
 const { spanMessagesOfCurrentAgent } = require('../../support/collector-span-messages')
 const express = require('express')
 const { TestGrpcDataSenderBuilder, SpanAdaptor, MetadataAdaptor } = require('../../support/test-grpc-data-sender')
@@ -17,12 +18,15 @@ const ServiceType = require('../../../lib/context/service-type')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
+const DataSender = require('../../../lib/client/data-sender')
+const RecordingDataSender = require('../../support/recording-data-sender')
 
 // https://github.com/nodejs/undici
 // The testcontainer calls require('undici') in http-wait-strategy.js
 test('shimming require(undici) cause by require-in-the-middle package', function (t) {
     const { request } = require('undici')
     const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder()
+    let dataSender
     let spanCount = 0
     let actualTestSpan
     let actualFetchAPISpan
@@ -103,7 +107,7 @@ test('shimming require(undici) cause by require-in-the-middle package', function
                     t.equal(actualTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `child trace by undici transaction id is ${traceRoot.getTransactionId()}`)
                     t.equal(actualPChildTraceByUndici.getSpanid(), traceRoot.getTraceId().getSpanId(), `child trace by undici span id is ${traceRoot.getTraceId().getSpanId()}`)
 
-                    const actualSpanChunk = agent.dataSender.findSpanChunks(traceRoot)[0]
+                    const actualSpanChunk = dataSender.findSpanChunks(traceRoot)[0]
                     t.equal(actualPChildTraceByUndici.getEndpoint(), actualSpanChunk.endPoint ?? '', `child trace by undici endpoint is ${actualSpanChunk.endPoint}`)
                     t.equal(actualPChildTraceByUndici.getApplicationservicetype(), actualSpanChunk.applicationServiceType, `child trace by undici application service type is ${actualSpanChunk.applicationServiceType}`)
                     t.equal(actualPChildTraceByUndici.getKeytime(), actualSpanChunk.keyTime, `child trace by undici key time is ${actualSpanChunk.keyTime}`)
@@ -232,15 +236,16 @@ test('shimming require(undici) cause by require-in-the-middle package', function
     }))
 
     grpcDataSenderBuilder.build().then((grpcDataSender) => {
-        agent.bindHttp(grpcDataSender)
+        dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+        const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
         t.teardown(() => {
             grpcDataSender.close()
         })
 
         const app = new express()
         app.get('/test', async (req, res) => {
-            agent.callbackTraceClose((trace) => {
-                actualTestSpan = agent.dataSender.findSpan(trace.spanBuilder.traceRoot)
+            dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then((span) => {
+                actualTestSpan = span
             })
             const { body } = await request('http://localhost:5006/outgoing')
             const text = await body.text()
@@ -248,8 +253,8 @@ test('shimming require(undici) cause by require-in-the-middle package', function
         })
 
         app.get('/outgoing', (req, res) => {
-            agent.callbackTraceClose((trace) => {
-                actualFetchAPISpan = agent.dataSender.findSpan(trace.spanBuilder.traceRoot)
+            dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then((span) => {
+                actualFetchAPISpan = span
             })
             throw new Error('test')
         })
@@ -299,7 +304,7 @@ test('shimming undici: requestExceptionMetaData should deliver error.cause chain
     }))
 
     grpcDataSenderBuilder.build().then((grpcDataSender) => {
-        agent.bindHttp(grpcDataSender)
+        new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
         t.teardown(() => {
             grpcDataSender.close()
         })
@@ -327,7 +332,8 @@ test('shimming undici: should not collect ExceptionMetaData when errorAnalysis i
     const originalEnv = process.env.PINPOINT_FEATURES_ERROR_ANALYSIS
     process.env.PINPOINT_FEATURES_ERROR_ANALYSIS = 'false'
 
-    agent.bindHttp()
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
     t.teardown(() => {
         if (originalEnv === undefined) {
@@ -339,13 +345,12 @@ test('shimming undici: should not collect ExceptionMetaData when errorAnalysis i
 
     const app = new express()
     app.get('/disabled-outgoing', (req, res) => {
-        agent.callbackTraceClose((trace) => {
-            setImmediate(() => {
-                const actualExceptionMetaData = trace.repository.dataSender.findExceptionMetaData(trace.getTraceRoot())
-                t.equal(actualExceptionMetaData, undefined, 'ExceptionMetaData should not be sent when errorAnalysis is disabled')
-                server.close()
-                t.end()
-            })
+        const traceRoot = agent.currentTraceObject().getTraceRoot()
+        dataSender.waitForSpan(traceRoot).then(() => {
+            const actualExceptionMetaData = dataSender.findExceptionMetaData(traceRoot)
+            t.equal(actualExceptionMetaData, undefined, 'ExceptionMetaData should not be sent when errorAnalysis is disabled')
+            server.close()
+            t.end()
         })
         throw new Error('disabled error analysis test')
     })
@@ -364,6 +369,7 @@ test('shimming undici: should not collect ExceptionMetaData when errorAnalysis i
 // https://nodejs.org/en/learn/getting-started/fetch
 test('shimming udici by global nodejs fetch', function (t) {
     const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder()
+    let dataSender
     let spanCount = 0
     let actualTestSpan
     let actualFetchAPISpan
@@ -439,7 +445,7 @@ test('shimming udici by global nodejs fetch', function (t) {
                     t.equal(actualTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `child trace by undici transaction id is ${traceRoot.getTransactionId()}`)
                     t.equal(actualPChildTraceByUndici.getSpanid(), traceRoot.getTraceId().getSpanId(), `child trace by undici span id is ${traceRoot.getTraceId().getSpanId()}`)
 
-                    const actualSpanChunk = agent.dataSender.findSpanChunks(traceRoot)[0]
+                    const actualSpanChunk = dataSender.findSpanChunks(traceRoot)[0]
                     t.equal(actualPChildTraceByUndici.getEndpoint(), actualSpanChunk.endPoint ?? '', `child trace by undici endpoint is ${actualSpanChunk.endPoint}`)
                     t.equal(actualPChildTraceByUndici.getApplicationservicetype(), actualSpanChunk.applicationServiceType, `child trace by undici application service type is ${actualSpanChunk.applicationServiceType}`)
                     t.equal(actualPChildTraceByUndici.getKeytime(), actualSpanChunk.keyTime, `child trace by undici key time is ${actualSpanChunk.keyTime}`)
@@ -538,15 +544,16 @@ test('shimming udici by global nodejs fetch', function (t) {
     })).addAdaptor(new MetadataAdaptor())
 
     grpcDataSenderBuilder.build().then((grpcDataSender) => {
-        agent.bindHttp(grpcDataSender)
+        dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+        const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
         t.teardown(() => {
             grpcDataSender.close()
         })
 
         const app = new express()
         app.get('/test', async (req, res) => {
-            agent.callbackTraceClose((trace) => {
-                actualTestSpan = agent.dataSender.findSpan(trace.spanBuilder.traceRoot)
+            dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then((span) => {
+                actualTestSpan = span
             })
             const response = await fetch('http://localhost:5006/outgoing')
             const text = await response.text()
@@ -554,8 +561,8 @@ test('shimming udici by global nodejs fetch', function (t) {
         })
 
         app.get('/outgoing', (req, res) => {
-            agent.callbackTraceClose((trace) => {
-                actualFetchAPISpan = agent.dataSender.findSpan(trace.spanBuilder.traceRoot)
+            dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then((span) => {
+                actualFetchAPISpan = span
             })
             res.send('test')
         })

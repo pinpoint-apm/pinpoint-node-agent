@@ -5,8 +5,10 @@
  */
 
 const test = require('tape')
+const { ProcessAgentBuilder, startAgent, nullDataSenderAgent } = require('../../support/process-agent-builder')
+startAgent()
 const axios = require('axios')
-const agent = require('../../support/agent-singleton-mock')
+const { finished } = require('node:stream')
 const Koa = require('koa')
 const Router = require('koa-router')
 const annotationKey = require('../../../lib/constant/annotation-key')
@@ -21,8 +23,8 @@ const http = require('http')
 const https = require('https')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 const { ParentTraceHeader } = require('../../fixtures/parent-trace-header')
-const { ProcessAgentBuilder } = require('../../support/process-agent-builder')
 const RecordingDataSender = require('../../support/recording-data-sender')
+const DataSender = require('../../../lib/client/data-sender')
 
 
 const TEST_ENV = {
@@ -32,8 +34,8 @@ const TEST_ENV = {
 
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-const getUriStatsRepository = () => {
-  const enricher = agent.traceContext?.traceCompletionEnricher?.enrichers?.find((e) => {
+const getUriStatsRepository = (traceContext) => {
+  const enricher = traceContext.traceCompletionEnricher?.enrichers?.find((e) => {
     return e && typeof e.onComplete === 'function' && e.repository
   })
   return enricher?.repository ?? UriStatsRepositoryBuilder.nullObject
@@ -41,30 +43,17 @@ const getUriStatsRepository = () => {
 
 const testName1 = 'koa-router1'
 test(`${testName1} Should record request in basic route koa.test.js`, function (t) {
-  agent.bindHttp()
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
   const testName = testName1
   const PATH = `/${testName}`
   const app = new Koa()
   const router = new Router()
 
+  let getTraceRoot
   router.get(PATH, async (ctx, next) => {
+    getTraceRoot = agent.currentTraceObject().getTraceRoot()
     ctx.body = 'ok. get'
-
-    agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code')
-      t.equal(trace.spanBuilder.annotations[0].value, 200, 'response status is 200')
-
-      let actualBuilder = new MethodDescriptorBuilder('get')
-        .setClassName('Router')
-      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.spanBuilder.spanEventList[0]
-      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.equal(spanEvent.annotations[0].key, -1, 'parameter')
-      t.equal(spanEvent.annotations[0].value, '/koa-router1', 'parameter value matching')
-      t.true(actualMethodDescriptor.apiDescriptor.startsWith('Router.get'), 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-    })
   })
   router.post(PATH, async (ctx, next) => {
     ctx.body = 'ok. post'
@@ -80,6 +69,21 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
     })
     t.equal(result1.status, 200)
 
+    const getSpan = await dataSender.waitForSpan(getTraceRoot)
+    t.equal(getSpan.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code')
+    t.equal(getSpan.annotations[0].value, 200, 'response status is 200')
+
+    let actualBuilder = new MethodDescriptorBuilder('get')
+      .setClassName('Router')
+    const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+    let spanEvent = getSpan.spanEventList[0]
+    t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+    t.equal(spanEvent.annotations[0].key, -1, 'parameter')
+    t.equal(spanEvent.annotations[0].value, '/koa-router1', 'parameter value matching')
+    t.true(actualMethodDescriptor.apiDescriptor.startsWith('Router.get'), 'apiDescriptor')
+    t.equal(actualMethodDescriptor.className, 'Router', 'className')
+    t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
+
     const result2 = await axios.post(getServerUrl(PATH))
     t.equal(result2.status, 200)
 
@@ -92,22 +96,19 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
 test('koa should record handler registered with pattern route', (t) => {
   t.plan(3)
 
-  agent.bindHttp({
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder({
     features: { uriStats: { httpMethod: true } }
-  })
+  }).setDataSender(dataSender).build()
 
   const PATH = '/orders/:orderId/items/:itemId'
   const app = new Koa()
   const router = new Router()
 
+  let traceRoot
   router.get(PATH, async (ctx) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
     ctx.body = 'ok pattern'
-
-    agent.callbackTraceClose((trace) => {
-      const traceRoot = trace.spanBuilder.getTraceRoot()
-      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate recorded for pattern route')
-      t.equal(traceRoot.getEnricher('uriStats.method'), 'GET', 'httpMethod recorded when flag enabled')
-    })
   })
 
   app.use(router.routes()).use(router.allowedMethods())
@@ -119,6 +120,10 @@ test('koa should record handler registered with pattern route', (t) => {
       httpsAgent: new https.Agent({ keepAlive: false }),
     })
     t.equal(result.status, 200, 'pattern route responds 200')
+
+    const span = await dataSender.waitForSpan(traceRoot)
+    t.equal(span.traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate recorded for pattern route')
+    t.equal(span.traceRoot.getEnricher('uriStats.method'), 'GET', 'httpMethod recorded when flag enabled')
     server.close()
   })
 })
@@ -126,24 +131,19 @@ test('koa should record handler registered with pattern route', (t) => {
 test('koa should disable uriTemplate/httpMethod enrichment and use null repository when isUriStatsEnabled is false', (t) => {
   t.plan(5)
 
-  agent.bindHttp({
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder({
     features: { uriStats: undefined }
-  })
+  }).setDataSender(dataSender).build()
 
   const PATH = '/uri-stats-disabled/:orderId'
   const app = new Koa()
   const router = new Router()
 
+  let traceRoot
   router.get(PATH, async (ctx) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
     ctx.body = 'ok uri off'
-
-    agent.callbackTraceClose((trace) => {
-      const traceRoot = trace.spanBuilder.getTraceRoot()
-      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), undefined, 'uriTemplate should be undefined when uriStats is disabled')
-      t.equal(traceRoot.getEnricher('uriStats.method'), undefined, 'httpMethod should be undefined when uriStats is disabled')
-      t.equal(getUriStatsRepository(), UriStatsRepositoryBuilder.nullObject, 'UriStatsRepository should be nullObject when uriStats is disabled')
-      server.close()
-    })
   })
 
   app.use(router.routes()).use(router.allowedMethods())
@@ -152,31 +152,32 @@ test('koa should disable uriTemplate/httpMethod enrichment and use null reposito
     const result = await axios.get(getServerUrl('/uri-stats-disabled/123'))
     t.equal(result.status, 200, 'request responds 200')
     t.equal(result.data, 'ok uri off', 'response data is ok uri off')
+
+    const span = await dataSender.waitForSpan(traceRoot)
+    t.equal(span.traceRoot.getEnricher('uriStats.uriTemplate'), undefined, 'uriTemplate should be undefined when uriStats is disabled')
+    t.equal(span.traceRoot.getEnricher('uriStats.method'), undefined, 'httpMethod should be undefined when uriStats is disabled')
+    t.equal(getUriStatsRepository(agent.getTraceContext()), UriStatsRepositoryBuilder.nullObject, 'UriStatsRepository should be nullObject when uriStats is disabled')
+    server.close()
   })
 })
 
 test('koa should keep uriTemplate and omit httpMethod in TraceRoot when isUriStatsHttpMethodEnabled is false', (t) => {
   t.plan(5)
 
-  agent.bindHttp({
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder({
     collector: { spanPort: -1, statPort: -1, tcpPort: -1 },
     features: { uriStats: { httpMethod: false } }
-  })
+  }).setDataSender(dataSender).build()
 
   const PATH = '/uri-stats-method-disabled/:orderId'
   const app = new Koa()
   const router = new Router()
 
+  let traceRoot
   router.get(PATH, async (ctx) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
     ctx.body = 'ok uri method off'
-
-    agent.callbackTraceClose((trace) => {
-      const traceRoot = trace.spanBuilder.getTraceRoot()
-      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate recorded when uri stats enabled')
-      t.equal(traceRoot.getEnricher('uriStats.method'), undefined, 'httpMethod should be undefined in TraceRoot when flag disabled')
-      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'status code annotation exists')
-      server.close()
-    })
   })
 
   app.use(router.routes()).use(router.allowedMethods())
@@ -185,11 +186,18 @@ test('koa should keep uriTemplate and omit httpMethod in TraceRoot when isUriSta
     const result = await axios.get(getServerUrl('/uri-stats-method-disabled/999'))
     t.equal(result.status, 200, 'request responds 200')
     t.equal(result.data, 'ok uri method off', 'response data ok uri method off')
+
+    const span = await dataSender.waitForSpan(traceRoot)
+    t.equal(span.traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate recorded when uri stats enabled')
+    t.equal(span.traceRoot.getEnricher('uriStats.method'), undefined, 'httpMethod should be undefined in TraceRoot when flag disabled')
+    t.equal(span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'status code annotation exists')
+    server.close()
   })
 })
 
 test('Should aggregate URI stats in UriStatsRepository for Koa', function (t) {
-  agent.bindHttp()
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
   const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
@@ -197,41 +205,10 @@ test('Should aggregate URI stats in UriStatsRepository for Koa', function (t) {
   const PATH = '/integration/uri-stats'
   const app = new Koa()
   const router = new Router()
-  let resolveTraceClosed
-  const traceClosed = new Promise((resolve) => {
-    resolveTraceClosed = resolve
-  })
-
+  let traceRoot
   router.get(PATH, async (ctx) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
     ctx.body = 'ok stats'
-
-    agent.callbackTraceClose((trace) => {
-      setImmediate(() => {
-        const repository = getUriStatsRepository()
-
-        t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
-
-        const now = DateNow.now()
-        const timeWindow = 30000
-        const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
-
-        const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
-        t.ok(snapshot, 'Snapshot exists')
-
-        if (snapshot) {
-          // Default: METHOD URI
-          const expectedKey = `GET ${PATH}`
-          const entry = snapshot.dataMap.get(expectedKey)
-
-          t.ok(entry, `Entry for ${expectedKey} exists`)
-          if (entry) {
-            t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
-          }
-        }
-
-        resolveTraceClosed()
-      })
-    })
   })
 
   app.use(router.routes()).use(router.allowedMethods())
@@ -243,7 +220,28 @@ test('Should aggregate URI stats in UriStatsRepository for Koa', function (t) {
         httpAgent: new http.Agent({ keepAlive: false }),
         httpsAgent: new https.Agent({ keepAlive: false }),
       })
-      await traceClosed
+      await dataSender.waitForSpan(traceRoot)
+      const repository = getUriStatsRepository(agent.getTraceContext())
+
+      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+
+      const now = DateNow.now()
+      const timeWindow = 30000
+      const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+
+      const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+      t.ok(snapshot, 'Snapshot exists')
+
+      if (snapshot) {
+        // Default: METHOD URI
+        const expectedKey = `GET ${PATH}`
+        const entry = snapshot.dataMap.get(expectedKey)
+
+        t.ok(entry, `Entry for ${expectedKey} exists`)
+        if (entry) {
+          t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
+        }
+      }
     } catch (e) {
       t.fail(e)
     } finally {
@@ -254,14 +252,15 @@ test('Should aggregate URI stats in UriStatsRepository for Koa', function (t) {
 })
 
 test('Should aggregate URI stats without HTTP method when disabled in config for Koa', function (t) {
-  agent.bindHttp({
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder({
     features: {
       uriStats: {
         httpMethod: false,
         capacity: 1000
       }
     }
-  })
+  }).setDataSender(dataSender).build()
 
   const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
@@ -269,41 +268,10 @@ test('Should aggregate URI stats without HTTP method when disabled in config for
   const PATH = '/integration/uri-stats/no-method'
   const app = new Koa()
   const router = new Router()
-  let resolveTraceClosed
-  const traceClosed = new Promise((resolve) => {
-    resolveTraceClosed = resolve
-  })
-
+  let traceRoot
   router.get(PATH, async (ctx) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
     ctx.body = 'ok stats no method'
-
-    agent.callbackTraceClose((trace) => {
-      setImmediate(() => {
-        const repository = getUriStatsRepository()
-
-        t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
-
-        const now = DateNow.now()
-        const timeWindow = 30000
-        const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
-
-        const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
-        t.ok(snapshot, 'Snapshot exists')
-
-        if (snapshot) {
-          // Disabled: URI
-          const expectedKey = PATH
-          const entry = snapshot.dataMap.get(expectedKey)
-
-          t.ok(entry, `Entry for ${expectedKey} exists`)
-          if (entry) {
-            t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
-          }
-        }
-
-        resolveTraceClosed()
-      })
-    })
   })
 
   app.use(router.routes()).use(router.allowedMethods())
@@ -315,7 +283,28 @@ test('Should aggregate URI stats without HTTP method when disabled in config for
         httpAgent: new http.Agent({ keepAlive: false }),
         httpsAgent: new https.Agent({ keepAlive: false }),
       })
-      await traceClosed
+      await dataSender.waitForSpan(traceRoot)
+      const repository = getUriStatsRepository(agent.getTraceContext())
+
+      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+
+      const now = DateNow.now()
+      const timeWindow = 30000
+      const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+
+      const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+      t.ok(snapshot, 'Snapshot exists')
+
+      if (snapshot) {
+        // Disabled: URI
+        const expectedKey = PATH
+        const entry = snapshot.dataMap.get(expectedKey)
+
+        t.ok(entry, `Entry for ${expectedKey} exists`)
+        if (entry) {
+          t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
+        }
+      }
     } catch (e) {
       t.fail(e)
     } finally {
@@ -326,7 +315,7 @@ test('Should aggregate URI stats without HTTP method when disabled in config for
 })
 
 test('Should aggregate URI stats for DisableTrace in Koa', function (t) {
-  agent.bindHttp({
+  const agent = nullDataSenderAgent({
     sampling: { enable: false },
     features: {
       uriStats: {
@@ -342,38 +331,10 @@ test('Should aggregate URI stats for DisableTrace in Koa', function (t) {
   const PATH = '/integration/uri-stats/disable-trace'
   const app = new Koa()
   const router = new Router()
-  let resolveTraceClosed
-  const traceClosed = new Promise((resolve) => {
-    resolveTraceClosed = resolve
-  })
-
+  let traceCompleted
   router.get(PATH, async (ctx) => {
+    traceCompleted = new Promise(resolve => finished(ctx.res, resolve))
     ctx.body = 'ok stats disable trace'
-
-    agent.callbackTraceClose(() => {
-      setImmediate(() => {
-        const repository = getUriStatsRepository()
-
-        t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
-
-        const now = DateNow.now()
-        const timeWindow = 30000
-        const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
-
-        const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
-        t.ok(snapshot, 'Snapshot exists')
-
-        const expectedKey = PATH
-        const entry = snapshot.dataMap.get(expectedKey)
-
-        t.ok(entry, `Entry for ${expectedKey} exists`)
-        if (entry) {
-          t.equal(entry.totalHistogram.count, 1, 'DisableTrace request counted in histogram')
-        }
-
-        resolveTraceClosed()
-      })
-    })
   })
 
   app.use(router.routes()).use(router.allowedMethods())
@@ -385,7 +346,25 @@ test('Should aggregate URI stats for DisableTrace in Koa', function (t) {
         httpAgent: new http.Agent({ keepAlive: false }),
         httpsAgent: new https.Agent({ keepAlive: false }),
       })
-      await traceClosed
+      await traceCompleted
+      const repository = getUriStatsRepository(agent.getTraceContext())
+
+      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+
+      const now = DateNow.now()
+      const timeWindow = 30000
+      const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+
+      const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+      t.ok(snapshot, 'Snapshot exists')
+
+      const expectedKey = PATH
+      const entry = snapshot.dataMap.get(expectedKey)
+
+      t.ok(entry, `Entry for ${expectedKey} exists`)
+      if (entry) {
+        t.equal(entry.totalHistogram.count, 1, 'DisableTrace request counted in histogram')
+      }
     } catch (e) {
       t.fail(e)
     } finally {
@@ -430,39 +409,15 @@ test('Koa with error analysis disabled responds to a throwing route and records 
 })
 
 test('Should record ExceptionMetaData with uriTemplate when route throws in Koa', function (t) {
-  agent.bindHttp()
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
   const PATH = '/integration/exception-meta'
   const app = new Koa()
   const router = new Router()
-  let resolveTraceClosed
-  const traceClosed = new Promise((resolve) => {
-    resolveTraceClosed = resolve
-  })
-
+  let traceRoot
   router.get(PATH, async (ctx) => {
-    agent.callbackTraceClose((trace) => {
-      setImmediate(() => {
-        const actualExceptionMetaData = trace.repository.dataSender.findExceptionMetaData(trace.getTraceRoot())?.valueOfProtocolBuffer()
-        t.ok(actualExceptionMetaData, 'ExceptionMetaData should be sent')
-
-        if (actualExceptionMetaData) {
-          const actualTransactionId = actualExceptionMetaData.getTransactionid()
-          t.ok(actualTransactionId, 'transactionId should exist')
-          t.ok(actualExceptionMetaData.getSpanid(), 'spanId should exist')
-          t.equal(actualExceptionMetaData.getUritemplate(), PATH, 'uriTemplate should be route path')
-
-          const exceptions = actualExceptionMetaData.getExceptionsList()
-          t.equal(exceptions.length, 1, 'exceptions length should be 1')
-          if (exceptions.length > 0) {
-            t.equal(exceptions[0].getExceptionclassname(), 'Error', 'exception class should be Error')
-            t.ok(exceptions[0].getExceptionmessage().includes('koa exception test'), 'exception message should match')
-          }
-        }
-
-        resolveTraceClosed()
-      })
-    })
+    traceRoot = agent.currentTraceObject().getTraceRoot()
     throw new Error('koa exception test')
   })
 
@@ -476,7 +431,23 @@ test('Should record ExceptionMetaData with uriTemplate when route throws in Koa'
         httpAgent: new http.Agent({ keepAlive: false }),
         httpsAgent: new https.Agent({ keepAlive: false }),
       })
-      await traceClosed
+      await dataSender.waitForSpan(traceRoot)
+      const actualExceptionMetaData = dataSender.findExceptionMetaData(traceRoot)?.valueOfProtocolBuffer()
+      t.ok(actualExceptionMetaData, 'ExceptionMetaData should be sent')
+
+      if (actualExceptionMetaData) {
+        const actualTransactionId = actualExceptionMetaData.getTransactionid()
+        t.ok(actualTransactionId, 'transactionId should exist')
+        t.ok(actualExceptionMetaData.getSpanid(), 'spanId should exist')
+        t.equal(actualExceptionMetaData.getUritemplate(), PATH, 'uriTemplate should be route path')
+
+        const exceptions = actualExceptionMetaData.getExceptionsList()
+        t.equal(exceptions.length, 1, 'exceptions length should be 1')
+        if (exceptions.length > 0) {
+          t.equal(exceptions[0].getExceptionclassname(), 'Error', 'exception class should be Error')
+          t.ok(exceptions[0].getExceptionmessage().includes('koa exception test'), 'exception message should match')
+        }
+      }
     } catch (e) {
       t.fail(e)
     } finally {
@@ -487,7 +458,7 @@ test('Should record ExceptionMetaData with uriTemplate when route throws in Koa'
 })
 
 test('Should count failure in URI stats for DisableTrace in Koa', function (t) {
-  agent.bindHttp({
+  const agent = nullDataSenderAgent({
     sampling: { enable: false },
     features: {
       uriStats: {
@@ -503,37 +474,9 @@ test('Should count failure in URI stats for DisableTrace in Koa', function (t) {
   const PATH = '/integration/uri-stats/disable-trace-failure'
   const app = new Koa()
   const router = new Router()
-  let resolveTraceClosed
-  const traceClosed = new Promise((resolve) => {
-    resolveTraceClosed = resolve
-  })
-
+  let traceCompleted
   router.get(PATH, async (ctx) => {
-    agent.callbackTraceClose(() => {
-      setImmediate(() => {
-        const repository = getUriStatsRepository()
-
-        t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
-
-        const now = DateNow.now()
-        const timeWindow = 30000
-        const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
-
-        const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
-        t.ok(snapshot, 'Snapshot exists')
-
-        const expectedKey = PATH
-        const entry = snapshot.dataMap.get(expectedKey)
-
-        t.ok(entry, `Entry for ${expectedKey} exists`)
-        if (entry) {
-          t.equal(entry.totalHistogram.count, 1, 'DisableTrace failure request counted in total histogram')
-          t.equal(entry.failedHistogram.count, 1, 'DisableTrace failure request counted in failed histogram')
-        }
-
-        resolveTraceClosed()
-      })
-    })
+    traceCompleted = new Promise(resolve => finished(ctx.res, resolve))
     ctx.status = 500
     ctx.body = 'error'
   })
@@ -548,7 +491,26 @@ test('Should count failure in URI stats for DisableTrace in Koa', function (t) {
         httpAgent: new http.Agent({ keepAlive: false }),
         httpsAgent: new https.Agent({ keepAlive: false }),
       })
-      await traceClosed
+      await traceCompleted
+      const repository = getUriStatsRepository(agent.getTraceContext())
+
+      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+
+      const now = DateNow.now()
+      const timeWindow = 30000
+      const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+
+      const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+      t.ok(snapshot, 'Snapshot exists')
+
+      const expectedKey = PATH
+      const entry = snapshot.dataMap.get(expectedKey)
+
+      t.ok(entry, `Entry for ${expectedKey} exists`)
+      if (entry) {
+        t.equal(entry.totalHistogram.count, 1, 'DisableTrace failure request counted in total histogram')
+        t.equal(entry.failedHistogram.count, 1, 'DisableTrace failure request counted in failed histogram')
+      }
     } catch (e) {
       t.fail(e)
     } finally {
@@ -600,7 +562,7 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
   }))
 
   grpcDataSenderBuilder.build().then((grpcDataSender) => {
-    agent.bindHttp(grpcDataSender)
+    new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
 
     const app = new Koa()
     const router = new Router()
@@ -634,7 +596,8 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
 })
 
 test('Koa: Should not mark a client disconnect before the response as an error', function (t) {
-  agent.bindHttp()
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
   const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
@@ -644,7 +607,7 @@ test('Koa: Should not mark a client disconnect before the response as an error',
   const router = new Router()
   let client
   router.get(PATH, async (ctx) => {
-    agent.callbackTraceClose(assertSuccess)
+    dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then(assertSuccess)
     const responseClosed = new Promise((resolve) => ctx.res.on('close', resolve))
     client.destroy()
     await responseClosed
@@ -656,32 +619,31 @@ test('Koa: Should not mark a client disconnect before the response as an error',
     client = sendRequestOverRawSocket(server.address().port, PATH)
   })
 
-  function assertSuccess(trace) {
-    t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code annotation is recorded')
-    t.equal(trace.spanBuilder.annotations[0].value, 200, 'HTTP status code is 200')
-    t.equal(trace.getTraceRoot().getShared().getErrorCode(), undefined, 'client disconnect does not mark the error code')
+  function assertSuccess(span) {
+    t.equal(span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code annotation is recorded')
+    t.equal(span.annotations[0].value, 200, 'HTTP status code is 200')
+    t.equal(span.traceRoot.getShared().getErrorCode(), undefined, 'client disconnect does not mark the error code')
 
-    setImmediate(() => {
-      const repository = getUriStatsRepository()
-      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+    const repository = getUriStatsRepository(agent.getTraceContext())
+    t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
 
-      const timeWindow = 30000
-      const baseTimestamp = Math.floor(DateNow.now() / timeWindow) * timeWindow
-      const entry = repository.snapshotManager.getCurrent(baseTimestamp)?.dataMap.get(`GET ${PATH}`)
-      t.ok(entry, `Entry for GET ${PATH} exists`)
-      if (entry) {
-        t.equal(entry.totalHistogram.count, 1, 'client disconnect counted in total histogram')
-        t.equal(entry.failedHistogram.count, 0, 'client disconnect not counted in failed histogram')
-      }
+    const timeWindow = 30000
+    const baseTimestamp = Math.floor(DateNow.now() / timeWindow) * timeWindow
+    const entry = repository.snapshotManager.getCurrent(baseTimestamp)?.dataMap.get(`GET ${PATH}`)
+    t.ok(entry, `Entry for GET ${PATH} exists`)
+    if (entry) {
+      t.equal(entry.totalHistogram.count, 1, 'client disconnect counted in total histogram')
+      t.equal(entry.failedHistogram.count, 0, 'client disconnect not counted in failed histogram')
+    }
 
-      server.close()
-      t.end()
-    })
+    server.close()
+    t.end()
   }
 })
 
 test('Koa: v4 serviceName is sent as Pinpoint-pServiceName and an inbound one is recorded as parentServiceName', function (t) {
-  agent.bindHttp({ serviceName: 'koa.service' })
+  const dataSender = new RecordingDataSender()
+  new ProcessAgentBuilder({ serviceName: 'koa.service' }).setDataSender(dataSender).build()
 
   const PATH = '/parent-service-name'
   const OUTGOING_PATH = '/parent-service-name/outgoing'
@@ -704,11 +666,11 @@ test('Koa: v4 serviceName is sent as Pinpoint-pServiceName and an inbound one is
 
       t.equal(outgoingRequestHeaders['pinpoint-pservicename'], 'koa.service', 'outgoing request has Pinpoint-pServiceName header of the Config serviceName')
 
-      const span = agent.dataSender.spans().find(span => span.rpc === PATH)
+      const span = dataSender.spans().find(span => span.rpc === PATH)
       t.equal(span.parentServiceName, 'parent.service', 'span parentServiceName is the inbound Pinpoint-pServiceName')
       t.equal(span.toProtocolBuffer().getSpan().getAcceptevent().getParentinfo().getParentservicename(), 'parent.service', 'PParentInfo.parentServiceName is the inbound Pinpoint-pServiceName')
 
-      const outgoingSpan = agent.dataSender.spans().find(span => span.rpc === OUTGOING_PATH)
+      const outgoingSpan = dataSender.spans().find(span => span.rpc === OUTGOING_PATH)
       t.equal(outgoingSpan.parentServiceName, 'koa.service', 'next hop span parentServiceName is this agent serviceName')
     } catch (error) {
       t.fail(error.stack)
@@ -720,7 +682,8 @@ test('Koa: v4 serviceName is sent as Pinpoint-pServiceName and an inbound one is
 })
 
 test('Koa: v3 sends no Pinpoint-pServiceName and an inbound request without it leaves parentServiceName unset', function (t) {
-  agent.bindHttp({ serviceName: 'ignored.service', collector: { ip: '127.0.0.1', spanPort: -1, statPort: -1, tcpPort: -1, protocolVersion: 'v3' } })
+  const dataSender = new RecordingDataSender()
+  new ProcessAgentBuilder({ serviceName: 'ignored.service', collector: { ip: '127.0.0.1', spanPort: -1, statPort: -1, tcpPort: -1, protocolVersion: 'v3' } }).setDataSender(dataSender).build()
 
   const PATH = '/parent-service-name'
   const OUTGOING_PATH = '/parent-service-name/outgoing'
@@ -744,7 +707,7 @@ test('Koa: v3 sends no Pinpoint-pServiceName and an inbound request without it l
       t.equal(outgoingRequestHeaders['pinpoint-pappname'], 'test.application.name', 'outgoing request has Pinpoint-pAppName header')
       t.equal(outgoingRequestHeaders['pinpoint-pservicename'], undefined, 'v3 outgoing request has no Pinpoint-pServiceName header even with serviceName set')
 
-      const span = agent.dataSender.spans().find(span => span.rpc === PATH)
+      const span = dataSender.spans().find(span => span.rpc === PATH)
       t.equal(span.parentApplicationName, 'parent.application', 'span parentApplicationName is the inbound Pinpoint-pAppName')
       t.equal(span.parentServiceName, undefined, 'span parentServiceName is unset')
       t.equal(span.toProtocolBuffer().getSpan().getAcceptevent().getParentinfo().getParentservicename(), '', 'PParentInfo.parentServiceName is unset')
@@ -759,7 +722,8 @@ test('Koa: v3 sends no Pinpoint-pServiceName and an inbound request without it l
 
 test('Koa: application service type is NODE 1400 even with PINPOINT_SERVICE_TYPE and json applicationServiceType', function (t) {
   process.env.PINPOINT_SERVICE_TYPE = '1600'
-  agent.bindHttp({ applicationServiceType: 1500 })
+  const dataSender = new RecordingDataSender()
+  new ProcessAgentBuilder({ applicationServiceType: 1500 }).setDataSender(dataSender).build()
   delete process.env.PINPOINT_SERVICE_TYPE
 
   const PATH = '/application-service-type'
@@ -783,10 +747,10 @@ test('Koa: application service type is NODE 1400 even with PINPOINT_SERVICE_TYPE
 
       t.equal(outgoingRequestHeaders['pinpoint-papptype'], '1400', 'outgoing request has Pinpoint-pAppType header of NODE 1400')
 
-      const span = agent.dataSender.spans().find(span => span.rpc === PATH)
+      const span = dataSender.spans().find(span => span.rpc === PATH)
       t.equal(span.toProtocolBuffer().getSpan().getApplicationservicetype(), 1400, 'PSpan.applicationServiceType is NODE 1400')
 
-      const outgoingSpan = agent.dataSender.spans().find(span => span.rpc === OUTGOING_PATH)
+      const outgoingSpan = dataSender.spans().find(span => span.rpc === OUTGOING_PATH)
       t.equal(outgoingSpan.parentApplicationType, 1400, 'next hop span parentApplicationType is NODE 1400')
     } catch (error) {
       t.fail(error.stack)
@@ -812,7 +776,7 @@ test('Koa: AgentStat sends the transaction count and response time of completed 
     .addAdaptor(new MetadataAdaptor())
 
   grpcDataSenderBuilder.build().then((grpcDataSender) => {
-    agent.bindHttp(grpcDataSender)
+    const agent = new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
     const agentStatsMonitor = new AgentStatsMonitor(grpcDataSender, agent.getConfig().getAgentId(), agent.agentStartTime)
 
     const app = new Koa()

@@ -10,13 +10,12 @@ const ServiceType = require('../../lib/context/service-type')
 const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const TraceIdBuilder = require('../../lib/context/trace/trace-id-builder')
-const { ProcessAgentBuilder } = require('../support/process-agent-builder')
-const { dataSenderNullObject } = require('../support/data-sender-null-object')
+const { ProcessAgentBuilder, nullDataSenderAgent } = require('../support/process-agent-builder')
 const RecordingDataSender = require('../support/recording-data-sender')
 
 test('Should create continued trace and add span info', function (t) {
   t.plan(2)
-  const agent = new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
+  const agent = nullDataSenderAgent()
   const traceContext = agent.getTraceContext()
   const traceId = new TraceIdBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '9').build()
   const trace = traceContext.continueTraceObject(traceId)
@@ -33,7 +32,7 @@ test('Should create continued trace and add span info', function (t) {
 
 test('Should begin/end trace block asynchronously', async function (t) {
   t.plan(4)
-  const agent = new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
+  const agent = nullDataSenderAgent()
   const traceContext = agent.getTraceContext()
   const startedTrace = traceContext.newTraceObject('/')
 

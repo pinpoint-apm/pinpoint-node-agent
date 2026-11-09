@@ -7,10 +7,11 @@
 'use strict'
 
 const test = require('tape')
+const { startAgent, nullDataSenderAgent } = require('../../support/process-agent-builder')
+startAgent()
 const axios = require('axios')
 const http = require('http')
 const https = require('https')
-const agent = require('../../support/agent-singleton-mock')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
 const Header = require('../../../lib/instrumentation/http/pinpoint-header')
 const HttpClientRequest = require('../../../lib/instrumentation/http/http-client-request')
@@ -20,7 +21,7 @@ const endPoint = 'localhost:5005'
 const rpcName = '/tests/123'
 
 test('Should write pinpoint header', async function (t) {
-  agent.bindHttp()
+  const agent = nullDataSenderAgent()
   const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' })
     res.end('hello')
@@ -40,6 +41,7 @@ test('Should write pinpoint header', async function (t) {
         const headerWriter = new OutgoingClientRequestHeaderWriter(clientRequest)
         headerWriter.write(nextTraceId, agent.getConfig())
         t.equal(request.headers[Header.traceId], trace.spanBuilder.traceRoot.getTraceId().toStringDelimiterFormatted(), "trace ID new ID was added in Header")
+        agent.completeTraceObject(trace)
       })
     })
     .listen(5005, async function () {

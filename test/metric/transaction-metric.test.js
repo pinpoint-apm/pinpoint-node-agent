@@ -7,11 +7,10 @@
 const test = require('tape')
 const TransactionMetric = require('../../lib/metric/transaction-metric')
 const TraceIdBuilder = require('../../lib/context/trace/trace-id-builder')
-const { ProcessAgentBuilder } = require('../support/process-agent-builder')
-const { dataSenderNullObject } = require('../support/data-sender-null-object')
+const { nullDataSenderAgent } = require('../support/process-agent-builder')
 
 test('A sampled new transaction counts as sampledNewCount', (t) => {
-    const agent = new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
+    const agent = nullDataSenderAgent()
     const transactionMetric = new TransactionMetric()
 
     const trace = agent.getTraceContext().newTraceObject('/sampled')
@@ -22,7 +21,7 @@ test('A sampled new transaction counts as sampledNewCount', (t) => {
 })
 
 test('A new transaction not sampled counts as unsampledNewCount', (t) => {
-    const agent = new ProcessAgentBuilder({ sampling: { enable: false } }).setDataSender(dataSenderNullObject).build()
+    const agent = nullDataSenderAgent({ sampling: { enable: false } })
     const transactionMetric = new TransactionMetric()
 
     const trace = agent.getTraceContext().newTraceObject('/not-sampled')
@@ -33,7 +32,7 @@ test('A new transaction not sampled counts as unsampledNewCount', (t) => {
 })
 
 test('A continued transaction counts as sampledContinuationCount', (t) => {
-    const agent = new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
+    const agent = nullDataSenderAgent()
     const transactionMetric = new TransactionMetric()
 
     const trace = agent.getTraceContext().continueTraceObject(new TraceIdBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '9').build())
@@ -44,7 +43,7 @@ test('A continued transaction counts as sampledContinuationCount', (t) => {
 })
 
 test('A continued transaction with sampling disabled counts as unsampledContinuationCount', (t) => {
-    const agent = new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
+    const agent = nullDataSenderAgent()
     const transactionMetric = new TransactionMetric()
 
     const trace = agent.getTraceContext().disableSampling()
@@ -55,7 +54,7 @@ test('A continued transaction with sampling disabled counts as unsampledContinua
 })
 
 test('A snapshot counts only the transactions since the previous snapshot', (t) => {
-    const agent = new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
+    const agent = nullDataSenderAgent()
     const transactionMetric = new TransactionMetric()
 
     const first = agent.getTraceContext().newTraceObject('/first')

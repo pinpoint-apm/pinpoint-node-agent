@@ -7,9 +7,8 @@
 'use strict'
 
 const test = require('tape')
-const { ProcessAgentBuilder } = require('../../support/process-agent-builder')
-const { dataSenderNullObject } = require('../../support/data-sender-null-object')
-const agent = new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
+const { startAgent, nullDataSenderAgent } = require('../../support/process-agent-builder')
+startAgent()
 const axios = require('axios')
 const express = require('express')
 const http = require('http')
@@ -17,7 +16,7 @@ const https = require('https')
 
 test('exclusion URL sampling test', (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = '/healthcheck,/metrics'
-    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
+    const agent = nullDataSenderAgent()
     t.deepEqual(agent.getTraceContext().traceSampler.pathMatcher.patterns, ["/healthcheck", "/metrics"])
     let state = agent.getTraceContext().traceSampler.newState('/healthcheck')
     t.equal(state.isSampled(), false, 'isSampled is false')
@@ -29,8 +28,7 @@ test('exclusion URL sampling test', (t) => {
 
 test('outgoing request when canSample true', async (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check"
-    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
-    await outgoingRequest(t, "/heath_check", false)
+    await outgoingRequest(t, nullDataSenderAgent(), "/heath_check", false)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 
     t.end()
@@ -38,8 +36,7 @@ test('outgoing request when canSample true', async (t) => {
 
 test('when pattern match is false, sampling is false', async (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**"
-    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
-    await outgoingRequest(t, "/heath_check", true)
+    await outgoingRequest(t, nullDataSenderAgent(), "/heath_check", true)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 
     t.end()
@@ -47,31 +44,26 @@ test('when pattern match is false, sampling is false', async (t) => {
 
 test('when pattern match with cache size on ENV environment, sampling test with cache hit', async (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
-    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
-    await outgoingRequest(t, "/test", false)
+    await outgoingRequest(t, nullDataSenderAgent(), "/test", false)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
-    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
-    await outgoingRequest(t, "/test", false)
+    await outgoingRequest(t, nullDataSenderAgent(), "/test", false)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
-    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
-    await outgoingRequest(t, "/test", true)
+    await outgoingRequest(t, nullDataSenderAgent(), "/test", true)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/test?"
-    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
-    await outgoingRequest(t, "/test", true)
+    await outgoingRequest(t, nullDataSenderAgent(), "/test", true)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/test?"
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
-    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
-    await outgoingRequest(t, "/test", true)
+    await outgoingRequest(t, nullDataSenderAgent(), "/test", true)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
 
@@ -79,57 +71,52 @@ test('when pattern match with cache size on ENV environment, sampling test with 
 })
 
 test('when pattern match with cache size form JSON, sampling test with cache hit', async (t) => {
-    new ProcessAgentBuilder({
+    await outgoingRequest(t, nullDataSenderAgent({
         features: {
             traceExclusionUrl: {
                 patterns: ['/heath_check?/**', '/tes?']
             }
         }
-    }).setDataSender(dataSenderNullObject).build()
-    await outgoingRequest(t, "/test", false)
+    }), "/test", false)
 
-    new ProcessAgentBuilder({
+    await outgoingRequest(t, nullDataSenderAgent({
         features: {
             traceExclusionUrl: {
                 patterns: ['/heath_check?/**', '/tes?'],
                 cacheSize: 0
             }
         }
-    }).setDataSender(dataSenderNullObject).build()
-    await outgoingRequest(t, "/test", false)
+    }), "/test", false)
 
-    new ProcessAgentBuilder({
+    await outgoingRequest(t, nullDataSenderAgent({
         features: {
             traceExclusionUrl: {
                 cacheSize: 0
             }
         }
-    }).setDataSender(dataSenderNullObject).build()
-    await outgoingRequest(t, "/test", true)
+    }), "/test", true)
 
-    new ProcessAgentBuilder({
+    await outgoingRequest(t, nullDataSenderAgent({
         features: {
             traceExclusionUrl: {
                 patterns: ['/heath_check?/**', '/test?']
             }
         }
-    }).setDataSender(dataSenderNullObject).build()
-    await outgoingRequest(t, "/test", true)
+    }), "/test", true)
 
-    new ProcessAgentBuilder({
+    await outgoingRequest(t, nullDataSenderAgent({
         features: {
             traceExclusionUrl: {
                 patterns: ['/heath_check?/**', '/test?'],
                 cacheSize: 0
             }
         }
-    }).setDataSender(dataSenderNullObject).build()
-    await outgoingRequest(t, "/test", true)
+    }), "/test", true)
 
     t.end()
 })
 
-async function outgoingRequest(t, path, expectedSampling) {
+async function outgoingRequest(t, agent, path, expectedSampling) {
     return new Promise((resolve) => {
         const PATH = path
         const app = new express()

@@ -5,7 +5,8 @@
  */
 
 const test = require('tape')
-const agent = require('../../support/agent-singleton-mock')
+const { ProcessAgentBuilder, startAgent, nullDataSenderAgent } = require('../../support/process-agent-builder')
+startAgent()
 const { spanMessagesOfCurrentAgent } = require('../../support/collector-span-messages')
 const http = require('node:http')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
@@ -20,6 +21,8 @@ const express = require('express')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
 const HttpRequestTraceBuilder = require('../../../lib/instrumentation/http/http-request-trace-builder')
 const TraceHeaderBuilder = require('../../../lib/instrumentation/http/trace-header-builder')
+const DataSender = require('../../../lib/client/data-sender')
+const RecordingDataSender = require('../../support/recording-data-sender')
 
 const TEST_ENV = {
     host: 'localhost',
@@ -28,6 +31,7 @@ const TEST_ENV = {
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 test('http error status code', (t) => {
+    let dataSender
     let spanOrSpanChunkCallback
     const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new SpanAdaptor({
         sendSpanBatch: (call, callback) => {
@@ -43,15 +47,14 @@ test('http error status code', (t) => {
     })).addAdaptor(new MetadataAdaptor())
 
     grpcDataSenderBuilder.build().then((grpcDataSender) => {
-        agent.bindHttp(grpcDataSender)
+        dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+        const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
         t.teardown(() => {
             grpcDataSender.close()
         })
 
         const server = http.createServer((req, res) => {
-            agent.callbackTraceClose((trace) => {
-                actualTrace = trace
-            })
+            actualTraceRoot = agent.currentTraceObject().getTraceRoot()
             res.writeHead(500)
             res.end('ok')
         })
@@ -67,11 +70,11 @@ test('http error status code', (t) => {
         })
     })
 
-    let actualTrace
+    let actualTraceRoot
     spanOrSpanChunkCallback = (actual) => {
         const pSpan = actual
         const actualPTransactionId = pSpan.getTransactionid()
-        const traceRoot = actualTrace.getTraceRoot()
+        const traceRoot = actualTraceRoot
         t.equal(actualPTransactionId.getAgentid(), traceRoot.getAgentId(), `transactionId agentId should be ${traceRoot.getAgentId()}`)
         t.equal(actualPTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), `transactionId agentStartTime should be ${traceRoot.getTraceId().getAgentStartTime()}`)
         t.equal(actualPTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `transactionId should be ${traceRoot.getTraceId().getTransactionId()}`)
@@ -79,7 +82,7 @@ test('http error status code', (t) => {
         t.equal(pSpan.getParentspanid(), '-1', 'parentSpanId should be -1')
         t.equal(pSpan.getStarttime(), traceRoot.getTraceStartTime(), `startTime should be ${traceRoot.getTraceStartTime()}`)
 
-        const actualSpan = agent.dataSender.findSpan(traceRoot)
+        const actualSpan = dataSender.findSpan(traceRoot)
         t.equal(pSpan.getElapsed(), actualSpan.elapsedTime, `elapsedTime should be ${actualSpan.elapsedTime}`)
         t.equal(pSpan.getApiid(), defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.apiId, `apiId should be ${defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.apiId}`)
         t.equal(pSpan.getServicetype(), ServiceType.node.code, `serviceType should be ${ServiceType.node.code}`)
@@ -95,14 +98,15 @@ test('http error status code', (t) => {
     }
 })
 test('http should not mark a client disconnect before the response as an error', (t) => {
-    agent.bindHttp()
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
     let client
     const server = http.createServer((req, res) => {
-        agent.callbackTraceClose((trace) => {
-            t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code annotation is recorded')
-            t.equal(trace.spanBuilder.annotations[0].value, 200, 'HTTP status code is 200')
-            t.equal(trace.getTraceRoot().getShared().getErrorCode(), undefined, 'client disconnect does not mark the error code')
+        dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then((span) => {
+            t.equal(span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code annotation is recorded')
+            t.equal(span.annotations[0].value, 200, 'HTTP status code is 200')
+            t.equal(span.traceRoot.getShared().getErrorCode(), undefined, 'client disconnect does not mark the error code')
             server.close()
             t.end()
         })
@@ -115,13 +119,14 @@ test('http should not mark a client disconnect before the response as an error',
 })
 
 test('http should not mark a client close after the response as an error', (t) => {
-    agent.bindHttp()
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
     let client
     const server = http.createServer((req, res) => {
-        agent.callbackTraceClose((trace) => {
-            t.equal(trace.spanBuilder.annotations[0].value, 200, 'HTTP status code is 200')
-            t.equal(trace.getTraceRoot().getShared().getErrorCode(), undefined, 'client close after the response does not mark the error code')
+        dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then((span) => {
+            t.equal(span.annotations[0].value, 200, 'HTTP status code is 200')
+            t.equal(span.traceRoot.getShared().getErrorCode(), undefined, 'client close after the response does not mark the error code')
             client.destroy()
             server.close()
             t.end()
@@ -134,13 +139,14 @@ test('http should not mark a client close after the response as an error', (t) =
 })
 
 test('http should mark a 500 response after a client disconnect as an error', (t) => {
-    agent.bindHttp()
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
     let client
     const server = http.createServer((req, res) => {
-        agent.callbackTraceClose((trace) => {
-            t.equal(trace.spanBuilder.annotations[0].value, 500, 'HTTP status code is 500')
-            t.equal(trace.getTraceRoot().getShared().getErrorCode(), 1, '500 status code marks the error code')
+        dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then((span) => {
+            t.equal(span.annotations[0].value, 500, 'HTTP status code is 500')
+            t.equal(span.traceRoot.getShared().getErrorCode(), 1, '500 status code marks the error code')
             server.close()
             t.end()
         })
@@ -156,7 +162,8 @@ test('http should mark a 500 response after a client disconnect as an error', (t
 })
 
 test('nested request HTTP', async function (t) {
-    agent.bindHttp()
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
     const app = new express()
 
     let actualAssertsOn5006
@@ -164,19 +171,19 @@ test('nested request HTTP', async function (t) {
     app.get('/test', async (req, res) => {
         await axios.get(`http://localhost:5006/test`)
         res.send('ok')
-        agent.callbackTraceClose((trace) => {
-            t.equal(req.headers['host'], 'localhost:5005', 'http://localhost:5005/test endPoint')
 
-            const actualTraceOn5005 = localStorage.getStore()
-            if (actualTransactionIdSequence === undefined) {
-                actualTransactionIdSequence = trace.spanBuilder.traceRoot.getTraceId().transactionId
-            }
-            t.equal(actualTransactionIdSequence, trace.spanBuilder.traceRoot.getTraceId().transactionId, `http://localhost:5005/test transactionId sequence is ${actualTransactionIdSequence}`)
+        const actualTraceOn5005 = localStorage.getStore()
+        const span = await dataSender.waitForSpan(actualTraceOn5005.getTraceRoot())
+        t.equal(req.headers['host'], 'localhost:5005', 'http://localhost:5005/test endPoint')
 
-            actualAssertsOn5006(actualTraceOn5005)
+        if (actualTransactionIdSequence === undefined) {
+            actualTransactionIdSequence = span.traceRoot.getTraceId().transactionId
+        }
+        t.equal(actualTransactionIdSequence, span.traceRoot.getTraceId().transactionId, `http://localhost:5005/test transactionId sequence is ${actualTransactionIdSequence}`)
 
-            actualTransactionIdSequence = String(parseInt(actualTransactionIdSequence) + 1)
-        })
+        actualAssertsOn5006(actualTraceOn5005)
+
+        actualTransactionIdSequence = String(parseInt(actualTransactionIdSequence) + 1)
     })
 
     const appGraphQL = new express()
@@ -217,7 +224,7 @@ test('nested request HTTP', async function (t) {
 })
 
 test('outgoing request when canSample false', (t) => {
-    agent.bindHttp({ 'sampling': { 'enable': false } })
+    nullDataSenderAgent({ 'sampling': { 'enable': false } })
     const PATH = '/request'
     const app = new express()
 
@@ -252,12 +259,14 @@ test('outgoing request when canSample false', (t) => {
 })
 
 test('incomming request agent sampled true', (t) => {
-    agent.bindHttp()
-    incomingRequest(t, true)
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+    incomingRequest(t, agent, true, dataSender)
 })
 
 test('incomming request by User', (t) => {
-    agent.bindHttp()
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
     const app = new express()
     const PATH = '/incommingrequest'
@@ -313,7 +322,7 @@ test('incomming request by User', (t) => {
     const server = app.listen(TEST_ENV.port, async () => {
         const result1 = await axios.get(getServerUrl(PATH))
         t.equal(result1.status, 200)
-        const actualTraceId = agent.dataSender.findSpan(incomingTraceRoot).traceRoot.getTraceId()
+        const actualTraceId = (await dataSender.waitForSpan(incomingTraceRoot)).traceRoot.getTraceId()
         t.equal(typeof actualTraceId.getSpanId(), 'string')
         t.equal(typeof actualTraceId.getParentSpanId(), 'string')
         t.equal(typeof actualTraceId.agentStartTime, 'string')
@@ -324,7 +333,7 @@ test('incomming request by User', (t) => {
 })
 
 //https://github.com/naver/pinpoint/blob/ab07664e2ed944e90aa9c44f7e39597f39264c2b/bootstrap-core/src/main/java/com/navercorp/pinpoint/bootstrap/plugin/request/DefaultTraceHeaderReader.java#L78
-function incomingRequest(t, sampled) {
+function incomingRequest(t, agent, sampled, dataSender) {
     const app = new express()
 
     let config = {
@@ -406,7 +415,7 @@ function incomingRequest(t, sampled) {
         const result1 = await axios.get(getServerUrl(PATH), config)
         t.equal(result1.status, 200)
         if (sampled) {
-            const actualTraceId = agent.dataSender.findSpan(incomingTraceRoot).traceRoot.getTraceId()
+            const actualTraceId = (await dataSender.waitForSpan(incomingTraceRoot)).traceRoot.getTraceId()
             t.equal(typeof actualTraceId.getSpanId(), 'string')
             t.equal(typeof actualTraceId.getParentSpanId(), 'string')
             t.equal(typeof actualTraceId.getAgentStartTime(), 'string')

@@ -5,11 +5,13 @@
  */
 
 const test = require('tape')
-const agent = require('../../support/agent-singleton-mock')
+const { ProcessAgentBuilder, startAgent, nullDataSenderAgent } = require('../../support/process-agent-builder')
+const agent = startAgent()
 const axios = require('axios')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
+const RecordingDataSender = require('../../support/recording-data-sender')
 
 // Set up express5 hooking before requiring
 const { Hook } = require('require-in-the-middle')
@@ -44,55 +46,33 @@ const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
 const testName1 = 'express5-basic'
 test(`${testName1} Should record request in Express 5 basic route`, function (t) {
-  agent.bindHttp()
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
   const testName = testName1
   const PATH = '/' + testName
   const app = express5()
 
   // Express 5 GET route with async/await support
+  let getTraceRoot
   app.get(PATH, async (req, res) => {
-    agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_PARAM.code, 'HTTP param key match')
-      t.equal(trace.spanBuilder.annotations[0].value, 'api=test&test1=express5', 'HTTP param value match')
-      t.equal(trace.spanBuilder.annotations[1].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
-      t.equal(trace.spanBuilder.annotations[1].value, 200, 'response status is 200')
-
-      let actualBuilder = new MethodDescriptorBuilder('get')
-        .setClassName('Router')
-      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.spanBuilder.spanEventList[0]
-      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-    })
+    getTraceRoot = agent.currentTraceObject().getTraceRoot()
     // Express 5 natively supports Promises
     await new Promise(resolve => setTimeout(resolve, 10))
     res.send('ok get express5')
   })
 
   // Express 5 POST route
+  let postTraceRoot
   app.post(PATH, async (req, res) => {
+    postTraceRoot = agent.currentTraceObject().getTraceRoot()
     res.send('ok post express5')
-
-    agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'POST HTTP STATUS CODE')
-      t.equal(trace.spanBuilder.annotations[0].value, 200, 'POST HTTP STATUS CODE value')
-
-      let actualBuilder = new MethodDescriptorBuilder('post')
-        .setClassName('Router')
-      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.spanBuilder.spanEventList[0]
-      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.post', 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMethodDescriptor.methodName, 'post', 'methodName')
-    })
   })
 
   // Express 5 error handling with async/await
+  let errorTraceRoot
   app.get('/express5-error', async (req, res, next) => {
+    errorTraceRoot = agent.currentTraceObject().getTraceRoot()
     try {
       // In Express 5, errors thrown in async functions are automatically passed to error handlers
       throw new Error('Express 5 async error')
@@ -106,11 +86,6 @@ test(`${testName1} Should record request in Express 5 basic route`, function (t)
     // eslint-disable-next-line no-unused-vars
     const _ = next // Express error handler requires 4 parameters
 
-    agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'Error HTTP STATUS CODE')
-      t.equal(trace.spanBuilder.annotations[0].value, 500, 'Error HTTP STATUS CODE value')
-    })
-
     res.status(500).send('Express 5 error handled!')
   })
 
@@ -122,10 +97,32 @@ test(`${testName1} Should record request in Express 5 basic route`, function (t)
       t.equal(result1.status, 200, 'GET request successful')
       t.equal(result1.data, 'ok get express5', 'GET response data')
 
+      const getSpan = await dataSender.waitForSpan(getTraceRoot)
+      t.equal(getSpan.annotations[0].key, annotationKey.HTTP_PARAM.code, 'HTTP param key match')
+      t.equal(getSpan.annotations[0].value, 'api=test&test1=express5', 'HTTP param value match')
+      t.equal(getSpan.annotations[1].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
+      t.equal(getSpan.annotations[1].value, 200, 'response status is 200')
+
+      let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('get').setClassName('Router'))
+      t.equal(actualMethodDescriptor.apiId, getSpan.spanEventList[0].apiId, 'apiId')
+      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
+      t.equal(actualMethodDescriptor.className, 'Router', 'className')
+      t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
+
       // POST request test
       const result2 = await axios.post(getServerUrl(PATH))
       t.equal(result2.status, 200, 'POST request successful')
       t.equal(result2.data, 'ok post express5', 'POST response data')
+
+      const postSpan = await dataSender.waitForSpan(postTraceRoot)
+      t.equal(postSpan.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'POST HTTP STATUS CODE')
+      t.equal(postSpan.annotations[0].value, 200, 'POST HTTP STATUS CODE value')
+
+      actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('post').setClassName('Router'))
+      t.equal(actualMethodDescriptor.apiId, postSpan.spanEventList[0].apiId, 'apiId')
+      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.post', 'apiDescriptor')
+      t.equal(actualMethodDescriptor.className, 'Router', 'className')
+      t.equal(actualMethodDescriptor.methodName, 'post', 'methodName')
 
       // Error handling test
       try {
@@ -139,6 +136,10 @@ test(`${testName1} Should record request in Express 5 basic route`, function (t)
         }
       }
 
+      const errorSpan = await dataSender.waitForSpan(errorTraceRoot)
+      t.equal(errorSpan.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'Error HTTP STATUS CODE')
+      t.equal(errorSpan.annotations[0].value, 500, 'Error HTTP STATUS CODE value')
+
     } catch (error) {
       t.fail(`Test failed: ${error.message}`)
     } finally {
@@ -150,7 +151,7 @@ test(`${testName1} Should record request in Express 5 basic route`, function (t)
 
 // Express 5 Router test
 test('Express 5 Router functionality', (t) => {
-  agent.bindHttp()
+  nullDataSenderAgent()
 
   const app = express5()
   const router = express5.Router()

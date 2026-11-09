@@ -5,7 +5,8 @@
  */
 
 const test = require('tape')
-const agent = require('../../support/agent-singleton-mock')
+const { ProcessAgentBuilder, startAgent } = require('../../support/process-agent-builder')
+const { agentStartTime } = startAgent()
 const { spanMessagesOfCurrentAgent } = require('../../support/collector-span-messages')
 const express = require('express')
 const axios = require('axios')
@@ -24,6 +25,13 @@ const services = require('../../../lib/data/v1/Service_grpc_pb')
 const spanMessages = require('../../../lib/data/v1/Span_pb')
 const log = require('../../../lib/utils/log/logger')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
+const RecordingDataSender = require('../../support/recording-data-sender')
+const DataSender = require('../../../lib/client/data-sender')
+const GrpcDataSender = require('../../../lib/client/grpc-data-sender')
+const { ClientHeader, makeClientHeaderInterceptor } = require('../../../lib/name/client-header')
+const testConfig = require('../../fixtures/pinpoint-config-test.json')
+
+let dataSender
 
 let callbackPresultReturnUnaryService
 const pResultReturnUnaryService = (call, callback) => {
@@ -61,7 +69,7 @@ const spanMessageBatchService = (call, callback) => {
         const spanOrSpanChunk = spanMessage.getSpan() ?? spanMessage.getSpanchunk()
         const spanOrSpanChunks = getSpanOrSpanChunks()
         spanOrSpanChunks.push(spanOrSpanChunk)
-        if (agent.getTraces().length === ++dataStreamCount) {
+        if (++dataStreamCount === dataSender.spans().length + dataSender.spanChunks().length && dataSender.spans().length > 0) {
             spanMessageEndEventCallback?.()
         }
     })
@@ -107,12 +115,15 @@ test(`nested mysql async query with express`, async (t) => {
     process.env['PINPOINT_PROFILER_SQL_STAT'] = 'true'
 
     collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), async (err, port) => {
-        agent.bindHttp(port)
+        const builder = new ProcessAgentBuilder({ collector: Object.assign({}, testConfig.collector, { spanPort: port, statPort: port, tcpPort: port }) })
+        dataSender = new RecordingDataSender(new DataSender(builder.config, new GrpcDataSender(builder.config, [makeClientHeaderInterceptor(ClientHeader.make(agentStartTime, builder.config))])))
+        const agent = builder.setDataSender(dataSender).build()
         resetSpanOrSpanChunks()
         const container = await startMySql()
 
         const app = new express()
         app.get('/test1', (req, res) => {
+            const traceRoot = agent.currentTraceObject().getTraceRoot()
             const connection = mysql.createConnection({
                 host: container.getHost(),
                 port: container.getPort(),
@@ -139,11 +150,11 @@ test(`nested mysql async query with express`, async (t) => {
                 })
             })
 
-            agent.callbackTraceClose(async (trace) => {
+            dataSender.waitForSpan(traceRoot).then((span) => {
                 let actualBuilder = new MethodDescriptorBuilder('get')
                     .setClassName('Router')
                 let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-                let actualSpanEvent = trace.repository.dataSender.findSpan(trace.getTraceRoot()).spanEventList.find(spanEvent => spanEvent.sequence === 0)
+                let actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence === 0)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
                 t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor is equal')
                 t.equal(actualMethodDescriptor.className, 'Router', 'className is equal')
@@ -154,7 +165,7 @@ test(`nested mysql async query with express`, async (t) => {
 
                 actualBuilder = new MethodDescriptorBuilder('createConnection')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-                actualSpanEvent = trace.repository.dataSender.findSpan(trace.getTraceRoot()).spanEventList.find(spanEvent => spanEvent.sequence === 1)
+                actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence === 1)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
                 t.equal(actualSpanEvent.endPoint, container.getHost(), 'endPoint is equal')
                 t.equal(actualSpanEvent.destinationId, 'test', 'destinationId is equal')
@@ -165,15 +176,15 @@ test(`nested mysql async query with express`, async (t) => {
                 actualBuilder = new MethodDescriptorBuilder('connect')
                     .setClassName('Connection')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-                actualSpanEvent = trace.repository.dataSender.findSpan(trace.getTraceRoot()).spanEventList.find(spanEvent => spanEvent.sequence === 2)
+                actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence === 2)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
                 t.equal(actualSpanEvent.sequence, 2, 'sequence is 2')
                 t.equal(actualSpanEvent.depth, 2, 'depth is 3')
                 t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'serviceType is mysql')
                 let actualNextAsyncId = actualSpanEvent.asyncId
 
-                let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
-                t.equal(actualSpanChunk.getTraceRoot(), trace.getTraceRoot(), 'traceRoot is equal')
+                let actualSpanChunk = dataSender.findSpanChunk(actualNextAsyncId)
+                t.equal(actualSpanChunk.getTraceRoot(), span.traceRoot, 'traceRoot is equal')
                 t.equal(actualSpanChunk.localAsyncId.getAsyncId(), actualSpanEvent.asyncId.getAsyncId(), 'localAsyncId is equal')
                 t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence is equal')
                 t.equal(actualSpanChunk.spanEventList[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'apiId is equal')
@@ -184,15 +195,15 @@ test(`nested mysql async query with express`, async (t) => {
                 actualBuilder = new MethodDescriptorBuilder('query')
                     .setClassName('Connection')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-                actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 3)
+                actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence === 3)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
                 t.equal(actualSpanEvent.sequence, 3, 'sequence is 3')
                 t.equal(actualSpanEvent.depth, 2, 'depth is 2')
                 t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType is mysql')
                 actualNextAsyncId = actualSpanEvent.asyncId
 
-                actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
-                t.equal(actualSpanChunk.getTraceRoot(), trace.spanBuilder.getTraceRoot(), 'traceRoot is equal')
+                actualSpanChunk = dataSender.findSpanChunk(actualNextAsyncId)
+                t.equal(actualSpanChunk.getTraceRoot(), span.traceRoot, 'traceRoot is equal')
                 t.equal(actualSpanChunk.localAsyncId.asyncId, actualSpanEvent.asyncId.asyncId, 'localAsyncId is equal')
                 t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence is equal')
                 t.equal(actualSpanChunk.spanEventList[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'apiId is equal')
@@ -210,8 +221,8 @@ test(`nested mysql async query with express`, async (t) => {
                 t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType is mysql')
                 actualNextAsyncId = actualSpanEvent.asyncId
 
-                actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
-                t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), trace.spanBuilder.getTraceRoot().getTransactionId(), 'transactionIdObject is equal')
+                actualSpanChunk = dataSender.findSpanChunk(actualNextAsyncId)
+                t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), span.traceRoot.getTransactionId(), 'transactionIdObject is equal')
                 t.equal(actualSpanChunk.localAsyncId.asyncId, actualNextAsyncId.asyncId, 'localAsyncId is equal')
                 t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence is equal')
                 t.equal(actualSpanChunk.spanEventList[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'apiId is equal')
@@ -224,20 +235,19 @@ test(`nested mysql async query with express`, async (t) => {
         })
 
         spanMessageEndEventCallback = async () => {
-            const trace = agent.getTrace(0)
-            const childTrace = agent.getTrace(1)
-            const actualSpanChunkGrpc = getSpanChunk(childTrace.localAsyncId)
+            const span = dataSender.spans()[0]
+            const actualSpanChunk = dataSender.spanChunks()[0]
+            const actualSpanChunkGrpc = getSpanChunk(actualSpanChunk.localAsyncId)
             t.equal(actualSpanChunkGrpc.getVersion(), 1, 'PSpanChunk.version is 1')
 
             const actualTractionId = actualSpanChunkGrpc.getTransactionid()
-            t.equal(actualTractionId.getAgentid(), trace.getTraceRoot().getAgentId(), `PSpanChunk.PTransactionId.agentId is ${trace.getTraceRoot().getAgentId()}`)
+            t.equal(actualTractionId.getAgentid(), span.traceRoot.getAgentId(), `PSpanChunk.PTransactionId.agentId is ${span.traceRoot.getAgentId()}`)
             t.equal(typeof actualTractionId.getAgentid(), 'string', 'PSpanChunk.PTransactionId.agentId type is string')
-            t.equal(actualTractionId.getAgentstarttime(), trace.getTraceId().getAgentStartTime(), `PSpanChunk.PTransactionId.agentStartTime is ${trace.getTraceId().getAgentStartTime()}`)
+            t.equal(actualTractionId.getAgentstarttime(), span.traceRoot.getTraceId().getAgentStartTime(), `PSpanChunk.PTransactionId.agentStartTime is ${span.traceRoot.getTraceId().getAgentStartTime()}`)
             t.equal(typeof actualTractionId.getAgentstarttime(), 'string', 'PSpanChunk.PTransactionId.agentStartTime type is string')
-            t.equal(actualTractionId.getSequence(), trace.getTraceRoot().getTransactionId(), `PSpanChunk.PTransactionId.sequence is ${trace.getTraceRoot().getTransactionId()}`)
+            t.equal(actualTractionId.getSequence(), span.traceRoot.getTransactionId(), `PSpanChunk.PTransactionId.sequence is ${span.traceRoot.getTransactionId()}`)
             t.equal(typeof actualTractionId.getSequence(), 'string', 'PSpanChunk.PTransactionId.sequence type is string')
 
-            const actualSpanChunk = childTrace.repository.spanChunkBuilder
             t.equal(actualSpanChunkGrpc.getSpanid(), actualSpanChunk.traceRoot.getTraceId().getSpanId(), `PSpanChunk.spanId is ${actualSpanChunk.traceRoot.getTraceId().getSpanId()}`)
             t.equal(typeof actualSpanChunkGrpc.getSpanid(), 'string', 'PSpanChunk.spanId type is string')
             t.equal(actualSpanChunkGrpc.getEndpoint(), '', `PSpanChunk.endPoint is '${actualSpanChunkGrpc.getEndpoint()}'`)
@@ -253,7 +263,7 @@ test(`nested mysql async query with express`, async (t) => {
             t.equal(actualLocalAsyncId.getSequence(), actualSpanChunk.localAsyncId.sequence, `PSpanChunk.PLocalAsyncId.sequence is ${actualSpanChunk.localAsyncId.sequence}`)
             t.equal(typeof actualLocalAsyncId.getSequence(), 'number', 'PSpanChunk.PLocalAsyncId.sequence type is number')
             t.end()
-            trace.repository.dataSender.close()
+            dataSender.close()
         }
 
         app.use(express.json())
@@ -291,11 +301,14 @@ test(`nested mysql2 async query with express`, async (t) => {
     })
 
     collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), async (err, port) => {
-        agent.bindHttpWithCallSite(port)
+        const builder = new ProcessAgentBuilder({ 'trace-location-and-filename-of-call-site': true, collector: Object.assign({}, testConfig.collector, { spanPort: port, statPort: port, tcpPort: port }) })
+        dataSender = new RecordingDataSender(new DataSender(builder.config, new GrpcDataSender(builder.config, [makeClientHeaderInterceptor(ClientHeader.make(agentStartTime, builder.config))])))
+        const agent = builder.setDataSender(dataSender).build()
         const container = await startMySql()
 
         const app = new express()
         app.get('/test1', async (req, res) => {
+            const traceRoot = agent.currentTraceObject().getTraceRoot()
             const connection = mysql2.createConnection({
                 host: container.getHost(),
                 port: container.getPort(),
@@ -337,13 +350,13 @@ test(`nested mysql2 async query with express`, async (t) => {
             t.equal(rows[0].name, 'name1', 'name in SELECT query hooking')
             t.equal(rows[0].joined.toISOString().slice(0, 10), '2023-01-17', 'joined in SELECT query hooking')
 
-            agent.callbackTraceClose(async (trace) => {
-                t.equal(trace.spanBuilder.serviceType, ServiceType.node.getCode(), 'Span serviceType is node')
-                t.true(trace.spanBuilder.remoteAddress === '127.0.0.1' || trace.spanBuilder.remoteAddress === '::1', `remoteAddress is ${trace.spanBuilder.remoteAddress}`)
+            dataSender.waitForSpan(traceRoot).then((span) => {
+                t.equal(span.serviceType, ServiceType.node.getCode(), 'Span serviceType is node')
+                t.true(span.remoteAddress === '127.0.0.1' || span.remoteAddress === '::1', `remoteAddress is ${span.remoteAddress}`)
                 let actualBuilder = new MethodDescriptorBuilder('get')
                     .setClassName('Router')
                 let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-                let actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 0)
+                let actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence === 0)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
                 t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor is equal')
                 t.equal(actualMethodDescriptor.className, 'Router', 'className is equal')
@@ -354,7 +367,7 @@ test(`nested mysql2 async query with express`, async (t) => {
 
                 actualBuilder = new MethodDescriptorBuilder('createConnection')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-                actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 1)
+                actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence === 1)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
                 t.equal(actualSpanEvent.endPoint, container.getHost(), 'endPoint is equal')
                 t.equal(actualSpanEvent.destinationId, 'test', 'destinationId is equal')
@@ -365,15 +378,15 @@ test(`nested mysql2 async query with express`, async (t) => {
                 actualBuilder = new MethodDescriptorBuilder('query')
                     .setClassName('Connection')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-                actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 2)
+                actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence === 2)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
                 t.equal(actualSpanEvent.sequence, 2, 'sequence is 2')
                 t.equal(actualSpanEvent.depth, 2, 'depth is 2')
                 t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType is mysql')
                 let actualNextAsyncId = actualSpanEvent.asyncId
 
-                let actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
-                t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), trace.spanBuilder.getTraceRoot().getTransactionId(), 'transactionIdObject is equal')
+                let actualSpanChunk = dataSender.findSpanChunk(actualNextAsyncId)
+                t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), span.traceRoot.getTransactionId(), 'transactionIdObject is equal')
                 t.equal(actualSpanChunk.localAsyncId.asyncId, actualSpanEvent.asyncId.asyncId, 'localAsyncId is equal')
                 t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence is equal')
                 t.equal(actualSpanChunk.spanEventList[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'apiId is equal')
@@ -391,8 +404,8 @@ test(`nested mysql2 async query with express`, async (t) => {
                 t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType is mysql')
                 actualNextAsyncId = actualSpanEvent.asyncId
 
-                actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
-                t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), trace.spanBuilder.getTraceRoot().getTransactionId(), 'transactionIdObject is equal')
+                actualSpanChunk = dataSender.findSpanChunk(actualNextAsyncId)
+                t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), span.traceRoot.getTransactionId(), 'transactionIdObject is equal')
                 t.equal(actualSpanChunk.localAsyncId.asyncId, actualNextAsyncId.asyncId, 'localAsyncId is equal')
                 t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence is equal')
                 t.equal(actualSpanChunk.spanEventList[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'apiId is equal')
@@ -403,15 +416,15 @@ test(`nested mysql2 async query with express`, async (t) => {
                 actualBuilder = new MethodDescriptorBuilder('query')
                     .setClassName('Connection')
                 actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-                actualSpanEvent = trace.spanBuilder.spanEventList.find(spanEvent => spanEvent.sequence === 3)
+                actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence === 3)
                 t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId is equal')
                 t.equal(actualSpanEvent.sequence, 3, 'sequence is 3')
                 t.equal(actualSpanEvent.depth, 2, 'depth is 2')
                 t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType is mysql')
                 actualNextAsyncId = actualSpanEvent.asyncId
 
-                actualSpanChunk = trace.repository.dataSender.findSpanChunk(actualNextAsyncId)
-                t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), trace.spanBuilder.getTraceRoot().getTransactionId(), 'transactionIdObject is equal')
+                actualSpanChunk = dataSender.findSpanChunk(actualNextAsyncId)
+                t.equal(actualSpanChunk.getTraceRoot().getTransactionId(), span.traceRoot.getTransactionId(), 'transactionIdObject is equal')
                 t.equal(actualSpanChunk.localAsyncId.asyncId, actualNextAsyncId.asyncId, 'localAsyncId is equal')
                 t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence is equal')
                 t.equal(actualSpanChunk.spanEventList[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'apiId is equal')
@@ -420,14 +433,13 @@ test(`nested mysql2 async query with express`, async (t) => {
                 t.equal(actualSpanChunk.spanEventList[0].serviceType, ServiceType.async.getCode(), 'serviceType is mysql')
 
                 spanMessageEndEventCallback = async () => {
-                    const trace = agent.getTraces()[0]
-                    t.true(trace.spanBuilder.remoteAddress === '127.0.0.1' || trace.spanBuilder.remoteAddress === '::1', `remoteAddress is ${trace.spanBuilder.remoteAddress}`)
+                    t.true(span.remoteAddress === '127.0.0.1' || span.remoteAddress === '::1', `remoteAddress is ${span.remoteAddress}`)
 
                     connection.end()
-                    t.equal(agent.getSendedApiMetaInfos().length, 0, 'agent.getSendedApiMetaInfos() is empty')
-                    t.equal(agent.getSqlMetadata().length, 0, 'agent.getSqlMetadata() is empty')
+                    t.equal(dataSender.apiMetaInfos().length, 0, 'agent.getSendedApiMetaInfos() is empty')
+                    t.equal(dataSender.sqlMetaData().length, 0, 'agent.getSqlMetadata() is empty')
                     t.end()
-                    trace.repository.dataSender.close()
+                    dataSender.close()
                 }
             })
         })
@@ -442,17 +454,17 @@ test(`nested mysql2 async query with express`, async (t) => {
                 t.equal(call.request.getLine(), apiDescriptor.lineNumber, `line is ${call.request.getLine()}`)
                 t.equal(call.request.getLocation(), apiDescriptor.getLocation(), `location is ${call.request.getLocation()}`)
                 t.equal(call.request.getType(), apiDescriptor.getType(), `type is ${call.request.getType()}`)
-                const sendedApiMetaInfos = agent.getSendedApiMetaInfos()
-                const index = sendedApiMetaInfos.findIndex(item => item === apiDescriptor)
+                const sendedApiMetaInfos = dataSender.apiMetaInfos()
+                const index = sendedApiMetaInfos.findIndex(item => item.apiId === apiDescriptor.apiId)
                 sendedApiMetaInfos.splice(index, 1)
             } else {
-                const parsingResult = [...agent.traceContext.spanEventRecorderFactory.sqlMetadataService.cache.cache.entries()]
+                const parsingResult = [...agent.getTraceContext().spanEventRecorderFactory.sqlMetadataService.cache.cache.entries()]
                     .map(([, value]) => value)
                     .find(parsingResult => parsingResult.sqlMetaDataValue().sqlId === call.request.getSqlid())
                 t.equal(call.request.getSqlid(), parsingResult.sqlMetaDataValue().sqlId, `sqlId is ${call.request.getSqlid()}`)
                 t.equal(call.request.getSql(), parsingResult.sqlMetaDataValue().sql, `sql is ${call.request.getSql()}`)
-                const sendedSqlMetadata = agent.getSqlMetadata()
-                const index = sendedSqlMetadata.findIndex(item => item === parsingResult)
+                const sendedSqlMetadata = dataSender.sqlMetaData()
+                const index = sendedSqlMetadata.findIndex(item => item.sqlId === parsingResult.sqlMetaDataValue().sqlId)
                 sendedSqlMetadata.splice(index, 1)
             }
         }

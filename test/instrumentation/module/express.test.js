@@ -5,8 +5,10 @@
  */
 
 const test = require('tape')
+const { ProcessAgentBuilder, startAgent, nullDataSenderAgent } = require('../../support/process-agent-builder')
+startAgent()
 const axios = require('axios')
-const agent = require('../../support/agent-singleton-mock')
+const { finished } = require('node:stream')
 const { spanMessagesOfCurrentAgent } = require('../../support/collector-span-messages')
 const express = require('express')
 const annotationKey = require('../../../lib/constant/annotation-key')
@@ -26,7 +28,6 @@ const { UriStatsMonitor } = require('../../../lib/metric/uri/uri-stats-monitor')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 const { ParentTraceHeader } = require('../../fixtures/parent-trace-header')
 const { receiverTypeNameOfFunctionMethod } = require('../../support/stack-frame')
-const { ProcessAgentBuilder } = require('../../support/process-agent-builder')
 const RecordingDataSender = require('../../support/recording-data-sender')
 const { startLocalHttpsServer } = require('../../support/local-https-server')
 
@@ -35,8 +36,8 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-const getUriStatsRepository = () => {
-  const enricher = agent.traceContext?.traceCompletionEnricher?.enrichers?.find((e) => {
+const getUriStatsRepository = (traceContext) => {
+  const enricher = traceContext.traceCompletionEnricher?.enrichers?.find((e) => {
     return e && typeof e.onComplete === 'function' && e.repository
   })
   return enricher?.repository ?? UriStatsRepositoryBuilder.nullObject
@@ -44,86 +45,57 @@ const getUriStatsRepository = () => {
 
 const testName1 = 'express1'
 test(`${testName1} Should record request in basic route`, function (t) {
-  agent.bindHttp()
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
   const testName = testName1
 
   const PATH = '/' + testName
   const app = new express()
 
+  let getTraceRoot
   app.get(PATH, async (req, res) => {
+    getTraceRoot = agent.currentTraceObject().getTraceRoot()
     res.send('ok get')
-
-    agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_PARAM.code, 'HTTP param key match')
-      t.equal(trace.spanBuilder.annotations[0].value, 'api=test&test1=test', 'HTTP param value match')
-      t.equal(trace.spanBuilder.annotations[1].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
-      t.equal(trace.spanBuilder.annotations[1].value, 200, 'response status is 200')
-
-      let actualBuilder = new MethodDescriptorBuilder('get')
-        .setClassName('Router')
-      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.spanBuilder.spanEventList[0]
-      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-    })
   })
 
-
+  let postTraceRoot
   app.post(PATH, (req, res) => {
+    postTraceRoot = agent.currentTraceObject().getTraceRoot()
     res.send('ok post')
-
-    agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, '/express1 HTTP STATUS CODE in annotation zero')
-      t.equal(trace.spanBuilder.annotations[0].value, 200, '/express1 HTTP STATUS CODE value in annotation zero')
-
-      let actualBuilder = new MethodDescriptorBuilder('post')
-        .setClassName('Router')
-      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.spanBuilder.spanEventList[0]
-      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.post', 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMethodDescriptor.methodName, 'post', 'methodName')
-    })
   })
 
+  let express2TraceRoot
   app.get('/express2', async (req, res) => {
+    express2TraceRoot = agent.currentTraceObject().getTraceRoot()
     res.send('ok get')
-
-    agent.callbackTraceClose((trace) => {
-      let actualBuilder = new MethodDescriptorBuilder('get')
-        .setClassName('Router')
-      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.spanBuilder.spanEventList[0]
-      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-    })
   })
 
   let errorOrder = 0
   let pathSymbol
 
   const express3Symbol = Symbol('express3')
+  let express3TraceRoot
   app.get('/express3', (req, res, next) => {
+    express3TraceRoot = agent.currentTraceObject().getTraceRoot()
     errorOrder++
     pathSymbol = express3Symbol
     throw new Error('error case')
   })
 
   const express4Symbol = Symbol('express4')
+  let express4TraceRoot
   app.get('/express4', (req, res, next) => {
+    express4TraceRoot = agent.currentTraceObject().getTraceRoot()
     errorOrder++
     pathSymbol = express4Symbol
     next(new Error('error case'))
   })
 
   const exceptionUnhandledSymbol = Symbol('exceptionUnhandled')
+  let exceptionUnhandledTraceRoot
   app.get('/exception/unhandled', function (req, res, next) {
+    exceptionUnhandledTraceRoot = agent.currentTraceObject().getTraceRoot()
     errorOrder++
     pathSymbol = exceptionUnhandledSymbol
     const error = new Error('Pinpoint unhandled exception test route')
@@ -142,16 +114,6 @@ test(`${testName1} Should record request in basic route`, function (t) {
       t.equal(errorOrder, 3, 'exception/unhandled error order')
     }
 
-    agent.callbackTraceClose((trace) => {
-      if (errorOrder == 1) {
-        throwHandleTest(trace, t)
-      } else if (errorOrder == 2) {
-        nextErrorHandleTest(trace, t)
-      } else if (errorOrder == 3) {
-        unhandledExceptionStatsFrameTest(trace, t)
-      }
-    })
-
     res.status(500).send('Something broke!')
   })
 
@@ -159,45 +121,77 @@ test(`${testName1} Should record request in basic route`, function (t) {
     const result1 = await axios.get(getServerUrl(PATH) + '?api=test&test1=test')
     t.equal(result1.status, 200)
 
+    const getSpan = await dataSender.waitForSpan(getTraceRoot)
+    t.equal(getSpan.annotations[0].key, annotationKey.HTTP_PARAM.code, 'HTTP param key match')
+    t.equal(getSpan.annotations[0].value, 'api=test&test1=test', 'HTTP param value match')
+    t.equal(getSpan.annotations[1].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
+    t.equal(getSpan.annotations[1].value, 200, 'response status is 200')
+
+    let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('get').setClassName('Router'))
+    t.equal(actualMethodDescriptor.apiId, getSpan.spanEventList[0].apiId, 'apiId')
+    t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
+    t.equal(actualMethodDescriptor.className, 'Router', 'className')
+    t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
+
     const result2 = await axios.post(getServerUrl(PATH))
     t.equal(result2.status, 200)
 
+    const postSpan = await dataSender.waitForSpan(postTraceRoot)
+    t.equal(postSpan.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, '/express1 HTTP STATUS CODE in annotation zero')
+    t.equal(postSpan.annotations[0].value, 200, '/express1 HTTP STATUS CODE value in annotation zero')
+
+    actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('post').setClassName('Router'))
+    t.equal(actualMethodDescriptor.apiId, postSpan.spanEventList[0].apiId, 'apiId')
+    t.equal(actualMethodDescriptor.apiDescriptor, 'Router.post', 'apiDescriptor')
+    t.equal(actualMethodDescriptor.className, 'Router', 'className')
+    t.equal(actualMethodDescriptor.methodName, 'post', 'methodName')
+
     const result3 = await axios.get(getServerUrl('/express2'))
     t.equal(result3.status, 200)
+
+    const express2Span = await dataSender.waitForSpan(express2TraceRoot)
+    actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('get').setClassName('Router'))
+    t.equal(actualMethodDescriptor.apiId, express2Span.spanEventList[0].apiId, 'apiId')
+    t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
+    t.equal(actualMethodDescriptor.className, 'Router', 'className')
+    t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
 
     try {
       await axios.get(getServerUrl('/express3'))
     } catch (error) {
       t.equal(error.response.status, 500)
     }
+    throwHandleTest(await dataSender.waitForSpan(express3TraceRoot), dataSender, t)
 
     try {
       await axios.get(getServerUrl('/express4'))
     } catch (error) {
       t.equal(error.response.status, 500, 'axios.get(getServerUrl(/express4))')
     }
+    nextErrorHandleTest(await dataSender.waitForSpan(express4TraceRoot), dataSender, t)
 
     try {
       await axios.get(getServerUrl('/exception/unhandled'))
     } catch (error) {
       t.equal(error.response.status, 500, 'axios.get(getServerUrl(/exception/unhandled))')
     }
+    unhandledExceptionStatsFrameTest(await dataSender.waitForSpan(exceptionUnhandledTraceRoot), dataSender, t)
 
     t.end()
     server.close()
   })
 })
 
-function throwHandleTest(trace, t) {
-  t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), '/express3 HTTP_STATUS_CODE annotationKey matching')
-  t.equal(trace.spanBuilder.annotations[0].value, 500, '/express3 HTTP_STATUS_CODE value matching')
+function throwHandleTest(span, dataSender, t) {
+  t.equal(span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), '/express3 HTTP_STATUS_CODE annotationKey matching')
+  t.equal(span.annotations[0].value, 500, '/express3 HTTP_STATUS_CODE value matching')
 
-  t.equal(trace.spanBuilder.traceRoot.getShared().getErrorCode(), 1, 'traceRoot errorCode should be 1')
+  t.equal(span.traceRoot.getShared().getErrorCode(), 1, 'traceRoot errorCode should be 1')
 
   let actualBuilder = new MethodDescriptorBuilder('get')
     .setClassName('Router')
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  let spanEvent = trace.spanBuilder.spanEventList[0]
+  let spanEvent = span.spanEventList[0]
   t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
   t.equal(actualMethodDescriptor.className, 'Router', 'className')
@@ -208,7 +202,7 @@ function throwHandleTest(trace, t) {
   actualBuilder = new MethodDescriptorBuilder('use')
     .setClassName('Router')
   const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  spanEvent = trace.spanBuilder.spanEventList[1]
+  spanEvent = span.spanEventList[1]
   t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.equal(actualErrorMethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
@@ -218,16 +212,16 @@ function throwHandleTest(trace, t) {
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
   t.true(/express\.test\.js:\d+:\d+$/.test(spanEvent.exceptionInfo.stringValue), 'error case')
 
-  const actualExceptionMetaData = trace.repository.dataSender.findExceptionMetaData(trace.getTraceRoot()).valueOfProtocolBuffer()
+  const actualExceptionMetaData = dataSender.findExceptionMetaData(span.traceRoot).valueOfProtocolBuffer()
   const actualTransactionId = actualExceptionMetaData.getTransactionid()
-  t.equal(actualTransactionId.getAgentid(), trace.spanBuilder.traceRoot.getTraceId().getAgentId(), `ExceptionMetaData transactionId agentId ${actualTransactionId.getAgentid()}`)
-  t.equal(actualTransactionId.getAgentstarttime(), trace.spanBuilder.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStarttime ${actualTransactionId.getAgentstarttime()}`)
-  t.equal(actualTransactionId.getSequence(), trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transactionId sequence ${actualTransactionId.getSequence()}`)
-  t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
+  t.equal(actualTransactionId.getAgentid(), span.traceRoot.getTraceId().getAgentId(), `ExceptionMetaData transactionId agentId ${actualTransactionId.getAgentid()}`)
+  t.equal(actualTransactionId.getAgentstarttime(), span.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStarttime ${actualTransactionId.getAgentstarttime()}`)
+  t.equal(actualTransactionId.getSequence(), span.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transactionId sequence ${actualTransactionId.getSequence()}`)
+  t.equal(actualExceptionMetaData.getSpanid(), span.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
   t.equal(actualExceptionMetaData.getUritemplate(), '/express3', 'ExceptionMetaData uriTemplate /express3')
 
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
-  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception[0]
+  const actualSpanEventError = span.spanEventList[1].exception[0]
   t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
   t.equal(actualExceptions[0].getExceptionclassname(), actualSpanEventError.errorClassName, `ExceptionMetaData exception class name ${actualSpanEventError.errorClassName}`)
   t.equal(actualExceptions[0].getExceptionmessage(), actualSpanEventError.errorMessage, `ExceptionMetaData exception message ${actualSpanEventError.errorMessage}`)
@@ -236,13 +230,13 @@ function throwHandleTest(trace, t) {
   t.equal(actualExceptions[0].getExceptiondepth(), actualSpanEventError.exceptionDepth, `ExceptionMetaData exception depth ${actualSpanEventError.exceptionDepth}`)
 }
 
-function nextErrorHandleTest(trace, t) {
-  t.equal(trace.spanBuilder.traceRoot.getShared().getErrorCode(), 1, 'traceRoot errorCode should be 1')
+function nextErrorHandleTest(span, dataSender, t) {
+  t.equal(span.traceRoot.getShared().getErrorCode(), 1, 'traceRoot errorCode should be 1')
 
   let actualBuilder = new MethodDescriptorBuilder('get')
     .setClassName('Router')
   const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  let spanEvent = trace.spanBuilder.spanEventList[0]
+  let spanEvent = span.spanEventList[0]
   t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
   t.equal(actualMethodDescriptor.className, 'Router', 'className')
@@ -253,7 +247,7 @@ function nextErrorHandleTest(trace, t) {
   actualBuilder = new MethodDescriptorBuilder('use')
     .setClassName('Router')
   const actualErrorMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-  spanEvent = trace.spanBuilder.spanEventList[1]
+  spanEvent = span.spanEventList[1]
   t.equal(actualErrorMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
   t.equal(actualErrorMethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
@@ -263,15 +257,15 @@ function nextErrorHandleTest(trace, t) {
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
   t.true(/express\.test\.js:\d+:\d+$/.test(spanEvent.exceptionInfo.stringValue), 'error case')
 
-  const actualExceptionMetaData = trace.repository.dataSender.findExceptionMetaData(trace.getTraceRoot()).valueOfProtocolBuffer()
+  const actualExceptionMetaData = dataSender.findExceptionMetaData(span.traceRoot).valueOfProtocolBuffer()
   const actualTransactionId = actualExceptionMetaData.getTransactionid()
-  t.equal(actualTransactionId.getAgentid(), trace.spanBuilder.traceRoot.getTraceId().getAgentId(), `ExceptionMetaData transactionId agentId ${actualTransactionId.getAgentid()}`)
-  t.equal(actualTransactionId.getAgentstarttime(), trace.spanBuilder.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStarttime ${actualTransactionId.getAgentstarttime()}`)
-  t.equal(actualTransactionId.getSequence(), trace.spanBuilder.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transactionId sequence ${actualTransactionId.getSequence()}`)
-  t.equal(actualExceptionMetaData.getSpanid(), trace.spanBuilder.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
+  t.equal(actualTransactionId.getAgentid(), span.traceRoot.getTraceId().getAgentId(), `ExceptionMetaData transactionId agentId ${actualTransactionId.getAgentid()}`)
+  t.equal(actualTransactionId.getAgentstarttime(), span.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData transactionId agentStarttime ${actualTransactionId.getAgentstarttime()}`)
+  t.equal(actualTransactionId.getSequence(), span.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transactionId sequence ${actualTransactionId.getSequence()}`)
+  t.equal(actualExceptionMetaData.getSpanid(), span.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
   t.equal(actualExceptionMetaData.getUritemplate(), '/express4', 'ExceptionMetaData uriTemplate /express4')
 
-  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception[0]
+  const actualSpanEventError = span.spanEventList[1].exception[0]
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
   t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
   t.equal(actualExceptions[0].getExceptionclassname(), actualSpanEventError.errorClassName, `ExceptionMetaData exception class name ${actualSpanEventError.errorClassName}`)
@@ -281,15 +275,15 @@ function nextErrorHandleTest(trace, t) {
   t.equal(actualExceptions[0].getExceptiondepth(), actualSpanEventError.exceptionDepth, `ExceptionMetaData exception depth ${actualSpanEventError.exceptionDepth}`)
 }
 
-function unhandledExceptionStatsFrameTest(trace, t) {
-  const actualExceptionMetaData = trace.repository.dataSender.findExceptionMetaData(trace.getTraceRoot())?.valueOfProtocolBuffer()
+function unhandledExceptionStatsFrameTest(span, dataSender, t) {
+  const actualExceptionMetaData = dataSender.findExceptionMetaData(span.traceRoot)?.valueOfProtocolBuffer()
   t.ok(actualExceptionMetaData, 'ExceptionMetaData should be sent')
 
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
   t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
 
   const actualException = actualExceptions[0]
-  const actualSpanEventError = trace.spanBuilder.spanEventList[1].exception[0]
+  const actualSpanEventError = span.spanEventList[1].exception[0]
 
   t.equal(actualException.getExceptionmessage(), actualSpanEventError.errorMessage, 'ExceptionMetaData exception message should match span event error message')
   t.equal(actualException.getExceptionid(), actualSpanEventError.exceptionId, 'ExceptionMetaData exception id should match span event exception id')
@@ -302,7 +296,7 @@ function unhandledExceptionStatsFrameTest(trace, t) {
 
 const testName2 = 'express2'
 test(`[${testName2}] Should record request in express.Router`, function (t) {
-  agent.bindHttpWithCallSite()
+  nullDataSenderAgent({ 'trace-location-and-filename-of-call-site': true })
 
   const testName = testName2
 
@@ -346,7 +340,7 @@ test(`[${testName2}] Should record request in express.Router`, function (t) {
 
 const testName3 = 'express3'
 test(`${testName3} Should record request taking more than 2 sec`, async function (t) {
-  agent.bindHttpWithCallSite()
+  nullDataSenderAgent({ 'trace-location-and-filename-of-call-site': true })
   const outgoingServer = await startLocalHttpsServer({ responseDelayMs: 2000 })
   t.teardown(() => outgoingServer.close())
 
@@ -376,7 +370,8 @@ test(`${testName3} Should record request taking more than 2 sec`, async function
 
 const testName5 = 'express5'
 test(`${testName5} Should record middleware`, function (t) {
-  agent.bindHttp()
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
   const testName = testName5
 
@@ -398,42 +393,9 @@ test(`${testName5} Should record middleware`, function (t) {
     next()
   })
 
+  let traceRoot
   app.get(PATH, (req, res) => {
-    agent.callbackTraceClose((trace) => {
-      let actualBuilder = new MethodDescriptorBuilder('get')
-        .setClassName('Router')
-      const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      let spanEvent = trace.spanBuilder.spanEventList[2]
-      t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
-      t.equal(actualMethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
-      t.equal(spanEvent.sequence, 2, 'sequence')
-      t.equal(spanEvent.depth, 1, 'spanEvent.depth')
-
-      actualBuilder = new MethodDescriptorBuilder('use')
-        .setClassName('Router')
-      const actualMiddleware1MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      spanEvent = trace.spanBuilder.spanEventList[1]
-      t.equal(actualMiddleware1MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.equal(actualMiddleware1MethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
-      t.equal(actualMiddleware1MethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMiddleware1MethodDescriptor.functionName, 'use', 'functionName')
-      t.equal(spanEvent.sequence, 1, 'sequence')
-      t.equal(spanEvent.depth, 1, 'spanEvent.depth')
-
-      actualBuilder = new MethodDescriptorBuilder('use')
-        .setClassName('Router')
-      const actualMiddleware2MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-      spanEvent = trace.spanBuilder.spanEventList[0]
-      t.equal(actualMiddleware2MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
-      t.equal(actualMiddleware2MethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
-      t.equal(actualMiddleware2MethodDescriptor.className, 'Router', 'className')
-      t.equal(actualMiddleware2MethodDescriptor.methodName, 'use', 'methodName')
-      t.equal(spanEvent.sequence, 0, 'sequence')
-      t.equal(spanEvent.depth, 1, 'spanEvent.depth')
-    })
-
+    traceRoot = agent.currentTraceObject().getTraceRoot()
     res.send('ok router1')
   })
 
@@ -445,6 +407,40 @@ test(`${testName5} Should record middleware`, function (t) {
     })
     t.equal(result1.status, 200)
 
+    const span = await dataSender.waitForSpan(traceRoot)
+    let actualBuilder = new MethodDescriptorBuilder('get')
+      .setClassName('Router')
+    const actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+    let spanEvent = span.spanEventList[2]
+    t.equal(actualMethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+    t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor')
+    t.equal(actualMethodDescriptor.className, 'Router', 'className')
+    t.equal(actualMethodDescriptor.methodName, 'get', 'methodName')
+    t.equal(spanEvent.sequence, 2, 'sequence')
+    t.equal(spanEvent.depth, 1, 'spanEvent.depth')
+
+    actualBuilder = new MethodDescriptorBuilder('use')
+      .setClassName('Router')
+    const actualMiddleware1MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+    spanEvent = span.spanEventList[1]
+    t.equal(actualMiddleware1MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+    t.equal(actualMiddleware1MethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
+    t.equal(actualMiddleware1MethodDescriptor.className, 'Router', 'className')
+    t.equal(actualMiddleware1MethodDescriptor.functionName, 'use', 'functionName')
+    t.equal(spanEvent.sequence, 1, 'sequence')
+    t.equal(spanEvent.depth, 1, 'spanEvent.depth')
+
+    actualBuilder = new MethodDescriptorBuilder('use')
+      .setClassName('Router')
+    const actualMiddleware2MethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
+    spanEvent = span.spanEventList[0]
+    t.equal(actualMiddleware2MethodDescriptor.apiId, spanEvent.apiId, 'apiId')
+    t.equal(actualMiddleware2MethodDescriptor.apiDescriptor, 'Router.use', 'apiDescriptor')
+    t.equal(actualMiddleware2MethodDescriptor.className, 'Router', 'className')
+    t.equal(actualMiddleware2MethodDescriptor.methodName, 'use', 'methodName')
+    t.equal(spanEvent.sequence, 0, 'sequence')
+    t.equal(spanEvent.depth, 1, 'spanEvent.depth')
+
     t.end()
     server.close()
   })
@@ -452,7 +448,7 @@ test(`${testName5} Should record middleware`, function (t) {
 
 const testName6 = 'express6'
 test(`${testName6} Should record each http method`, function (t) {
-  agent.bindHttpWithCallSite()
+  nullDataSenderAgent({ 'trace-location-and-filename-of-call-site': true })
 
   const testName = testName6
 
@@ -501,6 +497,7 @@ test(`${testName6} Should record each http method`, function (t) {
 test('express version check', (t) => {
   const hook = require('../../../lib/instrumentation/module/express')
   const expected = { name: 'module' }
+  const agent = nullDataSenderAgent()
   let actual = hook(agent, '5.0', expected)
   t.equal(actual.name, 'module', 'express version 5.0 test')
 
@@ -510,7 +507,8 @@ test('express version check', (t) => {
 })
 
 test('incoming request by Disable Trace requests', (t) => {
-  agent.bindHttp({ 'sampling': { 'rate': 3 } })
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder({ 'sampling': { 'rate': 3 } }).setDataSender(dataSender).build()
   let actualTraceIdTransactionId = 0
   let actualRequestCount = 0
 
@@ -519,11 +517,15 @@ test('incoming request by Disable Trace requests', (t) => {
   app.get('/', async (req, res) => {
     actualRequestCount++
     const trace = agent.currentTraceObject()
+    rootPathTraces.push(trace)
     const traceRoot = trace.getTraceRoot()
     actualTraceIdTransactionId = traceRoot.transactionId
 
     if (actualRequestCount == 1 || actualRequestCount == 4) {
       t.equal('' + (getTransactionId().sequence - 1), actualTraceIdTransactionId, `traceRoot.transactionId equals transactionIdGenerator.sequence ${traceRoot.transactionId}`)
+    } else {
+      t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
+      t.equal(actualTraceIdTransactionId, '' + (getDisabledId().sequence + 5), 'DisableTrace transaction no updated transactionIdGenerator.sequence')
     }
 
     const result = await axios.get(getServerUrl('/api'), {
@@ -534,24 +536,20 @@ test('incoming request by Disable Trace requests', (t) => {
     t.equal(result.status, 200, 'api request status code is 200')
     t.equal(result.data, 'ok /api get', 'api request data is ok /api get')
     res.send('ok get')
-
-    agent.callbackTraceClose((trace) => {
-      if (actualRequestCount == 1) {
-        t.equal(actualTraceIdTransactionId, trace.getTraceRoot().transactionId, 'transaction id sequence equals transactionIdGenerator.sequence')
-      } else if (actualRequestCount == 4) {
-        t.equal(actualTraceIdTransactionId, trace.getTraceRoot().transactionId, 'transaction id sequence equals transactionIdGenerator.sequence')
-      } else {
-        t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
-        t.equal(actualTraceIdTransactionId, '' + (getDisabledId().sequence + 5), 'DisableTrace transaction no updated transactionIdGenerator.sequence')
-      }
-      rootPathTraces.push(trace)
-    })
   })
 
   const apiRequests = []
   const apiPathTraces = []
   app.get('/api', async (req, res) => {
     apiRequests.push(req)
+    const trace = agent.currentTraceObject()
+    apiPathTraces.push(trace)
+    if (actualRequestCount == 1 || actualRequestCount == 4) {
+      t.equal(actualTraceIdTransactionId, trace.getTraceId().transactionId, 'API transaction id sequence equals transactionIdGenerator.sequence')
+    } else {
+      t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
+      t.equal(actualTraceIdTransactionId, '' + (getDisabledId().sequence + 5), 'API DisableTrace transaction no updated transactionIdGenerator.sequence')
+    }
 
     const result = await axios.get(getServerUrl('/api2'), {
       timeout: 10000,
@@ -561,33 +559,21 @@ test('incoming request by Disable Trace requests', (t) => {
     t.equal(result.status, 200, 'api2 request status code is 200')
     t.equal(result.data, 'ok /api2 get', 'api request data is ok /api2 get')
     res.send('ok /api get')
-
-    agent.callbackTraceClose((trace) => {
-      if (actualRequestCount == 1 || actualRequestCount == 4) {
-        t.equal(actualTraceIdTransactionId, trace.getTraceId().transactionId, 'API transaction id sequence equals transactionIdGenerator.sequence')
-      } else {
-        t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
-        t.equal(actualTraceIdTransactionId, '' + (getDisabledId().sequence + 5), 'API DisableTrace transaction no updated transactionIdGenerator.sequence')
-      }
-      apiPathTraces.push(trace)
-    })
   })
 
   const apiRequests2 = []
   const apiPathTraces2 = []
   app.get('/api2', async (req, res) => {
     apiRequests2.push(req)
+    const trace = agent.currentTraceObject()
+    apiPathTraces2.push(trace)
+    if (actualRequestCount == 1 || actualRequestCount == 4) {
+      t.equal(actualTraceIdTransactionId, trace.getTraceId().transactionId, 'API transaction id sequence equals transactionIdGenerator.sequence')
+    } else {
+      t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
+      t.equal(actualTraceIdTransactionId, '' + (getDisabledId().sequence + 5), 'API DisableTrace transaction no updated transactionIdGenerator.sequence')
+    }
     res.send('ok /api2 get')
-
-    agent.callbackTraceClose((trace) => {
-      if (actualRequestCount == 1 || actualRequestCount == 4) {
-        t.equal(actualTraceIdTransactionId, trace.getTraceId().transactionId, 'API transaction id sequence equals transactionIdGenerator.sequence')
-      } else {
-        t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
-        t.equal(actualTraceIdTransactionId, '' + (getDisabledId().sequence + 5), 'API DisableTrace transaction no updated transactionIdGenerator.sequence')
-      }
-      apiPathTraces2.push(trace)
-    })
   })
 
   const server = app.listen(TEST_ENV.port, async function () {
@@ -599,19 +585,21 @@ test('incoming request by Disable Trace requests', (t) => {
     t.equal(result1.status, 200, 'first / request status code is 200')
 
     let actualTrace = rootPathTraces[0]
-    t.equal(actualTrace.spanBuilder.rpc, '/', 'HTTP Request URI')
-    t.equal(actualTrace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
-    t.equal(actualTrace.spanBuilder.annotations[0].value, 200, 'response status is 200')
+    const rootSpan = await dataSender.waitForSpan(actualTrace.getTraceRoot())
+    t.equal(rootSpan.rpc, '/', 'HTTP Request URI')
+    t.equal(rootSpan.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
+    t.equal(rootSpan.annotations[0].value, 200, 'response status is 200')
 
     let actualApiTrace = apiPathTraces[0]
-    t.equal(actualTrace.spanBuilder.spanId, actualApiTrace.spanBuilder.parentSpanId, 'parent span id equals to root span id')
-    t.equal(actualApiTrace.spanBuilder.rpc, '/api', 'HTTP Request URI')
-    t.equal(actualApiTrace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
-    t.equal(actualApiTrace.spanBuilder.annotations[0].value, 200, 'response status is 200')
+    const apiSpan = await dataSender.waitForSpan(actualApiTrace.getTraceRoot())
+    t.equal(rootSpan.traceRoot.getTraceId().getSpanId(), apiSpan.traceRoot.getTraceId().getParentSpanId(), 'parent span id equals to root span id')
+    t.equal(apiSpan.rpc, '/api', 'HTTP Request URI')
+    t.equal(apiSpan.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code')
+    t.equal(apiSpan.annotations[0].value, 200, 'response status is 200')
 
     let actualApiRequest = apiRequests[0]
     t.equal(actualApiRequest.url, '/api', 'api request url is /api')
-    t.equal(actualApiRequest.headers['pinpoint-host'], actualApiTrace.spanBuilder.endPoint, 'api request pinpoint-host header is localhost:5006')
+    t.equal(actualApiRequest.headers['pinpoint-host'], apiSpan.endPoint, 'api request pinpoint-host header is localhost:5006')
     t.equal(actualApiRequest.headers['pinpoint-flags'], '0', 'api request pinpoint-flags header is 0')
     t.equal(actualApiRequest.headers['pinpoint-sampled'], undefined, 'api request pinpoint-sampled header is s0')
     t.equal(actualApiRequest.headers['pinpoint-pappname'], agent.getConfig().getApplicationName(), 'pinpoint-pappname header is the Config applicationName')
@@ -666,34 +654,34 @@ test('incoming request by Disable Trace requests', (t) => {
 test('express should record handler registered with pattern route', (t) => {
   t.plan(8)
 
-  agent.bindHttp()
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
   const app = new express()
   const PATH = '/users/:userId/books/:bookId'
 
+  let traceRoot
   app.get(PATH, (req, res) => {
-    const { userId, bookId } = req.params
+    traceRoot = agent.currentTraceObject().getTraceRoot()
     res.send('ok pattern')
-
-    agent.callbackTraceClose((trace) => {
-      t.equal(trace.spanBuilder.rpc, `/users/${userId}/books/${bookId}`, 'rpc should capture concrete request path')
-      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code annotation key')
-      t.equal(trace.spanBuilder.annotations[0].value, 200, 'HTTP status code is 200')
-      const traceRoot = trace.spanBuilder.getTraceRoot()
-      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate should capture pattern route')
-      t.equal(traceRoot.getEnricher('uriStats.method'), 'GET', 'httpMethod is GET')
-
-      const md = apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('get').setClassName('Router'))
-      const spanEvent = trace.spanBuilder.spanEventList[0]
-      t.equal(md.apiDescriptor, 'Router.get', 'method descriptor uses Router.get')
-      t.equal(md.apiId, spanEvent.apiId, 'apiId matches span event')
-
-      server.close()
-    })
   })
 
   const server = app.listen(TEST_ENV.port, async () => {
     const result = await axios.get(getServerUrl('/users/42/books/abc'))
     t.equal(result.status, 200, 'pattern route responds 200')
+
+    const span = await dataSender.waitForSpan(traceRoot)
+    t.equal(span.rpc, '/users/42/books/abc', 'rpc should capture concrete request path')
+    t.equal(span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'HTTP status code annotation key')
+    t.equal(span.annotations[0].value, 200, 'HTTP status code is 200')
+    t.equal(span.traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate should capture pattern route')
+    t.equal(span.traceRoot.getEnricher('uriStats.method'), 'GET', 'httpMethod is GET')
+
+    const md = apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('get').setClassName('Router'))
+    const spanEvent = span.spanEventList[0]
+    t.equal(md.apiDescriptor, 'Router.get', 'method descriptor uses Router.get')
+    t.equal(md.apiId, spanEvent.apiId, 'apiId matches span event')
+
+    server.close()
   })
 })
 
@@ -732,108 +720,82 @@ test('express with error analysis disabled responds to a throwing handler and re
 test('express should disable uriTemplate/httpMethod enrichment and use null repository when isUriStatsEnabled is false', (t) => {
   t.plan(5)
 
-  agent.bindHttp({
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder({
     "features": {
       "uriStats": undefined
     }
-  })
+  }).setDataSender(dataSender).build()
 
   const app = new express()
   const PATH = '/uri-stats-disabled/:orderId'
 
-  let server
+  let traceRoot
   app.get(PATH, (req, res) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
     res.send('ok uri off')
-    agent.callbackTraceClose((trace) => {
-      const traceRoot = trace.spanBuilder.getTraceRoot()
-      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), undefined, 'uriTemplate should be undefined when uriStats is disabled')
-      t.equal(traceRoot.getEnricher('uriStats.method'), undefined, 'httpMethod should be undefined when uriStats is disabled')
-      t.equal(getUriStatsRepository(), UriStatsRepositoryBuilder.nullObject, 'UriStatsRepository should be nullObject when uriStats is disabled')
-      server.close()
-    })
   })
 
-  server = app.listen(TEST_ENV.port, async () => {
+  const server = app.listen(TEST_ENV.port, async () => {
     const result = await axios.get(getServerUrl('/uri-stats-disabled/123'))
     t.equal(result.status, 200, 'request responds 200')
     t.equal(result.data, 'ok uri off', 'response data is ok uri off')
+
+    const span = await dataSender.waitForSpan(traceRoot)
+    t.equal(span.traceRoot.getEnricher('uriStats.uriTemplate'), undefined, 'uriTemplate should be undefined when uriStats is disabled')
+    t.equal(span.traceRoot.getEnricher('uriStats.method'), undefined, 'httpMethod should be undefined when uriStats is disabled')
+    t.equal(getUriStatsRepository(agent.getTraceContext()), UriStatsRepositoryBuilder.nullObject, 'UriStatsRepository should be nullObject when uriStats is disabled')
+    server.close()
   })
 })
 
 test('express should keep uriTemplate but skip httpMethod when isUriStatsHttpMethodEnabled is false', (t) => {
   t.plan(5)
 
-  agent.bindHttp({
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder({
     "features": {
       "uriStats": {
         "httpMethod": false
       }
     }
-  })
+  }).setDataSender(dataSender).build()
 
   const app = new express()
   const PATH = '/uri-stats-method-disabled/:orderId'
 
-  let server
+  let traceRoot
   app.get(PATH, (req, res) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
     res.send('ok uri method off')
-    agent.callbackTraceClose((trace) => {
-      const traceRoot = trace.spanBuilder.getTraceRoot()
-      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate recorded when uri stats enabled')
-      t.equal(traceRoot.getEnricher('uriStats.method'), undefined, 'httpMethod not recorded when httpMethod flag disabled')
-      t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'status code annotation exists')
-      server.close()
-    })
   })
 
-  server = app.listen(TEST_ENV.port, async () => {
+  const server = app.listen(TEST_ENV.port, async () => {
     const result = await axios.get(getServerUrl('/uri-stats-method-disabled/999'))
     t.equal(result.status, 200, 'request responds 200')
     t.equal(result.data, 'ok uri method off', 'response data is ok uri method off')
+
+    const span = await dataSender.waitForSpan(traceRoot)
+    t.equal(span.traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'uriTemplate recorded when uri stats enabled')
+    t.equal(span.traceRoot.getEnricher('uriStats.method'), undefined, 'httpMethod not recorded when httpMethod flag disabled')
+    t.equal(span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.code, 'status code annotation exists')
+    server.close()
   })
 })
 
 test('Should aggregate URI stats in UriStatsRepository', function (t) {
-  agent.bindHttp()
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
   const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/integration/uri-stats'
   const app = new express()
-  let resolveTraceClosed
-  const traceClosed = new Promise((resolve) => {
-    resolveTraceClosed = resolve
-  })
-
+  let traceRoot
   app.get(PATH, (req, res) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
     res.send('ok stats')
-
-    agent.callbackTraceClose((trace) => {
-      setImmediate(() => {
-        const repository = getUriStatsRepository()
-
-        t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
-
-        const now = DateNow.now()
-        const timeWindow = 30000
-        const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
-
-        const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
-        t.ok(snapshot, 'Snapshot exists')
-
-        if (snapshot) {
-          const expectedKey = `GET ${PATH}`
-          const entry = snapshot.dataMap.get(expectedKey)
-
-          t.ok(entry, `Entry for ${expectedKey} exists`)
-          if (entry) {
-            t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
-          }
-        }
-        resolveTraceClosed()
-      })
-    })
   })
 
   const server = app.listen(TEST_ENV.port, async () => {
@@ -843,7 +805,27 @@ test('Should aggregate URI stats in UriStatsRepository', function (t) {
         httpAgent: new http.Agent({ keepAlive: false }),
         httpsAgent: new https.Agent({ keepAlive: false }),
       })
-      await traceClosed
+      await dataSender.waitForSpan(traceRoot)
+      const repository = getUriStatsRepository(agent.getTraceContext())
+
+      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+
+      const now = DateNow.now()
+      const timeWindow = 30000
+      const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+
+      const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+      t.ok(snapshot, 'Snapshot exists')
+
+      if (snapshot) {
+        const expectedKey = `GET ${PATH}`
+        const entry = snapshot.dataMap.get(expectedKey)
+
+        t.ok(entry, `Entry for ${expectedKey} exists`)
+        if (entry) {
+          t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
+        }
+      }
     } catch (e) {
       t.fail(e)
     } finally {
@@ -854,52 +836,25 @@ test('Should aggregate URI stats in UriStatsRepository', function (t) {
 })
 
 test('Should aggregate URI stats without HTTP method when disabled in config', function (t) {
-  agent.bindHttp({
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder({
     features: {
       uriStats: {
         httpMethod: false,
         capacity: 1000
       }
     }
-  })
+  }).setDataSender(dataSender).build()
 
   const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/integration/uri-stats/no-method'
   const app = new express()
-  let resolveTraceClosed
-  const traceClosed = new Promise((resolve) => {
-    resolveTraceClosed = resolve
-  })
-
+  let traceRoot
   app.get(PATH, (req, res) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
     res.send('ok stats no method')
-
-    agent.callbackTraceClose((trace) => {
-      setImmediate(() => {
-        const repository = getUriStatsRepository()
-
-        t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
-
-        const now = DateNow.now()
-        const timeWindow = 30000
-        const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
-
-        const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
-        t.ok(snapshot, 'Snapshot exists')
-
-        // When httpMethod is disabled, the key should be just the PATH
-        const expectedKey = PATH
-        const entry = snapshot.dataMap.get(expectedKey)
-
-        t.ok(entry, `Entry for ${expectedKey} exists`)
-        if (entry) {
-          t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
-        }
-        resolveTraceClosed()
-      })
-    })
   })
 
   const server = app.listen(TEST_ENV.port, async () => {
@@ -909,7 +864,26 @@ test('Should aggregate URI stats without HTTP method when disabled in config', f
         httpAgent: new http.Agent({ keepAlive: false }),
         httpsAgent: new https.Agent({ keepAlive: false }),
       })
-      await traceClosed
+      await dataSender.waitForSpan(traceRoot)
+      const repository = getUriStatsRepository(agent.getTraceContext())
+
+      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+
+      const now = DateNow.now()
+      const timeWindow = 30000
+      const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+
+      const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+      t.ok(snapshot, 'Snapshot exists')
+
+      // When httpMethod is disabled, the key should be just the PATH
+      const expectedKey = PATH
+      const entry = snapshot.dataMap.get(expectedKey)
+
+      t.ok(entry, `Entry for ${expectedKey} exists`)
+      if (entry) {
+        t.equal(entry.totalHistogram.count, 1, 'Request counted in histogram')
+      }
     } catch (e) {
       t.fail(e)
     } finally {
@@ -920,7 +894,7 @@ test('Should aggregate URI stats without HTTP method when disabled in config', f
 })
 
 test('Should aggregate URI stats for DisableTrace in Express', function (t) {
-  agent.bindHttp({
+  const agent = nullDataSenderAgent({
     sampling: { enable: false },
     features: {
       uriStats: {
@@ -935,37 +909,10 @@ test('Should aggregate URI stats for DisableTrace in Express', function (t) {
 
   const PATH = '/integration/uri-stats/disable-trace'
   const app = new express()
-  let resolveTraceClosed
-  const traceClosed = new Promise((resolve) => {
-    resolveTraceClosed = resolve
-  })
-
+  let traceCompleted
   app.get(PATH, (req, res) => {
+    traceCompleted = new Promise(resolve => finished(res, resolve))
     res.send('ok stats disable trace')
-
-    agent.callbackTraceClose(() => {
-      setImmediate(() => {
-        const repository = getUriStatsRepository()
-
-        t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
-
-        const now = DateNow.now()
-        const timeWindow = 30000
-        const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
-
-        const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
-        t.ok(snapshot, 'Snapshot exists')
-
-        const expectedKey = PATH
-        const entry = snapshot.dataMap.get(expectedKey)
-
-        t.ok(entry, `Entry for ${expectedKey} exists`)
-        if (entry) {
-          t.equal(entry.totalHistogram.count, 1, 'DisableTrace request counted in histogram')
-        }
-        resolveTraceClosed()
-      })
-    })
   })
 
   const server = app.listen(TEST_ENV.port, async () => {
@@ -975,7 +922,25 @@ test('Should aggregate URI stats for DisableTrace in Express', function (t) {
         httpAgent: new http.Agent({ keepAlive: false }),
         httpsAgent: new https.Agent({ keepAlive: false }),
       })
-      await traceClosed
+      await traceCompleted
+      const repository = getUriStatsRepository(agent.getTraceContext())
+
+      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+
+      const now = DateNow.now()
+      const timeWindow = 30000
+      const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+
+      const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+      t.ok(snapshot, 'Snapshot exists')
+
+      const expectedKey = PATH
+      const entry = snapshot.dataMap.get(expectedKey)
+
+      t.ok(entry, `Entry for ${expectedKey} exists`)
+      if (entry) {
+        t.equal(entry.totalHistogram.count, 1, 'DisableTrace request counted in histogram')
+      }
     } catch (e) {
       t.fail(e)
     } finally {
@@ -1067,7 +1032,7 @@ test('Functional Test: requestExceptionMetaData should deliver converted excepti
   })).addAdaptor(new SpanAdaptor())
 
   grpcDataSenderBuilder.build().then((grpcDataSender) => {
-    agent.bindHttp(grpcDataSender)
+    new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
 
     const app = new express()
     app.get('/exception/unhandled', function (req, res, next) {
@@ -1140,7 +1105,7 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
   })).addAdaptor(new SpanAdaptor())
 
   grpcDataSenderBuilder.build().then((grpcDataSender) => {
-    agent.bindHttp(grpcDataSender)
+    new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
 
     const app = new express()
     app.get('/exception/cause-chain', function (req, res, next) {
@@ -1199,7 +1164,7 @@ test('Functional Test: SendSpan with success and failure', (t) => {
   })).addAdaptor(new MetadataAdaptor())
 
   grpcDataSenderBuilder.build().then((grpcDataSender) => {
-    agent.bindHttp(grpcDataSender)
+    const agent = new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
 
     const app = new express()
     const successPath = '/functional/success'
@@ -1256,7 +1221,7 @@ test('Functional Test: SendSpan with success and failure', (t) => {
         await axios.get('http://localhost:' + serverPort + failPath + '?delay=150')
       } catch (e) { }
 
-      const repository = getUriStatsRepository()
+      const repository = getUriStatsRepository(agent.getTraceContext())
       repository.timeWindow = 1000
       const monitor = new UriStatsMonitor(new DataSender(grpcDataSender.config, grpcDataSender), repository)
       monitor.start()
@@ -1369,27 +1334,24 @@ test('Functional Test: SendSpan with success and failure', (t) => {
 })
 
 test('Express: Should record request with custom uri template when configured', function (t) {
-  agent.bindHttp({
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder({
     features: {
       uriStats: {
         useUserInput: true
       }
     }
-  })
+  }).setDataSender(dataSender).build()
 
   const app = new express()
   const PATH = '/custom-uri-merge-test'
 
+  let traceRoot
   app.get(PATH, async (req, res) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
     // Simulate user input for uri template
     req['pinpoint.metric.uri-template'] = '/user/input/uri/merged'
     res.send('ok get merged')
-
-    agent.callbackTraceClose((trace) => {
-      const traceRoot = trace.spanBuilder.getTraceRoot()
-      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), '/user/input/uri/merged', 'Uri template match from merged test')
-      t.end()
-    })
   })
 
   // Start server on a different port to avoid conflict
@@ -1399,17 +1361,19 @@ test('Express: Should record request with custom uri template when configured', 
   const server = app.listen(port, async () => {
     try {
       await axios.get(getServerUrl(PATH))
+      const span = await dataSender.waitForSpan(traceRoot)
+      t.equal(span.traceRoot.getEnricher('uriStats.uriTemplate'), '/user/input/uri/merged', 'Uri template match from merged test')
     } catch (error) {
       t.fail(error.message)
-      t.end()
     } finally {
       server.close()
+      t.end()
     }
   })
 })
 
 test('Should count failure in URI stats for DisableTrace in Express', function (t) {
-  agent.bindHttp({
+  const agent = nullDataSenderAgent({
     sampling: { enable: false },
     features: {
       uriStats: {
@@ -1424,37 +1388,9 @@ test('Should count failure in URI stats for DisableTrace in Express', function (
 
   const PATH = '/integration/uri-stats/disable-trace-failure'
   const app = new express()
-  let resolveTraceClosed
-  const traceClosed = new Promise((resolve) => {
-    resolveTraceClosed = resolve
-  })
-
+  let traceCompleted
   app.get(PATH, function (req, res, next) {
-    agent.callbackTraceClose(() => {
-      setImmediate(() => {
-        const repository = getUriStatsRepository()
-
-        t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
-
-        const now = DateNow.now()
-        const timeWindow = 30000
-        const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
-
-        const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
-        t.ok(snapshot, 'Snapshot exists')
-
-        const expectedKey = PATH
-        const entry = snapshot.dataMap.get(expectedKey)
-
-        t.ok(entry, `Entry for ${expectedKey} exists`)
-        if (entry) {
-          t.equal(entry.totalHistogram.count, 1, 'DisableTrace failure request counted in total histogram')
-          t.equal(entry.failedHistogram.count, 1, 'DisableTrace failure request counted in failed histogram')
-        }
-
-        resolveTraceClosed()
-      })
-    })
+    traceCompleted = new Promise(resolve => finished(res, resolve))
     next(new Error('disable trace failure test'))
   })
   app.use(function (err, req, res, next) {
@@ -1469,7 +1405,26 @@ test('Should count failure in URI stats for DisableTrace in Express', function (
         httpAgent: new http.Agent({ keepAlive: false }),
         httpsAgent: new https.Agent({ keepAlive: false }),
       })
-      await traceClosed
+      await traceCompleted
+      const repository = getUriStatsRepository(agent.getTraceContext())
+
+      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+
+      const now = DateNow.now()
+      const timeWindow = 30000
+      const baseTimestamp = Math.floor(now / timeWindow) * timeWindow
+
+      const snapshot = repository.snapshotManager.getCurrent(baseTimestamp)
+      t.ok(snapshot, 'Snapshot exists')
+
+      const expectedKey = PATH
+      const entry = snapshot.dataMap.get(expectedKey)
+
+      t.ok(entry, `Entry for ${expectedKey} exists`)
+      if (entry) {
+        t.equal(entry.totalHistogram.count, 1, 'DisableTrace failure request counted in total histogram')
+        t.equal(entry.failedHistogram.count, 1, 'DisableTrace failure request counted in failed histogram')
+      }
     } catch (e) {
       t.fail(e)
     } finally {
@@ -1480,26 +1435,23 @@ test('Should count failure in URI stats for DisableTrace in Express', function (
 })
 
 test('Express: Should not override uri template from user input when useUserInput is false', function (t) {
-  agent.bindHttp({
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder({
     features: {
       uriStats: {
         useUserInput: false
       }
     }
-  })
+  }).setDataSender(dataSender).build()
 
   const app = new express()
   const PATH = '/custom-uri-no-override'
 
+  let traceRoot
   app.get(PATH, async (req, res) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
     req['pinpoint.metric.uri-template'] = '/user/input/should-not-override'
     res.send('ok no override')
-
-    agent.callbackTraceClose((trace) => {
-      const traceRoot = trace.spanBuilder.getTraceRoot()
-      t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'Route template should be preserved when useUserInput is false')
-      t.end()
-    })
   })
 
   const port = TEST_ENV.port + 2
@@ -1508,17 +1460,20 @@ test('Express: Should not override uri template from user input when useUserInpu
   const server = app.listen(port, async () => {
     try {
       await axios.get(getServerUrl(PATH))
+      const span = await dataSender.waitForSpan(traceRoot)
+      t.equal(span.traceRoot.getEnricher('uriStats.uriTemplate'), PATH, 'Route template should be preserved when useUserInput is false')
     } catch (error) {
       t.fail(error.message)
-      t.end()
     } finally {
       server.close()
+      t.end()
     }
   })
 })
 
 test('Express: Should not mark a client disconnect before the response as an error', function (t) {
-  agent.bindHttp()
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
   const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
   const DateNow = require('../../../lib/support/date-now')
@@ -1527,7 +1482,7 @@ test('Express: Should not mark a client disconnect before the response as an err
   const app = new express()
   let client
   app.get(PATH, function (req, res) {
-    agent.callbackTraceClose(assertSuccess)
+    dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then(assertSuccess)
     res.on('close', () => res.send('ok'))
     client.destroy()
   })
@@ -1536,32 +1491,31 @@ test('Express: Should not mark a client disconnect before the response as an err
     client = sendRequestOverRawSocket(server.address().port, PATH)
   })
 
-  function assertSuccess(trace) {
-    t.equal(trace.spanBuilder.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code annotation is recorded')
-    t.equal(trace.spanBuilder.annotations[0].value, 200, 'HTTP status code is 200')
-    t.equal(trace.getTraceRoot().getShared().getErrorCode(), undefined, 'client disconnect does not mark the error code')
+  function assertSuccess(span) {
+    t.equal(span.annotations[0].key, annotationKey.HTTP_STATUS_CODE.getCode(), 'HTTP status code annotation is recorded')
+    t.equal(span.annotations[0].value, 200, 'HTTP status code is 200')
+    t.equal(span.traceRoot.getShared().getErrorCode(), undefined, 'client disconnect does not mark the error code')
 
-    setImmediate(() => {
-      const repository = getUriStatsRepository()
-      t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
+    const repository = getUriStatsRepository(agent.getTraceContext())
+    t.ok(repository instanceof UriStatsRepository, 'Repository is initialized')
 
-      const timeWindow = 30000
-      const baseTimestamp = Math.floor(DateNow.now() / timeWindow) * timeWindow
-      const entry = repository.snapshotManager.getCurrent(baseTimestamp)?.dataMap.get(`GET ${PATH}`)
-      t.ok(entry, `Entry for GET ${PATH} exists`)
-      if (entry) {
-        t.equal(entry.totalHistogram.count, 1, 'client disconnect counted in total histogram')
-        t.equal(entry.failedHistogram.count, 0, 'client disconnect not counted in failed histogram')
-      }
+    const timeWindow = 30000
+    const baseTimestamp = Math.floor(DateNow.now() / timeWindow) * timeWindow
+    const entry = repository.snapshotManager.getCurrent(baseTimestamp)?.dataMap.get(`GET ${PATH}`)
+    t.ok(entry, `Entry for GET ${PATH} exists`)
+    if (entry) {
+      t.equal(entry.totalHistogram.count, 1, 'client disconnect counted in total histogram')
+      t.equal(entry.failedHistogram.count, 0, 'client disconnect not counted in failed histogram')
+    }
 
-      server.close()
-      t.end()
-    })
+    server.close()
+    t.end()
   }
 })
 
 test('Express: v4 serviceName is sent as Pinpoint-pServiceName and an inbound one is recorded as parentServiceName', function (t) {
-  agent.bindHttp({ serviceName: 'express.service' })
+  const dataSender = new RecordingDataSender()
+  new ProcessAgentBuilder({ serviceName: 'express.service' }).setDataSender(dataSender).build()
 
   const PATH = '/parent-service-name'
   const OUTGOING_PATH = '/parent-service-name/outgoing'
@@ -1582,11 +1536,11 @@ test('Express: v4 serviceName is sent as Pinpoint-pServiceName and an inbound on
 
       t.equal(outgoingRequestHeaders['pinpoint-pservicename'], 'express.service', 'outgoing request has Pinpoint-pServiceName header of the Config serviceName')
 
-      const span = agent.dataSender.spans().find(span => span.rpc === PATH)
+      const span = dataSender.spans().find(span => span.rpc === PATH)
       t.equal(span.parentServiceName, 'parent.service', 'span parentServiceName is the inbound Pinpoint-pServiceName')
       t.equal(span.toProtocolBuffer().getSpan().getAcceptevent().getParentinfo().getParentservicename(), 'parent.service', 'PParentInfo.parentServiceName is the inbound Pinpoint-pServiceName')
 
-      const outgoingSpan = agent.dataSender.spans().find(span => span.rpc === OUTGOING_PATH)
+      const outgoingSpan = dataSender.spans().find(span => span.rpc === OUTGOING_PATH)
       t.equal(outgoingSpan.parentServiceName, 'express.service', 'next hop span parentServiceName is this agent serviceName')
     } catch (error) {
       t.fail(error.stack)
@@ -1598,7 +1552,8 @@ test('Express: v4 serviceName is sent as Pinpoint-pServiceName and an inbound on
 })
 
 test('Express: v3 sends no Pinpoint-pServiceName and an inbound request without it leaves parentServiceName unset', function (t) {
-  agent.bindHttp({ serviceName: 'ignored.service', collector: { ip: '127.0.0.1', spanPort: -1, statPort: -1, tcpPort: -1, protocolVersion: 'v3' } })
+  const dataSender = new RecordingDataSender()
+  new ProcessAgentBuilder({ serviceName: 'ignored.service', collector: { ip: '127.0.0.1', spanPort: -1, statPort: -1, tcpPort: -1, protocolVersion: 'v3' } }).setDataSender(dataSender).build()
 
   const PATH = '/parent-service-name'
   const OUTGOING_PATH = '/parent-service-name/outgoing'
@@ -1620,7 +1575,7 @@ test('Express: v3 sends no Pinpoint-pServiceName and an inbound request without 
       t.equal(outgoingRequestHeaders['pinpoint-pappname'], 'test.application.name', 'outgoing request has Pinpoint-pAppName header')
       t.equal(outgoingRequestHeaders['pinpoint-pservicename'], undefined, 'v3 outgoing request has no Pinpoint-pServiceName header even with serviceName set')
 
-      const span = agent.dataSender.spans().find(span => span.rpc === PATH)
+      const span = dataSender.spans().find(span => span.rpc === PATH)
       t.equal(span.parentApplicationName, 'parent.application', 'span parentApplicationName is the inbound Pinpoint-pAppName')
       t.equal(span.parentServiceName, undefined, 'span parentServiceName is unset')
       t.equal(span.toProtocolBuffer().getSpan().getAcceptevent().getParentinfo().getParentservicename(), '', 'PParentInfo.parentServiceName is unset')
@@ -1635,7 +1590,8 @@ test('Express: v3 sends no Pinpoint-pServiceName and an inbound request without 
 
 test('Express: application service type is NODE 1400 even with PINPOINT_SERVICE_TYPE and json applicationServiceType', function (t) {
   process.env.PINPOINT_SERVICE_TYPE = '1600'
-  agent.bindHttp({ applicationServiceType: 1500 })
+  const dataSender = new RecordingDataSender()
+  new ProcessAgentBuilder({ applicationServiceType: 1500 }).setDataSender(dataSender).build()
   delete process.env.PINPOINT_SERVICE_TYPE
 
   const PATH = '/application-service-type'
@@ -1657,10 +1613,10 @@ test('Express: application service type is NODE 1400 even with PINPOINT_SERVICE_
 
       t.equal(outgoingRequestHeaders['pinpoint-papptype'], '1400', 'outgoing request has Pinpoint-pAppType header of NODE 1400')
 
-      const span = agent.dataSender.spans().find(span => span.rpc === PATH)
+      const span = dataSender.spans().find(span => span.rpc === PATH)
       t.equal(span.toProtocolBuffer().getSpan().getApplicationservicetype(), 1400, 'PSpan.applicationServiceType is NODE 1400')
 
-      const outgoingSpan = agent.dataSender.spans().find(span => span.rpc === OUTGOING_PATH)
+      const outgoingSpan = dataSender.spans().find(span => span.rpc === OUTGOING_PATH)
       t.equal(outgoingSpan.parentApplicationType, 1400, 'next hop span parentApplicationType is NODE 1400')
     } catch (error) {
       t.fail(error.stack)
@@ -1686,7 +1642,7 @@ test('Express: AgentStat sends the transaction count and response time of comple
     .addAdaptor(new MetadataAdaptor())
 
   grpcDataSenderBuilder.build().then((grpcDataSender) => {
-    agent.bindHttp(grpcDataSender)
+    const agent = new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
     const agentStatsMonitor = new AgentStatsMonitor(grpcDataSender, agent.getConfig().getAgentId(), agent.agentStartTime)
 
     const app = new express()

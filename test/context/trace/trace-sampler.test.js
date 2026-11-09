@@ -7,7 +7,9 @@
 'use strict'
 
 const test = require('tape')
-const agent = require('../../support/agent-singleton-mock')
+const { ProcessAgentBuilder } = require('../../support/process-agent-builder')
+const { dataSenderNullObject } = require('../../support/data-sender-null-object')
+const agent = new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
 const axios = require('axios')
 const express = require('express')
 const http = require('http')
@@ -15,11 +17,11 @@ const https = require('https')
 
 test('exclusion URL sampling test', (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = '/healthcheck,/metrics'
-    agent.bindHttp()
-    t.deepEqual(agent.traceContext.traceSampler.pathMatcher.patterns, ["/healthcheck", "/metrics"])
-    let state = agent.traceContext.traceSampler.newState('/healthcheck')
+    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
+    t.deepEqual(agent.getTraceContext().traceSampler.pathMatcher.patterns, ["/healthcheck", "/metrics"])
+    let state = agent.getTraceContext().traceSampler.newState('/healthcheck')
     t.equal(state.isSampled(), false, 'isSampled is false')
-    state = agent.traceContext.traceSampler.newState('/metrics')
+    state = agent.getTraceContext().traceSampler.newState('/metrics')
     t.equal(state.isSampled(), false, 'isSampled is false')
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
     t.end()
@@ -27,7 +29,7 @@ test('exclusion URL sampling test', (t) => {
 
 test('outgoing request when canSample true', async (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check"
-    agent.bindHttp()
+    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
     await outgoingRequest(t, "/heath_check", false)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 
@@ -36,7 +38,7 @@ test('outgoing request when canSample true', async (t) => {
 
 test('when pattern match is false, sampling is false', async (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**"
-    agent.bindHttp()
+    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
     await outgoingRequest(t, "/heath_check", true)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 
@@ -45,30 +47,30 @@ test('when pattern match is false, sampling is false', async (t) => {
 
 test('when pattern match with cache size on ENV environment, sampling test with cache hit', async (t) => {
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
-    agent.bindHttp()
+    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
     await outgoingRequest(t, "/test", false)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/tes?"
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
-    agent.bindHttp()
+    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
     await outgoingRequest(t, "/test", false)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
-    agent.bindHttp()
+    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
     await outgoingRequest(t, "/test", true)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/test?"
-    agent.bindHttp()
+    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
     await outgoingRequest(t, "/test", true)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
 
     process.env['PINPOINT_TRACE_EXCLUSION_URL_PATTERN'] = "/heath_check?/**,/test?"
     process.env['PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE'] = "0"
-    agent.bindHttp()
+    new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
     await outgoingRequest(t, "/test", true)
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_PATTERN
     delete process.env.PINPOINT_TRACE_EXCLUSION_URL_CACHE_SIZE
@@ -77,61 +79,51 @@ test('when pattern match with cache size on ENV environment, sampling test with 
 })
 
 test('when pattern match with cache size form JSON, sampling test with cache hit', async (t) => {
-    let config = require('../../fixtures/pinpoint-config-test.json')
-    config = Object.assign({}, config, {
-        "features": {
-            "traceExclusionUrl": {
-                "patterns": ["/heath_check?/**", "/tes?"]
+    new ProcessAgentBuilder({
+        features: {
+            traceExclusionUrl: {
+                patterns: ['/heath_check?/**', '/tes?']
             }
         }
-    })
-    agent.bindHttp(config)
+    }).setDataSender(dataSenderNullObject).build()
     await outgoingRequest(t, "/test", false)
 
-    config = require('../../fixtures/pinpoint-config-test.json')
-    config = Object.assign({}, config, {
-        "features": {
-            "traceExclusionUrl": {
-                "patterns": ["/heath_check?/**", "/tes?"],
-                "cacheSize": 0
+    new ProcessAgentBuilder({
+        features: {
+            traceExclusionUrl: {
+                patterns: ['/heath_check?/**', '/tes?'],
+                cacheSize: 0
             }
         }
-    })
-    agent.bindHttp(config)
+    }).setDataSender(dataSenderNullObject).build()
     await outgoingRequest(t, "/test", false)
 
-    config = require('../../fixtures/pinpoint-config-test.json')
-    config = Object.assign({}, config, {
-        "features": {
-            "traceExclusionUrl": {
-                "cacheSize": 0
+    new ProcessAgentBuilder({
+        features: {
+            traceExclusionUrl: {
+                cacheSize: 0
             }
         }
-    })
-    agent.bindHttp(config)
+    }).setDataSender(dataSenderNullObject).build()
     await outgoingRequest(t, "/test", true)
 
-    config = require('../../fixtures/pinpoint-config-test.json')
-    config = Object.assign({}, config, {
-        "features": {
-            "traceExclusionUrl": {
-                "patterns": ["/heath_check?/**", "/test?"]
+    new ProcessAgentBuilder({
+        features: {
+            traceExclusionUrl: {
+                patterns: ['/heath_check?/**', '/test?']
             }
         }
-    })
-    agent.bindHttp(config)
+    }).setDataSender(dataSenderNullObject).build()
     await outgoingRequest(t, "/test", true)
 
-    config = require('../../fixtures/pinpoint-config-test.json')
-    config = Object.assign({}, config, {
-        "features": {
-            "traceExclusionUrl": {
-                "patterns": ["/heath_check?/**", "/test?"],
-                "cacheSize": 0
+    new ProcessAgentBuilder({
+        features: {
+            traceExclusionUrl: {
+                patterns: ['/heath_check?/**', '/test?'],
+                cacheSize: 0
             }
         }
-    })
-    agent.bindHttp(config)
+    }).setDataSender(dataSenderNullObject).build()
     await outgoingRequest(t, "/test", true)
 
     t.end()

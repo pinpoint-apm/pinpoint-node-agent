@@ -7,22 +7,17 @@
 const test = require('tape')
 
 const ServiceType = require('../../lib/context/service-type')
-const TraceContext = require('../../lib/context/trace-context')
 const defaultPredefinedMethodDescriptorRegistry = require('../../lib/constant/default-predefined-method-descriptor-registry')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
-const agent = require('../support/agent-singleton-mock')
 const TraceIdBuilder = require('../../lib/context/trace/trace-id-builder')
-const { SpanRecorderFactory } = require('../../lib/context/trace/span-recorder-factory')
-const SpanEventRecorderFactory = require('../../lib/context/trace/span-event-recorder-factory')
-const { SqlMetadataService } = require('../../lib/instrumentation/sql/sql-metadata-service')
-const { IntIdParsingResultFactory } = require('../../lib/context/trace/parsing-result-factory')
-const { CompositeTraceCompletionEnricher } = require('../../lib/context/trace/composite-trace-completion-enricher')
+const { ProcessAgentBuilder } = require('../support/process-agent-builder')
+const { dataSenderNullObject } = require('../support/data-sender-null-object')
+const RecordingDataSender = require('../support/recording-data-sender')
 
 test('Should create continued trace and add span info', function (t) {
   t.plan(2)
-  agent.bindHttp()
-
-  const traceContext = new TraceContext(agent.dataSender, agent.getConfig(), new CompositeTraceCompletionEnricher([]), new SpanRecorderFactory(agent.getConfig()), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())), agent.agentStartTime)
+  const agent = new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
+  const traceContext = agent.getTraceContext()
   const traceId = new TraceIdBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '9').build()
   const trace = traceContext.continueTraceObject(traceId)
   localStorage.run(trace, () => {
@@ -38,10 +33,8 @@ test('Should create continued trace and add span info', function (t) {
 
 test('Should begin/end trace block asynchronously', async function (t) {
   t.plan(4)
-  agent.bindHttp()
-
-  // start trace and write span info
-  const traceContext = new TraceContext(agent.dataSender, agent.getConfig(), new CompositeTraceCompletionEnricher([]), new SpanRecorderFactory(agent.getConfig()), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())), agent.agentStartTime)
+  const agent = new ProcessAgentBuilder().setDataSender(dataSenderNullObject).build()
+  const traceContext = agent.getTraceContext()
   const startedTrace = traceContext.newTraceObject('/')
 
   localStorage.run(startedTrace, () => {
@@ -65,17 +58,21 @@ test('Should begin/end trace block asynchronously', async function (t) {
 
     currentTrace.traceBlockEnd(spanEventRecorder)
     t.equal(traceContext.currentTraceObject().callStack.stack.length, 0, "traceBolckEnd callstack length is zero")
+    traceContext.completeTraceObject(startedTrace)
   })
 })
 
 test('Should complete trace ', async function (t) {
-  t.plan(1)
-  agent.bindHttp()
-  const traceContext = new TraceContext(agent.dataSender, agent.getConfig(), new CompositeTraceCompletionEnricher([]), new SpanRecorderFactory(agent.getConfig()), new SpanEventRecorderFactory(new SqlMetadataService(agent.dataSender, new IntIdParsingResultFactory())), agent.agentStartTime)
+  t.plan(2)
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+  const traceContext = agent.getTraceContext()
   const trace = traceContext.newTraceObject('/')
 
   await new Promise(resolve => setTimeout(resolve, 501))
 
   traceContext.completeTraceObject(trace)
-  t.ok(trace.spanRecorder.spanBuilder.elapsedTime > 0)
+  const span = dataSender.findSpan(trace.getTraceRoot())
+  t.ok(span, 'the completed trace sends its span')
+  t.ok(span.elapsedTime >= 500, 'the sent span has the elapsed time of the 501ms wait')
 })

@@ -24,19 +24,23 @@ const { dataSenderNullObject } = require('./data-sender-null-object')
 let processAgent
 let dataSenderInUse
 
-// Tests read the test's sender through what holds it (agent.dataSender.findSpan(traceRoot)),
-// so the sender the process agent keeps forwards every field to the test's sender
-const forwardingDataSender = new Proxy({}, {
-    get(target, property) {
-        return Reflect.get(dataSenderInUse, property)
+const forwardingDataSender = {
+    send(data) {
+        dataSenderInUse.send(data)
     },
-    set(target, property, value) {
-        return Reflect.set(dataSenderInUse, property, value)
+    sendStat(stats) {
+        dataSenderInUse.sendStat(stats)
     },
-    defineProperty(target, property, descriptor) {
-        return Reflect.defineProperty(dataSenderInUse, property, descriptor)
+    sendPing() {
+        dataSenderInUse.sendPing()
     },
-})
+    sendSupportedServicesCommand() {
+        dataSenderInUse.sendSupportedServicesCommand()
+    },
+    close() {
+        dataSenderInUse.close()
+    },
+}
 
 class ProcessAgentBuilder extends AgentBuilder {
     constructor(json = {}) {
@@ -58,7 +62,7 @@ class ProcessAgentBuilder extends AgentBuilder {
     }
 
     // The first build() in the process also starts the agent of the test process, which turns its ModuleHook on,
-    // so a test file that loads an instrumented module calls build() before it requires that module
+    // so a test file that loads an instrumented module calls startAgent() before it requires that module
     build() {
         if (!processAgent) {
             processAgent = startProcessAgent(this.config)

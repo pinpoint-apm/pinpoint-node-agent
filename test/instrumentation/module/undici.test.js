@@ -9,7 +9,6 @@
 const test = require('tape')
 const { ProcessAgentBuilder, startAgent } = require('../../support/process-agent-builder')
 startAgent()
-const { spanMessagesOfCurrentAgent } = require('../../support/collector-span-messages')
 const express = require('express')
 const { TestGrpcDataSenderBuilder, SpanAdaptor, MetadataAdaptor } = require('../../support/test-grpc-data-sender')
 const axios = require('axios')
@@ -23,252 +22,227 @@ const RecordingDataSender = require('../../support/recording-data-sender')
 
 // https://github.com/nodejs/undici
 // The testcontainer calls require('undici') in http-wait-strategy.js
-test('shimming require(undici) cause by require-in-the-middle package', function (t) {
+test('shimming require(undici) cause by require-in-the-middle package', async function (t) {
     const { request } = require('undici')
-    const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder()
-    let dataSender
-    let spanCount = 0
-    let actualTestSpan
-    let actualFetchAPISpan
-    let outgoingRequestParentSpanId
-    grpcDataSenderBuilder.addAdaptor(new SpanAdaptor({
-        sendSpanBatch: function (call, callback) {
-            spanMessagesOfCurrentAgent(call.request).forEach(function (data) {
-                spanCount++
-                t.true(data, 'span.on("data") is not null')
+    const spanAdaptor = new SpanAdaptor()
+    const metadataAdaptor = new MetadataAdaptor()
+    const grpcDataSender = await new TestGrpcDataSenderBuilder()
+        .addAdaptor(spanAdaptor)
+        .addAdaptor(metadataAdaptor)
+        .build()
+    t.teardown(() => {
+        grpcDataSender.close()
+    })
+    const dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
-                if (spanCount === 1) {
-                    const actualOutgoingRequestSpan = data.getSpan()
+    let testTraceRoot
+    let outgoingTraceRoot
+    const app = new express()
+    app.get('/test', async (req, res) => {
+        testTraceRoot = agent.currentTraceObject().getTraceRoot()
+        const { body } = await request('http://localhost:5006/outgoing')
+        const text = await body.text()
+        res.send(text)
+    })
 
-                    const actualTransactionId = actualOutgoingRequestSpan.getTransactionid()
-                    const traceRoot = actualFetchAPISpan.traceRoot
-                    t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), `Outgoing request Span agent id is ${traceRoot.getAgentId()}`)
-                    t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), `Outgoing request Span agent start time is ${traceRoot.getTraceId().getAgentStartTime()}`)
-                    t.equal(actualTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `Outgoing request Span transaction id is ${traceRoot.getTransactionId()}`)
-                    t.equal(actualOutgoingRequestSpan.getSpanid(), traceRoot.getTraceId().getSpanId(), `Outgoing request Span span id is ${traceRoot.getTraceId().getSpanId()}`)
-                    t.equal(actualOutgoingRequestSpan.getParentspanid(), traceRoot.getTraceId().getParentSpanId(), `Outgoing request Span parent span id is ${traceRoot.getTraceId().getParentSpanId()}`)
-                    // https://d2.naver.com/helloworld/1194202
-                    outgoingRequestParentSpanId = actualOutgoingRequestSpan.getParentspanid()
+    app.get('/outgoing', (req, res) => {
+        outgoingTraceRoot = agent.currentTraceObject().getTraceRoot()
+        throw new Error('test')
+    })
 
-                    t.equal(actualOutgoingRequestSpan.getStarttime(), traceRoot.getTraceStartTime(), `Outgoing request Span start time is ${traceRoot.getTraceStartTime()}`)
-                    t.equal(actualOutgoingRequestSpan.getElapsed(), actualFetchAPISpan.elapsedTime, `Outgoing request Span elapsed time is ${actualFetchAPISpan.elapsedTime}`)
-                    const nodeServerApiId = defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor
-                    t.equal(actualOutgoingRequestSpan.getApiid(), nodeServerApiId.apiId, `Outgoing request Span is ${nodeServerApiId.apiId}`)
+    app.use(function (err, req, res, next) {
+        res.status(500).send('Internal Server Error')
+    })
 
-                    t.equal(actualOutgoingRequestSpan.getServicetype(), ServiceType.node.code, 'Outgoing request Span service type is node')
+    const server = app.listen(5006)
+    await new Promise(resolve => server.on('listening', resolve))
+    const result = await axios.get('http://localhost:5006/test', { httpsAgent: new http.Agent({ keepAlive: false }) })
+    t.equal(result.data, 'Internal Server Error', 'response is test')
+    server.close()
 
-                    const actualOutgoingRequestAcceptEvent = actualOutgoingRequestSpan.getAcceptevent()
-                    t.equal(actualOutgoingRequestAcceptEvent.getRpc(), '/outgoing', 'Outgoing request Span rpc is /outgoing')
-                    t.equal(actualOutgoingRequestAcceptEvent.getEndpoint(), 'localhost:5006', 'Outgoing request Span endpoint is localhost:5006')
-                    t.equal(actualOutgoingRequestAcceptEvent.getRemoteaddr(), actualTestSpan.remoteAddress, `Outgoing request Span remote address is ${actualTestSpan.remoteAddress}`)
+    const actualTestSpan = await dataSender.waitForSpan(testTraceRoot)
+    const actualFetchAPISpan = await dataSender.waitForSpan(outgoingTraceRoot)
 
-                    t.equal(actualOutgoingRequestSpan.getFlag(), 0, 'Outgoing request Span flag is 0')
-                    t.equal(actualOutgoingRequestSpan.getErr(), 1, 'Outgoing request Span error is 1')
-                    t.equal(actualOutgoingRequestSpan.getExceptioninfo(), undefined, 'Outgoing request Span exception info is undefined')
-                    t.equal(actualOutgoingRequestSpan.getApplicationservicetype(), ServiceType.node.code, 'Outgoing request Span application service type is node')
-                    t.equal(actualOutgoingRequestSpan.getLoggingtransactioninfo(), 0, 'Outgoing request Span logging transaction info is 0')
+    const actualOutgoingRequestSpan = await spanAdaptor.span(outgoingTraceRoot)
 
-                    const actualOutgoingRequestSpanEvents = actualOutgoingRequestSpan.getSpaneventList()
-                    actualOutgoingRequestSpanEvents.forEach((pSpanEvent, index) => {
-                        const spanEvent = actualFetchAPISpan.spanEventList[index]
-                        t.equal(pSpanEvent.getSequence(), spanEvent.sequence, `Outgoing request Span event sequence is ${spanEvent.sequence}`)
-                        t.equal(pSpanEvent.getDepth(), spanEvent.depth, `Outgoing request Span event depth is ${spanEvent.depth}`)
-                        t.equal(pSpanEvent.getStartelapsed(), spanEvent.startElapsedTime, `Outgoing request Span event start elapsed time is ${spanEvent.startElapsed}`)
-                        t.equal(pSpanEvent.getEndelapsed(), spanEvent.elapsedTime, `Outgoing request Span event end elapsed time is ${spanEvent.elapsedTime}`)
-                        t.equal(pSpanEvent.getServicetype(), spanEvent.serviceType, `Outgoing request Span event service type is ${spanEvent.serviceType}`)
-                        t.equal(pSpanEvent.getApiid(), spanEvent.apiId, `Outgoing request Span event api id is ${spanEvent.apiId}`)
-                        t.equal(pSpanEvent.getAsyncevent(), spanEvent.asyncId?.getAsyncId() ?? 0, `Outgoing request Span event async id is ${spanEvent.asyncId?.getAsyncId() ?? 0}`)
+    const actualOutgoingTransactionId = actualOutgoingRequestSpan.getTransactionid()
+    t.equal(actualOutgoingTransactionId.getAgentid(), outgoingTraceRoot.getAgentId(), `Outgoing request Span agent id is ${outgoingTraceRoot.getAgentId()}`)
+    t.equal(actualOutgoingTransactionId.getAgentstarttime(), outgoingTraceRoot.getTraceId().getAgentStartTime(), `Outgoing request Span agent start time is ${outgoingTraceRoot.getTraceId().getAgentStartTime()}`)
+    t.equal(actualOutgoingTransactionId.getSequence(), outgoingTraceRoot.getTraceId().getTransactionId(), `Outgoing request Span transaction id is ${outgoingTraceRoot.getTransactionId()}`)
+    t.equal(actualOutgoingRequestSpan.getSpanid(), outgoingTraceRoot.getTraceId().getSpanId(), `Outgoing request Span span id is ${outgoingTraceRoot.getTraceId().getSpanId()}`)
+    t.equal(actualOutgoingRequestSpan.getParentspanid(), outgoingTraceRoot.getTraceId().getParentSpanId(), `Outgoing request Span parent span id is ${outgoingTraceRoot.getTraceId().getParentSpanId()}`)
+    // https://d2.naver.com/helloworld/1194202
+    const outgoingRequestParentSpanId = actualOutgoingRequestSpan.getParentspanid()
 
-                        if (index === 1) {
-                            t.equal(pSpanEvent.getExceptioninfo().getIntvalue(), spanEvent.exceptionInfo.intValue, `Outgoing request Span event index=${index} exception info is 1`)
-                            t.equal(pSpanEvent.getExceptioninfo().getStringvalue().getValue(), spanEvent.exceptionInfo.stringValue, `Outgoing request Span event index=${index} exception info `)
-                        }
+    t.equal(actualOutgoingRequestSpan.getStarttime(), outgoingTraceRoot.getTraceStartTime(), `Outgoing request Span start time is ${outgoingTraceRoot.getTraceStartTime()}`)
+    t.equal(actualOutgoingRequestSpan.getElapsed(), actualFetchAPISpan.elapsedTime, `Outgoing request Span elapsed time is ${actualFetchAPISpan.elapsedTime}`)
+    const nodeServerApiId = defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor
+    t.equal(actualOutgoingRequestSpan.getApiid(), nodeServerApiId.apiId, `Outgoing request Span is ${nodeServerApiId.apiId}`)
 
-                        const pMessageEvent = pSpanEvent.getNextevent().getMessageevent()
-                        t.equal(pMessageEvent.getNextspanid(), spanEvent.nextSpanId, `Outgoing request Span event next span id is ${spanEvent.nextSpanId}`)
-                        t.equal(pMessageEvent.getEndpoint(), spanEvent.endPoint ?? '', `Outgoing request Span event endpoint is ${spanEvent.endPoint}`)
-                        t.equal(pMessageEvent.getDestinationid(), spanEvent.destinationId ?? '', `Outgoing request Span event destination id is ${spanEvent.destinationId}`)
+    t.equal(actualOutgoingRequestSpan.getServicetype(), ServiceType.node.code, 'Outgoing request Span service type is node')
 
-                        const pAnnotations = pSpanEvent.getAnnotationList()
-                        pAnnotations.forEach((pAnnotation, index) => {
-                            const annotation = spanEvent.annotations[index]
-                            t.equal(pAnnotation.getKey(), annotation.key, `Outgoing request Span event annotation key is ${annotation.key}`)
-                            const pAnnotationValue = pAnnotation.getValue()
-                            t.equal(pAnnotationValue.getLongvalue(), annotation.value, `Outgoing request Span event annotation value is ${annotation.value}`)
-                        })
-                    })
-                } else if (spanCount === 2) {
-                    const actualPChildTraceByUndici = data.getSpanchunk()
+    const actualOutgoingRequestAcceptEvent = actualOutgoingRequestSpan.getAcceptevent()
+    t.equal(actualOutgoingRequestAcceptEvent.getRpc(), '/outgoing', 'Outgoing request Span rpc is /outgoing')
+    t.equal(actualOutgoingRequestAcceptEvent.getEndpoint(), 'localhost:5006', 'Outgoing request Span endpoint is localhost:5006')
+    t.equal(actualOutgoingRequestAcceptEvent.getRemoteaddr(), actualTestSpan.remoteAddress, `Outgoing request Span remote address is ${actualTestSpan.remoteAddress}`)
 
-                    const actualTransactionId = actualPChildTraceByUndici.getTransactionid()
-                    const traceRoot = actualTestSpan.traceRoot
-                    t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), `child trace by undici agent id is ${traceRoot.getAgentId()}`)
-                    t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), `child trace by undici agent start time is ${traceRoot.getTraceId().getAgentStartTime()}`)
-                    t.equal(actualTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `child trace by undici transaction id is ${traceRoot.getTransactionId()}`)
-                    t.equal(actualPChildTraceByUndici.getSpanid(), traceRoot.getTraceId().getSpanId(), `child trace by undici span id is ${traceRoot.getTraceId().getSpanId()}`)
+    t.equal(actualOutgoingRequestSpan.getFlag(), 0, 'Outgoing request Span flag is 0')
+    t.equal(actualOutgoingRequestSpan.getErr(), 1, 'Outgoing request Span error is 1')
+    t.equal(actualOutgoingRequestSpan.getExceptioninfo(), undefined, 'Outgoing request Span exception info is undefined')
+    t.equal(actualOutgoingRequestSpan.getApplicationservicetype(), ServiceType.node.code, 'Outgoing request Span application service type is node')
+    t.equal(actualOutgoingRequestSpan.getLoggingtransactioninfo(), 0, 'Outgoing request Span logging transaction info is 0')
 
-                    const actualSpanChunk = dataSender.findSpanChunks(traceRoot)[0]
-                    t.equal(actualPChildTraceByUndici.getEndpoint(), actualSpanChunk.endPoint ?? '', `child trace by undici endpoint is ${actualSpanChunk.endPoint}`)
-                    t.equal(actualPChildTraceByUndici.getApplicationservicetype(), actualSpanChunk.applicationServiceType, `child trace by undici application service type is ${actualSpanChunk.applicationServiceType}`)
-                    t.equal(actualPChildTraceByUndici.getKeytime(), actualSpanChunk.keyTime, `child trace by undici key time is ${actualSpanChunk.keyTime}`)
+    const actualOutgoingRequestSpanEvents = actualOutgoingRequestSpan.getSpaneventList()
+    actualOutgoingRequestSpanEvents.forEach((pSpanEvent, index) => {
+        const spanEvent = actualFetchAPISpan.spanEventList[index]
+        t.equal(pSpanEvent.getSequence(), spanEvent.sequence, `Outgoing request Span event sequence is ${spanEvent.sequence}`)
+        t.equal(pSpanEvent.getDepth(), spanEvent.depth, `Outgoing request Span event depth is ${spanEvent.depth}`)
+        t.equal(pSpanEvent.getStartelapsed(), spanEvent.startElapsedTime, `Outgoing request Span event start elapsed time is ${spanEvent.startElapsed}`)
+        t.equal(pSpanEvent.getEndelapsed(), spanEvent.elapsedTime, `Outgoing request Span event end elapsed time is ${spanEvent.elapsedTime}`)
+        t.equal(pSpanEvent.getServicetype(), spanEvent.serviceType, `Outgoing request Span event service type is ${spanEvent.serviceType}`)
+        t.equal(pSpanEvent.getApiid(), spanEvent.apiId, `Outgoing request Span event api id is ${spanEvent.apiId}`)
+        t.equal(pSpanEvent.getAsyncevent(), spanEvent.asyncId?.getAsyncId() ?? 0, `Outgoing request Span event async id is ${spanEvent.asyncId?.getAsyncId() ?? 0}`)
 
-                    const pSpanEvents = actualPChildTraceByUndici.getSpaneventList()
-                    pSpanEvents.forEach((pSpanEvent, index) => {
-                        const spanEvent = actualSpanChunk.spanEventList[index]
-                        t.equal(pSpanEvent.getSequence(), spanEvent.sequence, `child trace by undici span event sequence is ${spanEvent.sequence}`)
-                        t.equal(pSpanEvent.getDepth(), spanEvent.depth, `child trace by undici span event depth is ${spanEvent.depth}`)
-                        t.equal(pSpanEvent.getStartelapsed(), spanEvent.startElapsedTime, `child trace by undici span event start elapsed time is ${spanEvent.startElapsed}`)
-                        t.equal(pSpanEvent.getEndelapsed(), spanEvent.elapsedTime, `child trace by undici span event end elapsed time is ${spanEvent.elapsedTime}`)
-                        t.equal(pSpanEvent.getServicetype(), spanEvent.serviceType, `child trace by undici span event service type is ${spanEvent.serviceType}`)
-                        t.equal(pSpanEvent.getApiid(), spanEvent.apiId, `child trace by undici span event api id is ${spanEvent.apiId}`)
-                        t.equal(pSpanEvent.getAsyncevent(), spanEvent.asyncId?.getAsyncId() ?? 0, `child trace by undici span event async id is ${spanEvent.asyncId?.getAsyncId() ?? 0}`)
-
-                        const pMessageEvent = pSpanEvent.getNextevent().getMessageevent()
-                        t.equal(pMessageEvent.getNextspanid(), spanEvent.nextSpanId, `child trace by undici span event next span id is ${spanEvent.nextSpanId}`)
-                        t.equal(pMessageEvent.getEndpoint(), spanEvent.endPoint ?? '', `child trace by undici span event endpoint is ${spanEvent.endPoint}`)
-                        t.equal(pMessageEvent.getDestinationid(), spanEvent.destinationId ?? '', `child trace by undici span event destination id is ${spanEvent.destinationId}`)
-
-                        const pAnnotations = pSpanEvent.getAnnotationList()
-                        pAnnotations.forEach((pAnnotation, index) => {
-                            const annotation = spanEvent.annotations[index]
-                            t.equal(pAnnotation.getKey(), annotation.key, `child trace by undici span event annotation key is ${annotation.key}`)
-                            const pAnnotationValue = pAnnotation.getValue()
-                            if (annotation.key === annotationKey.HTTP_STATUS_CODE.code) {
-                                t.equal(pAnnotationValue.getIntvalue(), annotation.value, `child trace by undici span event annotation value is ${annotation.value}`)
-                            } else {
-                                t.equal(pAnnotationValue.getStringvalue(), annotation.value, `child trace by undici span event annotation value is ${annotation.value}`)
-                            }
-                        })
-                    })
-                } else if (spanCount === 3) {
-                    const actualPSpan = data.getSpan()
-
-                    const actualTransactionId = actualPSpan.getTransactionid()
-                    const traceRoot = actualTestSpan.traceRoot
-                    t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), `agent id is ${traceRoot.getAgentId()}`)
-                    t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), `agent start time is ${traceRoot.getTraceId().getAgentStartTime()}`)
-                    t.equal(actualTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `transaction id is ${traceRoot.getTransactionId()}`)
-                    t.equal(actualPSpan.getSpanid(), traceRoot.getTraceId().getSpanId(), `span id is ${traceRoot.getTraceId().getSpanId()}`)
-                    t.equal(actualPSpan.getParentspanid(), '-1', `parent span id is ${traceRoot.getTraceId().getParentSpanId()}`)
-                    t.equal(actualPSpan.getSpanid(), outgoingRequestParentSpanId, `The parentSpanId of the outgoing request traceId is the spanId of the /test request ${actualPSpan.getSpanid()}`)
-
-                    t.equal(actualPSpan.getStarttime(), traceRoot.getTraceStartTime(), `start time is ${traceRoot.getTraceStartTime()}`)
-                    t.equal(actualPSpan.getElapsed(), actualTestSpan.elapsedTime, `elapsed time is ${actualTestSpan.elapedTime}`)
-                    const nodeServerApiId = defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor
-                    t.equal(actualPSpan.getApiid(), nodeServerApiId.apiId, `Node process Span is ${nodeServerApiId.apiId}`)
-
-                    // http-request-trace-builder.js record(spanRecorder)
-                    t.equal(actualPSpan.getServicetype(), ServiceType.node.code, 'service type is node')
-
-                    const actualAcceptEvent = actualPSpan.getAcceptevent()
-                    t.equal(actualAcceptEvent.getRpc(), '/test', 'rpc is /test')
-                    t.equal(actualAcceptEvent.getEndpoint(), 'localhost:5006', 'endpoint is localhost:5006')
-                    t.equal(actualAcceptEvent.getRemoteaddr(), actualTestSpan.remoteAddress, `remote address is ${actualTestSpan.remoteAddress}`)
-
-                    t.equal(actualPSpan.getFlag(), 0, 'flag is 0')
-                    t.equal(actualPSpan.getErr(), 0, 'error is 0')
-                    t.equal(actualPSpan.getExceptioninfo(), undefined, 'exception info is undefined')
-                    t.equal(actualPSpan.getApplicationservicetype(), ServiceType.node.code, 'application service type is node')
-                    t.equal(actualPSpan.getLoggingtransactioninfo(), 0, 'logging transaction info is 0')
-
-                    const actualSpanEvents = actualPSpan.getSpaneventList()
-                    actualSpanEvents.forEach((pSpanEvent, index) => {
-                        const spanEvent = actualTestSpan.spanEventList[index]
-                        t.equal(pSpanEvent.getSequence(), spanEvent.sequence, `span event sequence is ${spanEvent.sequence}`)
-                        t.equal(pSpanEvent.getDepth(), spanEvent.depth, `span event depth is ${spanEvent.depth}`)
-                        t.equal(pSpanEvent.getStartelapsed(), spanEvent.startElapsedTime, `span event start elapsed time is ${spanEvent.startElapsed}`)
-                        t.equal(pSpanEvent.getEndelapsed(), spanEvent.elapsedTime, `span event end elapsed time is ${spanEvent.elapsedTime}`)
-                        t.equal(pSpanEvent.getServicetype(), spanEvent.serviceType, `span event service type is ${spanEvent.serviceType}`)
-                        t.equal(pSpanEvent.getApiid(), spanEvent.apiId, `span event api id is ${spanEvent.apiId}`)
-                        t.equal(pSpanEvent.getAsyncevent(), spanEvent.asyncId?.getAsyncId() ?? 0, `span event async id is ${spanEvent.asyncId?.getAsyncId() ?? 0}`)
-
-                        const pMessageEvent = pSpanEvent.getNextevent().getMessageevent()
-                        t.equal(pMessageEvent.getNextspanid(), spanEvent.nextSpanId, `span event next span id is ${spanEvent.nextSpanId}`)
-                        t.equal(pMessageEvent.getEndpoint(), spanEvent.endPoint ?? '', `span event endpoint is ${spanEvent.endPoint}`)
-                        t.equal(pMessageEvent.getDestinationid(), spanEvent.destinationId ?? '', `span event destination id is ${spanEvent.destinationId}`)
-
-                        const pAnnotations = pSpanEvent.getAnnotationList()
-                        pAnnotations.forEach((pAnnotation, index) => {
-                            const annotation = spanEvent.annotations[index]
-                            t.equal(pAnnotation.getKey(), annotation.key, `annotation key is ${annotation.key}`)
-                            const pAnnotationValue = pAnnotation.getValue()
-                            t.equal(pAnnotationValue.getStringvalue(), annotation.value, `annotation value is ${annotation.value}`)
-                        })
-                    })
-                } else {
-                    t.fail('span count is over 3')
-                }
-            })
-            callback(null, new spanMessages.PSpanResultBatch())
-        },
-    }))
-    grpcDataSenderBuilder.addAdaptor(new MetadataAdaptor({
-        requestExceptionMetaData: (call, callback) => {
-            const result = new spanMessages.PResult()
-            callback(null, result)
-
-            const exceptionMetaData = call.request
-            t.equal(exceptionMetaData.getTransactionid().getAgentid(), actualFetchAPISpan.traceRoot.getAgentId(), `ExceptionMetaData agent id is ${actualFetchAPISpan.traceRoot.getAgentId()}`)
-            t.equal(exceptionMetaData.getTransactionid().getAgentstarttime(), actualFetchAPISpan.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData agent start time is ${actualFetchAPISpan.traceRoot.getTraceId().getAgentStartTime()}`)
-            t.equal(exceptionMetaData.getTransactionid().getSequence(), actualFetchAPISpan.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transaction id is ${actualFetchAPISpan.traceRoot.getTraceId().getTransactionId()}`)
-            t.equal(exceptionMetaData.getSpanid(), actualFetchAPISpan.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData span id is ${actualFetchAPISpan.traceRoot.getTraceId().getSpanId()}`)
-            t.equal(exceptionMetaData.getUritemplate(), '/outgoing', 'ExceptionMetaData uri template is /outgoing')
-
-            const exceptionsList = exceptionMetaData.getExceptionsList()
-            t.equal(exceptionsList.length, 1, 'ExceptionMetaData exceptions length is 1')
-            const actualException = exceptionsList[0]
-            const spanEventException = actualFetchAPISpan.spanEventList[1].exception[0]
-            t.equal(actualException.getExceptionclassname(), spanEventException.errorClassName, `ExceptionMetaData exception class name is ${spanEventException.errorClassName}`)
-            t.equal(actualException.getExceptionmessage(), spanEventException.errorMessage, `ExceptionMetaData exception message is ${spanEventException.errorMessage}`)
-            t.equal(actualException.getExceptiondepth(), spanEventException.exceptionDepth, `ExceptionMetaData exception depth is ${spanEventException.exceptionDepth}`)
-            t.equal(actualException.getExceptionid(), spanEventException.exceptionId, `ExceptionMetaData exception id is ${spanEventException.exceptionId}`)
-            const stackTraceElements = actualException.getStacktraceelementList()
-            const spanEventFrameStack = spanEventException.frameStack
-            stackTraceElements.forEach((pStackTraceElement, index) => {
-                const frameStack = spanEventFrameStack[index]
-                t.equal(pStackTraceElement.getClassname(), frameStack.className, `ExceptionMetaData stack trace element class name is ${frameStack.className}`)
-                t.equal(pStackTraceElement.getFilename(), frameStack.fileName, `ExceptionMetaData stack trace element file name is ${frameStack.fileName}`)
-                t.equal(pStackTraceElement.getLinenumber(), frameStack.lineNumber, `ExceptionMetaData stack trace element line number is ${frameStack.lineNumber}`)
-                t.equal(pStackTraceElement.getMethodname(), frameStack.methodName, `ExceptionMetaData stack trace element method name is ${frameStack.methodName}`)
-            })
-            t.end()
+        if (index === 1) {
+            t.equal(pSpanEvent.getExceptioninfo().getIntvalue(), spanEvent.exceptionInfo.intValue, `Outgoing request Span event index=${index} exception info is 1`)
+            t.equal(pSpanEvent.getExceptioninfo().getStringvalue().getValue(), spanEvent.exceptionInfo.stringValue, `Outgoing request Span event index=${index} exception info `)
         }
-    }))
 
-    grpcDataSenderBuilder.build().then((grpcDataSender) => {
-        dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
-        const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
-        t.teardown(() => {
-            grpcDataSender.close()
-        })
+        const pMessageEvent = pSpanEvent.getNextevent().getMessageevent()
+        t.equal(pMessageEvent.getNextspanid(), spanEvent.nextSpanId, `Outgoing request Span event next span id is ${spanEvent.nextSpanId}`)
+        t.equal(pMessageEvent.getEndpoint(), spanEvent.endPoint ?? '', `Outgoing request Span event endpoint is ${spanEvent.endPoint}`)
+        t.equal(pMessageEvent.getDestinationid(), spanEvent.destinationId ?? '', `Outgoing request Span event destination id is ${spanEvent.destinationId}`)
 
-        const app = new express()
-        app.get('/test', async (req, res) => {
-            dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then((span) => {
-                actualTestSpan = span
-            })
-            const { body } = await request('http://localhost:5006/outgoing')
-            const text = await body.text()
-            res.send(text)
-        })
-
-        app.get('/outgoing', (req, res) => {
-            dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then((span) => {
-                actualFetchAPISpan = span
-            })
-            throw new Error('test')
-        })
-
-        app.use(function (err, req, res, next) {
-            res.status(500).send('Internal Server Error')
-        })
-
-        const server = app.listen(5006, async () => {
-            const result = await axios.get('http://localhost:5006/test', { httpsAgent: new http.Agent({ keepAlive: false }) })
-            t.equal(result.data, 'Internal Server Error', 'response is test')
-            server.close()
+        const pAnnotations = pSpanEvent.getAnnotationList()
+        pAnnotations.forEach((pAnnotation, index) => {
+            const annotation = spanEvent.annotations[index]
+            t.equal(pAnnotation.getKey(), annotation.key, `Outgoing request Span event annotation key is ${annotation.key}`)
+            const pAnnotationValue = pAnnotation.getValue()
+            t.equal(pAnnotationValue.getLongvalue(), annotation.value, `Outgoing request Span event annotation value is ${annotation.value}`)
         })
     })
+
+    const actualSpanChunk = dataSender.findSpanChunks(testTraceRoot)[0]
+    const actualPChildTraceByUndici = await spanAdaptor.spanChunk(actualSpanChunk.localAsyncId)
+
+    const actualChildTraceTransactionId = actualPChildTraceByUndici.getTransactionid()
+    t.equal(actualChildTraceTransactionId.getAgentid(), testTraceRoot.getAgentId(), `child trace by undici agent id is ${testTraceRoot.getAgentId()}`)
+    t.equal(actualChildTraceTransactionId.getAgentstarttime(), testTraceRoot.getTraceId().getAgentStartTime(), `child trace by undici agent start time is ${testTraceRoot.getTraceId().getAgentStartTime()}`)
+    t.equal(actualChildTraceTransactionId.getSequence(), testTraceRoot.getTraceId().getTransactionId(), `child trace by undici transaction id is ${testTraceRoot.getTransactionId()}`)
+    t.equal(actualPChildTraceByUndici.getSpanid(), testTraceRoot.getTraceId().getSpanId(), `child trace by undici span id is ${testTraceRoot.getTraceId().getSpanId()}`)
+
+    t.equal(actualPChildTraceByUndici.getEndpoint(), actualSpanChunk.endPoint ?? '', `child trace by undici endpoint is ${actualSpanChunk.endPoint}`)
+    t.equal(actualPChildTraceByUndici.getApplicationservicetype(), actualSpanChunk.applicationServiceType, `child trace by undici application service type is ${actualSpanChunk.applicationServiceType}`)
+    t.equal(actualPChildTraceByUndici.getKeytime(), actualSpanChunk.keyTime, `child trace by undici key time is ${actualSpanChunk.keyTime}`)
+
+    const pSpanEvents = actualPChildTraceByUndici.getSpaneventList()
+    pSpanEvents.forEach((pSpanEvent, index) => {
+        const spanEvent = actualSpanChunk.spanEventList[index]
+        t.equal(pSpanEvent.getSequence(), spanEvent.sequence, `child trace by undici span event sequence is ${spanEvent.sequence}`)
+        t.equal(pSpanEvent.getDepth(), spanEvent.depth, `child trace by undici span event depth is ${spanEvent.depth}`)
+        t.equal(pSpanEvent.getStartelapsed(), spanEvent.startElapsedTime, `child trace by undici span event start elapsed time is ${spanEvent.startElapsed}`)
+        t.equal(pSpanEvent.getEndelapsed(), spanEvent.elapsedTime, `child trace by undici span event end elapsed time is ${spanEvent.elapsedTime}`)
+        t.equal(pSpanEvent.getServicetype(), spanEvent.serviceType, `child trace by undici span event service type is ${spanEvent.serviceType}`)
+        t.equal(pSpanEvent.getApiid(), spanEvent.apiId, `child trace by undici span event api id is ${spanEvent.apiId}`)
+        t.equal(pSpanEvent.getAsyncevent(), spanEvent.asyncId?.getAsyncId() ?? 0, `child trace by undici span event async id is ${spanEvent.asyncId?.getAsyncId() ?? 0}`)
+
+        const pMessageEvent = pSpanEvent.getNextevent().getMessageevent()
+        t.equal(pMessageEvent.getNextspanid(), spanEvent.nextSpanId, `child trace by undici span event next span id is ${spanEvent.nextSpanId}`)
+        t.equal(pMessageEvent.getEndpoint(), spanEvent.endPoint ?? '', `child trace by undici span event endpoint is ${spanEvent.endPoint}`)
+        t.equal(pMessageEvent.getDestinationid(), spanEvent.destinationId ?? '', `child trace by undici span event destination id is ${spanEvent.destinationId}`)
+
+        const pAnnotations = pSpanEvent.getAnnotationList()
+        pAnnotations.forEach((pAnnotation, index) => {
+            const annotation = spanEvent.annotations[index]
+            t.equal(pAnnotation.getKey(), annotation.key, `child trace by undici span event annotation key is ${annotation.key}`)
+            const pAnnotationValue = pAnnotation.getValue()
+            if (annotation.key === annotationKey.HTTP_STATUS_CODE.code) {
+                t.equal(pAnnotationValue.getIntvalue(), annotation.value, `child trace by undici span event annotation value is ${annotation.value}`)
+            } else {
+                t.equal(pAnnotationValue.getStringvalue(), annotation.value, `child trace by undici span event annotation value is ${annotation.value}`)
+            }
+        })
+    })
+
+    const actualPSpan = await spanAdaptor.span(testTraceRoot)
+
+    const actualTestTransactionId = actualPSpan.getTransactionid()
+    t.equal(actualTestTransactionId.getAgentid(), testTraceRoot.getAgentId(), `agent id is ${testTraceRoot.getAgentId()}`)
+    t.equal(actualTestTransactionId.getAgentstarttime(), testTraceRoot.getTraceId().getAgentStartTime(), `agent start time is ${testTraceRoot.getTraceId().getAgentStartTime()}`)
+    t.equal(actualTestTransactionId.getSequence(), testTraceRoot.getTraceId().getTransactionId(), `transaction id is ${testTraceRoot.getTransactionId()}`)
+    t.equal(actualPSpan.getSpanid(), testTraceRoot.getTraceId().getSpanId(), `span id is ${testTraceRoot.getTraceId().getSpanId()}`)
+    t.equal(actualPSpan.getParentspanid(), '-1', `parent span id is ${testTraceRoot.getTraceId().getParentSpanId()}`)
+    t.equal(actualPSpan.getSpanid(), outgoingRequestParentSpanId, `The parentSpanId of the outgoing request traceId is the spanId of the /test request ${actualPSpan.getSpanid()}`)
+
+    t.equal(actualPSpan.getStarttime(), testTraceRoot.getTraceStartTime(), `start time is ${testTraceRoot.getTraceStartTime()}`)
+    t.equal(actualPSpan.getElapsed(), actualTestSpan.elapsedTime, `elapsed time is ${actualTestSpan.elapedTime}`)
+    t.equal(actualPSpan.getApiid(), nodeServerApiId.apiId, `Node process Span is ${nodeServerApiId.apiId}`)
+
+    // http-request-trace-builder.js record(spanRecorder)
+    t.equal(actualPSpan.getServicetype(), ServiceType.node.code, 'service type is node')
+
+    const actualAcceptEvent = actualPSpan.getAcceptevent()
+    t.equal(actualAcceptEvent.getRpc(), '/test', 'rpc is /test')
+    t.equal(actualAcceptEvent.getEndpoint(), 'localhost:5006', 'endpoint is localhost:5006')
+    t.equal(actualAcceptEvent.getRemoteaddr(), actualTestSpan.remoteAddress, `remote address is ${actualTestSpan.remoteAddress}`)
+
+    t.equal(actualPSpan.getFlag(), 0, 'flag is 0')
+    t.equal(actualPSpan.getErr(), 0, 'error is 0')
+    t.equal(actualPSpan.getExceptioninfo(), undefined, 'exception info is undefined')
+    t.equal(actualPSpan.getApplicationservicetype(), ServiceType.node.code, 'application service type is node')
+    t.equal(actualPSpan.getLoggingtransactioninfo(), 0, 'logging transaction info is 0')
+
+    const actualSpanEvents = actualPSpan.getSpaneventList()
+    actualSpanEvents.forEach((pSpanEvent, index) => {
+        const spanEvent = actualTestSpan.spanEventList[index]
+        t.equal(pSpanEvent.getSequence(), spanEvent.sequence, `span event sequence is ${spanEvent.sequence}`)
+        t.equal(pSpanEvent.getDepth(), spanEvent.depth, `span event depth is ${spanEvent.depth}`)
+        t.equal(pSpanEvent.getStartelapsed(), spanEvent.startElapsedTime, `span event start elapsed time is ${spanEvent.startElapsed}`)
+        t.equal(pSpanEvent.getEndelapsed(), spanEvent.elapsedTime, `span event end elapsed time is ${spanEvent.elapsedTime}`)
+        t.equal(pSpanEvent.getServicetype(), spanEvent.serviceType, `span event service type is ${spanEvent.serviceType}`)
+        t.equal(pSpanEvent.getApiid(), spanEvent.apiId, `span event api id is ${spanEvent.apiId}`)
+        t.equal(pSpanEvent.getAsyncevent(), spanEvent.asyncId?.getAsyncId() ?? 0, `span event async id is ${spanEvent.asyncId?.getAsyncId() ?? 0}`)
+
+        const pMessageEvent = pSpanEvent.getNextevent().getMessageevent()
+        t.equal(pMessageEvent.getNextspanid(), spanEvent.nextSpanId, `span event next span id is ${spanEvent.nextSpanId}`)
+        t.equal(pMessageEvent.getEndpoint(), spanEvent.endPoint ?? '', `span event endpoint is ${spanEvent.endPoint}`)
+        t.equal(pMessageEvent.getDestinationid(), spanEvent.destinationId ?? '', `span event destination id is ${spanEvent.destinationId}`)
+
+        const pAnnotations = pSpanEvent.getAnnotationList()
+        pAnnotations.forEach((pAnnotation, index) => {
+            const annotation = spanEvent.annotations[index]
+            t.equal(pAnnotation.getKey(), annotation.key, `annotation key is ${annotation.key}`)
+            const pAnnotationValue = pAnnotation.getValue()
+            t.equal(pAnnotationValue.getStringvalue(), annotation.value, `annotation value is ${annotation.value}`)
+        })
+    })
+
+    const exceptionMetaData = await metadataAdaptor.exceptionMetaData(outgoingTraceRoot)
+    t.equal(exceptionMetaData.getTransactionid().getAgentid(), actualFetchAPISpan.traceRoot.getAgentId(), `ExceptionMetaData agent id is ${actualFetchAPISpan.traceRoot.getAgentId()}`)
+    t.equal(exceptionMetaData.getTransactionid().getAgentstarttime(), actualFetchAPISpan.traceRoot.getTraceId().getAgentStartTime(), `ExceptionMetaData agent start time is ${actualFetchAPISpan.traceRoot.getTraceId().getAgentStartTime()}`)
+    t.equal(exceptionMetaData.getTransactionid().getSequence(), actualFetchAPISpan.traceRoot.getTraceId().getTransactionId(), `ExceptionMetaData transaction id is ${actualFetchAPISpan.traceRoot.getTraceId().getTransactionId()}`)
+    t.equal(exceptionMetaData.getSpanid(), actualFetchAPISpan.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData span id is ${actualFetchAPISpan.traceRoot.getTraceId().getSpanId()}`)
+    t.equal(exceptionMetaData.getUritemplate(), '/outgoing', 'ExceptionMetaData uri template is /outgoing')
+
+    const exceptionsList = exceptionMetaData.getExceptionsList()
+    t.equal(exceptionsList.length, 1, 'ExceptionMetaData exceptions length is 1')
+    const actualException = exceptionsList[0]
+    const spanEventException = actualFetchAPISpan.spanEventList[1].exception[0]
+    t.equal(actualException.getExceptionclassname(), spanEventException.errorClassName, `ExceptionMetaData exception class name is ${spanEventException.errorClassName}`)
+    t.equal(actualException.getExceptionmessage(), spanEventException.errorMessage, `ExceptionMetaData exception message is ${spanEventException.errorMessage}`)
+    t.equal(actualException.getExceptiondepth(), spanEventException.exceptionDepth, `ExceptionMetaData exception depth is ${spanEventException.exceptionDepth}`)
+    t.equal(actualException.getExceptionid(), spanEventException.exceptionId, `ExceptionMetaData exception id is ${spanEventException.exceptionId}`)
+    const stackTraceElements = actualException.getStacktraceelementList()
+    const spanEventFrameStack = spanEventException.frameStack
+    stackTraceElements.forEach((pStackTraceElement, index) => {
+        const frameStack = spanEventFrameStack[index]
+        t.equal(pStackTraceElement.getClassname(), frameStack.className, `ExceptionMetaData stack trace element class name is ${frameStack.className}`)
+        t.equal(pStackTraceElement.getFilename(), frameStack.fileName, `ExceptionMetaData stack trace element file name is ${frameStack.fileName}`)
+        t.equal(pStackTraceElement.getLinenumber(), frameStack.lineNumber, `ExceptionMetaData stack trace element line number is ${frameStack.lineNumber}`)
+        t.equal(pStackTraceElement.getMethodname(), frameStack.methodName, `ExceptionMetaData stack trace element method name is ${frameStack.methodName}`)
+    })
+    t.end()
 })
 
 test('shimming undici: requestExceptionMetaData should deliver error.cause chain', function (t) {
@@ -367,210 +341,189 @@ test('shimming undici: should not collect ExceptionMetaData when errorAnalysis i
 })
 
 // https://nodejs.org/en/learn/getting-started/fetch
-test('shimming udici by global nodejs fetch', function (t) {
-    const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder()
-    let dataSender
-    let spanCount = 0
-    let actualTestSpan
-    let actualFetchAPISpan
-    let outgoingRequestParentSpanId
-    grpcDataSenderBuilder.addAdaptor(new SpanAdaptor({
-        sendSpanBatch: function (call, callback) {
-            spanMessagesOfCurrentAgent(call.request).forEach(function (data) {
-                spanCount++
-                t.true(data, 'span.on("data") is not null')
+test('shimming udici by global nodejs fetch', async function (t) {
+    const spanAdaptor = new SpanAdaptor()
+    const grpcDataSender = await new TestGrpcDataSenderBuilder()
+        .addAdaptor(spanAdaptor)
+        .addAdaptor(new MetadataAdaptor())
+        .build()
+    t.teardown(() => {
+        grpcDataSender.close()
+    })
+    const dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
-                if (spanCount === 1) {
-                    const actualOutgoingRequestSpan = data.getSpan()
+    let testTraceRoot
+    let outgoingTraceRoot
+    const app = new express()
+    app.get('/test', async (req, res) => {
+        testTraceRoot = agent.currentTraceObject().getTraceRoot()
+        const response = await fetch('http://localhost:5006/outgoing')
+        const text = await response.text()
+        res.send(text)
+    })
 
-                    const actualTransactionId = actualOutgoingRequestSpan.getTransactionid()
-                    const traceRoot = actualFetchAPISpan.traceRoot
-                    t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), `Outgoing request Span agent id is ${traceRoot.getAgentId()}`)
-                    t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), `Outgoing request Span agent start time is ${traceRoot.getTraceId().getAgentStartTime()}`)
-                    t.equal(actualTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `Outgoing request Span transaction id is ${traceRoot.getTransactionId()}`)
-                    t.equal(actualOutgoingRequestSpan.getSpanid(), traceRoot.getTraceId().getSpanId(), `Outgoing request Span span id is ${traceRoot.getTraceId().getSpanId()}`)
-                    t.equal(actualOutgoingRequestSpan.getParentspanid(), traceRoot.getTraceId().getParentSpanId(), `Outgoing request Span parent span id is ${traceRoot.getTraceId().getParentSpanId()}`)
-                    // https://d2.naver.com/helloworld/1194202
-                    outgoingRequestParentSpanId = actualOutgoingRequestSpan.getParentspanid()
+    app.get('/outgoing', (req, res) => {
+        outgoingTraceRoot = agent.currentTraceObject().getTraceRoot()
+        res.send('test')
+    })
 
-                    t.equal(actualOutgoingRequestSpan.getStarttime(), traceRoot.getTraceStartTime(), `Outgoing request Span start time is ${traceRoot.getTraceStartTime()}`)
-                    t.equal(actualOutgoingRequestSpan.getElapsed(), actualFetchAPISpan.elapsedTime, `Outgoing request Span elapsed time is ${actualFetchAPISpan.elapsedTime}`)
-                    const nodeServerApiId = defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor
-                    t.equal(actualOutgoingRequestSpan.getApiid(), nodeServerApiId.apiId, `Outgoing request Span is ${nodeServerApiId.apiId}`)
+    const server = app.listen(5006)
+    await new Promise(resolve => server.on('listening', resolve))
+    const result = await axios.get('http://localhost:5006/test', { httpsAgent: new http.Agent({ keepAlive: false }) })
+    t.equal(result.data, 'test', 'response text is test')
+    server.close()
 
-                    t.equal(actualOutgoingRequestSpan.getServicetype(), ServiceType.node.code, 'Outgoing request Span service type is node')
+    const actualTestSpan = await dataSender.waitForSpan(testTraceRoot)
+    const actualFetchAPISpan = await dataSender.waitForSpan(outgoingTraceRoot)
 
-                    const actualOutgoingRequestAcceptEvent = actualOutgoingRequestSpan.getAcceptevent()
-                    t.equal(actualOutgoingRequestAcceptEvent.getRpc(), '/outgoing', 'Outgoing request Span rpc is /outgoing')
-                    t.equal(actualOutgoingRequestAcceptEvent.getEndpoint(), 'localhost:5006', 'Outgoing request Span endpoint is localhost:5006')
-                    t.equal(actualOutgoingRequestAcceptEvent.getRemoteaddr(), actualTestSpan.remoteAddress, `Outgoing request Span remote address is ${actualTestSpan.remoteAddress}`)
+    const actualOutgoingRequestSpan = await spanAdaptor.span(outgoingTraceRoot)
 
-                    t.equal(actualOutgoingRequestSpan.getFlag(), 0, 'Outgoing request Span flag is 0')
-                    t.equal(actualOutgoingRequestSpan.getErr(), 0, 'Outgoing request Span error is 0')
-                    t.equal(actualOutgoingRequestSpan.getExceptioninfo(), undefined, 'Outgoing request Span exception info is undefined')
-                    t.equal(actualOutgoingRequestSpan.getApplicationservicetype(), ServiceType.node.code, 'Outgoing request Span application service type is node')
-                    t.equal(actualOutgoingRequestSpan.getLoggingtransactioninfo(), 0, 'Outgoing request Span logging transaction info is 0')
+    const actualOutgoingTransactionId = actualOutgoingRequestSpan.getTransactionid()
+    t.equal(actualOutgoingTransactionId.getAgentid(), outgoingTraceRoot.getAgentId(), `Outgoing request Span agent id is ${outgoingTraceRoot.getAgentId()}`)
+    t.equal(actualOutgoingTransactionId.getAgentstarttime(), outgoingTraceRoot.getTraceId().getAgentStartTime(), `Outgoing request Span agent start time is ${outgoingTraceRoot.getTraceId().getAgentStartTime()}`)
+    t.equal(actualOutgoingTransactionId.getSequence(), outgoingTraceRoot.getTraceId().getTransactionId(), `Outgoing request Span transaction id is ${outgoingTraceRoot.getTransactionId()}`)
+    t.equal(actualOutgoingRequestSpan.getSpanid(), outgoingTraceRoot.getTraceId().getSpanId(), `Outgoing request Span span id is ${outgoingTraceRoot.getTraceId().getSpanId()}`)
+    t.equal(actualOutgoingRequestSpan.getParentspanid(), outgoingTraceRoot.getTraceId().getParentSpanId(), `Outgoing request Span parent span id is ${outgoingTraceRoot.getTraceId().getParentSpanId()}`)
+    // https://d2.naver.com/helloworld/1194202
+    const outgoingRequestParentSpanId = actualOutgoingRequestSpan.getParentspanid()
 
-                    const actualOutgoingRequestSpanEvents = actualOutgoingRequestSpan.getSpaneventList()
-                    actualOutgoingRequestSpanEvents.forEach((pSpanEvent, index) => {
-                        const spanEvent = actualFetchAPISpan.spanEventList[index]
-                        t.equal(pSpanEvent.getSequence(), spanEvent.sequence, `Outgoing request Span event sequence is ${spanEvent.sequence}`)
-                        t.equal(pSpanEvent.getDepth(), spanEvent.depth, `Outgoing request Span event depth is ${spanEvent.depth}`)
-                        t.equal(pSpanEvent.getStartelapsed(), spanEvent.startElapsedTime, `Outgoing request Span event start elapsed time is ${spanEvent.startElapsed}`)
-                        t.equal(pSpanEvent.getEndelapsed(), spanEvent.elapsedTime, `Outgoing request Span event end elapsed time is ${spanEvent.elapsedTime}`)
-                        t.equal(pSpanEvent.getServicetype(), spanEvent.serviceType, `Outgoing request Span event service type is ${spanEvent.serviceType}`)
-                        t.equal(pSpanEvent.getApiid(), spanEvent.apiId, `Outgoing request Span event api id is ${spanEvent.apiId}`)
-                        t.equal(pSpanEvent.getAsyncevent(), spanEvent.asyncId?.getAsyncId() ?? 0, `Outgoing request Span event async id is ${spanEvent.asyncId?.getAsyncId() ?? 0}`)
+    t.equal(actualOutgoingRequestSpan.getStarttime(), outgoingTraceRoot.getTraceStartTime(), `Outgoing request Span start time is ${outgoingTraceRoot.getTraceStartTime()}`)
+    t.equal(actualOutgoingRequestSpan.getElapsed(), actualFetchAPISpan.elapsedTime, `Outgoing request Span elapsed time is ${actualFetchAPISpan.elapsedTime}`)
+    const nodeServerApiId = defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor
+    t.equal(actualOutgoingRequestSpan.getApiid(), nodeServerApiId.apiId, `Outgoing request Span is ${nodeServerApiId.apiId}`)
 
-                        const pMessageEvent = pSpanEvent.getNextevent().getMessageevent()
-                        t.equal(pMessageEvent.getNextspanid(), spanEvent.nextSpanId, `Outgoing request Span event next span id is ${spanEvent.nextSpanId}`)
-                        t.equal(pMessageEvent.getEndpoint(), spanEvent.endPoint ?? '', `Outgoing request Span event endpoint is ${spanEvent.endPoint}`)
-                        t.equal(pMessageEvent.getDestinationid(), spanEvent.destinationId ?? '', `Outgoing request Span event destination id is ${spanEvent.destinationId}`)
+    t.equal(actualOutgoingRequestSpan.getServicetype(), ServiceType.node.code, 'Outgoing request Span service type is node')
 
-                        const pAnnotations = pSpanEvent.getAnnotationList()
-                        pAnnotations.forEach((pAnnotation, index) => {
-                            const annotation = spanEvent.annotations[index]
-                            t.equal(pAnnotation.getKey(), annotation.key, `Outgoing request Span event annotation key is ${annotation.key}`)
-                            const pAnnotationValue = pAnnotation.getValue()
-                            t.equal(pAnnotationValue.getStringvalue(), annotation.value, `Outgoing request Span event annotation value is ${annotation.value}`)
-                        })
-                    })
-                } else if (spanCount === 2) {
-                    const actualPChildTraceByUndici = data.getSpanchunk()
+    const actualOutgoingRequestAcceptEvent = actualOutgoingRequestSpan.getAcceptevent()
+    t.equal(actualOutgoingRequestAcceptEvent.getRpc(), '/outgoing', 'Outgoing request Span rpc is /outgoing')
+    t.equal(actualOutgoingRequestAcceptEvent.getEndpoint(), 'localhost:5006', 'Outgoing request Span endpoint is localhost:5006')
+    t.equal(actualOutgoingRequestAcceptEvent.getRemoteaddr(), actualTestSpan.remoteAddress, `Outgoing request Span remote address is ${actualTestSpan.remoteAddress}`)
 
-                    const actualTransactionId = actualPChildTraceByUndici.getTransactionid()
-                    const traceRoot = actualTestSpan.traceRoot
-                    t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), `child trace by undici agent id is ${traceRoot.getAgentId()}`)
-                    t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), `child trace by undici agent start time is ${traceRoot.getTraceId().getAgentStartTime()}`)
-                    t.equal(actualTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `child trace by undici transaction id is ${traceRoot.getTransactionId()}`)
-                    t.equal(actualPChildTraceByUndici.getSpanid(), traceRoot.getTraceId().getSpanId(), `child trace by undici span id is ${traceRoot.getTraceId().getSpanId()}`)
+    t.equal(actualOutgoingRequestSpan.getFlag(), 0, 'Outgoing request Span flag is 0')
+    t.equal(actualOutgoingRequestSpan.getErr(), 0, 'Outgoing request Span error is 0')
+    t.equal(actualOutgoingRequestSpan.getExceptioninfo(), undefined, 'Outgoing request Span exception info is undefined')
+    t.equal(actualOutgoingRequestSpan.getApplicationservicetype(), ServiceType.node.code, 'Outgoing request Span application service type is node')
+    t.equal(actualOutgoingRequestSpan.getLoggingtransactioninfo(), 0, 'Outgoing request Span logging transaction info is 0')
 
-                    const actualSpanChunk = dataSender.findSpanChunks(traceRoot)[0]
-                    t.equal(actualPChildTraceByUndici.getEndpoint(), actualSpanChunk.endPoint ?? '', `child trace by undici endpoint is ${actualSpanChunk.endPoint}`)
-                    t.equal(actualPChildTraceByUndici.getApplicationservicetype(), actualSpanChunk.applicationServiceType, `child trace by undici application service type is ${actualSpanChunk.applicationServiceType}`)
-                    t.equal(actualPChildTraceByUndici.getKeytime(), actualSpanChunk.keyTime, `child trace by undici key time is ${actualSpanChunk.keyTime}`)
+    const actualOutgoingRequestSpanEvents = actualOutgoingRequestSpan.getSpaneventList()
+    actualOutgoingRequestSpanEvents.forEach((pSpanEvent, index) => {
+        const spanEvent = actualFetchAPISpan.spanEventList[index]
+        t.equal(pSpanEvent.getSequence(), spanEvent.sequence, `Outgoing request Span event sequence is ${spanEvent.sequence}`)
+        t.equal(pSpanEvent.getDepth(), spanEvent.depth, `Outgoing request Span event depth is ${spanEvent.depth}`)
+        t.equal(pSpanEvent.getStartelapsed(), spanEvent.startElapsedTime, `Outgoing request Span event start elapsed time is ${spanEvent.startElapsed}`)
+        t.equal(pSpanEvent.getEndelapsed(), spanEvent.elapsedTime, `Outgoing request Span event end elapsed time is ${spanEvent.elapsedTime}`)
+        t.equal(pSpanEvent.getServicetype(), spanEvent.serviceType, `Outgoing request Span event service type is ${spanEvent.serviceType}`)
+        t.equal(pSpanEvent.getApiid(), spanEvent.apiId, `Outgoing request Span event api id is ${spanEvent.apiId}`)
+        t.equal(pSpanEvent.getAsyncevent(), spanEvent.asyncId?.getAsyncId() ?? 0, `Outgoing request Span event async id is ${spanEvent.asyncId?.getAsyncId() ?? 0}`)
 
-                    const pSpanEvents = actualPChildTraceByUndici.getSpaneventList()
-                    pSpanEvents.forEach((pSpanEvent, index) => {
-                        const spanEvent = actualSpanChunk.spanEventList[index]
-                        t.equal(pSpanEvent.getSequence(), spanEvent.sequence, `child trace by undici span event sequence is ${spanEvent.sequence}`)
-                        t.equal(pSpanEvent.getDepth(), spanEvent.depth, `child trace by undici span event depth is ${spanEvent.depth}`)
-                        t.equal(pSpanEvent.getStartelapsed(), spanEvent.startElapsedTime, `child trace by undici span event start elapsed time is ${spanEvent.startElapsed}`)
-                        t.equal(pSpanEvent.getEndelapsed(), spanEvent.elapsedTime, `child trace by undici span event end elapsed time is ${spanEvent.elapsedTime}`)
-                        t.equal(pSpanEvent.getServicetype(), spanEvent.serviceType, `child trace by undici span event service type is ${spanEvent.serviceType}`)
-                        t.equal(pSpanEvent.getApiid(), spanEvent.apiId, `child trace by undici span event api id is ${spanEvent.apiId}`)
-                        t.equal(pSpanEvent.getAsyncevent(), spanEvent.asyncId?.getAsyncId() ?? 0, `child trace by undici span event async id is ${spanEvent.asyncId?.getAsyncId() ?? 0}`)
+        const pMessageEvent = pSpanEvent.getNextevent().getMessageevent()
+        t.equal(pMessageEvent.getNextspanid(), spanEvent.nextSpanId, `Outgoing request Span event next span id is ${spanEvent.nextSpanId}`)
+        t.equal(pMessageEvent.getEndpoint(), spanEvent.endPoint ?? '', `Outgoing request Span event endpoint is ${spanEvent.endPoint}`)
+        t.equal(pMessageEvent.getDestinationid(), spanEvent.destinationId ?? '', `Outgoing request Span event destination id is ${spanEvent.destinationId}`)
 
-                        const pMessageEvent = pSpanEvent.getNextevent().getMessageevent()
-                        t.equal(pMessageEvent.getNextspanid(), spanEvent.nextSpanId, `child trace by undici span event next span id is ${spanEvent.nextSpanId}`)
-                        t.equal(pMessageEvent.getEndpoint(), spanEvent.endPoint ?? '', `child trace by undici span event endpoint is ${spanEvent.endPoint}`)
-                        t.equal(pMessageEvent.getDestinationid(), spanEvent.destinationId ?? '', `child trace by undici span event destination id is ${spanEvent.destinationId}`)
-
-                        const pAnnotations = pSpanEvent.getAnnotationList()
-                        pAnnotations.forEach((pAnnotation, index) => {
-                            const annotation = spanEvent.annotations[index]
-                            t.equal(pAnnotation.getKey(), annotation.key, `child trace by undici span event annotation key is ${annotation.key}`)
-                            const pAnnotationValue = pAnnotation.getValue()
-                            if (annotation.key === annotationKey.HTTP_STATUS_CODE.code) {
-                                t.equal(pAnnotationValue.getIntvalue(), annotation.value, `child trace by undici span event annotation value is ${annotation.value}`)
-                            } else {
-                                t.equal(pAnnotationValue.getStringvalue(), annotation.value, `child trace by undici span event annotation value is ${annotation.value}`)
-                            }
-                        })
-                    })
-                } else if (spanCount === 3) {
-                    const actualPSpan = data.getSpan()
-
-                    const actualTransactionId = actualPSpan.getTransactionid()
-                    const traceRoot = actualTestSpan.traceRoot
-                    t.equal(actualTransactionId.getAgentid(), traceRoot.getAgentId(), `agent id is ${traceRoot.getAgentId()}`)
-                    t.equal(actualTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), `agent start time is ${traceRoot.getTraceId().getAgentStartTime()}`)
-                    t.equal(actualTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `transaction id is ${traceRoot.getTransactionId()}`)
-                    t.equal(actualPSpan.getSpanid(), traceRoot.getTraceId().getSpanId(), `span id is ${traceRoot.getTraceId().getSpanId()}`)
-                    t.equal(actualPSpan.getParentspanid(), '-1', `parent span id is ${traceRoot.getTraceId().getParentSpanId()}`)
-                    t.equal(actualPSpan.getSpanid(), outgoingRequestParentSpanId, `The parentSpanId of the outgoing request traceId is the spanId of the /test request ${actualPSpan.getSpanid()}`)
-
-                    t.equal(actualPSpan.getStarttime(), traceRoot.getTraceStartTime(), `start time is ${traceRoot.getTraceStartTime()}`)
-                    t.equal(actualPSpan.getElapsed(), actualTestSpan.elapsedTime, `elapsed time is ${actualTestSpan.elapedTime}`)
-                    const nodeServerApiId = defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor
-                    t.equal(actualPSpan.getApiid(), nodeServerApiId.apiId, `Node process Span is ${nodeServerApiId.apiId}`)
-
-                    // http-request-trace-builder.js record(spanRecorder)
-                    t.equal(actualPSpan.getServicetype(), ServiceType.node.code, 'service type is node')
-
-                    const actualAcceptEvent = actualPSpan.getAcceptevent()
-                    t.equal(actualAcceptEvent.getRpc(), '/test', 'rpc is /outgoing')
-                    t.equal(actualAcceptEvent.getEndpoint(), 'localhost:5006', 'endpoint is localhost:5006')
-                    t.equal(actualAcceptEvent.getRemoteaddr(), actualTestSpan.remoteAddress, `remote address is ${actualTestSpan.remoteAddress}`)
-
-                    t.equal(actualPSpan.getFlag(), 0, 'flag is 0')
-                    t.equal(actualPSpan.getErr(), 0, 'error is 0')
-                    t.equal(actualPSpan.getExceptioninfo(), undefined, 'exception info is undefined')
-                    t.equal(actualPSpan.getApplicationservicetype(), ServiceType.node.code, 'application service type is node')
-                    t.equal(actualPSpan.getLoggingtransactioninfo(), 0, 'logging transaction info is 0')
-
-                    const actualSpanEvents = actualPSpan.getSpaneventList()
-                    actualSpanEvents.forEach((pSpanEvent, index) => {
-                        const spanEvent = actualTestSpan.spanEventList[index]
-                        t.equal(pSpanEvent.getSequence(), spanEvent.sequence, `span event sequence is ${spanEvent.sequence}`)
-                        t.equal(pSpanEvent.getDepth(), spanEvent.depth, `span event depth is ${spanEvent.depth}`)
-                        t.equal(pSpanEvent.getStartelapsed(), spanEvent.startElapsedTime, `span event start elapsed time is ${spanEvent.startElapsed}`)
-                        t.equal(pSpanEvent.getEndelapsed(), spanEvent.elapsedTime, `span event end elapsed time is ${spanEvent.elapsedTime}`)
-                        t.equal(pSpanEvent.getServicetype(), spanEvent.serviceType, `span event service type is ${spanEvent.serviceType}`)
-                        t.equal(pSpanEvent.getApiid(), spanEvent.apiId, `span event api id is ${spanEvent.apiId}`)
-                        t.equal(pSpanEvent.getAsyncevent(), spanEvent.asyncId?.getAsyncId() ?? 0, `span event async id is ${spanEvent.asyncId?.getAsyncId() ?? 0}`)
-
-                        const pMessageEvent = pSpanEvent.getNextevent().getMessageevent()
-                        t.equal(pMessageEvent.getNextspanid(), spanEvent.nextSpanId, `span event next span id is ${spanEvent.nextSpanId}`)
-                        t.equal(pMessageEvent.getEndpoint(), spanEvent.endPoint ?? '', `span event endpoint is ${spanEvent.endPoint}`)
-                        t.equal(pMessageEvent.getDestinationid(), spanEvent.destinationId ?? '', `span event destination id is ${spanEvent.destinationId}`)
-
-                        const pAnnotations = pSpanEvent.getAnnotationList()
-                        pAnnotations.forEach((pAnnotation, index) => {
-                            const annotation = spanEvent.annotations[index]
-                            t.equal(pAnnotation.getKey(), annotation.key, `annotation key is ${annotation.key}`)
-                            const pAnnotationValue = pAnnotation.getValue()
-                            t.equal(pAnnotationValue.getStringvalue(), annotation.value, `annotation value is ${annotation.value}`)
-                        })
-                    })
-
-                    t.end()
-                } else {
-                    t.fail('span count is over 3')
-                }
-            })
-            callback(null, new spanMessages.PSpanResultBatch())
-        },
-    })).addAdaptor(new MetadataAdaptor())
-
-    grpcDataSenderBuilder.build().then((grpcDataSender) => {
-        dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
-        const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
-        t.teardown(() => {
-            grpcDataSender.close()
-        })
-
-        const app = new express()
-        app.get('/test', async (req, res) => {
-            dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then((span) => {
-                actualTestSpan = span
-            })
-            const response = await fetch('http://localhost:5006/outgoing')
-            const text = await response.text()
-            res.send(text)
-        })
-
-        app.get('/outgoing', (req, res) => {
-            dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then((span) => {
-                actualFetchAPISpan = span
-            })
-            res.send('test')
-        })
-
-        const server = app.listen(5006, async () => {
-            const result = await axios.get('http://localhost:5006/test', { httpsAgent: new http.Agent({ keepAlive: false }) })
-            t.equal(result.data, 'test', 'response text is test')
-            server.close()
+        const pAnnotations = pSpanEvent.getAnnotationList()
+        pAnnotations.forEach((pAnnotation, index) => {
+            const annotation = spanEvent.annotations[index]
+            t.equal(pAnnotation.getKey(), annotation.key, `Outgoing request Span event annotation key is ${annotation.key}`)
+            const pAnnotationValue = pAnnotation.getValue()
+            t.equal(pAnnotationValue.getStringvalue(), annotation.value, `Outgoing request Span event annotation value is ${annotation.value}`)
         })
     })
+
+    const actualSpanChunk = dataSender.findSpanChunks(testTraceRoot)[0]
+    const actualPChildTraceByUndici = await spanAdaptor.spanChunk(actualSpanChunk.localAsyncId)
+
+    const actualChildTraceTransactionId = actualPChildTraceByUndici.getTransactionid()
+    t.equal(actualChildTraceTransactionId.getAgentid(), testTraceRoot.getAgentId(), `child trace by undici agent id is ${testTraceRoot.getAgentId()}`)
+    t.equal(actualChildTraceTransactionId.getAgentstarttime(), testTraceRoot.getTraceId().getAgentStartTime(), `child trace by undici agent start time is ${testTraceRoot.getTraceId().getAgentStartTime()}`)
+    t.equal(actualChildTraceTransactionId.getSequence(), testTraceRoot.getTraceId().getTransactionId(), `child trace by undici transaction id is ${testTraceRoot.getTransactionId()}`)
+    t.equal(actualPChildTraceByUndici.getSpanid(), testTraceRoot.getTraceId().getSpanId(), `child trace by undici span id is ${testTraceRoot.getTraceId().getSpanId()}`)
+
+    t.equal(actualPChildTraceByUndici.getEndpoint(), actualSpanChunk.endPoint ?? '', `child trace by undici endpoint is ${actualSpanChunk.endPoint}`)
+    t.equal(actualPChildTraceByUndici.getApplicationservicetype(), actualSpanChunk.applicationServiceType, `child trace by undici application service type is ${actualSpanChunk.applicationServiceType}`)
+    t.equal(actualPChildTraceByUndici.getKeytime(), actualSpanChunk.keyTime, `child trace by undici key time is ${actualSpanChunk.keyTime}`)
+
+    const pSpanEvents = actualPChildTraceByUndici.getSpaneventList()
+    pSpanEvents.forEach((pSpanEvent, index) => {
+        const spanEvent = actualSpanChunk.spanEventList[index]
+        t.equal(pSpanEvent.getSequence(), spanEvent.sequence, `child trace by undici span event sequence is ${spanEvent.sequence}`)
+        t.equal(pSpanEvent.getDepth(), spanEvent.depth, `child trace by undici span event depth is ${spanEvent.depth}`)
+        t.equal(pSpanEvent.getStartelapsed(), spanEvent.startElapsedTime, `child trace by undici span event start elapsed time is ${spanEvent.startElapsed}`)
+        t.equal(pSpanEvent.getEndelapsed(), spanEvent.elapsedTime, `child trace by undici span event end elapsed time is ${spanEvent.elapsedTime}`)
+        t.equal(pSpanEvent.getServicetype(), spanEvent.serviceType, `child trace by undici span event service type is ${spanEvent.serviceType}`)
+        t.equal(pSpanEvent.getApiid(), spanEvent.apiId, `child trace by undici span event api id is ${spanEvent.apiId}`)
+        t.equal(pSpanEvent.getAsyncevent(), spanEvent.asyncId?.getAsyncId() ?? 0, `child trace by undici span event async id is ${spanEvent.asyncId?.getAsyncId() ?? 0}`)
+
+        const pMessageEvent = pSpanEvent.getNextevent().getMessageevent()
+        t.equal(pMessageEvent.getNextspanid(), spanEvent.nextSpanId, `child trace by undici span event next span id is ${spanEvent.nextSpanId}`)
+        t.equal(pMessageEvent.getEndpoint(), spanEvent.endPoint ?? '', `child trace by undici span event endpoint is ${spanEvent.endPoint}`)
+        t.equal(pMessageEvent.getDestinationid(), spanEvent.destinationId ?? '', `child trace by undici span event destination id is ${spanEvent.destinationId}`)
+
+        const pAnnotations = pSpanEvent.getAnnotationList()
+        pAnnotations.forEach((pAnnotation, index) => {
+            const annotation = spanEvent.annotations[index]
+            t.equal(pAnnotation.getKey(), annotation.key, `child trace by undici span event annotation key is ${annotation.key}`)
+            const pAnnotationValue = pAnnotation.getValue()
+            if (annotation.key === annotationKey.HTTP_STATUS_CODE.code) {
+                t.equal(pAnnotationValue.getIntvalue(), annotation.value, `child trace by undici span event annotation value is ${annotation.value}`)
+            } else {
+                t.equal(pAnnotationValue.getStringvalue(), annotation.value, `child trace by undici span event annotation value is ${annotation.value}`)
+            }
+        })
+    })
+
+    const actualPSpan = await spanAdaptor.span(testTraceRoot)
+
+    const actualTestTransactionId = actualPSpan.getTransactionid()
+    t.equal(actualTestTransactionId.getAgentid(), testTraceRoot.getAgentId(), `agent id is ${testTraceRoot.getAgentId()}`)
+    t.equal(actualTestTransactionId.getAgentstarttime(), testTraceRoot.getTraceId().getAgentStartTime(), `agent start time is ${testTraceRoot.getTraceId().getAgentStartTime()}`)
+    t.equal(actualTestTransactionId.getSequence(), testTraceRoot.getTraceId().getTransactionId(), `transaction id is ${testTraceRoot.getTransactionId()}`)
+    t.equal(actualPSpan.getSpanid(), testTraceRoot.getTraceId().getSpanId(), `span id is ${testTraceRoot.getTraceId().getSpanId()}`)
+    t.equal(actualPSpan.getParentspanid(), '-1', `parent span id is ${testTraceRoot.getTraceId().getParentSpanId()}`)
+    t.equal(actualPSpan.getSpanid(), outgoingRequestParentSpanId, `The parentSpanId of the outgoing request traceId is the spanId of the /test request ${actualPSpan.getSpanid()}`)
+
+    t.equal(actualPSpan.getStarttime(), testTraceRoot.getTraceStartTime(), `start time is ${testTraceRoot.getTraceStartTime()}`)
+    t.equal(actualPSpan.getElapsed(), actualTestSpan.elapsedTime, `elapsed time is ${actualTestSpan.elapedTime}`)
+    t.equal(actualPSpan.getApiid(), nodeServerApiId.apiId, `Node process Span is ${nodeServerApiId.apiId}`)
+
+    // http-request-trace-builder.js record(spanRecorder)
+    t.equal(actualPSpan.getServicetype(), ServiceType.node.code, 'service type is node')
+
+    const actualAcceptEvent = actualPSpan.getAcceptevent()
+    t.equal(actualAcceptEvent.getRpc(), '/test', 'rpc is /outgoing')
+    t.equal(actualAcceptEvent.getEndpoint(), 'localhost:5006', 'endpoint is localhost:5006')
+    t.equal(actualAcceptEvent.getRemoteaddr(), actualTestSpan.remoteAddress, `remote address is ${actualTestSpan.remoteAddress}`)
+
+    t.equal(actualPSpan.getFlag(), 0, 'flag is 0')
+    t.equal(actualPSpan.getErr(), 0, 'error is 0')
+    t.equal(actualPSpan.getExceptioninfo(), undefined, 'exception info is undefined')
+    t.equal(actualPSpan.getApplicationservicetype(), ServiceType.node.code, 'application service type is node')
+    t.equal(actualPSpan.getLoggingtransactioninfo(), 0, 'logging transaction info is 0')
+
+    const actualSpanEvents = actualPSpan.getSpaneventList()
+    actualSpanEvents.forEach((pSpanEvent, index) => {
+        const spanEvent = actualTestSpan.spanEventList[index]
+        t.equal(pSpanEvent.getSequence(), spanEvent.sequence, `span event sequence is ${spanEvent.sequence}`)
+        t.equal(pSpanEvent.getDepth(), spanEvent.depth, `span event depth is ${spanEvent.depth}`)
+        t.equal(pSpanEvent.getStartelapsed(), spanEvent.startElapsedTime, `span event start elapsed time is ${spanEvent.startElapsed}`)
+        t.equal(pSpanEvent.getEndelapsed(), spanEvent.elapsedTime, `span event end elapsed time is ${spanEvent.elapsedTime}`)
+        t.equal(pSpanEvent.getServicetype(), spanEvent.serviceType, `span event service type is ${spanEvent.serviceType}`)
+        t.equal(pSpanEvent.getApiid(), spanEvent.apiId, `span event api id is ${spanEvent.apiId}`)
+        t.equal(pSpanEvent.getAsyncevent(), spanEvent.asyncId?.getAsyncId() ?? 0, `span event async id is ${spanEvent.asyncId?.getAsyncId() ?? 0}`)
+
+        const pMessageEvent = pSpanEvent.getNextevent().getMessageevent()
+        t.equal(pMessageEvent.getNextspanid(), spanEvent.nextSpanId, `span event next span id is ${spanEvent.nextSpanId}`)
+        t.equal(pMessageEvent.getEndpoint(), spanEvent.endPoint ?? '', `span event endpoint is ${spanEvent.endPoint}`)
+        t.equal(pMessageEvent.getDestinationid(), spanEvent.destinationId ?? '', `span event destination id is ${spanEvent.destinationId}`)
+
+        const pAnnotations = pSpanEvent.getAnnotationList()
+        pAnnotations.forEach((pAnnotation, index) => {
+            const annotation = spanEvent.annotations[index]
+            t.equal(pAnnotation.getKey(), annotation.key, `annotation key is ${annotation.key}`)
+            const pAnnotationValue = pAnnotation.getValue()
+            t.equal(pAnnotationValue.getStringvalue(), annotation.value, `annotation value is ${annotation.value}`)
+        })
+    })
+    t.end()
 })

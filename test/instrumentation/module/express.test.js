@@ -9,7 +9,6 @@ const { ProcessAgentBuilder, startAgent, nullDataSenderAgent } = require('../../
 startAgent()
 const axios = require('axios')
 const { finished } = require('node:stream')
-const { spanMessagesOfCurrentAgent } = require('../../support/collector-span-messages')
 const express = require('express')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
@@ -1142,17 +1141,11 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
 })
 
 test('Functional Test: SendSpan with success and failure', (t) => {
-  const receivedSpans = []
+  const traceRoots = []
   const receivedStats = []
 
-  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new SpanAdaptor({
-    sendSpanBatch: (call, callback) => {
-      spanMessagesOfCurrentAgent(call.request).forEach((spanMessage) => {
-        receivedSpans.push(spanMessage)
-      })
-      callback(null, new spanMessages.PSpanResultBatch())
-    }
-  })).addAdaptor(new StatAdaptor({
+  const spanAdaptor = new SpanAdaptor()
+  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(spanAdaptor).addAdaptor(new StatAdaptor({
     sendAgentStat: (call) => {
       call.on('data', (statMessage) => {
         receivedStats.push(statMessage)
@@ -1173,12 +1166,14 @@ test('Functional Test: SendSpan with success and failure', (t) => {
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
     app.get(successPath, async function (req, res) {
+      traceRoots.push(agent.currentTraceObject().getTraceRoot())
       if (req.query.delay) {
         await sleep(parseInt(req.query.delay))
       }
       res.send('ok')
     })
     app.get(failPath, async function (req, res, next) {
+      traceRoots.push(agent.currentTraceObject().getTraceRoot())
       try {
         if (req.query.delay) {
           await sleep(parseInt(req.query.delay))
@@ -1226,24 +1221,23 @@ test('Functional Test: SendSpan with success and failure', (t) => {
       const monitor = new UriStatsMonitor(new DataSender(grpcDataSender.config, grpcDataSender), repository)
       monitor.start()
 
-      setTimeout(() => {
-        t.equal(receivedSpans.length, 7, 'Should receive 7 spans')
+      setTimeout(async () => {
+        const spans = await Promise.all(traceRoots.map(traceRoot => spanAdaptor.span(traceRoot)))
+        t.equal(spans.length, 7, 'Should receive 7 spans')
 
-        const successSpanMsg = receivedSpans.find(msg => msg.getSpan().getAcceptevent().getRpc() === successPath)
-        const failSpanMsg = receivedSpans.find(msg => msg.getSpan().getAcceptevent().getRpc() === failPath)
+        const successSpan = spans.find(span => span.getAcceptevent().getRpc() === successPath)
+        const failSpan = spans.find(span => span.getAcceptevent().getRpc() === failPath)
 
-        t.ok(successSpanMsg, 'Success span found')
-        if (successSpanMsg) {
-          const span = successSpanMsg.getSpan()
-          t.equal(span.getErr(), 0, 'Success span should have err=0')
+        t.ok(successSpan, 'Success span found')
+        if (successSpan) {
+          t.equal(successSpan.getErr(), 0, 'Success span should have err=0')
         }
 
-        t.ok(failSpanMsg, 'Fail span found')
-        if (failSpanMsg) {
-          const span = failSpanMsg.getSpan()
-          t.equal(span.getErr(), 1, 'Fail span should have err=1')
+        t.ok(failSpan, 'Fail span found')
+        if (failSpan) {
+          t.equal(failSpan.getErr(), 1, 'Fail span should have err=1')
 
-          const spanEvents = span.getSpaneventList()
+          const spanEvents = failSpan.getSpaneventList()
           const eventWithException = spanEvents.find(e => {
             const info = e.getExceptioninfo()
             return info && info.getStringvalue && info.getStringvalue()

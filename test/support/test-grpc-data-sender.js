@@ -34,10 +34,6 @@ const fastRetryServiceConfig = {
     ]
 }
 
-// Builds a TestGrpcDataSender: binds a local collector server with the handlers of the adaptors,
-// then connects a GrpcDataSender to its port.
-// Each adaptor adds the server handlers of one RPC and the clients the GrpcDataSender creates for it,
-// so a test creates only the unary clients and streams it uses.
 class TestGrpcDataSenderBuilder {
     constructor(json = {}) {
         this.json = json
@@ -98,7 +94,6 @@ function configWithPort(json, port) {
     return new ConfigBuilder(Object.assign({}, testJson, json, { collector })).build()
 }
 
-// A GrpcDataSender with the collector server it is connected to.
 // The class is made per build because GrpcDataSender calls the initializers in its constructor, before a field can tell which clients to create.
 function testGrpcDataSenderClass(adaptors) {
     const initializers = new Set(adaptors.flatMap(adaptor => adaptor.initializers))
@@ -111,12 +106,10 @@ function testGrpcDataSenderClass(adaptors) {
             this.port = port
         }
 
-        // Shuts the server down and keeps the GrpcDataSender, as when the collector goes down
         disconnect() {
             this.server.forceShutdown()
         }
 
-        // Starts a new server with the handlers of the adaptors on the same port, as when the collector comes back
         async restart(...adaptors) {
             this.server = serverWithAdaptors(adaptors)
             return bindServer(this.server, `localhost:${this.port}`)
@@ -175,8 +168,6 @@ function testGrpcDataSenderClass(adaptors) {
     }
 }
 
-// The server handlers of one RPC; handlers passed to the constructor replace its default handlers.
-// The default handlers keep what the server received, so a test gets it by its key (a trace root, a timestamp, a request id) and asserts.
 class GrpcAdaptor {
     constructor(service, initializers) {
         this.service = service
@@ -202,7 +193,6 @@ class GrpcAdaptor {
         this.metadata.push(metadata)
     }
 
-    // Resolves with the first request that matches, now or once the server receives it
     waitFor(match) {
         const request = this.requests.find(match)
         if (request) {
@@ -261,13 +251,11 @@ class PingAdaptor extends GrpcAdaptor {
         }, handlers)
     }
 
-    // The server ends a ping stream after it writes the count-th ping of that stream back
     endStreamAfter(count) {
         this.streamEndCount = count
         return this
     }
 
-    // Resolves with the socketid of the connectionNumber-th ping stream once the server receives a ping on it
     connection(connectionNumber) {
         return this.waitFor(({ socketId }) => socketId === this.socketIds[connectionNumber - 1])
             .then(({ socketId }) => socketId)
@@ -290,9 +278,15 @@ class MetadataAdaptor extends GrpcAdaptor {
             requestExceptionMetaData: retryRuleHandler(this, retryRuleResult),
         }, handlers)
     }
+
+    exceptionMetaData(traceRoot) {
+        return this.waitFor(request => request instanceof spanMessages.PExceptionMetaData
+            && request.getTransactionid().getAgentid() === traceRoot.getTraceId().getAgentId()
+            && request.getTransactionid().getSequence() === traceRoot.getTraceId().getTransactionId()
+            && request.getSpanid() === traceRoot.getTraceId().getSpanId())
+    }
 }
 
-// Receives each span or span chunk of a span batch
 class SpanAdaptor extends GrpcAdaptor {
     constructor(handlers = {}) {
         super(services.SpanService, ['initializeSpanBatchSender'])
@@ -307,15 +301,13 @@ class SpanAdaptor extends GrpcAdaptor {
         }, handlers)
     }
 
-    // Resolves with the PSpan of the trace root
     span(traceRoot) {
         return this.waitFor(request => request instanceof spanMessages.PSpan
-            && request.getTransactionid().getAgentid() === traceRoot.getAgentId()
-            && request.getTransactionid().getSequence() === traceRoot.getTransactionId()
+            && request.getTransactionid().getAgentid() === traceRoot.getTraceId().getAgentId()
+            && request.getTransactionid().getSequence() === traceRoot.getTraceId().getTransactionId()
             && request.getSpanid() === traceRoot.getTraceId().getSpanId())
     }
 
-    // Resolves with the PSpanChunk of the local async id
     spanChunk(asyncId) {
         return this.waitFor(request => request instanceof spanMessages.PSpanChunk
             && request.getLocalasyncid()?.getAsyncid() === asyncId.getAsyncId()
@@ -339,18 +331,15 @@ class StatAdaptor extends GrpcAdaptor {
         }, handlers)
     }
 
-    // Resolves with the PStatMessage of the AgentStat collected at the timestamp
     agentStat(timestamp) {
         return this.waitFor(statMessage => statMessage.getAgentstat()?.getTimestamp() === timestamp)
     }
 
-    // Resolves with the PStatMessage of the URI stats of the snapshot taken at the timestamp
     uriStat(timestamp) {
         return this.waitFor(statMessage => statMessage.getAgenturistat()?.getEachuristatList().some(each => each.getTimestamp() === timestamp))
     }
 }
 
-// Receives the commandEcho and active thread count responses, and writes commands to the command stream
 class CommandAdaptor extends GrpcAdaptor {
     constructor(handlers = {}) {
         super(services.ProfilerCommandServiceService, ['initializeProfilerClients'])
@@ -376,19 +365,16 @@ class CommandAdaptor extends GrpcAdaptor {
         }, handlers)
     }
 
-    // Resolves with the echo response to the command of the request id
     echoResponse(requestId) {
         return this.waitFor(response => response instanceof cmdMessages.PCmdEchoResponse
             && response.getCommonresponse().getResponseid() === requestId)
     }
 
-    // Resolves with the first active thread count response to the command of the request id
     activeThreadCountResponse(requestId) {
         return this.waitFor(response => response instanceof cmdMessages.PCmdActiveThreadCountRes
             && response.getCommonstreamresponse().getResponseid() === requestId)
     }
 
-    // Writes an echo command to the command stream, or once the stream connects
     writeEcho() {
         const echo = new cmdMessages.PCmdEcho()
         echo.setMessage('echo')
@@ -397,7 +383,6 @@ class CommandAdaptor extends GrpcAdaptor {
         return this.writeCommand(request)
     }
 
-    // Writes an active thread count command to the command stream, or once the stream connects
     writeActiveThreadCount() {
         const request = this.newCommandRequest()
         request.setCommandactivethreadcount(new cmdMessages.PCmdActiveThreadCount())
@@ -422,7 +407,6 @@ class CommandAdaptor extends GrpcAdaptor {
 }
 
 // https://github.com/agreatfool/grpc_tools_node_protoc_ts/blob/v5.0.0/examples/src/grpcjs/client.ts
-// Succeeds on the attempt named in the succeed-on-retry-attempt metadata and receives the request of that attempt
 function retryRuleHandler(adaptor, response) {
     return (call, callback) => {
         const succeedOnRetryAttempt = call.metadata.get('succeed-on-retry-attempt')

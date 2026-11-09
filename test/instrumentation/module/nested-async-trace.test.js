@@ -7,7 +7,6 @@
 const test = require('tape')
 const { ProcessAgentBuilder, startAgent } = require('../../support/process-agent-builder')
 const { agentStartTime } = startAgent()
-const { spanMessagesOfCurrentAgent } = require('../../support/collector-span-messages')
 const express = require('express')
 const axios = require('axios')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
@@ -30,6 +29,7 @@ const DataSender = require('../../../lib/client/data-sender')
 const GrpcDataSender = require('../../../lib/client/grpc-data-sender')
 const { ClientHeader, makeClientHeaderInterceptor } = require('../../../lib/name/client-header')
 const testConfig = require('../../fixtures/pinpoint-config-test.json')
+const { SpanAdaptor } = require('../../support/test-grpc-data-sender')
 
 let dataSender
 
@@ -49,31 +49,6 @@ const pResultReturnUnaryService = (call, callback) => {
         callback({ code: code, details: `Failed on retry ${previousAttempts[0] ?? 0}` })
         callbackPresultReturnUnaryService?.({ code: code, details: `Failed on retry ${previousAttempts[0] ?? 0}` })
     }
-}
-
-let spanOrSpanChunks = []
-const resetSpanOrSpanChunks = () => {
-    spanOrSpanChunks = []
-}
-const getSpanOrSpanChunks = () => {
-    return spanOrSpanChunks
-}
-const getSpanChunk = (asyncId) => {
-    return getSpanOrSpanChunks().find(spanOrSpanChunk => spanOrSpanChunk.getLocalasyncid().getAsyncid() === asyncId.getAsyncId() && spanOrSpanChunk.getLocalasyncid().getSequence() === asyncId.getSequence())
-}
-
-let spanMessageEndEventCallback
-let dataStreamCount = 0
-const spanMessageBatchService = (call, callback) => {
-    spanMessagesOfCurrentAgent(call.request).forEach((spanMessage) => {
-        const spanOrSpanChunk = spanMessage.getSpan() ?? spanMessage.getSpanchunk()
-        const spanOrSpanChunks = getSpanOrSpanChunks()
-        spanOrSpanChunks.push(spanOrSpanChunk)
-        if (++dataStreamCount === dataSender.spans().length + dataSender.spanChunks().length && dataSender.spans().length > 0) {
-            spanMessageEndEventCallback?.()
-        }
-    })
-    callback(null, new spanMessages.PSpanResultBatch())
 }
 
 function sendAgentStat(call, callback) {
@@ -97,6 +72,7 @@ function callStreamPingSession(call) {
 }
 
 test(`nested mysql async query with express`, async (t) => {
+    const spanAdaptor = new SpanAdaptor()
     const collectorServer = new grpc.Server()
     collectorServer.addService(services.AgentService, {
         pingSession: callStreamPingSession
@@ -104,9 +80,7 @@ test(`nested mysql async query with express`, async (t) => {
     collectorServer.addService(services.StatService, {
         sendAgentStat: sendAgentStat
     })
-    collectorServer.addService(services.SpanService, {
-        sendSpanBatch: spanMessageBatchService
-    })
+    collectorServer.addService(services.SpanService, spanAdaptor.handlers)
     collectorServer.addService(services.MetadataService, {
         requestApiMetaData: pResultReturnUnaryService,
         requestSqlUidMetaData: pResultReturnUnaryService,
@@ -118,7 +92,6 @@ test(`nested mysql async query with express`, async (t) => {
         const builder = new ProcessAgentBuilder({ collector: Object.assign({}, testConfig.collector, { spanPort: port, statPort: port, tcpPort: port }) })
         dataSender = new RecordingDataSender(new DataSender(builder.config, new GrpcDataSender(builder.config, [makeClientHeaderInterceptor(ClientHeader.make(agentStartTime, builder.config))])))
         const agent = builder.setDataSender(dataSender).build()
-        resetSpanOrSpanChunks()
         const container = await startMySql()
 
         const app = new express()
@@ -150,7 +123,7 @@ test(`nested mysql async query with express`, async (t) => {
                 })
             })
 
-            dataSender.waitForSpan(traceRoot).then((span) => {
+            dataSender.waitForSpan(traceRoot).then(async (span) => {
                 let actualBuilder = new MethodDescriptorBuilder('get')
                     .setClassName('Router')
                 let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
@@ -231,40 +204,37 @@ test(`nested mysql async query with express`, async (t) => {
                 t.equal(actualSpanChunk.spanEventList[0].serviceType, ServiceType.async.getCode(), 'serviceType is mysql')
 
                 connection.end()
+
+                const sentSpanChunk = dataSender.spanChunks()[0]
+                const actualSpanChunkGrpc = await spanAdaptor.spanChunk(sentSpanChunk.localAsyncId)
+                t.equal(actualSpanChunkGrpc.getVersion(), 1, 'PSpanChunk.version is 1')
+
+                const actualTractionId = actualSpanChunkGrpc.getTransactionid()
+                t.equal(actualTractionId.getAgentid(), span.traceRoot.getAgentId(), `PSpanChunk.PTransactionId.agentId is ${span.traceRoot.getAgentId()}`)
+                t.equal(typeof actualTractionId.getAgentid(), 'string', 'PSpanChunk.PTransactionId.agentId type is string')
+                t.equal(actualTractionId.getAgentstarttime(), span.traceRoot.getTraceId().getAgentStartTime(), `PSpanChunk.PTransactionId.agentStartTime is ${span.traceRoot.getTraceId().getAgentStartTime()}`)
+                t.equal(typeof actualTractionId.getAgentstarttime(), 'string', 'PSpanChunk.PTransactionId.agentStartTime type is string')
+                t.equal(actualTractionId.getSequence(), span.traceRoot.getTransactionId(), `PSpanChunk.PTransactionId.sequence is ${span.traceRoot.getTransactionId()}`)
+                t.equal(typeof actualTractionId.getSequence(), 'string', 'PSpanChunk.PTransactionId.sequence type is string')
+
+                t.equal(actualSpanChunkGrpc.getSpanid(), sentSpanChunk.traceRoot.getTraceId().getSpanId(), `PSpanChunk.spanId is ${sentSpanChunk.traceRoot.getTraceId().getSpanId()}`)
+                t.equal(typeof actualSpanChunkGrpc.getSpanid(), 'string', 'PSpanChunk.spanId type is string')
+                t.equal(actualSpanChunkGrpc.getEndpoint(), '', `PSpanChunk.endPoint is '${actualSpanChunkGrpc.getEndpoint()}'`)
+                t.equal(typeof actualSpanChunkGrpc.getEndpoint(), 'string', 'PSpanChunk.endPoint type is string')
+                t.equal(actualSpanChunkGrpc.getApplicationservicetype(), sentSpanChunk.applicationServiceType, `PSpanChunk.applicationServiceType is ${sentSpanChunk.applicationServiceType}`)
+                t.equal(typeof actualSpanChunkGrpc.getApplicationservicetype(), 'number', 'PSpanChunk.applicationServiceType type is number')
+                t.equal(actualSpanChunkGrpc.getKeytime(), sentSpanChunk.keyTime, `PSpanChunk.keyTime is ${sentSpanChunk.keyTime}`)
+                t.equal(typeof actualSpanChunkGrpc.getKeytime(), 'number', 'PSpanChunk.keyTime type is number')
+
+                const actualLocalAsyncId = actualSpanChunkGrpc.getLocalasyncid()
+                t.equal(actualLocalAsyncId.getAsyncid(), sentSpanChunk.localAsyncId.asyncId, `PSpanChunk.PLocalAsyncId.asyncId is ${sentSpanChunk.localAsyncId.asyncId}`)
+                t.equal(typeof actualLocalAsyncId.getAsyncid(), 'number', 'PSpanChunk.PLocalAsyncId.asyncId type is number')
+                t.equal(actualLocalAsyncId.getSequence(), sentSpanChunk.localAsyncId.sequence, `PSpanChunk.PLocalAsyncId.sequence is ${sentSpanChunk.localAsyncId.sequence}`)
+                t.equal(typeof actualLocalAsyncId.getSequence(), 'number', 'PSpanChunk.PLocalAsyncId.sequence type is number')
+                t.end()
+                dataSender.close()
             })
         })
-
-        spanMessageEndEventCallback = async () => {
-            const span = dataSender.spans()[0]
-            const actualSpanChunk = dataSender.spanChunks()[0]
-            const actualSpanChunkGrpc = getSpanChunk(actualSpanChunk.localAsyncId)
-            t.equal(actualSpanChunkGrpc.getVersion(), 1, 'PSpanChunk.version is 1')
-
-            const actualTractionId = actualSpanChunkGrpc.getTransactionid()
-            t.equal(actualTractionId.getAgentid(), span.traceRoot.getAgentId(), `PSpanChunk.PTransactionId.agentId is ${span.traceRoot.getAgentId()}`)
-            t.equal(typeof actualTractionId.getAgentid(), 'string', 'PSpanChunk.PTransactionId.agentId type is string')
-            t.equal(actualTractionId.getAgentstarttime(), span.traceRoot.getTraceId().getAgentStartTime(), `PSpanChunk.PTransactionId.agentStartTime is ${span.traceRoot.getTraceId().getAgentStartTime()}`)
-            t.equal(typeof actualTractionId.getAgentstarttime(), 'string', 'PSpanChunk.PTransactionId.agentStartTime type is string')
-            t.equal(actualTractionId.getSequence(), span.traceRoot.getTransactionId(), `PSpanChunk.PTransactionId.sequence is ${span.traceRoot.getTransactionId()}`)
-            t.equal(typeof actualTractionId.getSequence(), 'string', 'PSpanChunk.PTransactionId.sequence type is string')
-
-            t.equal(actualSpanChunkGrpc.getSpanid(), actualSpanChunk.traceRoot.getTraceId().getSpanId(), `PSpanChunk.spanId is ${actualSpanChunk.traceRoot.getTraceId().getSpanId()}`)
-            t.equal(typeof actualSpanChunkGrpc.getSpanid(), 'string', 'PSpanChunk.spanId type is string')
-            t.equal(actualSpanChunkGrpc.getEndpoint(), '', `PSpanChunk.endPoint is '${actualSpanChunkGrpc.getEndpoint()}'`)
-            t.equal(typeof actualSpanChunkGrpc.getEndpoint(), 'string', 'PSpanChunk.endPoint type is string')
-            t.equal(actualSpanChunkGrpc.getApplicationservicetype(), actualSpanChunk.applicationServiceType, `PSpanChunk.applicationServiceType is ${actualSpanChunk.applicationServiceType}`)
-            t.equal(typeof actualSpanChunkGrpc.getApplicationservicetype(), 'number', 'PSpanChunk.applicationServiceType type is number')
-            t.equal(actualSpanChunkGrpc.getKeytime(), actualSpanChunk.keyTime, `PSpanChunk.keyTime is ${actualSpanChunk.keyTime}`)
-            t.equal(typeof actualSpanChunkGrpc.getKeytime(), 'number', 'PSpanChunk.keyTime type is number')
-
-            const actualLocalAsyncId = actualSpanChunkGrpc.getLocalasyncid()
-            t.equal(actualLocalAsyncId.getAsyncid(), actualSpanChunk.localAsyncId.asyncId, `PSpanChunk.PLocalAsyncId.asyncId is ${actualSpanChunk.localAsyncId.asyncId}`)
-            t.equal(typeof actualLocalAsyncId.getAsyncid(), 'number', 'PSpanChunk.PLocalAsyncId.asyncId type is number')
-            t.equal(actualLocalAsyncId.getSequence(), actualSpanChunk.localAsyncId.sequence, `PSpanChunk.PLocalAsyncId.sequence is ${actualSpanChunk.localAsyncId.sequence}`)
-            t.equal(typeof actualLocalAsyncId.getSequence(), 'number', 'PSpanChunk.PLocalAsyncId.sequence type is number')
-            t.end()
-            dataSender.close()
-        }
 
         app.use(express.json())
         app.use(express.urlencoded({
@@ -284,6 +254,7 @@ test(`nested mysql async query with express`, async (t) => {
 })
 
 test(`nested mysql2 async query with express`, async (t) => {
+    const spanAdaptor = new SpanAdaptor()
     const collectorServer = new grpc.Server()
     collectorServer.addService(services.AgentService, {
         pingSession: callStreamPingSession
@@ -291,9 +262,7 @@ test(`nested mysql2 async query with express`, async (t) => {
     collectorServer.addService(services.StatService, {
         sendAgentStat: sendAgentStat
     })
-    collectorServer.addService(services.SpanService, {
-        sendSpanBatch: spanMessageBatchService
-    })
+    collectorServer.addService(services.SpanService, spanAdaptor.handlers)
     collectorServer.addService(services.MetadataService, {
         requestApiMetaData: pResultReturnUnaryService,
         requestSqlUidMetaData: pResultReturnUnaryService,
@@ -350,7 +319,7 @@ test(`nested mysql2 async query with express`, async (t) => {
             t.equal(rows[0].name, 'name1', 'name in SELECT query hooking')
             t.equal(rows[0].joined.toISOString().slice(0, 10), '2023-01-17', 'joined in SELECT query hooking')
 
-            dataSender.waitForSpan(traceRoot).then((span) => {
+            dataSender.waitForSpan(traceRoot).then(async (span) => {
                 t.equal(span.serviceType, ServiceType.node.getCode(), 'Span serviceType is node')
                 t.true(span.remoteAddress === '127.0.0.1' || span.remoteAddress === '::1', `remoteAddress is ${span.remoteAddress}`)
                 let actualBuilder = new MethodDescriptorBuilder('get')
@@ -432,15 +401,15 @@ test(`nested mysql2 async query with express`, async (t) => {
                 t.equal(actualSpanChunk.spanEventList[0].sequence, 0, 'sequence is equal')
                 t.equal(actualSpanChunk.spanEventList[0].serviceType, ServiceType.async.getCode(), 'serviceType is mysql')
 
-                spanMessageEndEventCallback = async () => {
-                    t.true(span.remoteAddress === '127.0.0.1' || span.remoteAddress === '::1', `remoteAddress is ${span.remoteAddress}`)
+                await spanAdaptor.span(span.traceRoot)
+                await Promise.all(dataSender.spanChunks().map(spanChunk => spanAdaptor.spanChunk(spanChunk.localAsyncId)))
+                t.true(span.remoteAddress === '127.0.0.1' || span.remoteAddress === '::1', `remoteAddress is ${span.remoteAddress}`)
 
-                    connection.end()
-                    t.equal(dataSender.apiMetaInfos().length, 0, 'agent.getSendedApiMetaInfos() is empty')
-                    t.equal(dataSender.sqlMetaData().length, 0, 'agent.getSqlMetadata() is empty')
-                    t.end()
-                    dataSender.close()
-                }
+                connection.end()
+                t.equal(dataSender.apiMetaInfos().length, 0, 'agent.getSendedApiMetaInfos() is empty')
+                t.equal(dataSender.sqlMetaData().length, 0, 'agent.getSqlMetadata() is empty')
+                t.end()
+                dataSender.close()
             })
         })
 
@@ -469,7 +438,6 @@ test(`nested mysql2 async query with express`, async (t) => {
             }
         }
 
-        dataStreamCount = 0
         const server = app.listen(5006, async () => {
             const result = await axios.get('http://localhost:5006/test1')
             t.equal(result.status, 200, 'status is 200')

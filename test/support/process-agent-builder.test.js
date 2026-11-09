@@ -7,8 +7,8 @@
 'use strict'
 
 const test = require('tape')
-require('./agent-singleton-mock')
-const { ProcessAgentBuilder } = require('./process-agent-builder')
+const { ProcessAgentBuilder, startAgent } = require('./process-agent-builder')
+startAgent()
 const RecordingDataSender = require('./recording-data-sender')
 const TraceContext = require('../../lib/context/trace-context')
 const http = require('node:http')

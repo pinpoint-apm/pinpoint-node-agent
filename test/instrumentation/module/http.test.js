@@ -7,9 +7,7 @@
 const test = require('tape')
 const { ProcessAgentBuilder, startAgent, nullDataSenderAgent } = require('../../support/process-agent-builder')
 startAgent()
-const { spanMessagesOfCurrentAgent } = require('../../support/collector-span-messages')
 const http = require('node:http')
-const spanMessages = require('../../../lib/data/v1/Span_pb')
 const { TestGrpcDataSenderBuilder, SpanAdaptor, MetadataAdaptor } = require('../../support/test-grpc-data-sender')
 const axios = require('axios')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
@@ -30,72 +28,56 @@ const TEST_ENV = {
 }
 const getServerUrl = (path) => `http://${TEST_ENV.host}:${TEST_ENV.port}${path}`
 
-test('http error status code', (t) => {
-    let dataSender
-    let spanOrSpanChunkCallback
-    const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new SpanAdaptor({
-        sendSpanBatch: (call, callback) => {
-            spanMessagesOfCurrentAgent(call.request).forEach((data) => {
-                let spanOrSpanChunk = data.getSpan()
-                if (!spanOrSpanChunk) {
-                    spanOrSpanChunk = data.getSpanchunk()
-                }
-                spanOrSpanChunkCallback?.(spanOrSpanChunk)
-            })
-            callback(null, new spanMessages.PSpanResultBatch())
-        }
-    })).addAdaptor(new MetadataAdaptor())
-
-    grpcDataSenderBuilder.build().then((grpcDataSender) => {
-        dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
-        const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
-        t.teardown(() => {
-            grpcDataSender.close()
-        })
-
-        const server = http.createServer((req, res) => {
-            actualTraceRoot = agent.currentTraceObject().getTraceRoot()
-            res.writeHead(500)
-            res.end('ok')
-        })
-        server.listen(0, async () => {
-            const port = server.address().port
-            const result = await axios.get(`http://localhost:${port}`, { httpAgent: new http.Agent({ keepAlive: false }) })
-                                    .catch((error) => {
-                                        t.equal(error.response.status, 500, 'HTTTP status code should be 500')
-                                        return error.response
-                                    })
-            t.equal(result.status, 500, 'await result HTTTP status code should be 500')
-            server.close()
-        })
+test('http error status code', async (t) => {
+    const spanAdaptor = new SpanAdaptor()
+    const grpcDataSender = await new TestGrpcDataSenderBuilder()
+        .addAdaptor(spanAdaptor)
+        .addAdaptor(new MetadataAdaptor())
+        .build()
+    t.teardown(() => {
+        grpcDataSender.close()
     })
+    const dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
-    let actualTraceRoot
-    spanOrSpanChunkCallback = (actual) => {
-        const pSpan = actual
-        const actualPTransactionId = pSpan.getTransactionid()
-        const traceRoot = actualTraceRoot
-        t.equal(actualPTransactionId.getAgentid(), traceRoot.getAgentId(), `transactionId agentId should be ${traceRoot.getAgentId()}`)
-        t.equal(actualPTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), `transactionId agentStartTime should be ${traceRoot.getTraceId().getAgentStartTime()}`)
-        t.equal(actualPTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `transactionId should be ${traceRoot.getTraceId().getTransactionId()}`)
-        t.equal(pSpan.getSpanid(), traceRoot.getTraceId().getSpanId(), `spanId should be ${traceRoot.getTraceId().getSpanId()}`)
-        t.equal(pSpan.getParentspanid(), '-1', 'parentSpanId should be -1')
-        t.equal(pSpan.getStarttime(), traceRoot.getTraceStartTime(), `startTime should be ${traceRoot.getTraceStartTime()}`)
+    let traceRoot
+    const server = http.createServer((req, res) => {
+        traceRoot = agent.currentTraceObject().getTraceRoot()
+        res.writeHead(500)
+        res.end('ok')
+    })
+    await new Promise(resolve => server.listen(0, resolve))
+    const port = server.address().port
+    const result = await axios.get(`http://localhost:${port}`, { httpAgent: new http.Agent({ keepAlive: false }) })
+                            .catch((error) => {
+                                t.equal(error.response.status, 500, 'HTTTP status code should be 500')
+                                return error.response
+                            })
+    t.equal(result.status, 500, 'await result HTTTP status code should be 500')
+    server.close()
 
-        const actualSpan = dataSender.findSpan(traceRoot)
-        t.equal(pSpan.getElapsed(), actualSpan.elapsedTime, `elapsedTime should be ${actualSpan.elapsedTime}`)
-        t.equal(pSpan.getApiid(), defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.apiId, `apiId should be ${defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.apiId}`)
-        t.equal(pSpan.getServicetype(), ServiceType.node.code, `serviceType should be ${ServiceType.node.code}`)
+    const pSpan = await spanAdaptor.span(traceRoot)
+    const actualPTransactionId = pSpan.getTransactionid()
+    t.equal(actualPTransactionId.getAgentid(), traceRoot.getAgentId(), `transactionId agentId should be ${traceRoot.getAgentId()}`)
+    t.equal(actualPTransactionId.getAgentstarttime(), traceRoot.getTraceId().getAgentStartTime(), `transactionId agentStartTime should be ${traceRoot.getTraceId().getAgentStartTime()}`)
+    t.equal(actualPTransactionId.getSequence(), traceRoot.getTraceId().getTransactionId(), `transactionId should be ${traceRoot.getTraceId().getTransactionId()}`)
+    t.equal(pSpan.getSpanid(), traceRoot.getTraceId().getSpanId(), `spanId should be ${traceRoot.getTraceId().getSpanId()}`)
+    t.equal(pSpan.getParentspanid(), '-1', 'parentSpanId should be -1')
+    t.equal(pSpan.getStarttime(), traceRoot.getTraceStartTime(), `startTime should be ${traceRoot.getTraceStartTime()}`)
 
-        const pAcceptEvent = pSpan.getAcceptevent()
-        t.equal(pAcceptEvent.getRpc(), '/', 'rpc should be /')
-        t.equal(pAcceptEvent.getEndpoint(), actualSpan.endPoint, `endpoint should be ${actualSpan.endPoint}`)
-        t.equal(pAcceptEvent.getRemoteaddr(), actualSpan.remoteAddress, `remoteAddress should be ${actualSpan.remoteAddress}`)
+    const actualSpan = dataSender.findSpan(traceRoot)
+    t.equal(pSpan.getElapsed(), actualSpan.elapsedTime, `elapsedTime should be ${actualSpan.elapsedTime}`)
+    t.equal(pSpan.getApiid(), defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.apiId, `apiId should be ${defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor.apiId}`)
+    t.equal(pSpan.getServicetype(), ServiceType.node.code, `serviceType should be ${ServiceType.node.code}`)
 
-        t.equal(pSpan.getFlag(), 0, 'flag should be 0')
-        t.equal(pSpan.getErr(), 1, 'error should be 1')
-        t.end()
-    }
+    const pAcceptEvent = pSpan.getAcceptevent()
+    t.equal(pAcceptEvent.getRpc(), '/', 'rpc should be /')
+    t.equal(pAcceptEvent.getEndpoint(), actualSpan.endPoint, `endpoint should be ${actualSpan.endPoint}`)
+    t.equal(pAcceptEvent.getRemoteaddr(), actualSpan.remoteAddress, `remoteAddress should be ${actualSpan.remoteAddress}`)
+
+    t.equal(pSpan.getFlag(), 0, 'flag should be 0')
+    t.equal(pSpan.getErr(), 1, 'error should be 1')
+    t.end()
 })
 test('http should not mark a client disconnect before the response as an error', (t) => {
     const dataSender = new RecordingDataSender()

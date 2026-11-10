@@ -12,6 +12,7 @@ const services = require('../../lib/data/v1/Service_grpc_pb')
 const spanMessages = require('../../lib/data/v1/Span_pb')
 const cmdMessages = require('../../lib/data/v1/Cmd_pb')
 const GrpcDataSender = require('../../lib/client/grpc-data-sender')
+const DataSender = require('../../lib/client/data-sender')
 const { ConfigBuilder } = require('../../lib/config-builder')
 const { ClientHeader, makeClientHeaderInterceptor } = require('../../lib/name/client-header')
 
@@ -104,6 +105,10 @@ function testGrpcDataSenderClass(adaptors) {
             super(config, interceptors)
             this.server = server
             this.port = port
+        }
+
+        toDataSender() {
+            return new DataSender(this.config, this)
         }
 
         disconnect() {
@@ -285,6 +290,16 @@ class MetadataAdaptor extends GrpcAdaptor {
             && request.getTransactionid().getSequence() === traceRoot.getTraceId().getTransactionId()
             && request.getSpanid() === traceRoot.getTraceId().getSpanId())
     }
+
+    apiMetaData(apiId) {
+        return this.waitFor(request => request instanceof spanMessages.PApiMetaData
+            && request.getApiid() === apiId)
+    }
+
+    sqlMetaData(sqlId) {
+        return this.waitFor(request => request instanceof spanMessages.PSqlMetaData
+            && request.getSqlid() === sqlId)
+    }
 }
 
 class SpanAdaptor extends GrpcAdaptor {
@@ -333,6 +348,7 @@ class StatAdaptor extends GrpcAdaptor {
 
     agentStat(timestamp) {
         return this.waitFor(statMessage => statMessage.getAgentstat()?.getTimestamp() === timestamp)
+            .then(statMessage => statMessage.getAgentstat())
     }
 
     uriStat(timestamp) {

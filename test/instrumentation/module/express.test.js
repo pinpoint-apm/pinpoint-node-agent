@@ -17,13 +17,11 @@ const DisableTrace = require('../../../lib/context/disable-trace')
 const http = require('http')
 const https = require('https')
 const { getTransactionId, getDisabledId } = require('../../../lib/context/trace/id-generator')
-const spanMessages = require('../../../lib/data/v1/Span_pb')
 const { TestGrpcDataSenderBuilder, SpanAdaptor, StatAdaptor, MetadataAdaptor } = require('../../support/test-grpc-data-sender')
-const { waitForAgentStat } = require('../../support/wait-for-agent-stat')
 const AgentStatsMonitor = require('../../../lib/metric/agent-stats-monitor')
-const DataSender = require('../../../lib/client/data-sender')
-const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
+const { UriStatsRepository, UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
 const { UriStatsMonitor } = require('../../../lib/metric/uri/uri-stats-monitor')
+const DateNow = require('../../../lib/support/date-now')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 const { ParentTraceHeader } = require('../../fixtures/parent-trace-header')
 const { receiverTypeNameOfFunctionMethod } = require('../../support/stack-frame')
@@ -786,9 +784,6 @@ test('Should aggregate URI stats in UriStatsRepository', function (t) {
   const dataSender = new RecordingDataSender()
   const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
-  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
-  const DateNow = require('../../../lib/support/date-now')
-
   const PATH = '/integration/uri-stats'
   const app = new express()
   let traceRoot
@@ -845,9 +840,6 @@ test('Should aggregate URI stats without HTTP method when disabled in config', f
     }
   }).setDataSender(dataSender).build()
 
-  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
-  const DateNow = require('../../../lib/support/date-now')
-
   const PATH = '/integration/uri-stats/no-method'
   const app = new express()
   let traceRoot
@@ -903,9 +895,6 @@ test('Should aggregate URI stats for DisableTrace in Express', function (t) {
     }
   })
 
-  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
-  const DateNow = require('../../../lib/support/date-now')
-
   const PATH = '/integration/uri-stats/disable-trace'
   const app = new express()
   let traceCompleted
@@ -949,215 +938,166 @@ test('Should aggregate URI stats for DisableTrace in Express', function (t) {
   })
 })
 
-test('Functional Test: requestExceptionMetaData should deliver converted exception stack for /exception/unhandled', (t) => {
-  let metadataReceived
-  const metadataReceivedPromise = new Promise((resolve, reject) => {
-    metadataReceived = { resolve, reject }
+test('Functional Test: requestExceptionMetaData should deliver converted exception stack for /exception/unhandled', async (t) => {
+  const metadataAdaptor = new MetadataAdaptor()
+  const grpcDataSender = await new TestGrpcDataSenderBuilder()
+    .addAdaptor(metadataAdaptor)
+    .addAdaptor(new SpanAdaptor())
+    .build()
+  t.teardown(() => {
+    grpcDataSender.close()
   })
+  const agent = new ProcessAgentBuilder().setDataSender(grpcDataSender.toDataSender()).build()
 
-  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new MetadataAdaptor({
-    requestExceptionMetaData: (call, callback) => {
-      callback(null, new spanMessages.PResult())
-
-      try {
-        const exceptionMetaData = call.request
-        t.ok(exceptionMetaData, 'ExceptionMetaData should be delivered to collector')
-        t.ok(exceptionMetaData.getTransactionid(), 'transactionId should exist')
-        t.ok(exceptionMetaData.getSpanid(), 'spanId should exist')
-        t.equal(exceptionMetaData.getUritemplate(), '/exception/unhandled', 'uriTemplate should be route path')
-
-        const exceptions = exceptionMetaData.getExceptionsList()
-        t.equal(exceptions.length, 1, 'exceptions length should be 1')
-
-        const exception = exceptions[0]
-        t.equal(exception.getExceptionclassname(), 'Error', 'exception class should be Error')
-        t.equal(exception.getExceptionmessage(), 'Pinpoint unhandled exception test route', 'exception message should match')
-        t.ok(exception.getExceptionid() > 0, 'exception id should be greater than 0')
-        t.equal(exception.getExceptiondepth(), 0, 'exception depth should be 0')
-
-        const stackTraceElements = exception.getStacktraceelementList()
-
-        const actualStackTrace = stackTraceElements
-          .map((pStackTraceElement) => {
-            const className = pStackTraceElement.getClassname() || ''
-            const methodName = pStackTraceElement.getMethodname() || '<anonymous>'
-            const fileName = pStackTraceElement.getFilename() || 'unknown'
-            const lineNumber = pStackTraceElement.getLinenumber()
-            const typePrefix = className ? `${className}.` : ''
-            return `${typePrefix}${methodName} (${fileName}:${lineNumber})`
-          })
-          .join('\n')
-
-        const expectedStackTracePrefix = [
-          'express.test.js.<anonymous> (<workspace>/test/instrumentation/module/express.test.js:<line>)',
-          'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
-          'route.js.next (<workspace>/node_modules/express/lib/router/route.js:<line>)',
-          'Route.dispatch (<workspace>/node_modules/express/lib/router/route.js:<line>)',
-          'InterceptorRunner.run (<workspace>/lib/instrumentation/interceptor-runner.js:<line>)',
-          'express-layer-interceptor.js.wrapped (<workspace>/lib/instrumentation/module/express/express-layer-interceptor.js:<line>)',
-          'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
-          'index.js.<anonymous> (<workspace>/node_modules/express/lib/router/index.js:<line>)',
-          `${receiverTypeNameOfFunctionMethod('router')}.process_params (<workspace>/node_modules/express/lib/router/index.js:<line>)`,
-          'index.js.next (<workspace>/node_modules/express/lib/router/index.js:<line>)',
-        ].join('\n')
-
-        const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        const workspacePath = process.cwd().replace(/\\/g, '/')
-        const normalizeStackTrace = (stackTrace) => {
-          return stackTrace
-            .replace(/\\/g, '/')
-            .replace(new RegExp(escapeRegExp(workspacePath), 'g'), '<workspace>')
-            .replace(/express\.test\.js:\d+/g, 'express.test.js:<line>')
-            .replace(/interceptor-runner\.js:\d+/g, 'interceptor-runner.js:<line>')
-            .replace(/express-layer-interceptor\.js:\d+/g, 'express-layer-interceptor.js:<line>')
-            .replace(/(node_modules\/express\/lib\/router\/[a-zA-Z0-9_-]+\.js):\d+/g, '$1:<line>')
-        }
-
-        const normalizedActualLines = normalizeStackTrace(actualStackTrace).split('\n')
-        const normalizedExpectedPrefixLines = normalizeStackTrace(expectedStackTracePrefix).split('\n')
-
-        t.ok(actualStackTrace.includes('Pinpoint unhandled exception test route') === false, 'stack trace should not include error message line')
-        t.deepEqual(
-          normalizedActualLines.slice(0, normalizedExpectedPrefixLines.length),
-          normalizedExpectedPrefixLines,
-          'gRPC delivered stack trace should match stable prefix frames as multiline string'
-        )
-
-        metadataReceived.resolve()
-      } catch (error) {
-        metadataReceived.reject(error)
-      }
-    }
-  })).addAdaptor(new SpanAdaptor())
-
-  grpcDataSenderBuilder.build().then((grpcDataSender) => {
-    new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
-
-    const app = new express()
-    app.get('/exception/unhandled', function (req, res, next) {
-      const error = new Error('Pinpoint unhandled exception test route')
-      error.status = 500
-      next(error)
-    })
-    app.use(function (err, req, res, next) {
-      res.status(500).send('Something broke!')
-    })
-
-    const server = app.listen(0, async () => {
-      try {
-        const serverPort = server.address().port
-        const response = await axios.get(`http://localhost:${serverPort}/exception/unhandled`, {
-          validateStatus: () => true,
-          httpAgent: new http.Agent({ keepAlive: false }),
-          httpsAgent: new https.Agent({ keepAlive: false }),
-        })
-
-        t.equal(response.status, 500, 'route should return 500')
-        await metadataReceivedPromise
-      } catch (error) {
-        t.fail(error?.stack || error?.message || String(error))
-      } finally {
-        server.close(() => {
-          grpcDataSender.close()
-          t.end()
-        })
-      }
-    })
+  let traceRoot
+  const app = new express()
+  app.get('/exception/unhandled', function (req, res, next) {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    const error = new Error('Pinpoint unhandled exception test route')
+    error.status = 500
+    next(error)
   })
+  app.use(function (err, req, res, next) {
+    res.status(500).send('Something broke!')
+  })
+  const server = app.listen(0)
+  await new Promise(resolve => server.on('listening', resolve))
+  const response = await axios.get(`http://localhost:${server.address().port}/exception/unhandled`, {
+    validateStatus: () => true,
+    httpAgent: new http.Agent({ keepAlive: false }),
+    httpsAgent: new https.Agent({ keepAlive: false }),
+  })
+  server.close()
+  t.equal(response.status, 500, 'route should return 500')
+
+  const exceptionMetaData = await metadataAdaptor.exceptionMetaData(traceRoot)
+  t.ok(exceptionMetaData, 'ExceptionMetaData should be delivered to collector')
+  t.ok(exceptionMetaData.getTransactionid(), 'transactionId should exist')
+  t.ok(exceptionMetaData.getSpanid(), 'spanId should exist')
+  t.equal(exceptionMetaData.getUritemplate(), '/exception/unhandled', 'uriTemplate should be route path')
+
+  const exceptions = exceptionMetaData.getExceptionsList()
+  t.equal(exceptions.length, 1, 'exceptions length should be 1')
+
+  const exception = exceptions[0]
+  t.equal(exception.getExceptionclassname(), 'Error', 'exception class should be Error')
+  t.equal(exception.getExceptionmessage(), 'Pinpoint unhandled exception test route', 'exception message should match')
+  t.ok(exception.getExceptionid() > 0, 'exception id should be greater than 0')
+  t.equal(exception.getExceptiondepth(), 0, 'exception depth should be 0')
+
+  const stackTraceElements = exception.getStacktraceelementList()
+
+  const actualStackTrace = stackTraceElements
+    .map((pStackTraceElement) => {
+      const className = pStackTraceElement.getClassname() || ''
+      const methodName = pStackTraceElement.getMethodname() || '<anonymous>'
+      const fileName = pStackTraceElement.getFilename() || 'unknown'
+      const lineNumber = pStackTraceElement.getLinenumber()
+      const typePrefix = className ? `${className}.` : ''
+      return `${typePrefix}${methodName} (${fileName}:${lineNumber})`
+    })
+    .join('\n')
+
+  const expectedStackTracePrefix = [
+    'express.test.js.<anonymous> (<workspace>/test/instrumentation/module/express.test.js:<line>)',
+    'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
+    'route.js.next (<workspace>/node_modules/express/lib/router/route.js:<line>)',
+    'Route.dispatch (<workspace>/node_modules/express/lib/router/route.js:<line>)',
+    'InterceptorRunner.run (<workspace>/lib/instrumentation/interceptor-runner.js:<line>)',
+    'express-layer-interceptor.js.wrapped (<workspace>/lib/instrumentation/module/express/express-layer-interceptor.js:<line>)',
+    'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
+    'index.js.<anonymous> (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+    `${receiverTypeNameOfFunctionMethod('router')}.process_params (<workspace>/node_modules/express/lib/router/index.js:<line>)`,
+    'index.js.next (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+  ].join('\n')
+
+  const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const workspacePath = process.cwd().replace(/\\/g, '/')
+  const normalizeStackTrace = (stackTrace) => {
+    return stackTrace
+      .replace(/\\/g, '/')
+      .replace(new RegExp(escapeRegExp(workspacePath), 'g'), '<workspace>')
+      .replace(/express\.test\.js:\d+/g, 'express.test.js:<line>')
+      .replace(/interceptor-runner\.js:\d+/g, 'interceptor-runner.js:<line>')
+      .replace(/express-layer-interceptor\.js:\d+/g, 'express-layer-interceptor.js:<line>')
+      .replace(/(node_modules\/express\/lib\/router\/[a-zA-Z0-9_-]+\.js):\d+/g, '$1:<line>')
+  }
+
+  const normalizedActualLines = normalizeStackTrace(actualStackTrace).split('\n')
+  const normalizedExpectedPrefixLines = normalizeStackTrace(expectedStackTracePrefix).split('\n')
+
+  t.ok(actualStackTrace.includes('Pinpoint unhandled exception test route') === false, 'stack trace should not include error message line')
+  t.deepEqual(
+    normalizedActualLines.slice(0, normalizedExpectedPrefixLines.length),
+    normalizedExpectedPrefixLines,
+    'gRPC delivered stack trace should match stable prefix frames as multiline string'
+  )
+  t.end()
 })
 
-test('Functional Test: requestExceptionMetaData should deliver error.cause chain', (t) => {
-  let metadataReceived
-  const metadataReceivedPromise = new Promise((resolve, reject) => {
-    metadataReceived = { resolve, reject }
+test('Functional Test: requestExceptionMetaData should deliver error.cause chain', async (t) => {
+  const metadataAdaptor = new MetadataAdaptor()
+  const grpcDataSender = await new TestGrpcDataSenderBuilder()
+    .addAdaptor(metadataAdaptor)
+    .addAdaptor(new SpanAdaptor())
+    .build()
+  t.teardown(() => {
+    grpcDataSender.close()
   })
+  const agent = new ProcessAgentBuilder().setDataSender(grpcDataSender.toDataSender()).build()
 
-  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new MetadataAdaptor({
-    requestExceptionMetaData: (call, callback) => {
-      callback(null, new spanMessages.PResult())
-
-      try {
-        const exceptionMetaData = call.request
-        t.ok(exceptionMetaData, 'ExceptionMetaData should be delivered')
-
-        const exceptions = exceptionMetaData.getExceptionsList()
-        t.equal(exceptions.length, 2, 'should have 2 exceptions in cause chain')
-
-        const top = exceptions[0]
-        t.equal(top.getExceptionclassname(), 'Error', 'top exception class is Error')
-        t.equal(top.getExceptionmessage(), 'request failed', 'top exception message')
-        t.equal(top.getExceptiondepth(), 0, 'top exception depth is 0')
-
-        const cause = exceptions[1]
-        t.equal(cause.getExceptionclassname(), 'TypeError', 'cause class is TypeError')
-        t.equal(cause.getExceptionmessage(), 'root cause', 'cause message')
-        t.equal(cause.getExceptiondepth(), 1, 'cause depth is 1')
-
-        t.equal(top.getExceptionid(), cause.getExceptionid(), 'shared exceptionId')
-        t.ok(cause.getStacktraceelementList().length > 0, 'cause should have stack trace')
-
-        metadataReceived.resolve()
-      } catch (error) {
-        metadataReceived.reject(error)
-      }
-    }
-  })).addAdaptor(new SpanAdaptor())
-
-  grpcDataSenderBuilder.build().then((grpcDataSender) => {
-    new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
-
-    const app = new express()
-    app.get('/exception/cause-chain', function (req, res, next) {
-      const rootCause = new TypeError('root cause')
-      const error = new Error('request failed', { cause: rootCause })
-      error.status = 500
-      next(error)
-    })
-    app.use(function (err, req, res, next) {
-      res.status(500).send('error')
-    })
-
-    const server = app.listen(0, async () => {
-      try {
-        const serverPort = server.address().port
-        const response = await axios.get(`http://localhost:${serverPort}/exception/cause-chain`, {
-          validateStatus: () => true,
-          httpAgent: new http.Agent({ keepAlive: false }),
-          httpsAgent: new https.Agent({ keepAlive: false }),
-        })
-
-        t.equal(response.status, 500, 'route should return 500')
-        await metadataReceivedPromise
-      } catch (error) {
-        t.fail(error?.stack || error?.message || String(error))
-      } finally {
-        server.close(() => {
-          grpcDataSender.close()
-          t.end()
-        })
-      }
-    })
+  let traceRoot
+  const app = new express()
+  app.get('/exception/cause-chain', function (req, res, next) {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    const rootCause = new TypeError('root cause')
+    const error = new Error('request failed', { cause: rootCause })
+    error.status = 500
+    next(error)
   })
+  app.use(function (err, req, res, next) {
+    res.status(500).send('error')
+  })
+  const server = app.listen(0)
+  await new Promise(resolve => server.on('listening', resolve))
+  const response = await axios.get(`http://localhost:${server.address().port}/exception/cause-chain`, {
+    validateStatus: () => true,
+    httpAgent: new http.Agent({ keepAlive: false }),
+    httpsAgent: new https.Agent({ keepAlive: false }),
+  })
+  server.close()
+  t.equal(response.status, 500, 'route should return 500')
+
+  const exceptionMetaData = await metadataAdaptor.exceptionMetaData(traceRoot)
+  t.ok(exceptionMetaData, 'ExceptionMetaData should be delivered')
+
+  const exceptions = exceptionMetaData.getExceptionsList()
+  t.equal(exceptions.length, 2, 'should have 2 exceptions in cause chain')
+
+  const top = exceptions[0]
+  t.equal(top.getExceptionclassname(), 'Error', 'top exception class is Error')
+  t.equal(top.getExceptionmessage(), 'request failed', 'top exception message')
+  t.equal(top.getExceptiondepth(), 0, 'top exception depth is 0')
+
+  const cause = exceptions[1]
+  t.equal(cause.getExceptionclassname(), 'TypeError', 'cause class is TypeError')
+  t.equal(cause.getExceptionmessage(), 'root cause', 'cause message')
+  t.equal(cause.getExceptiondepth(), 1, 'cause depth is 1')
+
+  t.equal(top.getExceptionid(), cause.getExceptionid(), 'shared exceptionId')
+  t.ok(cause.getStacktraceelementList().length > 0, 'cause should have stack trace')
+  t.end()
 })
 
 test('Functional Test: SendSpan with success and failure', (t) => {
   const traceRoots = []
-  const receivedStats = []
 
   const spanAdaptor = new SpanAdaptor()
-  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(spanAdaptor).addAdaptor(new StatAdaptor({
-    sendAgentStat: (call) => {
-      call.on('data', (statMessage) => {
-        receivedStats.push(statMessage)
-      })
-      call.on('end', () => {
-        call.end()
-      })
-    }
-  })).addAdaptor(new MetadataAdaptor())
+  const statAdaptor = new StatAdaptor()
+  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(spanAdaptor).addAdaptor(statAdaptor).addAdaptor(new MetadataAdaptor())
 
   grpcDataSenderBuilder.build().then((grpcDataSender) => {
-    const agent = new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
+    const agent = new ProcessAgentBuilder().setDataSender(grpcDataSender.toDataSender()).build()
 
     const app = new express()
     const successPath = '/functional/success'
@@ -1217,112 +1157,111 @@ test('Functional Test: SendSpan with success and failure', (t) => {
       } catch (e) { }
 
       const repository = getUriStatsRepository(agent.getTraceContext())
-      repository.timeWindow = 1000
-      const monitor = new UriStatsMonitor(new DataSender(grpcDataSender.config, grpcDataSender), repository)
-      monitor.start()
+      const monitor = new UriStatsMonitor(grpcDataSender.toDataSender(), repository)
+      DateNow.setOffset(repository.getTimeWindow())
+      const snapshots = monitor.run()
+      DateNow.reset()
+      const uriStats = await Promise.all(snapshots.map(snapshot => statAdaptor.uriStat(snapshot.getBaseTimestamp())))
 
-      setTimeout(async () => {
-        const spans = await Promise.all(traceRoots.map(traceRoot => spanAdaptor.span(traceRoot)))
-        t.equal(spans.length, 7, 'Should receive 7 spans')
+      const spans = await Promise.all(traceRoots.map(traceRoot => spanAdaptor.span(traceRoot)))
+      t.equal(spans.length, 7, 'Should receive 7 spans')
 
-        const successSpan = spans.find(span => span.getAcceptevent().getRpc() === successPath)
-        const failSpan = spans.find(span => span.getAcceptevent().getRpc() === failPath)
+      const successSpan = spans.find(span => span.getAcceptevent().getRpc() === successPath)
+      const failSpan = spans.find(span => span.getAcceptevent().getRpc() === failPath)
 
-        t.ok(successSpan, 'Success span found')
-        if (successSpan) {
-          t.equal(successSpan.getErr(), 0, 'Success span should have err=0')
+      t.ok(successSpan, 'Success span found')
+      if (successSpan) {
+        t.equal(successSpan.getErr(), 0, 'Success span should have err=0')
+      }
+
+      t.ok(failSpan, 'Fail span found')
+      if (failSpan) {
+        t.equal(failSpan.getErr(), 1, 'Fail span should have err=1')
+
+        const spanEvents = failSpan.getSpaneventList()
+        const eventWithException = spanEvents.find(e => {
+          const info = e.getExceptioninfo()
+          return info && info.getStringvalue && info.getStringvalue()
+        })
+        t.ok(eventWithException, 'Should find span event with exception info')
+
+        if (eventWithException) {
+          const title = eventWithException.getExceptioninfo().getStringvalue().getValue()
+          t.true(title.startsWith('Error: functional test error'), 'Fail span event should have exception info')
         }
+      }
 
-        t.ok(failSpan, 'Fail span found')
-        if (failSpan) {
-          t.equal(failSpan.getErr(), 1, 'Fail span should have err=1')
+      t.ok(uriStats.length > 0, 'Should receive stats')
+      if (uriStats.length > 0) {
+        const mergedStats = {}
 
-          const spanEvents = failSpan.getSpaneventList()
-          const eventWithException = spanEvents.find(e => {
-            const info = e.getExceptioninfo()
-            return info && info.getStringvalue && info.getStringvalue()
-          })
-          t.ok(eventWithException, 'Should find span event with exception info')
-
-          if (eventWithException) {
-            const title = eventWithException.getExceptioninfo().getStringvalue().getValue()
-            t.true(title.startsWith('Error: functional test error'), 'Fail span event should have exception info')
-          }
-        }
-
-        t.ok(receivedStats.length > 0, 'Should receive stats')
-        if (receivedStats.length > 0) {
-          const mergedStats = {}
-
-          receivedStats.forEach(statMsg => {
-            const agentUriStat = statMsg.getAgenturistat()
-            if (agentUriStat) {
-              const eachList = agentUriStat.getEachuristatList()
-              if (eachList) {
-                eachList.forEach(each => {
-                  const uri = each.getUri()
-                  if (!mergedStats[uri]) {
-                    mergedStats[uri] = {
-                      totalBuckets: new Array(8).fill(0),
-                      failedBuckets: new Array(8).fill(0)
-                    }
+        uriStats.forEach(statMsg => {
+          const agentUriStat = statMsg.getAgenturistat()
+          if (agentUriStat) {
+            const eachList = agentUriStat.getEachuristatList()
+            if (eachList) {
+              eachList.forEach(each => {
+                const uri = each.getUri()
+                if (!mergedStats[uri]) {
+                  mergedStats[uri] = {
+                    totalBuckets: new Array(8).fill(0),
+                    failedBuckets: new Array(8).fill(0)
                   }
+                }
 
-                  const totalHistList = each.getTotalhistogram().getHistogramList()
-                  totalHistList.forEach((count, idx) => mergedStats[uri].totalBuckets[idx] += count)
+                const totalHistList = each.getTotalhistogram().getHistogramList()
+                totalHistList.forEach((count, idx) => mergedStats[uri].totalBuckets[idx] += count)
 
-                  const failedHistList = each.getFailedhistogram().getHistogramList()
-                  failedHistList.forEach((count, idx) => mergedStats[uri].failedBuckets[idx] += count)
-                })
-              }
+                const failedHistList = each.getFailedhistogram().getHistogramList()
+                failedHistList.forEach((count, idx) => mergedStats[uri].failedBuckets[idx] += count)
+              })
             }
-          })
-
-          const successUriKey = `GET ${successPath}`
-          const successStat = mergedStats[successUriKey]
-
-          t.ok(successStat, `Stats found for ${successPath}`)
-          if (successStat) {
-            const totalBuckets = successStat.totalBuckets
-            const totalCount = totalBuckets.reduce((acc, val) => acc + val, 0)
-            t.equal(totalCount, 5, 'Total count should be 5 for success')
-
-            t.equal(totalBuckets[0], 1, 'Bucket 0 (<100ms) should have 1 count')
-            t.equal(totalBuckets[1], 1, 'Bucket 1 (<300ms) should have 1 count')
-            t.equal(totalBuckets[2], 1, 'Bucket 2 (<500ms) should have 1 count')
-            t.equal(totalBuckets[3], 1, 'Bucket 3 (<1000ms) should have 1 count')
-            t.equal(totalBuckets[4], 1, 'Bucket 4 (<3000ms) should have 1 count')
-
-            const failedBuckets = successStat.failedBuckets
-            const failedCount = failedBuckets.reduce((acc, val) => acc + val, 0)
-            t.equal(failedCount, 0, 'Failed count should be 0 for success')
           }
+        })
 
-          const failUriKey = `GET ${failPath}`
-          const failStat = mergedStats[failUriKey]
+        const successUriKey = `GET ${successPath}`
+        const successStat = mergedStats[successUriKey]
 
-          t.ok(failStat, `Stats found for ${failPath}`)
-          if (failStat) {
-            const totalBuckets = failStat.totalBuckets
-            const totalCount = totalBuckets.reduce((acc, val) => acc + val, 0)
-            t.equal(totalCount, 2, 'Total count should be 2 for fail')
+        t.ok(successStat, `Stats found for ${successPath}`)
+        if (successStat) {
+          const totalBuckets = successStat.totalBuckets
+          const totalCount = totalBuckets.reduce((acc, val) => acc + val, 0)
+          t.equal(totalCount, 5, 'Total count should be 5 for success')
 
-            t.equal(totalBuckets[0], 1, 'Bucket 0 (<100ms) should have 1 count')
-            t.equal(totalBuckets[1], 1, 'Bucket 1 (<300ms) should have 1 count')
+          t.equal(totalBuckets[0], 1, 'Bucket 0 (<100ms) should have 1 count')
+          t.equal(totalBuckets[1], 1, 'Bucket 1 (<300ms) should have 1 count')
+          t.equal(totalBuckets[2], 1, 'Bucket 2 (<500ms) should have 1 count')
+          t.equal(totalBuckets[3], 1, 'Bucket 3 (<1000ms) should have 1 count')
+          t.equal(totalBuckets[4], 1, 'Bucket 4 (<3000ms) should have 1 count')
 
-            const failedBuckets = failStat.failedBuckets
-            const failedCount = failedBuckets.reduce((acc, val) => acc + val, 0)
-            t.equal(failedCount, 2, 'Failed count should be 2 for fail')
-            t.equal(failedBuckets[0], 1, 'Failed Bucket 0 (<100ms) should have 1 count')
-            t.equal(failedBuckets[1], 1, 'Failed Bucket 1 (<300ms) should have 1 count')
-          }
+          const failedBuckets = successStat.failedBuckets
+          const failedCount = failedBuckets.reduce((acc, val) => acc + val, 0)
+          t.equal(failedCount, 0, 'Failed count should be 0 for success')
         }
-        monitor.stop()
 
-        server.close()
-        grpcDataSender.close()
-        t.end()
-      }, 5000)
+        const failUriKey = `GET ${failPath}`
+        const failStat = mergedStats[failUriKey]
+
+        t.ok(failStat, `Stats found for ${failPath}`)
+        if (failStat) {
+          const totalBuckets = failStat.totalBuckets
+          const totalCount = totalBuckets.reduce((acc, val) => acc + val, 0)
+          t.equal(totalCount, 2, 'Total count should be 2 for fail')
+
+          t.equal(totalBuckets[0], 1, 'Bucket 0 (<100ms) should have 1 count')
+          t.equal(totalBuckets[1], 1, 'Bucket 1 (<300ms) should have 1 count')
+
+          const failedBuckets = failStat.failedBuckets
+          const failedCount = failedBuckets.reduce((acc, val) => acc + val, 0)
+          t.equal(failedCount, 2, 'Failed count should be 2 for fail')
+          t.equal(failedBuckets[0], 1, 'Failed Bucket 0 (<100ms) should have 1 count')
+          t.equal(failedBuckets[1], 1, 'Failed Bucket 1 (<300ms) should have 1 count')
+        }
+      }
+
+      server.close()
+      grpcDataSender.close()
+      t.end()
     })
   })
 })
@@ -1376,9 +1315,6 @@ test('Should count failure in URI stats for DisableTrace in Express', function (
       }
     }
   })
-
-  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
-  const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/integration/uri-stats/disable-trace-failure'
   const app = new express()
@@ -1468,9 +1404,6 @@ test('Express: Should not override uri template from user input when useUserInpu
 test('Express: Should not mark a client disconnect before the response as an error', function (t) {
   const dataSender = new RecordingDataSender()
   const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
-
-  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
-  const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/client-disconnect'
   const app = new express()
@@ -1622,21 +1555,13 @@ test('Express: application service type is NODE 1400 even with PINPOINT_SERVICE_
 })
 
 test('Express: AgentStat sends the transaction count and response time of completed requests', (t) => {
-  const receivedAgentStats = []
-  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new StatAdaptor({
-    sendAgentStat: (call) => {
-      call.on('data', (statMessage) => {
-        if (statMessage.getAgentstat()) {
-          receivedAgentStats.push(statMessage.getAgentstat())
-        }
-      })
-      call.on('end', () => call.end())
-    }
-  })).addAdaptor(new SpanAdaptor())
+  const statAdaptor = new StatAdaptor()
+  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(statAdaptor)
+    .addAdaptor(new SpanAdaptor())
     .addAdaptor(new MetadataAdaptor())
 
   grpcDataSenderBuilder.build().then((grpcDataSender) => {
-    const agent = new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
+    const agent = new ProcessAgentBuilder().setDataSender(grpcDataSender.toDataSender()).build()
     const agentStatsMonitor = new AgentStatsMonitor(grpcDataSender, agent.getConfig().getAgentId(), agent.agentStartTime)
 
     const app = new express()
@@ -1651,8 +1576,8 @@ test('Express: AgentStat sends the transaction count and response time of comple
         await axios.get(getServerUrl('/tps'), { httpAgent: new http.Agent({ keepAlive: false }) })
         await axios.get(getServerUrl('/tps'), { httpAgent: new http.Agent({ keepAlive: false }) })
 
-        agentStatsMonitor.send()
-        const pAgentStat = await waitForAgentStat(receivedAgentStats)
+        const statsInfo = await agentStatsMonitor.send()
+        const pAgentStat = await statAdaptor.agentStat(statsInfo.timestamp)
 
         t.equal(pAgentStat.getTransaction().getSamplednewcount(), 3, 'PTransaction.sampledNewCount is 3 requests')
         t.ok(pAgentStat.getResponsetime().getMax() > 0, 'PResponseTime.max is greater than 0')

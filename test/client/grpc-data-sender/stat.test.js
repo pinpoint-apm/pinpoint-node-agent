@@ -10,7 +10,6 @@ const test = require('tape')
 const grpc = require('@grpc/grpc-js')
 const { TestGrpcDataSenderBuilder, StatAdaptor } = require('../../support/test-grpc-data-sender')
 const { ProcessAgentBuilder } = require('../../support/process-agent-builder')
-const DataSender = require('../../../lib/client/data-sender')
 const { setInterval } = require('node:timers/promises')
 const shimmer = require('@pinpoint-apm/shimmer')
 const express = require('express')
@@ -39,8 +38,8 @@ test('stat stream reconnects after the collector comes back', reconnectTestTimeo
     const dataSender = await new TestGrpcDataSenderBuilder()
         .addAdaptor(statAdaptor)
         .build()
-    statAdaptor.agentStat(expected1.timestamp).then((statMessage) => {
-        t.equal(statMessage.getAgentstat().getTimestamp(), expected1.timestamp, `timestamp should be ${expected1.timestamp}`)
+    statAdaptor.agentStat(expected1.timestamp).then((pAgentStat) => {
+        t.equal(pAgentStat.getTimestamp(), expected1.timestamp, `timestamp should be ${expected1.timestamp}`)
         dataSender.disconnect()
     })
 
@@ -211,7 +210,7 @@ test('sendStat', async (t) => {
     t.teardown(() => {
         grpcDataSender.close()
     })
-    const agent = new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
+    const agent = new ProcessAgentBuilder().setDataSender(grpcDataSender.toDataSender()).build()
 
     const app = new express()
     app.get('/', (req, res) => {
@@ -222,9 +221,9 @@ test('sendStat', async (t) => {
             const originalHistogram = result.activeTrace.histogramValues()
             res.send('Hello World')
 
-            statAdaptor.agentStat(result.timestamp).then((statMessage) => {
+            statAdaptor.agentStat(result.timestamp).then((pAgentStat) => {
                 t.equal(statAdaptor.metadata[0].get('servicetype')[0], '1400', 'stat stream metadata servicetype is 1400')
-                const actualHistogram = statMessage.getAgentstat().getActivetrace().getHistogram().getActivetracecountList()
+                const actualHistogram = pAgentStat.getActivetrace().getHistogram().getActivetracecountList()
                 t.deepEqual(originalHistogram, actualHistogram, 'active trace histogram')
 
                 agentStatsMonitor.shutdown()

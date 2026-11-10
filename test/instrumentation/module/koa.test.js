@@ -14,18 +14,15 @@ const Router = require('koa-router')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
-const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
-const spanMessages = require('../../../lib/data/v1/Span_pb')
+const { UriStatsRepository, UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
+const DateNow = require('../../../lib/support/date-now')
 const { TestGrpcDataSenderBuilder, SpanAdaptor, StatAdaptor, MetadataAdaptor } = require('../../support/test-grpc-data-sender')
-const { waitForAgentStat } = require('../../support/wait-for-agent-stat')
 const AgentStatsMonitor = require('../../../lib/metric/agent-stats-monitor')
 const http = require('http')
 const https = require('https')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 const { ParentTraceHeader } = require('../../fixtures/parent-trace-header')
 const RecordingDataSender = require('../../support/recording-data-sender')
-const DataSender = require('../../../lib/client/data-sender')
-
 
 const TEST_ENV = {
   host: 'localhost',
@@ -91,7 +88,6 @@ test(`${testName1} Should record request in basic route koa.test.js`, function (
     server.close()
   })
 })
-
 
 test('koa should record handler registered with pattern route', (t) => {
   t.plan(3)
@@ -199,9 +195,6 @@ test('Should aggregate URI stats in UriStatsRepository for Koa', function (t) {
   const dataSender = new RecordingDataSender()
   const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
-  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
-  const DateNow = require('../../../lib/support/date-now')
-
   const PATH = '/integration/uri-stats'
   const app = new Koa()
   const router = new Router()
@@ -262,9 +255,6 @@ test('Should aggregate URI stats without HTTP method when disabled in config for
     }
   }).setDataSender(dataSender).build()
 
-  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
-  const DateNow = require('../../../lib/support/date-now')
-
   const PATH = '/integration/uri-stats/no-method'
   const app = new Koa()
   const router = new Router()
@@ -324,9 +314,6 @@ test('Should aggregate URI stats for DisableTrace in Koa', function (t) {
       }
     }
   })
-
-  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
-  const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/integration/uri-stats/disable-trace'
   const app = new Koa()
@@ -468,9 +455,6 @@ test('Should count failure in URI stats for DisableTrace in Koa', function (t) {
     }
   })
 
-  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
-  const DateNow = require('../../../lib/support/date-now')
-
   const PATH = '/integration/uri-stats/disable-trace-failure'
   const app = new Koa()
   const router = new Router()
@@ -520,87 +504,59 @@ test('Should count failure in URI stats for DisableTrace in Koa', function (t) {
   })
 })
 
-test('Functional Test: requestExceptionMetaData should deliver error.cause chain in Koa', (t) => {
-  let metadataReceived
-  const metadataReceivedPromise = new Promise((resolve, reject) => {
-    metadataReceived = { resolve, reject }
+test('Functional Test: requestExceptionMetaData should deliver error.cause chain in Koa', async (t) => {
+  const metadataAdaptor = new MetadataAdaptor()
+  const grpcDataSender = await new TestGrpcDataSenderBuilder()
+    .addAdaptor(metadataAdaptor)
+    .addAdaptor(new SpanAdaptor())
+    .build()
+  t.teardown(() => {
+    grpcDataSender.close()
   })
+  const agent = new ProcessAgentBuilder().setDataSender(grpcDataSender.toDataSender()).build()
 
-  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new SpanAdaptor({
-    sendSpanBatch: function (call, callback) {
-      callback(null, new spanMessages.PSpanResultBatch())
-    },
-  })).addAdaptor(new MetadataAdaptor({
-    requestExceptionMetaData: (call, callback) => {
-      callback(null, new spanMessages.PResult())
-
-      try {
-        const exceptionMetaData = call.request
-        t.ok(exceptionMetaData, 'ExceptionMetaData should be delivered')
-
-        const exceptions = exceptionMetaData.getExceptionsList()
-        t.equal(exceptions.length, 2, 'should have 2 exceptions in cause chain')
-
-        const top = exceptions[0]
-        t.equal(top.getExceptionclassname(), 'Error', 'top exception class is Error')
-        t.equal(top.getExceptionmessage(), 'koa gRPC request failed', 'top exception message')
-        t.equal(top.getExceptiondepth(), 0, 'top exception depth is 0')
-
-        const cause = exceptions[1]
-        t.equal(cause.getExceptionclassname(), 'TypeError', 'cause class is TypeError')
-        t.equal(cause.getExceptionmessage(), 'koa gRPC root cause', 'cause message')
-        t.equal(cause.getExceptiondepth(), 1, 'cause depth is 1')
-
-        t.equal(top.getExceptionid(), cause.getExceptionid(), 'shared exceptionId')
-        t.ok(cause.getStacktraceelementList().length > 0, 'cause should have stack trace')
-
-        metadataReceived.resolve()
-      } catch (error) {
-        metadataReceived.reject(error)
-      }
-    }
-  }))
-
-  grpcDataSenderBuilder.build().then((grpcDataSender) => {
-    new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
-
-    const app = new Koa()
-    const router = new Router()
-
-    router.get('/exception/cause-chain', async (ctx) => {
-      const rootCause = new TypeError('koa gRPC root cause')
-      throw new Error('koa gRPC request failed', { cause: rootCause })
-    })
-
-    app.use(router.routes()).use(router.allowedMethods())
-
-    const server = app.listen(0, async () => {
-      try {
-        const serverPort = server.address().port
-        await axios.get(`http://localhost:${serverPort}/exception/cause-chain`, {
-          validateStatus: () => true,
-          httpAgent: new http.Agent({ keepAlive: false }),
-          httpsAgent: new https.Agent({ keepAlive: false }),
-        })
-        await metadataReceivedPromise
-      } catch (error) {
-        t.fail(error?.stack || error?.message || String(error))
-      } finally {
-        server.close(() => {
-          grpcDataSender.close()
-          t.end()
-        })
-      }
-    })
+  let traceRoot
+  const app = new Koa()
+  const router = new Router()
+  router.get('/exception/cause-chain', async (ctx) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    const rootCause = new TypeError('koa gRPC root cause')
+    throw new Error('koa gRPC request failed', { cause: rootCause })
   })
+  app.use(router.routes()).use(router.allowedMethods())
+  const server = app.listen(0)
+  await new Promise(resolve => server.on('listening', resolve))
+  await axios.get(`http://localhost:${server.address().port}/exception/cause-chain`, {
+    validateStatus: () => true,
+    httpAgent: new http.Agent({ keepAlive: false }),
+    httpsAgent: new https.Agent({ keepAlive: false }),
+  })
+  server.close()
+
+  const exceptionMetaData = await metadataAdaptor.exceptionMetaData(traceRoot)
+  t.ok(exceptionMetaData, 'ExceptionMetaData should be delivered')
+
+  const exceptions = exceptionMetaData.getExceptionsList()
+  t.equal(exceptions.length, 2, 'should have 2 exceptions in cause chain')
+
+  const top = exceptions[0]
+  t.equal(top.getExceptionclassname(), 'Error', 'top exception class is Error')
+  t.equal(top.getExceptionmessage(), 'koa gRPC request failed', 'top exception message')
+  t.equal(top.getExceptiondepth(), 0, 'top exception depth is 0')
+
+  const cause = exceptions[1]
+  t.equal(cause.getExceptionclassname(), 'TypeError', 'cause class is TypeError')
+  t.equal(cause.getExceptionmessage(), 'koa gRPC root cause', 'cause message')
+  t.equal(cause.getExceptiondepth(), 1, 'cause depth is 1')
+
+  t.equal(top.getExceptionid(), cause.getExceptionid(), 'shared exceptionId')
+  t.ok(cause.getStacktraceelementList().length > 0, 'cause should have stack trace')
+  t.end()
 })
 
 test('Koa: Should not mark a client disconnect before the response as an error', function (t) {
   const dataSender = new RecordingDataSender()
   const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
-
-  const { UriStatsRepository } = require('../../../lib/metric/uri/uri-stats-repository')
-  const DateNow = require('../../../lib/support/date-now')
 
   const PATH = '/client-disconnect'
   const app = new Koa()
@@ -762,21 +718,13 @@ test('Koa: application service type is NODE 1400 even with PINPOINT_SERVICE_TYPE
 })
 
 test('Koa: AgentStat sends the transaction count and response time of completed requests', (t) => {
-  const receivedAgentStats = []
-  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(new StatAdaptor({
-    sendAgentStat: (call) => {
-      call.on('data', (statMessage) => {
-        if (statMessage.getAgentstat()) {
-          receivedAgentStats.push(statMessage.getAgentstat())
-        }
-      })
-      call.on('end', () => call.end())
-    }
-  })).addAdaptor(new SpanAdaptor())
+  const statAdaptor = new StatAdaptor()
+  const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder().addAdaptor(statAdaptor)
+    .addAdaptor(new SpanAdaptor())
     .addAdaptor(new MetadataAdaptor())
 
   grpcDataSenderBuilder.build().then((grpcDataSender) => {
-    const agent = new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
+    const agent = new ProcessAgentBuilder().setDataSender(grpcDataSender.toDataSender()).build()
     const agentStatsMonitor = new AgentStatsMonitor(grpcDataSender, agent.getConfig().getAgentId(), agent.agentStartTime)
 
     const app = new Koa()
@@ -793,8 +741,8 @@ test('Koa: AgentStat sends the transaction count and response time of completed 
         await axios.get(getServerUrl('/tps'), { httpAgent: new http.Agent({ keepAlive: false }) })
         await axios.get(getServerUrl('/tps'), { httpAgent: new http.Agent({ keepAlive: false }) })
 
-        agentStatsMonitor.send()
-        const pAgentStat = await waitForAgentStat(receivedAgentStats)
+        const statsInfo = await agentStatsMonitor.send()
+        const pAgentStat = await statAdaptor.agentStat(statsInfo.timestamp)
 
         t.equal(pAgentStat.getTransaction().getSamplednewcount(), 3, 'PTransaction.sampledNewCount is 3 requests')
         t.ok(pAgentStat.getResponsetime().getMax() > 0, 'PResponseTime.max is greater than 0')

@@ -15,14 +15,13 @@ const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const { TestGrpcDataSenderBuilder, MetadataAdaptor, SpanAdaptor } = require('../../support/test-grpc-data-sender')
 const RecordingDataSender = require('../../support/recording-data-sender')
-const DataSender = require('../../../lib/client/data-sender')
 
 test('mongodb query', async (t) => {
     const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder()
         .addAdaptor(new MetadataAdaptor())
         .addAdaptor(new SpanAdaptor())
     grpcDataSenderBuilder.build().then(async (grpcDataSender) => {
-        const dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+        const dataSender = new RecordingDataSender(grpcDataSender.toDataSender())
         const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
         const mongodbContainer = await startMongoDB()
         const client = new MongoClient(mongodbContainer.getConnectionString(), { directConnection: true })

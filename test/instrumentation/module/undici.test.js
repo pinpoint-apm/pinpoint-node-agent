@@ -16,8 +16,6 @@ const http = require('http')
 const ServiceType = require('../../../lib/context/service-type')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const annotationKey = require('../../../lib/constant/annotation-key')
-const spanMessages = require('../../../lib/data/v1/Span_pb')
-const DataSender = require('../../../lib/client/data-sender')
 const RecordingDataSender = require('../../support/recording-data-sender')
 
 // https://github.com/nodejs/undici
@@ -33,7 +31,7 @@ test('shimming require(undici) cause by require-in-the-middle package', async fu
     t.teardown(() => {
         grpcDataSender.close()
     })
-    const dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+    const dataSender = new RecordingDataSender(grpcDataSender.toDataSender())
     const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
     let testTraceRoot
@@ -245,61 +243,51 @@ test('shimming require(undici) cause by require-in-the-middle package', async fu
     t.end()
 })
 
-test('shimming undici: requestExceptionMetaData should deliver error.cause chain', function (t) {
-    const grpcDataSenderBuilder = new TestGrpcDataSenderBuilder()
-
-    grpcDataSenderBuilder.addAdaptor(new SpanAdaptor({
-        sendSpanBatch: function (call, callback) {
-            callback(null, new spanMessages.PSpanResultBatch())
-        },
-    }))
-    grpcDataSenderBuilder.addAdaptor(new MetadataAdaptor({
-        requestExceptionMetaData: (call, callback) => {
-            const result = new spanMessages.PResult()
-            callback(null, result)
-
-            const exceptionMetaData = call.request
-            const exceptionsList = exceptionMetaData.getExceptionsList()
-            t.equal(exceptionsList.length, 2, 'should have 2 exceptions in cause chain')
-
-            const top = exceptionsList[0]
-            t.equal(top.getExceptionclassname(), 'Error', 'top exception class is Error')
-            t.equal(top.getExceptionmessage(), 'undici cause top', 'top exception message')
-            t.equal(top.getExceptiondepth(), 0, 'top exception depth is 0')
-
-            const cause = exceptionsList[1]
-            t.equal(cause.getExceptionclassname(), 'TypeError', 'cause class is TypeError')
-            t.equal(cause.getExceptionmessage(), 'undici cause root', 'cause message')
-            t.equal(cause.getExceptiondepth(), 1, 'cause depth is 1')
-
-            t.equal(top.getExceptionid(), cause.getExceptionid(), 'shared exceptionId')
-            t.end()
-        }
-    }))
-
-    grpcDataSenderBuilder.build().then((grpcDataSender) => {
-        new ProcessAgentBuilder().setDataSender(new DataSender(grpcDataSender.config, grpcDataSender)).build()
-        t.teardown(() => {
-            grpcDataSender.close()
-        })
-
-        const app = new express()
-        app.get('/cause-outgoing', (req, res) => {
-            const rootCause = new TypeError('undici cause root')
-            throw new Error('undici cause top', { cause: rootCause })
-        })
-        app.use(function (err, req, res, next) {
-            res.status(500).send('error')
-        })
-
-        const server = app.listen(5006, async () => {
-            await axios.get('http://localhost:5006/cause-outgoing', {
-                validateStatus: () => true,
-                httpAgent: new http.Agent({ keepAlive: false }),
-            })
-            server.close()
-        })
+test('shimming undici: requestExceptionMetaData should deliver error.cause chain', async function (t) {
+    const metadataAdaptor = new MetadataAdaptor()
+    const grpcDataSender = await new TestGrpcDataSenderBuilder()
+        .addAdaptor(new SpanAdaptor())
+        .addAdaptor(metadataAdaptor)
+        .build()
+    t.teardown(() => {
+        grpcDataSender.close()
     })
+    const agent = new ProcessAgentBuilder().setDataSender(grpcDataSender.toDataSender()).build()
+
+    let traceRoot
+    const app = new express()
+    app.get('/cause-outgoing', (req, res) => {
+        traceRoot = agent.currentTraceObject().getTraceRoot()
+        const rootCause = new TypeError('undici cause root')
+        throw new Error('undici cause top', { cause: rootCause })
+    })
+    app.use(function (err, req, res, next) {
+        res.status(500).send('error')
+    })
+    const server = app.listen(5006)
+    await new Promise(resolve => server.on('listening', resolve))
+    await axios.get('http://localhost:5006/cause-outgoing', {
+        validateStatus: () => true,
+        httpAgent: new http.Agent({ keepAlive: false }),
+    })
+    server.close()
+
+    const exceptionMetaData = await metadataAdaptor.exceptionMetaData(traceRoot)
+    const exceptionsList = exceptionMetaData.getExceptionsList()
+    t.equal(exceptionsList.length, 2, 'should have 2 exceptions in cause chain')
+
+    const top = exceptionsList[0]
+    t.equal(top.getExceptionclassname(), 'Error', 'top exception class is Error')
+    t.equal(top.getExceptionmessage(), 'undici cause top', 'top exception message')
+    t.equal(top.getExceptiondepth(), 0, 'top exception depth is 0')
+
+    const cause = exceptionsList[1]
+    t.equal(cause.getExceptionclassname(), 'TypeError', 'cause class is TypeError')
+    t.equal(cause.getExceptionmessage(), 'undici cause root', 'cause message')
+    t.equal(cause.getExceptiondepth(), 1, 'cause depth is 1')
+
+    t.equal(top.getExceptionid(), cause.getExceptionid(), 'shared exceptionId')
+    t.end()
 })
 
 test('shimming undici: should not collect ExceptionMetaData when errorAnalysis is disabled', function (t) {
@@ -350,7 +338,7 @@ test('shimming udici by global nodejs fetch', async function (t) {
     t.teardown(() => {
         grpcDataSender.close()
     })
-    const dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+    const dataSender = new RecordingDataSender(grpcDataSender.toDataSender())
     const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
     let testTraceRoot

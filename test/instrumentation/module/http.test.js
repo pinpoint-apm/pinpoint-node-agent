@@ -19,7 +19,6 @@ const express = require('express')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
 const HttpRequestTraceBuilder = require('../../../lib/instrumentation/http/http-request-trace-builder')
 const TraceHeaderBuilder = require('../../../lib/instrumentation/http/trace-header-builder')
-const DataSender = require('../../../lib/client/data-sender')
 const RecordingDataSender = require('../../support/recording-data-sender')
 
 const TEST_ENV = {
@@ -37,7 +36,7 @@ test('http error status code', async (t) => {
     t.teardown(() => {
         grpcDataSender.close()
     })
-    const dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+    const dataSender = new RecordingDataSender(grpcDataSender.toDataSender())
     const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
     let traceRoot

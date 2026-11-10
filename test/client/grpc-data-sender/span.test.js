@@ -18,7 +18,6 @@ const SpanChunkBuilder = require('../../../lib/context/span-chunk-builder')
 const Trace = require('../../../lib/context/trace/trace')
 const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const RecordingDataSender = require('../../support/recording-data-sender')
-const DataSender = require('../../../lib/client/data-sender')
 const SpanEventRecorderFactory = require('../../../lib/context/trace/span-event-recorder-factory')
 const SpanRecorder = require('../../../lib/context/trace/span-recorder')
 
@@ -30,7 +29,7 @@ test('Should send span', async function (t) {
   t.teardown(() => {
     grpcDataSender.close()
   })
-  const dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+  const dataSender = new RecordingDataSender(grpcDataSender.toDataSender())
   const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
   const traceRoot = new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '5').build()
@@ -118,7 +117,7 @@ test('sendSpanChunk redis.SET.end', async function (t) {
   t.teardown(() => {
     grpcDataSender.close()
   })
-  const dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+  const dataSender = new RecordingDataSender(grpcDataSender.toDataSender())
   const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
   const traceRoot = new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '5').build()
@@ -186,7 +185,7 @@ test('sendSpan', async (t) => {
   t.teardown(() => {
     grpcDataSender.close()
   })
-  const dataSender = new RecordingDataSender(new DataSender(grpcDataSender.config, grpcDataSender))
+  const dataSender = new RecordingDataSender(grpcDataSender.toDataSender())
   const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
 
   const traceRoot = new RemoteTraceRootBuilder(agent.getConfig().getAgentId(), agent.agentStartTime, '5').build()

@@ -20,6 +20,7 @@ const CmdProto = require('../../../lib/data/v1/Cmd_pb')
 const AnnotationKey = require('../../../lib/constant/annotation-key')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 const { ParentTraceHeader } = require('../../fixtures/parent-trace-header')
+const { User } = require('../../support/user')
 
 let container
 let spanCollector
@@ -434,6 +435,40 @@ test('client disconnect before the /api/client-disconnect response should not re
     t.end()
 })
 
+test('Next.js: inbound Pinpoint headers are recorded on the span', async (t) => {
+    const isParentTraceRootSpan = (span) => span.getAcceptevent()?.getRpc() === '/' && span.getTransactionid()?.getAgentid() === 'parent.agent'
+    try {
+        receivedSpans = []
+        const response = await new User().fetch('http://127.0.0.1:3000/', { headers: ParentTraceHeader.header('pinpoint-host', 'parent.host:3000') })
+        t.equal(response.status, 200, '/ responds with 200')
+        const span = await waitForSpan(isParentTraceRootSpan, 10000)
+        t.equal(span.getTransactionid().getAgentid(), 'parent.agent', 'PTransactionId.agentId is the Pinpoint-TraceID agentId')
+        t.equal(span.getTransactionid().getAgentstarttime(), '1599831487121', 'PTransactionId.agentStartTime is the Pinpoint-TraceID agentStartTime')
+        t.equal(span.getTransactionid().getSequence(), '4', 'PTransactionId.sequence is the Pinpoint-TraceID sequence')
+        t.equal(span.getSpanid(), '-387300102333636357', 'PSpan.spanId is the Pinpoint-SpanID')
+        t.equal(span.getParentspanid(), '3116250228920588432', 'PSpan.parentSpanId is the Pinpoint-pSpanID')
+        t.equal(span.getFlag(), 0, 'PSpan.flag is the Pinpoint-Flags')
+        t.equal(span.getAcceptevent().getParentinfo().getParentapplicationname(), 'parent.application', 'PParentInfo.parentApplicationName is the Pinpoint-pAppName')
+        t.equal(span.getAcceptevent().getParentinfo().getParentapplicationtype(), 1210, 'PParentInfo.parentApplicationType is the Pinpoint-pAppType')
+        t.equal(span.getAcceptevent().getParentinfo().getAcceptorhost(), 'parent.host:3000', 'PParentInfo.acceptorHost is the Pinpoint-Host')
+
+        receivedSpans = []
+        const flagsResponse = await new User().fetch('http://127.0.0.1:3000/', { headers: ParentTraceHeader.header('pinpoint-flags', 'abc') })
+        t.equal(flagsResponse.status, 200, '/ with Pinpoint-Flags abc responds with 200')
+        const flagsSpan = await waitForSpan(isParentTraceRootSpan, 10000)
+        t.equal(flagsSpan.getFlag(), 0, 'Pinpoint-Flags abc is PSpan.flag 0')
+
+        receivedSpans = []
+        const parentApplicationTypeResponse = await new User().fetch('http://127.0.0.1:3000/', { headers: ParentTraceHeader.header('pinpoint-papptype', '') })
+        t.equal(parentApplicationTypeResponse.status, 200, '/ with an empty Pinpoint-pAppType responds with 200')
+        const parentApplicationTypeSpan = await waitForSpan(isParentTraceRootSpan, 10000)
+        t.equal(parentApplicationTypeSpan.getAcceptevent().getParentinfo().getParentapplicationtype(), -1, 'an empty Pinpoint-pAppType is PParentInfo.parentApplicationType UNDEFINED -1')
+    } catch (err) {
+        t.fail(err.message)
+    }
+    t.end()
+})
+
 test('Next.js: v4 serviceName is sent as Pinpoint-pServiceName and an inbound one is recorded as parentServiceName', async (t) => {
     receivedSpans = []
     const http = require('http')
@@ -445,12 +480,8 @@ test('Next.js: v4 serviceName is sent as Pinpoint-pServiceName and an inbound on
     await new Promise(resolve => outgoingServer.listen(0, '127.0.0.1', resolve))
     try {
         const target = `http://127.0.0.1:${outgoingServer.address().port}/outgoing`
-        const client = sendRequestOverRawSocket(3000, `/api/parent-service-name?target=${encodeURIComponent(target)}`, ParentTraceHeader.header('pinpoint-pservicename', 'parent.service'))
-        client.setTimeout(10000, () => client.destroy())
-        let response = ''
-        client.on('data', (chunk) => response += chunk)
-        await new Promise(resolve => client.on('close', resolve))
-        t.ok(response.startsWith('HTTP/1.1 200'), '/api/parent-service-name responds with 200')
+        const response = await new User().fetch(`http://127.0.0.1:3000/api/parent-service-name?target=${encodeURIComponent(target)}`, { headers: ParentTraceHeader.header('pinpoint-pservicename', 'parent.service') })
+        t.equal(response.status, 200, '/api/parent-service-name responds with 200')
 
         t.equal(outgoingRequestHeaders['pinpoint-pservicename'], 'next.js.service', 'outgoing request has Pinpoint-pServiceName header of PINPOINT_SERVICE_NAME')
 
@@ -460,6 +491,63 @@ test('Next.js: v4 serviceName is sent as Pinpoint-pServiceName and an inbound on
         t.fail(err.message)
     } finally {
         outgoingServer.close()
+    }
+    t.end()
+})
+
+test('Next.js: v3 sends no Pinpoint-pServiceName and an inbound request without it leaves parentServiceName unset', async (t) => {
+    const { spawn } = require('child_process')
+    const nextServer = spawn(
+        path.normalize('./node_modules/.bin/next'),
+        ['start', '-H', '127.0.0.1', '-p', '3002'],
+        {
+            cwd: testAppDir,
+            env: Object.assign({}, process.env, {
+                NODE_OPTIONS: '-r ../../../index.js',
+                NODE_ENV: 'production',
+                NEXT_TELEMETRY_DISABLED: '1',
+                PINPOINT_APPLICATION_NAME: 'next.js.v3',
+                PINPOINT_SERVICE_NAME: 'ignored.service',
+                PINPOINT_PROTOCOL_VERSION: 'v3',
+                PINPOINT_COLLECTOR_IP: '127.0.0.1',
+                PINPOINT_COLLECTOR_SPAN_PORT: String(spanCollectorPort),
+                PINPOINT_COLLECTOR_STAT_PORT: String(spanCollectorPort),
+                PINPOINT_COLLECTOR_TCP_PORT: String(spanCollectorPort),
+                PINPOINT_SAMPLING_RATE: '1',
+            }),
+        }
+    )
+    t.teardown(() => nextServer.kill())
+    nextServer.stderr.on('data', (data) => {
+        t.comment('next server stderr: ' + formatForTComment(data))
+    })
+    await new Promise((resolve, reject) => {
+        waitForNextServerReady(nextServer, (error) => error ? reject(error) : resolve())
+    })
+
+    const http = require('http')
+    let outgoingRequestHeaders
+    const outgoingServer = http.createServer((req, res) => {
+        outgoingRequestHeaders = req.headers
+        res.end('ok')
+    })
+    await new Promise(resolve => outgoingServer.listen(0, '127.0.0.1', resolve))
+    t.teardown(() => outgoingServer.close())
+
+    try {
+        receivedSpans = []
+        const target = `http://127.0.0.1:${outgoingServer.address().port}/outgoing`
+        const response = await new User().fetch(`http://127.0.0.1:3002/api/parent-service-name?target=${encodeURIComponent(target)}`, { headers: ParentTraceHeader.header('pinpoint-pappname', 'parent.application') })
+        t.equal(response.status, 200, '/api/parent-service-name responds with 200')
+
+        t.equal(outgoingRequestHeaders['pinpoint-pappname'], 'next.js.v3', 'outgoing request has Pinpoint-pAppName header of PINPOINT_APPLICATION_NAME')
+        t.equal(outgoingRequestHeaders['pinpoint-pservicename'], undefined, 'v3 outgoing request has no Pinpoint-pServiceName header even with PINPOINT_SERVICE_NAME set')
+
+        const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/parent-service-name') && s.getTransactionid()?.getAgentid() === 'parent.agent', 10000)
+        t.equal(span.getAcceptevent().getParentinfo().getParentapplicationname(), 'parent.application', 'PParentInfo.parentApplicationName is the inbound Pinpoint-pAppName')
+        t.equal(span.getAcceptevent().getParentinfo().getParentservicename(), '', 'PParentInfo.parentServiceName is unset')
+    } catch (err) {
+        t.fail(err.message)
     }
     t.end()
 })
@@ -475,12 +563,8 @@ test('Next.js: application service type is NODE 1400 even with PINPOINT_SERVICE_
     await new Promise(resolve => outgoingServer.listen(0, '127.0.0.1', resolve))
     try {
         const target = `http://127.0.0.1:${outgoingServer.address().port}/outgoing`
-        const client = sendRequestOverRawSocket(3000, `/api/parent-service-name?target=${encodeURIComponent(target)}`)
-        client.setTimeout(10000, () => client.destroy())
-        let response = ''
-        client.on('data', (chunk) => response += chunk)
-        await new Promise(resolve => client.on('close', resolve))
-        t.ok(response.startsWith('HTTP/1.1 200'), '/api/parent-service-name responds with 200')
+        const response = await new User().fetch(`http://127.0.0.1:3000/api/parent-service-name?target=${encodeURIComponent(target)}`)
+        t.equal(response.status, 200, '/api/parent-service-name responds with 200')
 
         t.equal(outgoingRequestHeaders['pinpoint-papptype'], '1400', 'outgoing request has Pinpoint-pAppType header of NODE 1400')
 

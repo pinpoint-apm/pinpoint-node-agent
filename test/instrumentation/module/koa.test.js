@@ -23,6 +23,9 @@ const https = require('https')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 const { ParentTraceHeader } = require('../../fixtures/parent-trace-header')
 const RecordingDataSender = require('../../support/recording-data-sender')
+const { User } = require('../../support/user')
+const TraceHeaderBuilder = require('../../../lib/instrumentation/http/trace-header-builder')
+const SpanRecorder = require('../../../lib/context/trace/span-recorder')
 
 const TEST_ENV = {
   host: 'localhost',
@@ -628,6 +631,130 @@ test('Koa: v4 serviceName is sent as Pinpoint-pServiceName and an inbound one is
 
       const outgoingSpan = dataSender.spans().find(span => span.rpc === OUTGOING_PATH)
       t.equal(outgoingSpan.parentServiceName, 'koa.service', 'next hop span parentServiceName is this agent serviceName')
+    } catch (error) {
+      t.fail(error.stack)
+    } finally {
+      server.close()
+      t.end()
+    }
+  })
+})
+
+test('Koa: inbound Pinpoint headers are recorded on the span', function (t) {
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+
+  const PATH = '/inbound-pinpoint-headers'
+  const app = new Koa()
+  const router = new Router()
+  let traceRoot
+  router.get(PATH, async (ctx) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    ctx.body = 'ok'
+  })
+  app.use(router.routes()).use(router.allowedMethods())
+
+  const server = app.listen(0, async () => {
+    const url = `http://localhost:${server.address().port}${PATH}`
+    try {
+      const response = await new User().fetch(url, { headers: ParentTraceHeader.header('pinpoint-host', 'parent.host:5006') })
+      t.equal(response.status, 200, 'responds with 200')
+      const span = (await dataSender.waitForSpan(traceRoot)).toProtocolBuffer().getSpan()
+      t.equal(span.getTransactionid().getAgentid(), 'parent.agent', 'PTransactionId.agentId is the Pinpoint-TraceID agentId')
+      t.equal(span.getTransactionid().getAgentstarttime(), '1599831487121', 'PTransactionId.agentStartTime is the Pinpoint-TraceID agentStartTime')
+      t.equal(span.getTransactionid().getSequence(), '4', 'PTransactionId.sequence is the Pinpoint-TraceID sequence')
+      t.equal(span.getSpanid(), '-387300102333636357', 'PSpan.spanId is the Pinpoint-SpanID')
+      t.equal(span.getParentspanid(), '3116250228920588432', 'PSpan.parentSpanId is the Pinpoint-pSpanID')
+      t.equal(span.getFlag(), 0, 'PSpan.flag is the Pinpoint-Flags')
+      t.equal(span.getAcceptevent().getParentinfo().getParentapplicationname(), 'parent.application', 'PParentInfo.parentApplicationName is the Pinpoint-pAppName')
+      t.equal(span.getAcceptevent().getParentinfo().getParentapplicationtype(), 1210, 'PParentInfo.parentApplicationType is the Pinpoint-pAppType')
+      t.equal(span.getAcceptevent().getParentinfo().getAcceptorhost(), 'parent.host:5006', 'PParentInfo.acceptorHost is the Pinpoint-Host')
+
+      const flagsResponse = await new User().fetch(url, { headers: ParentTraceHeader.header('pinpoint-flags', 'abc') })
+      t.equal(flagsResponse.status, 200, 'Pinpoint-Flags abc responds with 200')
+      const flagsSpan = (await dataSender.waitForSpan(traceRoot)).toProtocolBuffer().getSpan()
+      t.equal(flagsSpan.getFlag(), 0, 'Pinpoint-Flags abc is PSpan.flag 0')
+
+      const parentApplicationTypeResponse = await new User().fetch(url, { headers: ParentTraceHeader.header('pinpoint-papptype', '') })
+      t.equal(parentApplicationTypeResponse.status, 200, 'an empty Pinpoint-pAppType responds with 200')
+      const parentApplicationTypeSpan = (await dataSender.waitForSpan(traceRoot)).toProtocolBuffer().getSpan()
+      t.equal(parentApplicationTypeSpan.getAcceptevent().getParentinfo().getParentapplicationtype(), -1, 'an empty Pinpoint-pAppType is PParentInfo.parentApplicationType UNDEFINED -1')
+    } catch (error) {
+      t.fail(error.stack)
+    } finally {
+      server.close()
+      t.end()
+    }
+  })
+})
+
+test('Koa: the request is handled without a trace when the agent fails to make the trace', function (t) {
+  const agent = new ProcessAgentBuilder().setDataSender(new RecordingDataSender()).build()
+  const build = TraceHeaderBuilder.prototype.build
+  TraceHeaderBuilder.prototype.build = function () {
+    throw new Error('the agent fails to make the trace')
+  }
+  t.teardown(() => {
+    TraceHeaderBuilder.prototype.build = build
+  })
+
+  const PATH = '/agent-error/make-trace'
+  const app = new Koa()
+  const router = new Router()
+  let traceInHandler
+  router.get(PATH, async (ctx) => {
+    traceInHandler = agent.currentTraceObject()
+    ctx.body = 'ok'
+  })
+  app.use(router.routes()).use(router.allowedMethods())
+
+  const server = app.listen(0, async () => {
+    try {
+      const response = await new User().fetch(`http://localhost:${server.address().port}${PATH}`)
+      t.equal(response.status, 200, 'responds with 200')
+      t.equal(response.body, 'ok', 'the route handler runs')
+      t.equal(traceInHandler, undefined, 'the route handler runs without a trace')
+    } catch (error) {
+      t.fail(error.stack)
+    } finally {
+      server.close()
+      t.end()
+    }
+  })
+})
+
+test('Koa: the request is handled when the agent fails to record the response', function (t) {
+  const agent = new ProcessAgentBuilder().setDataSender(new RecordingDataSender()).build()
+  const recordAttribute = SpanRecorder.prototype.recordAttribute
+  SpanRecorder.prototype.recordAttribute = function (key, value) {
+    if (key === annotationKey.HTTP_STATUS_CODE) {
+      throw new Error('the agent fails to record the response')
+    }
+    return recordAttribute.call(this, key, value)
+  }
+  t.teardown(() => {
+    SpanRecorder.prototype.recordAttribute = recordAttribute
+  })
+
+  const PATH = '/agent-error/record-response'
+  const app = new Koa()
+  const router = new Router()
+  let traceInHandler
+  router.get(PATH, async (ctx) => {
+    traceInHandler = agent.currentTraceObject()
+    ctx.body = 'ok'
+  })
+  app.use(router.routes()).use(router.allowedMethods())
+
+  const server = app.listen(0, async () => {
+    const url = `http://localhost:${server.address().port}${PATH}`
+    try {
+      const response = await new User().fetch(url)
+      t.equal(response.status, 200, 'responds with 200')
+      t.ok(traceInHandler, 'the route handler runs with a trace')
+
+      const nextResponse = await new User().fetch(url)
+      t.equal(nextResponse.status, 200, 'the next request also responds with 200')
     } catch (error) {
       t.fail(error.stack)
     } finally {

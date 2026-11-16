@@ -17,7 +17,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 
 ### Changed
 - [[#561](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/561)] Send spans with the unary `SendSpanBatch` RPC; requires Collector 3.1.0 or later. Tune with `collector.spanBatch` / `PINPOINT_SPAN_BATCH_SIZE`, `PINPOINT_SPAN_BATCH_DEADLINE_MILLIS` and `PINPOINT_SPAN_BATCH_MAX_REQUESTS`
-- [[#532](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/532)] Require Node.js 20.18.1 or later; Node.js 18 is no longer supported
+- [[#532](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/532)] Require Node.js 22 or later; Node.js 18 and 20 are no longer supported
 
 ### Removed
 - [[#561](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/561)] The `SendSpan` gRPC stream

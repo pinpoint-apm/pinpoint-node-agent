@@ -23,6 +23,7 @@ const https = require('https')
 const net = require('node:net')
 const { once } = require('node:events')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
+const { startRequestStoreProbe } = require('../../support/request-store-probe')
 
 
 const TEST_ENV = {
@@ -608,6 +609,57 @@ test('Koa: a fetch() that fails in a route sends the ExceptionMetaData of its as
     const actualExceptions = actualExceptionMetaData.getExceptionsList()
     t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
     t.equal(actualExceptions[0].getExceptionid(), fetchSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the fetch() span event of the SpanChunk')
+  } catch (error) {
+    t.fail(error.message)
+  }
+  server.close()
+  t.end()
+})
+
+test('Koa: the gRPC resources that send the request data do not take the request store', async (t) => {
+  let resolveSpan
+  const spanReceived = new Promise(resolve => {
+    resolveSpan = resolve
+  })
+  const collectorServer = new grpc.Server()
+  collectorServer.addService(services.SpanService, {
+    sendSpan: (call) => {
+      call.on('data', (spanMessage) => {
+        if (spanMessage.getSpan()) {
+          resolveSpan()
+        }
+      })
+    }
+  })
+  collectorServer.addService(services.MetadataService, {
+    requestApiMetaData: (call, callback) => callback(null, new spanMessages.PResult()),
+    requestStringMetaData: (call, callback) => callback(null, new spanMessages.PResult()),
+  })
+  const port = await new Promise((resolve, reject) => {
+    collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => error ? reject(error) : resolve(port))
+  })
+  agent.bindHttp(new GrpcDataSenderBuilder(port).enableSpan().enableApiMetaInfo().enableStringMetaInfo().build())
+  const probe = startRequestStoreProbe()
+  t.teardown(() => {
+    probe.stop()
+    agent.dataSender.close()
+    collectorServer.forceShutdown()
+  })
+
+  const app = new Koa()
+  const router = new Router()
+  router.get('/request-store', (ctx) => {
+    ctx.body = 'ok'
+  })
+  app.use(router.routes()).use(router.allowedMethods())
+  const server = app.listen(0)
+  await once(server, 'listening')
+  try {
+    const response = await fetch(`http://localhost:${server.address().port}/request-store`)
+    t.equal(response.status, 200, 'the route responds 200')
+
+    await spanReceived
+    t.deepEqual(probe.capturedTypes(), [], 'no HTTP/2 resource is created with the request store')
   } catch (error) {
     t.fail(error.message)
   }

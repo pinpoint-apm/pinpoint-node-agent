@@ -4,6 +4,10 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 ## [1.4.6]
 ### Fixed
 - [[#604](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/604)] Send ExceptionMetaData for exceptions recorded in async child traces, such as a failed `fetch()`
+- [[#553](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/553)] The agent's gRPC connections and calls no longer keep a request's trace, or the stores of other AsyncLocalStorage instances such as the Next.js request store, in memory
+
+### Changed
+- [[#553](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/553)] Require Node.js 18.16 or later, where `AsyncLocalStorage.snapshot()` is available
 
 ## [1.4.5] - 2026-11-05
 ### Fixed

@@ -30,6 +30,7 @@ const { ConfigBuilder } = require('../../../lib/config-builder')
 const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
 const { UriStatsMonitor } = require('../../../lib/metric/uri/uri-stats-monitor')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
+const { startRequestStoreProbe } = require('../../support/request-store-probe')
 
 const TEST_ENV = {
   host: 'localhost', port: 5006
@@ -1108,6 +1109,55 @@ test('Express: a fetch() that fails in a route sends the ExceptionMetaData of it
     const actualExceptions = actualExceptionMetaData.getExceptionsList()
     t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
     t.equal(actualExceptions[0].getExceptionid(), fetchSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the fetch() span event of the SpanChunk')
+  } catch (error) {
+    t.fail(error.message)
+  }
+  server.close()
+  t.end()
+})
+
+test('Express: the gRPC resources that send the request data do not take the request store', async (t) => {
+  let resolveSpan
+  const spanReceived = new Promise(resolve => {
+    resolveSpan = resolve
+  })
+  const collectorServer = new grpc.Server()
+  collectorServer.addService(services.SpanService, {
+    sendSpan: (call) => {
+      call.on('data', (spanMessage) => {
+        if (spanMessage.getSpan()) {
+          resolveSpan()
+        }
+      })
+    }
+  })
+  collectorServer.addService(services.MetadataService, {
+    requestApiMetaData: (call, callback) => callback(null, new spanMessages.PResult()),
+    requestStringMetaData: (call, callback) => callback(null, new spanMessages.PResult()),
+  })
+  const port = await new Promise((resolve, reject) => {
+    collectorServer.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => error ? reject(error) : resolve(port))
+  })
+  agent.bindHttp(new GrpcDataSenderBuilder(port).enableSpan().enableApiMetaInfo().enableStringMetaInfo().build())
+  const probe = startRequestStoreProbe()
+  t.teardown(() => {
+    probe.stop()
+    agent.dataSender.close()
+    collectorServer.forceShutdown()
+  })
+
+  const app = new express()
+  app.get('/request-store', (req, res) => {
+    res.send('ok')
+  })
+  const server = app.listen(0)
+  await once(server, 'listening')
+  try {
+    const response = await fetch(`http://localhost:${server.address().port}/request-store`)
+    t.equal(response.status, 200, 'the route responds 200')
+
+    await spanReceived
+    t.deepEqual(probe.capturedTypes(), [], 'no HTTP/2 resource is created with the request store')
   } catch (error) {
     t.fail(error.message)
   }

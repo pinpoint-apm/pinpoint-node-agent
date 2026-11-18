@@ -11,6 +11,7 @@ const path = require('path')
 const { startMySql } = require('../../support/shared-containers')
 const testAppDir = path.join(__dirname, '../../fixtures/nextjs-app-router')
 const fs = require('fs')
+const ServiceType = require('../../../lib/context/service-type')
 const net = require('node:net')
 const { once } = require('node:events')
 const grpc = require('@grpc/grpc-js')
@@ -28,6 +29,7 @@ let container
 let spanCollector
 let spanCollectorPort
 let receivedSpans = []
+let receivedSpanChunks = []
 let receivedStats = []
 let receivedExceptionMetaData = []
 let nextServerStdout = ''
@@ -45,6 +47,10 @@ test('setup: start span collector', (t) => {
                 const span = spanMessage.getSpan()
                 if (span) {
                     receivedSpans.push(span)
+                }
+                const spanChunk = spanMessage.getSpanchunk()
+                if (spanChunk) {
+                    receivedSpanChunks.push(spanChunk)
                 }
             })
             callback(null, new SpanProto.PSpanResultBatch())
@@ -415,6 +421,33 @@ test('Next.js: a fetch() that fails in an API route sends the ExceptionMetaData 
     t.end()
 })
 
+test('Next.js: an outgoing http.request() that fails in an API route records the error in its async child trace', async (t) => {
+    receivedSpans = []
+    receivedSpanChunks = []
+    receivedExceptionMetaData = []
+    const closedServer = net.createServer().listen(0)
+    await once(closedServer, 'listening')
+    const closedPort = closedServer.address().port
+    await new Promise(resolve => closedServer.close(resolve))
+
+    const target = `http://127.0.0.1:${closedPort}/`
+    const response = await fetch(`http://127.0.0.1:3000/api/parent-service-name?target=${encodeURIComponent(target)}`)
+    t.equal(response.status, 500, 'the API route responds 500 after the http.request() fails')
+
+    const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/parent-service-name'), 10000)
+    const httpRequestSpanEvent = span.getSpaneventList().find((spanEvent) => spanEvent.getServicetype() === ServiceType.asyncHttpClientInternal.getCode())
+    const actualSpanChunk = await waitForSpanChunk((spanChunk) => spanChunk.getLocalasyncid()?.getAsyncid() === httpRequestSpanEvent.getAsyncevent(), 10000)
+    t.equal(actualSpanChunk.getLocalasyncid().getSequence(), 1, 'the SpanChunk localAsyncId is the asyncEvent of the http.request span event with sequence 1')
+    const actualHttpClientSpanEvent = actualSpanChunk.getSpaneventList().find((spanEvent) => spanEvent.getServicetype() === ServiceType.asyncHttpClient.getCode())
+    t.ok(actualHttpClientSpanEvent.getExceptioninfo(), 'the asyncHttpClient span event of the SpanChunk has the exceptionInfo')
+
+    await waitForExceptionMetaData((e) => e.getTransactionid().getSequence() === span.getTransactionid().getSequence(), 10000)
+    const actualExceptionMetaDataList = receivedExceptionMetaData.filter((e) => e.getTransactionid().getSequence() === span.getTransactionid().getSequence())
+    t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
+    t.equal(actualExceptionMetaDataList[0].getExceptionsList().length, 1, 'ExceptionMetaData has one exception')
+    t.end()
+})
+
 test('client disconnect before the /api/client-disconnect response should not record span error or failure in URI stats', async (t) => {
     receivedSpans = []
     receivedStats = []
@@ -720,6 +753,23 @@ function waitForSpan(predicate, timeoutMs = 5000) {
             }
             if (Date.now() - started > timeoutMs) {
                 return reject(new Error('Timed out waiting for span'))
+            }
+            setTimeout(check, 50)
+        }
+        check()
+    })
+}
+
+function waitForSpanChunk(predicate, timeoutMs = 5000) {
+    const started = Date.now()
+    return new Promise((resolve, reject) => {
+        const check = () => {
+            const match = receivedSpanChunks.find(predicate)
+            if (match) {
+                return resolve(match)
+            }
+            if (Date.now() - started > timeoutMs) {
+                return reject(new Error('Timed out waiting for SpanChunk'))
             }
             setTimeout(check, 50)
         }

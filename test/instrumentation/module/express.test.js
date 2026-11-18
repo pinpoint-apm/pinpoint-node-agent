@@ -16,6 +16,8 @@ const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-
 const DisableTrace = require('../../../lib/context/disable-trace')
 const http = require('http')
 const https = require('https')
+const net = require('node:net')
+const { once } = require('node:events')
 const { getTransactionId, getDisabledId } = require('../../../lib/context/trace/id-generator')
 const { TestGrpcDataSenderBuilder, SpanAdaptor, StatAdaptor, MetadataAdaptor } = require('../../support/test-grpc-data-sender')
 const AgentStatsMonitor = require('../../../lib/metric/agent-stats-monitor')
@@ -709,7 +711,7 @@ test('express with error analysis disabled responds to a throwing handler and re
         t.ok(errorSpanEvent, 'the error middleware span event records the exception info')
         t.equal(errorSpanEvent.exceptionInfo.intValue, 1, 'exceptionInfo intValue should be 1')
         t.equal(errorSpanEvent.exception, undefined, 'exception object should not be set')
-        t.equal(dataSender.exceptionMetaData().length, 0, 'no exception meta data is sent')
+        t.equal(dataSender.actualExceptionMetaData().length, 0, 'no exception meta data is sent')
         server.close()
         t.end()
       }))
@@ -1089,6 +1091,48 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
 
   t.equal(top.getExceptionid(), cause.getExceptionid(), 'shared exceptionId')
   t.ok(cause.getStacktraceelementList().length > 0, 'cause should have stack trace')
+  t.end()
+})
+
+test('Express: a fetch() that fails in a route sends the ExceptionMetaData of its async child trace', async (t) => {
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+
+  const closedServer = net.createServer().listen(0)
+  await once(closedServer, 'listening')
+  const closedPort = closedServer.address().port
+  await new Promise(resolve => closedServer.close(resolve))
+
+  let traceRoot
+  const app = new express()
+  app.get('/fetch-closed-port', async (req, res) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    try {
+      await fetch(`http://localhost:${closedPort}/`)
+      res.send('ok')
+    } catch (error) {
+      res.status(502).send(error.cause?.code)
+    }
+  })
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const response = await fetch(`http://localhost:${server.address().port}/fetch-closed-port`)
+  t.equal(response.status, 502, 'the route responds 502 after the fetch() fails')
+  await dataSender.waitForSpan(traceRoot)
+  server.close()
+
+  const actualExceptionMetaDataList = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === traceRoot)
+  t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
+
+  const actualExceptionMetaData = actualExceptionMetaDataList[0].valueOfProtocolBuffer()
+  t.equal(actualExceptionMetaData.getTransactionid().getSequence(), traceRoot.getTraceId().getTransactionId(), 'ExceptionMetaData has the transaction id of the request')
+  t.equal(actualExceptionMetaData.getSpanid(), traceRoot.getTraceId().getSpanId(), 'ExceptionMetaData has the span id of the request')
+  t.equal(actualExceptionMetaData.getUritemplate(), '/fetch-closed-port', 'ExceptionMetaData uriTemplate is the route path')
+
+  const fetchSpanEvent = dataSender.findSpanChunks(traceRoot).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.exception)
+  const actualExceptions = actualExceptionMetaData.getExceptionsList()
+  t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
+  t.equal(actualExceptions[0].getExceptionid(), fetchSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the fetch() span event of the SpanChunk')
   t.end()
 })
 

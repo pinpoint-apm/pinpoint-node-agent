@@ -123,7 +123,7 @@ class RecordingDataSender {
         return this.sentSqlUidMetaData
     }
 
-    exceptionMetaData() {
+    actualExceptionMetaData() {
         return this.sentExceptionMetaData
     }
 }

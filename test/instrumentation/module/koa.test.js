@@ -20,6 +20,8 @@ const GrpcDataSenderBuilder = require('../../client/grpc-data-sender-builder')
 const http = require('http')
 const { AgentBuilder } = require('../../../lib/agent-builder')
 const https = require('https')
+const net = require('node:net')
+const { once } = require('node:events')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 
 
@@ -566,6 +568,51 @@ test('Should record ExceptionMetaData with uriTemplate when route throws in Koa'
       t.end()
     }
   })
+})
+
+test('Koa: a fetch() that fails in a route sends the ExceptionMetaData of its async child trace', async (t) => {
+  agent.bindHttp()
+
+  const closedServer = net.createServer().listen(0)
+  await once(closedServer, 'listening')
+  const closedPort = closedServer.address().port
+  await new Promise(resolve => closedServer.close(resolve))
+
+  let traceClosed
+  const app = new Koa()
+  const router = new Router()
+  router.get('/fetch-closed-port', async (ctx) => {
+    traceClosed = new Promise(resolve => agent.callbackTraceClose(resolve))
+    try {
+      await fetch(`http://localhost:${closedPort}/`)
+      ctx.body = 'ok'
+    } catch (error) {
+      ctx.status = 502
+      ctx.body = error.cause?.code
+    }
+  })
+  app.use(router.routes()).use(router.allowedMethods())
+  const server = app.listen(0)
+  await once(server, 'listening')
+  try {
+    const response = await fetch(`http://localhost:${server.address().port}/fetch-closed-port`)
+    t.equal(response.status, 502, 'the route responds 502 after the fetch() fails')
+    const traceRoot = (await traceClosed).getTraceRoot()
+
+    const actualExceptionMetaData = agent.dataSender.dataSender.actualExceptionMetaData
+    t.equal(actualExceptionMetaData.getTransactionid().getSequence(), traceRoot.getTraceId().getTransactionId(), 'ExceptionMetaData has the transaction id of the request')
+    t.equal(actualExceptionMetaData.getSpanid(), traceRoot.getTraceId().getSpanId(), 'ExceptionMetaData has the span id of the request')
+    t.equal(actualExceptionMetaData.getUritemplate(), '/fetch-closed-port', 'ExceptionMetaData uriTemplate is the route path')
+
+    const fetchSpanEvent = agent.dataSender.mockSpanChunks.filter(spanChunk => spanChunk.traceRoot === traceRoot).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.exception)
+    const actualExceptions = actualExceptionMetaData.getExceptionsList()
+    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
+    t.equal(actualExceptions[0].getExceptionid(), fetchSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the fetch() span event of the SpanChunk')
+  } catch (error) {
+    t.fail(error.message)
+  }
+  server.close()
+  t.end()
 })
 
 test('Should count failure in URI stats for DisableTrace in Koa', function (t) {

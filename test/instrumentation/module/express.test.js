@@ -16,6 +16,8 @@ const DisableTrace = require('../../../lib/context/disable-trace')
 const http = require('http')
 const { AgentBuilder } = require('../../../lib/agent-builder')
 const https = require('https')
+const net = require('node:net')
+const { once } = require('node:events')
 const { getTransactionId, getDisabledId } = require('../../../lib/context/trace/id-generator')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../../lib/data/v1/Service_grpc_pb')
@@ -1069,6 +1071,48 @@ test('express should not collect ExceptionMetaData when errorAnalysis is disable
       httpsAgent: new https.Agent({ keepAlive: false }),
     })
   })
+})
+
+test('Express: a fetch() that fails in a route sends the ExceptionMetaData of its async child trace', async (t) => {
+  agent.bindHttp()
+
+  const closedServer = net.createServer().listen(0)
+  await once(closedServer, 'listening')
+  const closedPort = closedServer.address().port
+  await new Promise(resolve => closedServer.close(resolve))
+
+  let traceClosed
+  const app = new express()
+  app.get('/fetch-closed-port', async (req, res) => {
+    traceClosed = new Promise(resolve => agent.callbackTraceClose(resolve))
+    try {
+      await fetch(`http://localhost:${closedPort}/`)
+      res.send('ok')
+    } catch (error) {
+      res.status(502).send(error.cause?.code)
+    }
+  })
+  const server = app.listen(0)
+  await once(server, 'listening')
+  try {
+    const response = await fetch(`http://localhost:${server.address().port}/fetch-closed-port`)
+    t.equal(response.status, 502, 'the route responds 502 after the fetch() fails')
+    const traceRoot = (await traceClosed).getTraceRoot()
+
+    const actualExceptionMetaData = agent.dataSender.dataSender.actualExceptionMetaData
+    t.equal(actualExceptionMetaData.getTransactionid().getSequence(), traceRoot.getTraceId().getTransactionId(), 'ExceptionMetaData has the transaction id of the request')
+    t.equal(actualExceptionMetaData.getSpanid(), traceRoot.getTraceId().getSpanId(), 'ExceptionMetaData has the span id of the request')
+    t.equal(actualExceptionMetaData.getUritemplate(), '/fetch-closed-port', 'ExceptionMetaData uriTemplate is the route path')
+
+    const fetchSpanEvent = agent.dataSender.mockSpanChunks.filter(spanChunk => spanChunk.traceRoot === traceRoot).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.exception)
+    const actualExceptions = actualExceptionMetaData.getExceptionsList()
+    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
+    t.equal(actualExceptions[0].getExceptionid(), fetchSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the fetch() span event of the SpanChunk')
+  } catch (error) {
+    t.fail(error.message)
+  }
+  server.close()
+  t.end()
 })
 
 test('express should disable uriTemplate/httpMethod enrichment and use null repository when isUriStatsEnabled is false', (t) => {

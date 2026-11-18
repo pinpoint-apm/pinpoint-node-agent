@@ -12,6 +12,7 @@ const Router = require('koa-router')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
+const ServiceType = require('../../../lib/context/service-type')
 const { UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../../lib/data/v1/Service_grpc_pb')
@@ -609,6 +610,55 @@ test('Koa: a fetch() that fails in a route sends the ExceptionMetaData of its as
     const actualExceptions = actualExceptionMetaData.getExceptionsList()
     t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
     t.equal(actualExceptions[0].getExceptionid(), fetchSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the fetch() span event of the SpanChunk')
+  } catch (error) {
+    t.fail(error.message)
+  }
+  server.close()
+  t.end()
+})
+
+test('Koa: an outgoing http.request() that fails in a route records the error in its async child trace', async (t) => {
+  agent.bindHttp()
+
+  const closedServer = net.createServer().listen(0)
+  await once(closedServer, 'listening')
+  const closedPort = closedServer.address().port
+  await new Promise(resolve => closedServer.close(resolve))
+
+  let traceClosed
+  const app = new Koa()
+  const router = new Router()
+  router.get('/http-request-closed-port', async (ctx) => {
+    traceClosed = new Promise(resolve => agent.callbackTraceClose(resolve))
+    try {
+      await new Promise((resolve, reject) => {
+        http.request(`http://localhost:${closedPort}/`, resolve).on('error', reject).end()
+      })
+      ctx.body = 'ok'
+    } catch (error) {
+      ctx.status = 502
+      ctx.body = error.code
+    }
+  })
+  app.use(router.routes()).use(router.allowedMethods())
+  const server = app.listen(0)
+  await once(server, 'listening')
+  try {
+    const response = await fetch(`http://localhost:${server.address().port}/http-request-closed-port`)
+    t.equal(response.status, 502, 'the route responds 502 after the http.request() fails')
+    const traceRoot = (await traceClosed).getTraceRoot()
+
+    const httpRequestSpanEvent = agent.dataSender.getSpan(traceRoot).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.asyncHttpClientInternal.getCode())
+    const actualSpanChunk = agent.dataSender.findSpanChunk(httpRequestSpanEvent.asyncId)
+    t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'the SpanChunk localAsyncId is the asyncEvent of the http.request span event with sequence 1')
+    const actualHttpClientSpanEvent = actualSpanChunk.spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.asyncHttpClient.getCode())
+    t.ok(actualHttpClientSpanEvent.exceptionInfo, 'the asyncHttpClient span event of the SpanChunk has the exceptionInfo')
+
+    const actualExceptionMetaData = agent.dataSender.dataSender.actualExceptionMetaData
+    t.equal(actualExceptionMetaData.getTransactionid().getSequence(), traceRoot.getTraceId().getTransactionId(), 'ExceptionMetaData has the transaction id of the request')
+    const actualExceptions = actualExceptionMetaData.getExceptionsList()
+    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
+    t.equal(actualExceptions[0].getExceptionid(), actualHttpClientSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the asyncHttpClient span event')
   } catch (error) {
     t.fail(error.message)
   }

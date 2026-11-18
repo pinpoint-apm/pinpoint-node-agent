@@ -73,7 +73,8 @@ Pick the checks per change and say why each one was picked or skipped.
 - One line per scenario: PASS or FAIL, the scenario, the evidence (command, output,
   received data). Base and change branch side by side.
 - Then the environment: worktree, commit, Node.js version, app, load.
-- Post to GitHub only after the developer approves the draft.
+- Post the report as a comment on the PR under test; a release QA goes on the release
+  issue. When QA runs before the PR exists, post it right after the PR is created.
 
 ## Cleanup
 

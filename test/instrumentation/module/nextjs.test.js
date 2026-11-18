@@ -11,6 +11,8 @@ const path = require('path')
 const { startMySql } = require('../../support/shared-containers')
 const testAppDir = path.join(__dirname, '../../fixtures/nextjs-app-router')
 const fs = require('fs')
+const net = require('node:net')
+const { once } = require('node:events')
 const grpc = require('@grpc/grpc-js')
 const services = require('../../../lib/data/v1/Service_grpc_pb')
 const { Empty } = require('google-protobuf/google/protobuf/empty_pb')
@@ -27,6 +29,7 @@ let spanCollector
 let spanCollectorPort
 let receivedSpans = []
 let receivedStats = []
+let receivedExceptionMetaData = []
 test('setup', async (t) => {
     container = await startMySql()
     t.pass('setup complete')
@@ -69,7 +72,10 @@ test('setup: start span collector', (t) => {
         requestSqlUidMetaData: (call, callback) => callback?.(null, okResult),
         requestApiMetaData: (call, callback) => callback?.(null, okResult),
         requestStringMetaData: (call, callback) => callback?.(null, okResult),
-        requestExceptionMetaData: (call, callback) => callback?.(null, okResult),
+        requestExceptionMetaData: (call, callback) => {
+            receivedExceptionMetaData.push(call.request)
+            callback?.(null, okResult)
+        },
     })
 
     spanCollector.addService(services.StatService, {
@@ -370,6 +376,28 @@ test('fetch /api/error-500 should record span error and failure in URI stats', a
     } catch (err) {
         t.fail(err.message)
     }
+    t.end()
+})
+
+test('Next.js: a fetch() that fails in an API route sends the ExceptionMetaData of its async child trace', async (t) => {
+    receivedSpans = []
+    receivedExceptionMetaData = []
+    const closedServer = net.createServer().listen(0)
+    await once(closedServer, 'listening')
+    const closedPort = closedServer.address().port
+    await new Promise(resolve => closedServer.close(resolve))
+
+    const response = await fetch(`http://127.0.0.1:3000/api/fetch-closed-port?port=${closedPort}`)
+    t.equal(response.status, 502, 'the API route responds 502 after the fetch() fails')
+
+    const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/fetch-closed-port'), 10000)
+    const exceptionMetaData = await waitForExceptionMetaData((e) => e.getTransactionid().getSequence() === span.getTransactionid().getSequence(), 10000)
+    const actualExceptionMetaDataList = receivedExceptionMetaData.filter((e) => e.getTransactionid().getSequence() === span.getTransactionid().getSequence())
+    t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
+    t.equal(exceptionMetaData.getTransactionid().getAgentid(), span.getTransactionid().getAgentid(), 'ExceptionMetaData has the agent id of the request')
+    t.equal(exceptionMetaData.getSpanid(), span.getSpanid(), 'ExceptionMetaData has the span id of the request')
+    t.equal(exceptionMetaData.getExceptionsList().length, 1, 'ExceptionMetaData has one exception')
+    t.equal(exceptionMetaData.getUritemplate(), 'NULL', 'ExceptionMetaData uriTemplate is NULL because the user input uriTemplate is recorded when the response ends, after the async child trace closed')
     t.end()
 })
 
@@ -678,6 +706,23 @@ function waitForSpan(predicate, timeoutMs = 5000) {
             }
             if (Date.now() - started > timeoutMs) {
                 return reject(new Error('Timed out waiting for span'))
+            }
+            setTimeout(check, 50)
+        }
+        check()
+    })
+}
+
+function waitForExceptionMetaData(predicate, timeoutMs = 5000) {
+    const started = Date.now()
+    return new Promise((resolve, reject) => {
+        const check = () => {
+            const match = receivedExceptionMetaData.find(predicate)
+            if (match) {
+                return resolve(match)
+            }
+            if (Date.now() - started > timeoutMs) {
+                return reject(new Error('Timed out waiting for ExceptionMetaData'))
             }
             setTimeout(check, 50)
         }

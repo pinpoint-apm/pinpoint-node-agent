@@ -28,6 +28,7 @@ const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 const { ParentTraceHeader } = require('../../fixtures/parent-trace-header')
 const { receiverTypeNameOfFunctionMethod } = require('../../support/stack-frame')
 const RecordingDataSender = require('../../support/recording-data-sender')
+const { startRequestStoreProbe } = require('../../support/request-store-probe')
 const { User } = require('../../support/user')
 const TraceHeaderBuilder = require('../../../lib/instrumentation/http/trace-header-builder')
 const SpanRecorder = require('../../../lib/context/trace/span-recorder')
@@ -1133,6 +1134,36 @@ test('Express: a fetch() that fails in a route sends the ExceptionMetaData of it
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
   t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
   t.equal(actualExceptions[0].getExceptionid(), fetchSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the fetch() span event of the SpanChunk')
+  t.end()
+})
+
+test('Express: the gRPC resources that send the request data do not take the request store', async (t) => {
+  const spanAdaptor = new SpanAdaptor()
+  const grpcDataSender = await new TestGrpcDataSenderBuilder()
+    .addAdaptor(spanAdaptor)
+    .addAdaptor(new MetadataAdaptor())
+    .build()
+  const probe = startRequestStoreProbe()
+  t.teardown(() => {
+    probe.stop()
+    grpcDataSender.close()
+  })
+  const agent = new ProcessAgentBuilder().setDataSender(grpcDataSender.toDataSender()).build()
+
+  let traceRoot
+  const app = new express()
+  app.get('/request-store', (req, res) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    res.send('ok')
+  })
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const response = await fetch(`http://localhost:${server.address().port}/request-store`)
+  t.equal(response.status, 200, 'the route responds 200')
+
+  await spanAdaptor.span(traceRoot)
+  server.close()
+  t.deepEqual(probe.capturedTypes(), [], 'no HTTP/2 resource is created with the request store')
   t.end()
 })
 

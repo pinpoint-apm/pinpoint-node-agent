@@ -13,6 +13,7 @@ const apiMetaService = require('../../../lib/context/api-meta-service')
 const semver = require('semver')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const DisableTrace = require('../../../lib/context/disable-trace')
+const ServiceType = require('../../../lib/context/service-type')
 const http = require('http')
 const { AgentBuilder } = require('../../../lib/agent-builder')
 const https = require('https')
@@ -1109,6 +1110,47 @@ test('Express: a fetch() that fails in a route sends the ExceptionMetaData of it
     const actualExceptions = actualExceptionMetaData.getExceptionsList()
     t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
     t.equal(actualExceptions[0].getExceptionid(), fetchSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the fetch() span event of the SpanChunk')
+  } catch (error) {
+    t.fail(error.message)
+  }
+  server.close()
+  t.end()
+})
+
+test('Express: an outgoing http.request() that fails in a route records the error in its async child trace', async (t) => {
+  agent.bindHttp()
+
+  const closedServer = net.createServer().listen(0)
+  await once(closedServer, 'listening')
+  const closedPort = closedServer.address().port
+  await new Promise(resolve => closedServer.close(resolve))
+
+  let traceClosed
+  const app = new express()
+  app.get('/http-request-closed-port', (req, res) => {
+    traceClosed = new Promise(resolve => agent.callbackTraceClose(resolve))
+    http.request(`http://localhost:${closedPort}/`, () => res.send('ok'))
+      .on('error', (error) => res.status(502).send(error.code))
+      .end()
+  })
+  const server = app.listen(0)
+  await once(server, 'listening')
+  try {
+    const response = await fetch(`http://localhost:${server.address().port}/http-request-closed-port`)
+    t.equal(response.status, 502, 'the route responds 502 after the http.request() fails')
+    const traceRoot = (await traceClosed).getTraceRoot()
+
+    const httpRequestSpanEvent = agent.dataSender.getSpan(traceRoot).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.asyncHttpClientInternal.getCode())
+    const actualSpanChunk = agent.dataSender.findSpanChunk(httpRequestSpanEvent.asyncId)
+    t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'the SpanChunk localAsyncId is the asyncEvent of the http.request span event with sequence 1')
+    const actualHttpClientSpanEvent = actualSpanChunk.spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.asyncHttpClient.getCode())
+    t.ok(actualHttpClientSpanEvent.exceptionInfo, 'the asyncHttpClient span event of the SpanChunk has the exceptionInfo')
+
+    const actualExceptionMetaData = agent.dataSender.dataSender.actualExceptionMetaData
+    t.equal(actualExceptionMetaData.getTransactionid().getSequence(), traceRoot.getTraceId().getTransactionId(), 'ExceptionMetaData has the transaction id of the request')
+    const actualExceptions = actualExceptionMetaData.getExceptionsList()
+    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
+    t.equal(actualExceptions[0].getExceptionid(), actualHttpClientSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the asyncHttpClient span event')
   } catch (error) {
     t.fail(error.message)
   }

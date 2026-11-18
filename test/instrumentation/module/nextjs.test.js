@@ -30,6 +30,7 @@ let spanCollectorPort
 let receivedSpans = []
 let receivedStats = []
 let receivedExceptionMetaData = []
+let nextServerStdout = ''
 test('setup', async (t) => {
     container = await startMySql()
     t.pass('setup complete')
@@ -175,7 +176,7 @@ test('Next.JS Production Server start', (suite) => {
                 cwd: testAppDir,
                 env: Object.assign({}, process.env, {
                     PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT: 'true',
-                    NODE_OPTIONS: '-r ../../../index.js',
+                    NODE_OPTIONS: '-r ../../../index.js -r ../../support/request-store-probe-preload.js',
                     NODE_ENV: 'production',
                     DB_HOST: container.getHost(),
                     DB_PORT: container.getPort(3306),
@@ -198,6 +199,7 @@ test('Next.JS Production Server start', (suite) => {
             t.error(err, 'no error from next server')
         })
         nextServerProcess.stdout.on('data', (data) => {
+            nextServerStdout += data
             t.comment('next server stdout: ' + formatForTComment(data))
         })
         nextServerProcess.stderr.on('data', (data) => {
@@ -248,6 +250,18 @@ test('fetch http://127.0.0.1:3000/', async (t) => {
     } catch (err) {
         t.fail(err.message)
     }
+    t.end()
+})
+
+test('Next.js: the gRPC resources that send the request data do not take the request store', async (t) => {
+    receivedSpans = []
+    const response = await fetch('http://127.0.0.1:3000/')
+    t.equal(response.status, 200, '/ responds with 200')
+
+    const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc() === '/')
+    t.ok(span, 'received span from Next.js request')
+    const probeLines = nextServerStdout.split('\n').filter(line => line.includes('request-store-probe:'))
+    t.deepEqual(probeLines, [], 'no HTTP/2 resource is created with the request store')
     t.end()
 })
 

@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to Pinpoint Node.js agent will be documented in this file.
 
+## [1.4.6]
+### Fixed
+- [[#604](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/604)] Send ExceptionMetaData for exceptions recorded in async child traces, such as a failed `fetch()`
+
 ## [1.4.5] - 2026-11-05
 ### Fixed
 - [[#588](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/588)] Do not throw when recording an exception with error analysis disabled

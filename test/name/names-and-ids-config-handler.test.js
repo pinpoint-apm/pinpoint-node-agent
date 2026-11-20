@@ -55,7 +55,14 @@ test('v4 without serviceName has an error', (t) => {
     t.end()
 })
 
-test('v4 serviceName up to 254 characters with [a-zA-Z0-9._-]', (t) => {
+test('v4 serviceName from 3 to 254 characters with [a-zA-Z0-9._-]', (t) => {
+    const tooShort = handleNamesAndIds({ applicationName: 'appName', serviceName: 'ab' })
+    t.deepEqual(readErrors(tooShort), ['Service Name is too short (min 3 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'], '2 characters serviceName is too short')
+    t.equal(tooShort.enable, false, 'too short serviceName disables the agent')
+
+    const minLength = handleNamesAndIds({ applicationName: 'appName', serviceName: 'abc' })
+    t.deepEqual(readErrors(minLength), [], '3 characters serviceName is valid')
+
     const maxLength = handleNamesAndIds({ applicationName: 'appName', serviceName: 'a'.repeat(254) })
     t.deepEqual(readErrors(maxLength), [], '254 characters serviceName is valid')
     t.equal(maxLength.serviceName, 'a'.repeat(254), 'serviceName is kept')
@@ -63,8 +70,8 @@ test('v4 serviceName up to 254 characters with [a-zA-Z0-9._-]', (t) => {
     const tooLong = handleNamesAndIds({ applicationName: 'appName', serviceName: 'a'.repeat(255) })
     t.deepEqual(readErrors(tooLong), ['Service Name is too long (max 254 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'], '255 characters serviceName is too long')
 
-    const invalid = handleNamesAndIds({ applicationName: 'appName', serviceName: '~' })
-    t.deepEqual(readErrors(invalid), ['Service Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: ~. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'], 'invalid characters in serviceName')
+    const invalid = handleNamesAndIds({ applicationName: 'appName', serviceName: '~~~' })
+    t.deepEqual(readErrors(invalid), ['Service Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: ~~~. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'], 'invalid characters in serviceName')
     t.end()
 })
 
@@ -83,6 +90,16 @@ test('PINPOINT_SERVICE_NAME overrides json serviceName', (t) => {
     delete process.env.PINPOINT_SERVICE_NAME
 
     t.equal(given.serviceName, 'service-from-env', 'env overrides json')
+    t.end()
+})
+
+test('PINPOINT_SERVICE_NAME shorter than 3 characters has an error', (t) => {
+    process.env.PINPOINT_SERVICE_NAME = 'ab'
+    const given = handleNamesAndIds({ applicationName: 'appName' })
+    delete process.env.PINPOINT_SERVICE_NAME
+
+    t.deepEqual(readErrors(given), ['Service Name is too short (min 3 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'], 'PINPOINT_SERVICE_NAME=ab is too short')
+    t.equal(given.enable, false, 'too short PINPOINT_SERVICE_NAME disables the agent')
     t.end()
 })
 

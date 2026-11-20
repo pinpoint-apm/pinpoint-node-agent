@@ -32,7 +32,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 - [[#604](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/604)] Send ExceptionMetaData for exceptions recorded in async child traces, such as a failed `fetch()`
 - [[#610](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/610)] Record the exception and send the async child trace when an outgoing `http.request()` or `https.request()` fails with an error before a response
 - [[#553](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/553)] The agent's gRPC connections and calls no longer keep a request's trace, or the stores of other AsyncLocalStorage instances such as the Next.js request store, in memory
-- [[#609](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/609)] Error Analysis shows the file and line of Node built-in module frames, and the name and message of errors without a stack
+- [[#609](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/609)] Error Analysis shows the file and line of Node built-in module frames, no longer reads the lines of a multi-line message as frames, and keeps the name and message of errors without a stack
 
 ### Security
 - [[#528](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/528)] Bump `@grpc/grpc-js` to `^1.14.6` to resolve **CVE-2026-101916** and **CVE-2026-101915**, and the transitive `protobufjs` to `7.6.6` to resolve **CVE-2026-59877**

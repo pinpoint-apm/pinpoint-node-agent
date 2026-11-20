@@ -21,7 +21,6 @@ test('Agent is disabled when names and ids have errors', (t) => {
         .setDataSender({ send: (data) => sentData.push(data), close: () => {} })
         .setLogger({ warn: (...args) => warnLogs.push(args) })
         .disablePingScheduler()
-        .disableStatsScheduler()
         .disableServiceCommand()
         .build()
     agent.start()
@@ -40,7 +39,6 @@ test('Agent logs the Configuration with the names and ids warns at start', (t) =
         .setDataSender({ send: () => {}, close: () => {} })
         .setLogger({ warn: (...args) => warnLogs.push(args) })
         .disablePingScheduler()
-        .disableStatsScheduler()
         .disableServiceCommand()
         .build()
     agent.start()
@@ -88,6 +86,13 @@ test('Agent shutdown stops the stats scheduler', (t) => {
 
     t.equal(timeouts.afterStart, timeouts.beforeStart + 1, 'start schedules the stats job')
     t.equal(timeouts.afterShutdown, timeouts.beforeStart, 'shutdown clears the stats job')
+    t.end()
+})
+
+test('features.statsMonitoring false starts no stats scheduler', (t) => {
+    const timeouts = startAndShutdownAgentInChildProcess('stats-monitoring-off')
+
+    t.equal(timeouts.afterStart, timeouts.beforeStart, 'start schedules no stats job')
     t.end()
 })
 

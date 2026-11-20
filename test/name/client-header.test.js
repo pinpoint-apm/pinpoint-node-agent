@@ -91,12 +91,11 @@ function agent(protocolVersion, agentName) {
         applicationName: 'appName',
         serviceName: 'serviceName',
         collector: { ip: 'localhost', spanPort: port, statPort: port, tcpPort: port, protocolVersion },
-        features: { dataSending: true },
+        features: { dataSending: true, statsMonitoring: false },
     }
     const config = new ConfigBuilder(json).setUserDefinedJson({}).build()
     return new AgentBuilder(config)
         .disablePingScheduler()
-        .disableStatsScheduler()
         .disableServiceCommand()
         .build()
 }

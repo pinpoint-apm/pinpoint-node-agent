@@ -97,7 +97,6 @@ function startProcessAgent(config) {
     const agent = new AgentBuilder(config)
         .setDataSender(forwardingDataSender)
         .disablePingScheduler()
-        .disableStatsScheduler()
         .build()
     agent.start()
     return agent

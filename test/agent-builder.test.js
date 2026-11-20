@@ -7,6 +7,8 @@
 const test = require('tape')
 const path = require('path')
 const { execFileSync } = require('child_process')
+const grpc = require('@grpc/grpc-js')
+const services = require('../lib/data/v1/Service_grpc_pb')
 const { ConfigBuilder } = require('../lib/config-builder')
 const { AgentBuilder } = require('../lib/agent-builder')
 
@@ -48,6 +50,39 @@ test('Agent logs the Configuration with the names and ids warns at start', (t) =
     t.end()
 })
 
+test('A disabled agent opens no ping session to the collector', async (t) => {
+    const collector = await startCollectorRecordingPingSessions()
+    t.teardown(() => collector.server.forceShutdown())
+
+    const disabledAgent = new AgentBuilder(collectorConfig(collector.port, { enable: false, agentName: 'disabled-agent', serviceName: 'serviceName' }))
+        .setLogger({ warn: () => {} })
+        .build()
+    disabledAgent.start()
+    const enabledAgent = new AgentBuilder(collectorConfig(collector.port, { agentName: 'enabled-agent', serviceName: 'serviceName' })).build()
+    await collector.firstPingSession
+    enabledAgent.dataSender.close()
+
+    t.deepEqual(collector.pingSessionAgentNames, ['enabled-agent'], 'only the enabled agent opens a ping session')
+    t.end()
+})
+
+test('An agent disabled by a too short serviceName opens no ping session to the collector', async (t) => {
+    const collector = await startCollectorRecordingPingSessions()
+    t.teardown(() => collector.server.forceShutdown())
+
+    const disabledAgent = new AgentBuilder(collectorConfig(collector.port, { agentName: 'short-service-agent', serviceName: 'ab' }))
+        .setLogger({ warn: () => {} })
+        .build()
+    disabledAgent.start()
+    const enabledAgent = new AgentBuilder(collectorConfig(collector.port, { agentName: 'enabled-agent', serviceName: 'serviceName' })).build()
+    await collector.firstPingSession
+    enabledAgent.dataSender.close()
+
+    t.equal(disabledAgent.getConfig().enable, false, 'a too short serviceName disables the agent')
+    t.deepEqual(collector.pingSessionAgentNames, ['enabled-agent'], 'only the enabled agent opens a ping session')
+    t.end()
+})
+
 test('Agent shutdown stops the stats scheduler', (t) => {
     const timeouts = startAndShutdownAgentInChildProcess('stats')
 
@@ -67,4 +102,32 @@ test('Agent shutdown stops the ping scheduler', (t) => {
 function startAndShutdownAgentInChildProcess(scheduler) {
     const fixture = path.join(__dirname, 'fixtures/agent-shutdown.js')
     return JSON.parse(execFileSync(process.execPath, [fixture, scheduler], { encoding: 'utf8', timeout: 10000 }))
+}
+
+function startCollectorRecordingPingSessions() {
+    const pingSessionAgentNames = []
+    let pingSessionStarted
+    const firstPingSession = new Promise((resolve) => { pingSessionStarted = resolve })
+    const server = new grpc.Server()
+    server.addService(services.AgentService, {
+        pingSession: (call) => {
+            pingSessionAgentNames.push(call.metadata.get('agentname')[0])
+            call.on('data', (ping) => call.write(ping))
+            pingSessionStarted()
+        }
+    })
+    return new Promise((resolve, reject) => {
+        server.bindAsync('localhost:0', grpc.ServerCredentials.createInsecure(), (error, port) => {
+            error ? reject(error) : resolve({ server, port, pingSessionAgentNames, firstPingSession })
+        })
+    })
+}
+
+function collectorConfig(port, json) {
+    return new ConfigBuilder({
+        applicationName: 'appName',
+        collector: { ip: 'localhost', spanPort: port, statPort: port, tcpPort: port },
+        features: { dataSending: true },
+        ...json,
+    }).setUserDefinedJson({}).build()
 }

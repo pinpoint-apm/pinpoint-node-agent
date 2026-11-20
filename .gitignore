@@ -46,5 +46,7 @@ checkstyle-results.xml
 # claude code
 **/.claude/**/*.local.json
 **/.claude/worktrees/
+.claude/skills/qa/apps/nextjs/.next/
+.claude/skills/qa/apps/nextjs/next-env.d.ts
 
 .env

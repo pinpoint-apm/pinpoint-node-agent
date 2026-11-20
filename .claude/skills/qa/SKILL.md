@@ -1,6 +1,6 @@
 ---
 name: qa
-description: QA a pinpoint-node-agent change end to end on a worktree. Derive scenarios from the issue, run them in an app with the agent against a local collector, check memory with heap snapshots when the change calls for it, and report pass/fail with evidence. Use after the Tape tests pass, before a PR is merged and before a release.
+description: QA a pinpoint-node-agent change end to end on a worktree. Derive scenarios from the issue, run them in an app with the agent against a collector, check memory with heap snapshots when the change calls for it, and report pass/fail with evidence. Use after the Tape tests pass, before a PR is merged and before a release.
 ---
 
 # QA
@@ -20,12 +20,21 @@ agent sees it. Run QA after the tests pass.
 - One scenario per `input → expected` bullet of the issue.
 - Add the regressions the change can cause: the other frameworks (Express, Koa, Next.js),
   sampling off, error routes, async child traces, and the paths next to the changed code.
+- Scenarios test the features an app developer writes: routes, outgoing calls, database calls,
+  calls between apps and the errors the app throws. Requests carry the values the app sends in
+  normal use.
+- Run every scenario in `scenarios.md` on each framework, plus the scenarios of the issue.
+  A change that adds a feature adds its route to `apps/` and its scenario to `scenarios.md`
+  in the same format.
+- Report each expected value of a scenario as matched or not.
 
 ## Environment
 
-- Apps: `demo/express`, `demo/koa-example`, `demo/nextjs`. Pick the ones the change touches.
-- Collector: a local gRPC server that records every message it receives. Never an internal
-  host. Point the agent at it with `PINPOINT_COLLECTOR_IP`, `PINPOINT_COLLECTOR_SPAN_PORT`,
+- Apps: the Express, Koa and Next.js apps in `apps/`, which serve the routes of `scenarios.md`.
+  `scenarios.md` says how to start them.
+- Collector: one whose received data QA can read back, such as the call tree of a collector the
+  developer names, or every message a local gRPC server records. Point the agent at it with
+  `PINPOINT_COLLECTOR_IP`, `PINPOINT_COLLECTOR_SPAN_PORT`,
   `PINPOINT_COLLECTOR_STAT_PORT` and `PINPOINT_COLLECTOR_TCP_PORT`.
   - The collector answers the span RPC the branch uses (`SendSpanBatch`, or the `SendSpan`
     stream on older branches).
@@ -45,9 +54,10 @@ Pick the checks per change and say why each one was picked or skipped.
 
 ### Functional
 
-- Send the scenario requests and check what the collector received: Span rpc and
+- Send the scenario requests and check the Pinpoint Web result: transaction list, call tree
+  and Error Analysis. With a local gRPC server, check the messages it recorded: Span rpc and
   annotations, SpanChunk `localAsyncId`, metadata, ExceptionMetaData, stats.
-- Judge by the received data, not by agent logs.
+- Judge by the collected data, not by agent logs.
 
 ### Memory
 

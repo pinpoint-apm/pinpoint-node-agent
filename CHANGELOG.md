@@ -7,6 +7,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
   - `serviceName` / `PINPOINT_SERVICE_NAME` is required
   - The agent ID is always generated; `agentName` defaults to it
   - `applicationName` up to 254 characters
+- [[#560](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/560)] `serviceName` / `PINPOINT_SERVICE_NAME` must be 3 to 254 characters
 - [[#522](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/522)] New Inspector system information
   - Heap max is the V8 heap size limit, and Non-Heap shows external memory
   - GC count and time: major GC as old GC, minor GC as new GC; opt in with `features.gcStats` / `PINPOINT_FEATURES_GC_STATS` set to `true`

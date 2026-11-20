@@ -96,7 +96,7 @@ The agent identifies itself to the collector with `v4` by default, the same sche
 | Agent ID | Always a generated 22-char base64 UUIDv7; `PINPOINT_AGENT_ID` is ignored | `PINPOINT_AGENT_ID` (≤24 chars), or a generated 22-char base64 UUIDv7 if unset |
 | Agent name | Optional, ≤254 chars; defaults to the agent ID | Optional, ≤255 chars; defaults to the agent ID |
 | Application name | **Required**, ≤254 chars | **Required**, ≤254 chars |
-| Service name | **Required**, ≤254 chars; sent as the `servicename` gRPC header | Not used |
+| Service name | **Required**, 3 to 254 chars; sent as the `servicename` gRPC header | Not used |
 
 All names and IDs allow only `[a-zA-Z0-9._-]`.
 

@@ -129,7 +129,7 @@ PINPOINT_FEATURES_URI_STATS_CAPACITY | 1000 | Max URI patterns per snapshot wind
 PINPOINT_FEATURES_URI_STATS_TIME_WINDOW | 30000 | Snapshot window in ms.
 PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT | true | Use a user-defined URI template when available. See the example below.
 PINPOINT_FEATURES_ERROR_ANALYSIS | true | Set `false` to disable error analysis.
-PINPOINT_FEATURES_ERROR_ANALYSIS_MAX_DEPTH | 10 | Max depth for `Error.cause` chain traversal.
+PINPOINT_FEATURES_ERROR_ANALYSIS_MAX_DEPTH | 10 | Max depth for `Error.cause` chain traversal. Up to 10.
 
 Custom URI template example:
 ```javascript

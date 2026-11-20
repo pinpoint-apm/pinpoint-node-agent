@@ -5,6 +5,7 @@ const http = require('http')
 
 const target = () => `http://127.0.0.1:${process.env.TARGET_PORT}/`
 const closedPort = () => `http://127.0.0.1:${process.env.CLOSED_PORT}/`
+const localhostClosedPort = () => `http://localhost:${process.env.CLOSED_PORT}/`
 const appUrls = {
     express: () => `http://127.0.0.1:${process.env.EXPRESS_PORT}`,
     koa: () => `http://127.0.0.1:${process.env.KOA_PORT}`,
@@ -22,6 +23,8 @@ module.exports = {
     fetchOk: () => fetchUrl(target()),
     httpRequestClosedPort: () => httpRequest(closedPort()),
     fetchClosedPort: () => fetchUrl(closedPort()),
+    httpRequestLocalhostClosedPort: () => httpRequest(localhostClosedPort()),
+    fetchLocalhostClosedPort: () => fetchUrl(localhostClosedPort()),
     mysql2: () => query(() => databases.mysql2.query('SELECT id, name FROM member WHERE id = ?', ['a'])),
     mysql2Error: () => query(() => databases.mysql2.query('SELECT id FROM no_such_table')),
     pg: () => query(() => databases.pg.query('SELECT id, name FROM member WHERE id = $1', ['a'])),

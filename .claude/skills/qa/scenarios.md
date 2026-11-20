@@ -241,4 +241,39 @@ headers it received.
 18. A request with sampling off from the caller
    request  GET /downstream with Pinpoint-Sampled s0
    expect   transaction list  no row
+
+19. A route whose http.request() to localhost fails on every address
+   request  GET /http-request-localhost-closed-port
+   expect   transaction list  1 row, URL /http-request-localhost-closed-port, error mark
+            call tree         Node Server Process  /http-request-localhost-closed-port, http.status.code 502
+                                <route row>
+                                  http.request  (ASYNC_HTTP_CLIENT)
+                                    Asynchronous Invocation  (ASYNC)
+                                      GET  localhost:CLOSED_PORT/, error
+                                        AggregateError [ECONNREFUSED]: (Next.js: AggregateError:)
+            Error Analysis    3 errors, URI template /http-request-localhost-closed-port (Next.js: null):
+                              class AggregateError, empty message, first stack trace line
+                              internalConnectMultiple in node:net with its line number
+                              class Error, message connect ECONNREFUSED ::1:CLOSED_PORT
+                              class Error, message connect ECONNREFUSED 127.0.0.1:CLOSED_PORT
+
+20. A route whose fetch() to localhost fails on every address
+   request  GET /fetch-localhost-closed-port
+   expect   the same rows as scenario 19, with URL and URI template /fetch-localhost-closed-port
+            (Next.js: null)
+
+21. Query summary off, the default
+   app      default settings, the run of scenarios 1-20
+   request  the query routes of scenarios 7, 8, 9 and 13
+   expect   query summary     no query of the application in that run
+
+22. Query summary on
+   app      query summary on, started fresh
+   request  GET /ready, then /mysql2, /mysql2-error, /pg, /parallel once each
+   expect   query summary     grouped by query, the count for each app:
+                              SELECT id, name FROM member WHERE id = ?   2 (/mysql2 and /parallel)
+                              SELECT id, name FROM member WHERE id = $1  1
+                              SELECT id FROM no_such_table               1
+                              SELECT ?                                   2 (the SELECT 1 of /ready on
+                                                                           mysql2 and pg)
 ```

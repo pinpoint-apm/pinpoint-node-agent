@@ -49,7 +49,6 @@ declare class AgentBuilder {
   addEnricher(enricher: any): AgentBuilder;
   setSpanRecorderFactory(spanRecorderFactory: any): AgentBuilder;
   setParsingResultFactory(parsingResultFactory: any): AgentBuilder;
-  disableStatsScheduler(): AgentBuilder;
   disablePingScheduler(): AgentBuilder;
   disableServiceCommand(): AgentBuilder;
   build(): Agent;

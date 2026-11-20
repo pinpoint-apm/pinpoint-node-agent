@@ -9,8 +9,12 @@
 const { ConfigBuilder } = require('../../lib/config-builder')
 const { AgentBuilder } = require('../../lib/agent-builder')
 
-const scheduler = process.argv[2]
-const agent = scheduler === 'stats' ? statsOnlyAgent() : pingOnlyAgent()
+const agents = {
+    'stats': statsOnlyAgent,
+    'stats-monitoring-off': statsMonitoringOffAgent,
+    'ping': pingOnlyAgent,
+}
+const agent = agents[process.argv[2]]()
 
 const beforeStart = activeTimeoutCount()
 agent.start()
@@ -30,12 +34,21 @@ function statsOnlyAgent() {
         .build()
 }
 
+function statsMonitoringOffAgent() {
+    const config = new ConfigBuilder({ applicationName: 'appName', serviceName: 'serviceName', features: { statsMonitoring: false } }).setUserDefinedJson({}).build()
+    return new AgentBuilder(config)
+        .setDataSender({ send: () => {}, sendStat: () => {}, close: () => {} })
+        .setLogger({ warn: () => {} })
+        .disablePingScheduler()
+        .disableServiceCommand()
+        .build()
+}
+
 function pingOnlyAgent() {
     const config = new ConfigBuilder({ applicationName: 'appName', serviceName: 'serviceName', features: { statsMonitoring: false } }).setUserDefinedJson({}).build()
     return new AgentBuilder(config)
         .setDataSender({ send: () => {}, sendPing: () => {}, close: () => {} })
         .setLogger({ warn: () => {} })
-        .disableStatsScheduler()
         .disableServiceCommand()
         .build()
 }

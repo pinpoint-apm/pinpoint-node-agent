@@ -26,6 +26,7 @@ agent sees it. Run QA after the tests pass.
 - Run every scenario in `scenarios.md` on each framework, plus the scenarios of the issue.
   A change that adds a feature adds its route to `apps/` and its scenario to `scenarios.md`
   in the same format.
+- A release QA also runs `startup-scenarios.md` on one app.
 - Report each expected value of a scenario as matched or not.
 
 ## Environment

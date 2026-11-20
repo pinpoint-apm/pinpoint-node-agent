@@ -5,7 +5,7 @@
  */
 
 const test = require('tape')
-const { makeCloneBuilder } = require('../../lib/instrumentation/call-stack')
+const { makeCloneBuilder, namedGroupCallSite } = require('../../lib/instrumentation/call-stack')
 const MethodDescriptorBuilder = require('../../lib/context/method-descriptor-builder')
 test('express callSite', (t) => {
     let stack = 'at Function.app.<computed> [as get] (/Users/workspace/pinpoint/pinpoint-node-agent/node_modules/express/lib/application.js:481:30)'
@@ -38,5 +38,13 @@ test('express callSite', (t) => {
     t.equal(actual.className, 'Test', 'className')
     t.equal(actual.lineNumber, 80, 'lineNumber')
 
+    t.end()
+})
+
+test('namedGroupCallSite should read the file and line of a Node built-in module frame', (t) => {
+    const actual = namedGroupCallSite('at Function.alloc (node:buffer:395:3)')
+
+    t.equal(actual.location, 'node:buffer', 'the location is node:buffer')
+    t.equal(actual.lineNumber, 395, 'the line number is 395')
     t.end()
 })

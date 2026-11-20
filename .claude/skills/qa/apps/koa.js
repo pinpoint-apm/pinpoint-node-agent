@@ -17,6 +17,8 @@ route('/http-request-ok', calls.httpRequestOk)
 route('/fetch-ok', calls.fetchOk)
 route('/http-request-closed-port', calls.httpRequestClosedPort)
 route('/fetch-closed-port', calls.fetchClosedPort)
+route('/http-request-localhost-closed-port', calls.httpRequestLocalhostClosedPort)
+route('/fetch-localhost-closed-port', calls.fetchLocalhostClosedPort)
 router.get('/throw', () => {
     throw new Error('qa route throws')
 })

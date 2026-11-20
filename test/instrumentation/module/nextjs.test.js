@@ -416,7 +416,11 @@ test('Next.js: a fetch() that fails in an API route sends the ExceptionMetaData 
     t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
     t.equal(exceptionMetaData.getTransactionid().getAgentid(), span.getTransactionid().getAgentid(), 'ExceptionMetaData has the agent id of the request')
     t.equal(exceptionMetaData.getSpanid(), span.getSpanid(), 'ExceptionMetaData has the span id of the request')
-    t.equal(exceptionMetaData.getExceptionsList().length, 1, 'ExceptionMetaData has one exception')
+    const actualExceptions = exceptionMetaData.getExceptionsList()
+    t.equal(actualExceptions.length, 3, 'ExceptionMetaData has the AggregateError and its two connect errors')
+    t.equal(actualExceptions[0].getExceptionclassname(), 'AggregateError', 'the undici request error of the fetch() is an AggregateError')
+    t.deepEqual(actualExceptions.slice(1).map(exception => exception.getExceptionmessage()).sort(), [`connect ECONNREFUSED 127.0.0.1:${closedPort}`, `connect ECONNREFUSED ::1:${closedPort}`], 'then the two connect errors in AggregateError.errors, one per localhost address')
+    t.notEqual(actualExceptions[1].getExceptionid(), actualExceptions[0].getExceptionid(), 'a connect error has its own exceptionId')
     t.equal(exceptionMetaData.getUritemplate(), 'NULL', 'ExceptionMetaData uriTemplate is NULL because the user input uriTemplate is recorded when the response ends, after the async child trace closed')
     t.end()
 })
@@ -430,7 +434,7 @@ test('Next.js: an outgoing http.request() that fails in an API route records the
     const closedPort = closedServer.address().port
     await new Promise(resolve => closedServer.close(resolve))
 
-    const target = `http://127.0.0.1:${closedPort}/`
+    const target = `http://localhost:${closedPort}/`
     const response = await fetch(`http://127.0.0.1:3000/api/parent-service-name?target=${encodeURIComponent(target)}`)
     t.equal(response.status, 500, 'the API route responds 500 after the http.request() fails')
 
@@ -444,7 +448,13 @@ test('Next.js: an outgoing http.request() that fails in an API route records the
     await waitForExceptionMetaData((e) => e.getTransactionid().getSequence() === span.getTransactionid().getSequence(), 10000)
     const actualExceptionMetaDataList = receivedExceptionMetaData.filter((e) => e.getTransactionid().getSequence() === span.getTransactionid().getSequence())
     t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
-    t.equal(actualExceptionMetaDataList[0].getExceptionsList().length, 1, 'ExceptionMetaData has one exception')
+    const actualExceptions = actualExceptionMetaDataList[0].getExceptionsList()
+    t.equal(actualExceptions.length, 3, 'ExceptionMetaData has the AggregateError and its two connect errors')
+    t.equal(actualExceptions[0].getExceptionclassname(), 'AggregateError', 'the http.request() error is an AggregateError')
+    t.equal(actualExceptions[0].getStacktraceelementList()[0].getFilename(), 'node:net', 'the first frame of the AggregateError is in node:net')
+    t.true(actualExceptions[0].getStacktraceelementList()[0].getLinenumber() > 0, 'the first frame of the AggregateError has its line number')
+    t.deepEqual(actualExceptions.slice(1).map(exception => exception.getExceptionmessage()).sort(), [`connect ECONNREFUSED 127.0.0.1:${closedPort}`, `connect ECONNREFUSED ::1:${closedPort}`], 'then the two connect errors in AggregateError.errors, one per localhost address')
+    t.notEqual(actualExceptions[1].getExceptionid(), actualExceptions[0].getExceptionid(), 'a connect error has its own exceptionId')
     t.end()
 })
 

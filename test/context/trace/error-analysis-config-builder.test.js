@@ -72,3 +72,11 @@ test('ErrorAnalysisConfigBuilder should fallback invalid maxDepth to default', (
     t.equal(config.getMaxDepth(), 10, 'invalid maxDepth falls back to 10')
     t.end()
 })
+
+test('ErrorAnalysisConfigBuilder should cap maxDepth at 10', (t) => {
+    const config = new ErrorAnalysisConfigBuilder({
+        features: { errorAnalysis: { maxDepth: 1000 } }
+    }).build()
+    t.equal(config.getMaxDepth(), 10, 'maxDepth 1000 is capped at 10')
+    t.end()
+})

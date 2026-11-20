@@ -14,6 +14,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
   - Open File Descriptor on Linux; opt in with `features.fileDescriptorStats` / `PINPOINT_FEATURES_FILE_DESCRIPTOR_STATS` set to `true`
   - AgentInfo sends the Node.js version as `vmVersion`
 - [[#576](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/576)] Inspector Transactions Per Second and Response Time charts
+- [[#609](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/609)] Error Analysis supports `AggregateError`
 
 ### Changed
 - [[#561](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/561)] Send spans with the unary `SendSpanBatch` RPC; requires Collector 3.1.0 or later. Tune with `collector.spanBatch` / `PINPOINT_SPAN_BATCH_SIZE`, `PINPOINT_SPAN_BATCH_DEADLINE_MILLIS` and `PINPOINT_SPAN_BATCH_MAX_REQUESTS`
@@ -31,6 +32,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 - [[#604](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/604)] Send ExceptionMetaData for exceptions recorded in async child traces, such as a failed `fetch()`
 - [[#610](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/610)] Record the exception and send the async child trace when an outgoing `http.request()` or `https.request()` fails with an error before a response
 - [[#553](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/553)] The agent's gRPC connections and calls no longer keep a request's trace, or the stores of other AsyncLocalStorage instances such as the Next.js request store, in memory
+- [[#609](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/609)] Error Analysis shows the file and line of Node built-in module frames, and the name and message of errors without a stack
 
 ### Security
 - [[#528](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/528)] Bump `@grpc/grpc-js` to `^1.14.6` to resolve **CVE-2026-101916** and **CVE-2026-101915**, and the transitive `protobufjs` to `7.6.6` to resolve **CVE-2026-59877**

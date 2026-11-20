@@ -130,54 +130,232 @@ test('ExceptionBuilder should use fileName as className fallback and <anonymous>
 })
 
 test('ExceptionBuilder should walk error.cause chain', (t) => {
-    const rootCause = new Error('root cause')
-    rootCause.stack = 'RangeError: root cause\n    at Object.validate (/Users/app/validator.js:10:5)'
-
-    const middleError = new Error('middle error', { cause: rootCause })
-    middleError.stack = 'TypeError: middle error\n    at Object.parse (/Users/app/parser.js:20:5)'
-
-    const topError = new Error('top error', { cause: middleError })
-    topError.stack = 'Error: top error\n    at Object.handler (/Users/app/handler.js:30:5)'
+    const topError = new Error('top error', {
+        cause: new TypeError('middle error', {
+            cause: new RangeError('root cause'),
+        }),
+    })
 
     const exceptions = new ExceptionBuilder(topError).build()
 
-    t.equal(exceptions.length, 3, 'should have 3 exceptions in chain')
-
-    t.equal(exceptions[0].errorClassName, 'Error', 'depth 0: Error')
-    t.equal(exceptions[0].errorMessage, 'top error', 'depth 0: top error')
-    t.equal(exceptions[0].exceptionDepth, 0, 'depth 0')
-
-    t.equal(exceptions[1].errorClassName, 'TypeError', 'depth 1: TypeError')
-    t.equal(exceptions[1].errorMessage, 'middle error', 'depth 1: middle error')
-    t.equal(exceptions[1].exceptionDepth, 1, 'depth 1')
-
-    t.equal(exceptions[2].errorClassName, 'RangeError', 'depth 2: RangeError')
-    t.equal(exceptions[2].errorMessage, 'root cause', 'depth 2: root cause')
-    t.equal(exceptions[2].exceptionDepth, 2, 'depth 2')
-
-    const sharedId = exceptions[0].exceptionId
-    t.equal(exceptions[1].exceptionId, sharedId, 'all exceptions share same exceptionId')
-    t.equal(exceptions[2].exceptionId, sharedId, 'all exceptions share same exceptionId')
-
+    t.deepEqual(exceptionTree(exceptions), [
+        'A Error: top error',
+        'A   TypeError: middle error',
+        'A     RangeError: root cause',
+    ], 'the causes share the exceptionId of the top error, one depth deeper each')
     t.end()
 })
 
 test('ExceptionBuilder should respect maxDepth', (t) => {
-    const cause2 = new Error('cause2')
-    cause2.stack = 'Error: cause2\n    at c (/app.js:3:1)'
-    const cause1 = new Error('cause1', { cause: cause2 })
-    cause1.stack = 'Error: cause1\n    at b (/app.js:2:1)'
-    const top = new Error('top', { cause: cause1 })
-    top.stack = 'Error: top\n    at a (/app.js:1:1)'
+    const topError = new Error('top', {
+        cause: new Error('cause1', {
+            cause: new Error('cause2'),
+        }),
+    })
 
-    const exceptions = new ExceptionBuilder(top, 2).build()
+    const exceptions = new ExceptionBuilder(topError, 2).build()
 
-    t.equal(exceptions.length, 2, 'should be limited to maxDepth=2')
-    t.equal(exceptions[0].errorMessage, 'top', 'depth 0')
-    t.equal(exceptions[1].errorMessage, 'cause1', 'depth 1')
-
+    t.deepEqual(exceptionTree(exceptions), [
+        'A Error: top',
+        'A   Error: cause1',
+    ], 'the chain stops at maxDepth 2')
     t.end()
 })
+
+test('ExceptionBuilder should take the class name from error.name when Node adds a code to the stack header', (t) => {
+    let error
+    try {
+        Buffer.alloc(-1)
+    } catch (e) {
+        error = e
+    }
+    t.true(error.stack.startsWith('RangeError [ERR_OUT_OF_RANGE]: '), 'the stack header has the [ERR_OUT_OF_RANGE] code')
+
+    const exceptions = new ExceptionBuilder(error).build()
+
+    t.equal(exceptions[0].errorClassName, 'RangeError', 'the class name is RangeError')
+    t.equal(exceptions[0].frameStack[0].fileName, 'node:buffer', 'the first frame is in node:buffer')
+    t.true(exceptions[0].frameStack[0].lineNumber > 0, 'the first frame has its line number')
+    t.end()
+})
+
+test('ExceptionBuilder should take the class name from error.name when the error has no message', (t) => {
+    const error = new Error()
+    t.equal(error.stack.split('\n')[0], 'Error', 'the stack header has no colon')
+
+    const exceptions = new ExceptionBuilder(error).build()
+
+    t.equal(exceptions[0].errorClassName, 'Error', 'the class name is Error')
+    t.equal(exceptions[0].errorMessage, '', 'the message is empty')
+    t.end()
+})
+
+test('ExceptionBuilder should record unknown as the class name when error.name is not a string', (t) => {
+    const exceptions = new ExceptionBuilder({ stack: 'x' }).build()
+
+    t.equal(exceptions[0].errorClassName, 'unknown', 'the class name is unknown')
+    t.end()
+})
+
+test('ExceptionBuilder should keep the name and message of an error without a stack', (t) => {
+    const exceptions = new ExceptionBuilder({ name: 'CustomError', message: 'x' }).build()
+
+    t.equal(exceptions[0].errorClassName, 'CustomError', 'the class name is CustomError')
+    t.equal(exceptions[0].errorMessage, 'x', 'the message is x')
+    t.equal(exceptions[0].frameStack.length, 0, 'there are no frames')
+    t.end()
+})
+
+test('ExceptionBuilder should take frames only from the call site lines when the message has several lines', (t) => {
+    function readConfig() {
+        return new Error('expected 1\nactual 2')
+    }
+
+    const exceptions = new ExceptionBuilder(readConfig()).build()
+
+    t.equal(exceptions[0].errorMessage, 'expected 1\nactual 2', 'the message keeps both lines')
+    t.equal(exceptions[0].frameStack[0].methodName, 'readConfig', 'the first frame is readConfig, not the second message line')
+    t.end()
+})
+
+test('ExceptionBuilder should send each error in AggregateError.errors as its own exception chain', (t) => {
+    const aggregateError = new AggregateError([
+        new Error('connect ECONNREFUSED ::1:3000'),
+        new Error('connect ECONNREFUSED 127.0.0.1:3000'),
+    ])
+
+    const exceptions = new ExceptionBuilder(aggregateError).build()
+
+    t.deepEqual(exceptionTree(exceptions), [
+        'A AggregateError: ',
+        'B Error: connect ECONNREFUSED ::1:3000',
+        'C Error: connect ECONNREFUSED 127.0.0.1:3000',
+    ], 'each error in AggregateError.errors starts its own chain at depth 0')
+    t.end()
+})
+
+test('ExceptionBuilder should send the errors of an AggregateError found in the cause chain', (t) => {
+    const fetchError = new TypeError('fetch failed', {
+        cause: new AggregateError([
+            new Error('connect ECONNREFUSED ::1:3000'),
+            new Error('connect ECONNREFUSED 127.0.0.1:3000'),
+        ]),
+    })
+
+    const exceptions = new ExceptionBuilder(fetchError).build()
+
+    t.deepEqual(exceptionTree(exceptions), [
+        'A TypeError: fetch failed',
+        'A   AggregateError: ',
+        'B Error: connect ECONNREFUSED ::1:3000',
+        'C Error: connect ECONNREFUSED 127.0.0.1:3000',
+    ], 'the errors of the AggregateError cause follow the TypeError chain')
+    t.end()
+})
+
+test('ExceptionBuilder should walk the cause chain of an error in AggregateError.errors', (t) => {
+    const aggregateError = new AggregateError([
+        new Error('request failed', {
+            cause: new Error('socket hang up'),
+        }),
+    ])
+
+    const exceptions = new ExceptionBuilder(aggregateError).build()
+
+    t.deepEqual(exceptionTree(exceptions), [
+        'A AggregateError: ',
+        'B Error: request failed',
+        'B   Error: socket hang up',
+    ], 'the cause of errors[0] shares its exceptionId at depth 1')
+    t.end()
+})
+
+test('ExceptionBuilder should send the errors of an AggregateError nested in AggregateError.errors', (t) => {
+    const anyError = new AggregateError([
+        new AggregateError([
+            new Error('connect ECONNREFUSED ::1:3000'),
+            new Error('connect ECONNREFUSED 127.0.0.1:3000'),
+        ]),
+        new AggregateError([
+            new Error('connect ECONNREFUSED ::1:4000'),
+            new Error('connect ECONNREFUSED 127.0.0.1:4000'),
+        ]),
+    ], 'All promises were rejected')
+
+    const exceptions = new ExceptionBuilder(anyError).build()
+
+    t.deepEqual(exceptionTree(exceptions), [
+        'A AggregateError: All promises were rejected',
+        'B AggregateError: ',
+        'C AggregateError: ',
+        'D Error: connect ECONNREFUSED ::1:3000',
+        'E Error: connect ECONNREFUSED 127.0.0.1:3000',
+        'F Error: connect ECONNREFUSED ::1:4000',
+        'G Error: connect ECONNREFUSED 127.0.0.1:4000',
+    ], 'the outer array errors come before the nested array errors')
+    t.end()
+})
+
+test('ExceptionBuilder should send at most 10 errors from AggregateError.errors whatever maxDepth is', (t) => {
+    const errors = Array.from({ length: 12 }, (_, index) => new Error(`request ${index} failed`))
+    const aggregateError = new AggregateError(errors)
+
+    const exceptions = new ExceptionBuilder(aggregateError, 2).build()
+
+    t.equal(exceptions.length, 11, 'the AggregateError and the first 10 errors')
+    t.equal(exceptions[10].errorMessage, 'request 9 failed', 'the last one is errors[9]')
+    t.end()
+})
+
+test('ExceptionBuilder should not send the errors array of an error that is not an AggregateError', (t) => {
+    const validationError = new Error('invalid request')
+    validationError.name = 'ValidationError'
+    validationError.errors = ['id is required', 'name is required']
+
+    const exceptions = new ExceptionBuilder(validationError).build()
+
+    t.deepEqual(exceptionTree(exceptions), [
+        'A ValidationError: invalid request',
+    ], 'only the ValidationError itself')
+    t.end()
+})
+
+test('ExceptionBuilder should skip the values in AggregateError.errors that are not errors', (t) => {
+    const aggregateError = new AggregateError([
+        undefined,
+        'timeout',
+        new Error('connect ECONNREFUSED 127.0.0.1:3000'),
+    ])
+
+    const exceptions = new ExceptionBuilder(aggregateError).build()
+
+    t.deepEqual(exceptionTree(exceptions), [
+        'A AggregateError: ',
+        'B Error: connect ECONNREFUSED 127.0.0.1:3000',
+    ], 'only the AggregateError and its Error')
+    t.end()
+})
+
+test('ExceptionBuilder should send the first 10 errors without throwing when AggregateError.errors is huge', (t) => {
+    const errors = Array.from({ length: 200000 }, (_, index) => new Error(`request ${index} failed`))
+    const aggregateError = new AggregateError(errors)
+
+    const exceptions = new ExceptionBuilder(aggregateError).build()
+
+    t.equal(exceptions.length, 11, 'the AggregateError and the first 10 errors')
+    t.equal(exceptions[10].errorMessage, 'request 9 failed', 'the last one is errors[9]')
+    t.end()
+})
+
+function exceptionTree(exceptions) {
+    const labels = new Map()
+    return exceptions.map(exception => {
+        if (!labels.has(exception.exceptionId)) {
+            labels.set(exception.exceptionId, String.fromCharCode(65 + labels.size))
+        }
+        return `${labels.get(exception.exceptionId)} ${'  '.repeat(exception.exceptionDepth)}${exception.errorClassName}: ${exception.errorMessage}`
+    })
+}
 
 const actualCallStack = `Error: express case
 at patchLayer (/Users/test/workspace/pinpoint/pinpoint-node-agent/lib/instrumentation/module/express.js:83:65)

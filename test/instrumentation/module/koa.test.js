@@ -491,8 +491,11 @@ test('Koa: a fetch() that fails in a route sends the ExceptionMetaData of its as
 
   const fetchSpanEvent = dataSender.findSpanChunks(traceRoot).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.exception)
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
-  t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
+  t.equal(actualExceptions.length, 3, 'ExceptionMetaData has the AggregateError and its two connect errors')
   t.equal(actualExceptions[0].getExceptionid(), fetchSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the fetch() span event of the SpanChunk')
+  t.equal(actualExceptions[0].getExceptionclassname(), 'AggregateError', 'the undici request error of the fetch() is an AggregateError')
+  t.deepEqual(actualExceptions.slice(1).map(exception => exception.getExceptionmessage()).sort(), [`connect ECONNREFUSED 127.0.0.1:${closedPort}`, `connect ECONNREFUSED ::1:${closedPort}`], 'then the two connect errors in AggregateError.errors, one per localhost address')
+  t.notEqual(actualExceptions[1].getExceptionid(), actualExceptions[0].getExceptionid(), 'a connect error has its own exceptionId')
   t.end()
 })
 
@@ -537,8 +540,13 @@ test('Koa: an outgoing http.request() that fails in a route records the error in
   const actualExceptionMetaDataList = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === traceRoot)
   t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
   const actualExceptions = actualExceptionMetaDataList[0].valueOfProtocolBuffer().getExceptionsList()
-  t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
+  t.equal(actualExceptions.length, 3, 'ExceptionMetaData has the AggregateError and its two connect errors')
   t.equal(actualExceptions[0].getExceptionid(), actualHttpClientSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the asyncHttpClient span event')
+  t.equal(actualExceptions[0].getExceptionclassname(), 'AggregateError', 'the http.request() error is an AggregateError')
+  t.equal(actualExceptions[0].getStacktraceelementList()[0].getFilename(), 'node:net', 'the first frame of the AggregateError is in node:net')
+  t.true(actualExceptions[0].getStacktraceelementList()[0].getLinenumber() > 0, 'the first frame of the AggregateError has its line number')
+  t.deepEqual(actualExceptions.slice(1).map(exception => exception.getExceptionmessage()).sort(), [`connect ECONNREFUSED 127.0.0.1:${closedPort}`, `connect ECONNREFUSED ::1:${closedPort}`], 'then the two connect errors in AggregateError.errors, one per localhost address')
+  t.notEqual(actualExceptions[1].getExceptionid(), actualExceptions[0].getExceptionid(), 'a connect error has its own exceptionId')
   t.end()
 })
 
@@ -681,6 +689,40 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
 
   t.equal(top.getExceptionid(), cause.getExceptionid(), 'shared exceptionId')
   t.ok(cause.getStacktraceelementList().length > 0, 'cause should have stack trace')
+  t.end()
+})
+
+test('Koa: an error without a stack keeps its name and message in ExceptionMetaData', async (t) => {
+  const metadataAdaptor = new MetadataAdaptor()
+  const grpcDataSender = await new TestGrpcDataSenderBuilder()
+    .addAdaptor(metadataAdaptor)
+    .addAdaptor(new SpanAdaptor())
+    .build()
+  t.teardown(() => {
+    grpcDataSender.close()
+  })
+  const agent = new ProcessAgentBuilder().setDataSender(grpcDataSender.toDataSender()).build()
+
+  let traceRoot
+  const app = new Koa()
+  const router = new Router()
+  router.get('/exception/without-stack', async () => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    throw { name: 'ValidationError', message: 'id is required' }
+  })
+  app.use(router.routes()).use(router.allowedMethods())
+  const server = app.listen(0)
+  await new Promise(resolve => server.on('listening', resolve))
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/exception/without-stack`)
+  await response.text()
+  server.close()
+
+  const exceptionMetaData = await metadataAdaptor.exceptionMetaData(traceRoot)
+  const exceptions = exceptionMetaData.getExceptionsList()
+  t.equal(exceptions.length, 1, 'one exception')
+  t.equal(exceptions[0].getExceptionclassname(), 'ValidationError', 'the class name is ValidationError')
+  t.equal(exceptions[0].getExceptionmessage(), 'id is required', 'the message is id is required')
+  t.equal(exceptions[0].getStacktraceelementList().length, 0, 'there are no frames')
   t.end()
 })
 

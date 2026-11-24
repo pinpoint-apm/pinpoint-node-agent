@@ -489,10 +489,10 @@ test('Koa: a fetch() that fails in a route sends the ExceptionMetaData of its as
   t.equal(actualExceptionMetaData.getSpanid(), traceRoot.getTraceId().getSpanId(), 'ExceptionMetaData has the span id of the request')
   t.equal(actualExceptionMetaData.getUritemplate(), '/fetch-closed-port', 'ExceptionMetaData uriTemplate is the route path')
 
-  const fetchSpanEvent = dataSender.findSpanChunks(traceRoot).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.exception)
+  const fetchSpanEvent = dataSender.findSpanChunks(traceRoot).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.exceptionInfo)
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
   t.equal(actualExceptions.length, 3, 'ExceptionMetaData has the AggregateError and its two connect errors')
-  t.equal(actualExceptions[0].getExceptionid(), fetchSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the fetch() span event of the SpanChunk')
+  t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(fetchSpanEvent), 'ExceptionMetaData exception is the one recorded on the fetch() span event of the SpanChunk')
   t.equal(actualExceptions[0].getExceptionclassname(), 'AggregateError', 'the undici request error of the fetch() is an AggregateError')
   t.deepEqual(actualExceptions.slice(1).map(exception => exception.getExceptionmessage()).sort(), [`connect ECONNREFUSED 127.0.0.1:${closedPort}`, `connect ECONNREFUSED ::1:${closedPort}`], 'then the two connect errors in AggregateError.errors, one per localhost address')
   t.notEqual(actualExceptions[1].getExceptionid(), actualExceptions[0].getExceptionid(), 'a connect error has its own exceptionId')
@@ -541,7 +541,7 @@ test('Koa: an outgoing http.request() that fails in a route records the error in
   t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
   const actualExceptions = actualExceptionMetaDataList[0].valueOfProtocolBuffer().getExceptionsList()
   t.equal(actualExceptions.length, 3, 'ExceptionMetaData has the AggregateError and its two connect errors')
-  t.equal(actualExceptions[0].getExceptionid(), actualHttpClientSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the asyncHttpClient span event')
+  t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(actualHttpClientSpanEvent), 'ExceptionMetaData exception is the one recorded on the asyncHttpClient span event')
   t.equal(actualExceptions[0].getExceptionclassname(), 'AggregateError', 'the http.request() error is an AggregateError')
   t.equal(actualExceptions[0].getStacktraceelementList()[0].getFilename(), 'node:net', 'the first frame of the AggregateError is in node:net')
   t.true(actualExceptions[0].getStacktraceelementList()[0].getLinenumber() > 0, 'the first frame of the AggregateError has its line number')
@@ -1055,3 +1055,7 @@ test('Koa: AgentStat sends the transaction count and response time of completed 
     })
   })
 })
+
+function exceptionChainId(spanEvent) {
+  return spanEvent.annotations.find(annotation => annotation.getKey() === annotationKey.EXCEPTION_CHAIN_ID.getCode()).getValue()
+}

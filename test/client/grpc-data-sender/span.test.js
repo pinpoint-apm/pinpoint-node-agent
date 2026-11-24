@@ -20,6 +20,7 @@ const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant
 const RecordingDataSender = require('../../support/recording-data-sender')
 const SpanEventRecorderFactory = require('../../../lib/context/trace/span-event-recorder-factory')
 const SpanRecorder = require('../../../lib/context/trace/span-recorder')
+const { exceptionRecorderNullObject } = require('../../../lib/context/trace/exception-recorder')
 
 test('Should send span', async function (t) {
   const spanAdaptor = new SpanAdaptor()
@@ -44,7 +45,7 @@ test('Should send span', async function (t) {
   const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
   const repository = new SpanRepository(spanChunkBuilder, dataSender)
   const spanRecorder = new SpanRecorder(spanBuilder, agent.getConfig())
-  const trace = new Trace(spanBuilder, repository, spanRecorder, new SpanEventRecorderFactory())
+  const trace = new Trace(spanBuilder, repository, spanRecorder, new SpanEventRecorderFactory(), exceptionRecorderNullObject)
 
   const spanEventRecorder = trace.traceBlockBegin()
   spanEventRecorder.spanEventBuilder.setSequence(10)
@@ -124,7 +125,7 @@ test('sendSpanChunk redis.SET.end', async function (t) {
   const asyncId = AsyncId.make()
   const spanChunkBuilder = new AsyncSpanChunkBuilder(traceRoot, asyncId)
   const repository = new SpanRepository(spanChunkBuilder, dataSender)
-  const childTraceBuilder = new ChildTraceBuilder(traceRoot, repository, asyncId, new SpanEventRecorderFactory())
+  const childTraceBuilder = new ChildTraceBuilder(traceRoot, repository, asyncId, new SpanEventRecorderFactory(), exceptionRecorderNullObject)
 
   const spanEventRecorder = childTraceBuilder.traceBlockBegin()
   spanEventRecorder.recordServiceType(serviceType.redis)
@@ -193,7 +194,7 @@ test('sendSpan', async (t) => {
   const spanChunkBuilder = new SpanChunkBuilder(traceRoot)
   const repository = new SpanRepository(spanChunkBuilder, dataSender)
   const spanRecorder = new SpanRecorder(spanBuilder, agent.getConfig())
-  const trace = new Trace(spanBuilder, repository, spanRecorder, new SpanEventRecorderFactory())
+  const trace = new Trace(spanBuilder, repository, spanRecorder, new SpanEventRecorderFactory(), exceptionRecorderNullObject)
   trace.spanRecorder.recordApi(defaultPredefinedMethodDescriptorRegistry.nodeServerMethodDescriptor)
   trace.spanRecorder.recordServiceType(serviceType.node)
   trace.spanRecorder.recordRpc('/')

@@ -25,6 +25,7 @@ router.get('/throw', () => {
 route('/mysql2', calls.mysql2)
 route('/mysql2-error', calls.mysql2Error)
 route('/pg', calls.pg)
+route('/pg-error', calls.pgError)
 route('/redis', calls.redis)
 route('/ioredis', calls.ioredis)
 route('/mongodb', calls.mongodb)

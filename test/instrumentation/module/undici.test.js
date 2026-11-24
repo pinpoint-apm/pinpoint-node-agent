@@ -226,20 +226,13 @@ test('shimming require(undici) cause by require-in-the-middle package', async fu
     const exceptionsList = exceptionMetaData.getExceptionsList()
     t.equal(exceptionsList.length, 1, 'ExceptionMetaData exceptions length is 1')
     const actualException = exceptionsList[0]
-    const spanEventException = actualFetchAPISpan.spanEventList[1].exception[0]
-    t.equal(actualException.getExceptionclassname(), spanEventException.errorClassName, `ExceptionMetaData exception class name is ${spanEventException.errorClassName}`)
-    t.equal(actualException.getExceptionmessage(), spanEventException.errorMessage, `ExceptionMetaData exception message is ${spanEventException.errorMessage}`)
-    t.equal(actualException.getExceptiondepth(), spanEventException.exceptionDepth, `ExceptionMetaData exception depth is ${spanEventException.exceptionDepth}`)
-    t.equal(actualException.getExceptionid(), spanEventException.exceptionId, `ExceptionMetaData exception id is ${spanEventException.exceptionId}`)
+    t.equal(actualException.getExceptionclassname(), 'Error', 'ExceptionMetaData exception class name is Error')
+    t.equal(actualException.getExceptionmessage(), 'test', 'ExceptionMetaData exception message is test')
+    t.equal(actualException.getExceptiondepth(), 0, 'ExceptionMetaData exception depth is 0')
+    t.equal(actualException.getExceptionid(), exceptionChainId(actualFetchAPISpan.spanEventList[1]), 'the span event of the error points to the ExceptionMetaData exception')
     const stackTraceElements = actualException.getStacktraceelementList()
-    const spanEventFrameStack = spanEventException.frameStack
-    stackTraceElements.forEach((pStackTraceElement, index) => {
-        const frameStack = spanEventFrameStack[index]
-        t.equal(pStackTraceElement.getClassname(), frameStack.className, `ExceptionMetaData stack trace element class name is ${frameStack.className}`)
-        t.equal(pStackTraceElement.getFilename(), frameStack.fileName, `ExceptionMetaData stack trace element file name is ${frameStack.fileName}`)
-        t.equal(pStackTraceElement.getLinenumber(), frameStack.lineNumber, `ExceptionMetaData stack trace element line number is ${frameStack.lineNumber}`)
-        t.equal(pStackTraceElement.getMethodname(), frameStack.methodName, `ExceptionMetaData stack trace element method name is ${frameStack.methodName}`)
-    })
+    t.true(/undici\.test\.js$/.test(stackTraceElements[0].getFilename()), 'the first stack trace element is the route that threw the error')
+    t.true(stackTraceElements[0].getLinenumber() > 0, 'the first stack trace element has its line number')
     t.end()
 })
 
@@ -515,3 +508,7 @@ test('shimming udici by global nodejs fetch', async function (t) {
     })
     t.end()
 })
+
+function exceptionChainId(spanEvent) {
+    return spanEvent.annotations.find(annotation => annotation.getKey() === annotationKey.EXCEPTION_CHAIN_ID.getCode()).getValue()
+}

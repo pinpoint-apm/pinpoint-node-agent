@@ -13,7 +13,7 @@ const SpanChunkBuilder = require('../../lib/context/span-chunk-builder')
 const TraceRootBuilder = require('../../lib/context/trace-root-builder')
 const AsyncSpanChunkBuilder = require('../../lib/context/trace/async-span-chunk-builder')
 const AsyncId = require('../../lib/context/async-id')
-const { ExceptionMetaDataBuilder } = require('../../lib/context/trace/exception-meta-data-builder')
+const { ExceptionMetaData } = require('../../lib/context/trace/exception-meta-data')
 
 test('RecordingDataSender finds the span and span chunks of a trace by its trace root', (t) => {
     const dataSender = new RecordingDataSender()
@@ -49,9 +49,9 @@ test('RecordingDataSender finds the async span chunk by its local async id', (t)
 test('RecordingDataSender finds the exception metadata of a trace by its trace root', (t) => {
     const dataSender = new RecordingDataSender()
     const traceRoot = new TraceRootBuilder('agentId', 1).build()
-    const exceptionMetaData = new ExceptionMetaDataBuilder(traceRoot).build()
+    const exceptionMetaData = new ExceptionMetaData(traceRoot, [], 'NULL')
 
-    dataSender.send(new ExceptionMetaDataBuilder(new TraceRootBuilder('agentId', 2).build()).build())
+    dataSender.send(new ExceptionMetaData(new TraceRootBuilder('agentId', 2).build(), [], 'NULL'))
     dataSender.send(exceptionMetaData)
 
     t.equal(dataSender.findExceptionMetaData(traceRoot), exceptionMetaData, 'the exception metadata of the trace')

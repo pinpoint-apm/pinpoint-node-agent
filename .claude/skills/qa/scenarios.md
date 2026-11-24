@@ -138,11 +138,12 @@ headers it received.
    expect   transaction list  1 row, URL /mysql2-error, error mark
             call tree         Node Server Process  /mysql2-error, http.status.code 500
                                 <route row>
-                                  PoolConnection.query  (MYSQL), SQL SELECT id FROM no_such_table, error
-                                    Error: Table 'test.no_such_table' doesn't exist
+                                  PoolConnection.query  (MYSQL), SQL SELECT id FROM no_such_table
                                     Pool.getConnection  (MYSQL)
                                       Asynchronous Invocation  (ASYNC)
                                         PoolConnection.query  (MYSQL)
+                                    Asynchronous Invocation  (ASYNC), error
+                                      Error: Table 'test.no_such_table' doesn't exist
             Error Analysis    1 error, class Error, message Table 'test.no_such_table' doesn't exist,
                               URI template /mysql2-error (Next.js: null)
 
@@ -155,28 +156,39 @@ headers it received.
                                                 SQL-BindValue a
             Error Analysis    no error
 
-10. A route that sets a key with redis
+10. A route whose PostgreSQL query fails
+   request  GET /pg-error
+   expect   transaction list  1 row, URL /pg-error, error mark
+            call tree         Node Server Process  /pg-error, http.status.code 500
+                                <route row>
+                                  Client.query  (POSTGRESQL), SQL SELECT id FROM no_such_table
+                                    Asynchronous Invocation  (ASYNC), error
+                                      error: relation "no_such_table" does not exist
+            Error Analysis    1 error, class error, message relation "no_such_table" does not exist,
+                              URI template /pg-error (Next.js: null)
+
+11. A route that sets a key with redis
    request  GET /redis
    expect   transaction list  1 row, URL /redis, no error mark
             call tree         Node Server Process  /redis, http.status.code 200
                                 <route row>
                                   RedisClient.set  (REDIS)
 
-11. A route that sets a key with ioredis
+12. A route that sets a key with ioredis
    request  GET /ioredis
    expect   transaction list  1 row, URL /ioredis, no error mark
             call tree         Node Server Process  /ioredis, http.status.code 200
                                 <route row>
                                   Redis.set  (REDIS)
 
-12. A route that finds a MongoDB document
+13. A route that finds a MongoDB document
    request  GET /mongodb
    expect   transaction list  1 row, URL /mongodb, no error mark
             call tree         Node Server Process  /mongodb, http.status.code 200
                                 <route row>
                                   MongoClient.find  (MONGO)
 
-13. A route that runs fetch() and a mysql2 query at the same time
+14. A route that runs fetch() and a mysql2 query at the same time
    request  GET /parallel
    expect   transaction list  1 row, URL /parallel, no error mark
             call tree         Node Server Process  /parallel, http.status.code 200
@@ -186,7 +198,7 @@ headers it received.
                                       GET  127.0.0.1:TARGET_PORT/, http.status.code 200
                                   PoolConnection.query  (MYSQL), the rows of scenario 7
 
-14. A route that calls another app
+15. A route that calls another app
    request  GET /call-<app> for both other apps
    expect   transaction list  2 rows with the same transaction id: the caller's /call-<app> and
                               the called app's /downstream, no error mark
@@ -205,7 +217,7 @@ headers it received.
                               pinpoint-papptype 1400, pinpoint-pservicename = the caller's service name,
                               pinpoint-host 127.0.0.1:<app port>
 
-15. A route that calls another app that throws
+16. A route that calls another app that throws
    request  GET /call-<app>-throw for both other apps
    expect   transaction list  2 rows with the same transaction id, both with an error mark
             call tree         Node Server Process  /call-<app>-throw, http.status.code 500
@@ -221,13 +233,13 @@ headers it received.
                               URI template /downstream-throw
                               called app Next.js: no error
 
-16. A route that calls another app with sampling off in the caller
+17. A route that calls another app with sampling off in the caller
    app      the caller with PINPOINT_SAMPLING=false, the called apps with sampling on
    request  GET /call-<app> for both other apps
    expect   transaction list  no row from the caller or the called app
             response          only pinpoint-sampled s0
 
-17. A request from an app outside Pinpoint
+18. A request from an app outside Pinpoint
    request  GET /downstream with Pinpoint-TraceID qa-external-<app>^<epoch ms>^1,
             Pinpoint-SpanID 1111111111, Pinpoint-pSpanID 2222222222, Pinpoint-Flags 0,
             Pinpoint-pAppName qa-external, Pinpoint-pAppType 1000,
@@ -238,11 +250,11 @@ headers it received.
                                 Node Server Process  /downstream, http.status.code 200
                                   <route row>
 
-18. A request with sampling off from the caller
+19. A request with sampling off from the caller
    request  GET /downstream with Pinpoint-Sampled s0
    expect   transaction list  no row
 
-19. A route whose http.request() to localhost fails on every address
+20. A route whose http.request() to localhost fails on every address
    request  GET /http-request-localhost-closed-port
    expect   transaction list  1 row, URL /http-request-localhost-closed-port, error mark
             call tree         Node Server Process  /http-request-localhost-closed-port, http.status.code 502
@@ -257,17 +269,17 @@ headers it received.
                               class Error, message connect ECONNREFUSED ::1:CLOSED_PORT
                               class Error, message connect ECONNREFUSED 127.0.0.1:CLOSED_PORT
 
-20. A route whose fetch() to localhost fails on every address
+21. A route whose fetch() to localhost fails on every address
    request  GET /fetch-localhost-closed-port
-   expect   the same rows as scenario 19, with URL and URI template /fetch-localhost-closed-port
+   expect   the same rows as scenario 20, with URL and URI template /fetch-localhost-closed-port
             (Next.js: null)
 
-21. Query summary off, the default
-   app      default settings, the run of scenarios 1-20
-   request  the query routes of scenarios 7, 8, 9 and 13
+22. Query summary off, the default
+   app      default settings, the run of scenarios 1-21
+   request  the query routes of scenarios 7, 8, 9, 10 and 14
    expect   query summary     no query of the application in that run
 
-22. Query summary on
+23. Query summary on
    app      query summary on, started fresh
    request  GET /ready, then /mysql2, /mysql2-error, /pg, /parallel once each
    expect   query summary     grouped by query, the count for each app:

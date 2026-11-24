@@ -12,6 +12,7 @@ const { startMySql } = require('../../support/shared-containers')
 const testAppDir = path.join(__dirname, '../../fixtures/nextjs-app-router')
 const fs = require('fs')
 const ServiceType = require('../../../lib/context/service-type')
+const mysqlExecuteQueryServiceType = require('../../../lib/instrumentation/module/mysql/mysql-execute-query-service-type')
 const net = require('node:net')
 const { once } = require('node:events')
 const grpc = require('@grpc/grpc-js')
@@ -455,6 +456,30 @@ test('Next.js: an outgoing http.request() that fails in an API route records the
     t.true(actualExceptions[0].getStacktraceelementList()[0].getLinenumber() > 0, 'the first frame of the AggregateError has its line number')
     t.deepEqual(actualExceptions.slice(1).map(exception => exception.getExceptionmessage()).sort(), [`connect ECONNREFUSED 127.0.0.1:${closedPort}`, `connect ECONNREFUSED ::1:${closedPort}`], 'then the two connect errors in AggregateError.errors, one per localhost address')
     t.notEqual(actualExceptions[1].getExceptionid(), actualExceptions[0].getExceptionid(), 'a connect error has its own exceptionId')
+    t.end()
+})
+
+test('Next.js: a mysql2 query that fails in an API route records the error on the Asynchronous Invocation of its query callback', async (t) => {
+    receivedSpans = []
+    receivedSpanChunks = []
+    receivedExceptionMetaData = []
+    const response = await fetch('http://127.0.0.1:3000/api/mysql-error')
+    t.equal(response.status, 500, 'the API route responds 500 after the query fails')
+
+    const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/mysql-error'), 10000)
+    const querySpanEvent = span.getSpaneventList().find((spanEvent) => spanEvent.getServicetype() === mysqlExecuteQueryServiceType.getCode())
+    t.notOk(querySpanEvent.getExceptioninfo(), 'the query span event has no error, because the query returns before its result')
+    const callbackSpanChunk = await waitForSpanChunk((spanChunk) => spanChunk.getLocalasyncid()?.getAsyncid() === querySpanEvent.getAsyncevent(), 10000)
+    const asyncInvocationSpanEvent = callbackSpanChunk.getSpaneventList().find((spanEvent) => spanEvent.getServicetype() === ServiceType.async.getCode())
+    t.ok(asyncInvocationSpanEvent.getExceptioninfo(), 'the Asynchronous Invocation span event of the query callback has the error of the failed query')
+
+    await waitForExceptionMetaData((e) => e.getTransactionid().getSequence() === span.getTransactionid().getSequence(), 10000)
+    const actualExceptionMetaDataList = receivedExceptionMetaData.filter((e) => e.getTransactionid().getSequence() === span.getTransactionid().getSequence())
+    t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
+    const actualExceptions = actualExceptionMetaDataList[0].getExceptionsList()
+    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
+    t.equal(actualExceptions[0].getExceptionmessage(), "Table 'test.no_such_table' doesn't exist", 'ExceptionMetaData exception is the error of the failed query')
+    t.equal(actualExceptionMetaDataList[0].getUritemplate(), 'NULL', 'ExceptionMetaData uriTemplate is NULL because the user input uriTemplate is recorded when the response ends, after the async child trace closed')
     t.end()
 })
 

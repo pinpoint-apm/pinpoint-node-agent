@@ -19,6 +19,10 @@ const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant
 const ServiceType = require('../../../lib/context/service-type')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
 const RecordingDataSender = require('../../support/recording-data-sender')
+const express = require('express')
+const Koa = require('koa')
+const Router = require('koa-router')
+const { once } = require('node:events')
 
 
 test(`getConnection query hooking`, async (t) => {
@@ -421,3 +425,136 @@ test(`Cluster with query`, async (t) => {
     t.teardown(async () => {
     })
 })
+test('Express: a mysql2 query that fails in a route records the error on the Asynchronous Invocation of its query callback', async (t) => {
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+    const container = await startMySql()
+    const pool = mysqlp.createPool({
+        host: container.getHost(),
+        port: container.getPort(),
+        database: 'test',
+        user: container.getUsername(),
+        password: container.getUserPassword(),
+    })
+
+    let traceRoot
+    const app = new express()
+    app.get('/mysql2-error', async (req, res) => {
+        traceRoot = agent.currentTraceObject().getTraceRoot()
+        try {
+            await pool.query('SELECT id FROM no_such_table')
+            res.send('ok')
+        } catch (error) {
+            res.status(500).send(error.code)
+        }
+    })
+    const server = app.listen(0)
+    await once(server, 'listening')
+    const response = await fetch(`http://localhost:${server.address().port}/mysql2-error`)
+    t.equal(response.status, 500, 'the route responds 500 after the query fails')
+    const span = await dataSender.waitForSpan(traceRoot)
+    server.close()
+    await pool.end()
+
+    const querySpanEvent = span.spanEventList.find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+    t.notOk(querySpanEvent.exceptionInfo, 'the query span event has no error, because the query returns before its result')
+    const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
+    t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error of the failed query')
+
+    const actualExceptionMetaDataList = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === traceRoot)
+    t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
+    const actualExceptionMetaData = actualExceptionMetaDataList[0].valueOfProtocolBuffer()
+    const actualExceptions = actualExceptionMetaData.getExceptionsList()
+    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
+    t.equal(actualExceptions[0].getExceptionmessage(), "Table 'test.no_such_table' doesn't exist", 'ExceptionMetaData exception is the error of the failed query')
+    t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(asyncInvocationSpanEvent), 'the Asynchronous Invocation span event points to the exception')
+    t.equal(actualExceptionMetaData.getUritemplate(), '/mysql2-error', 'ExceptionMetaData uriTemplate is the route')
+    t.end()
+})
+
+test('Express: a mysql2 query that fails in an unsampled request marks the error code from its query callback', async (t) => {
+    const agent = new ProcessAgentBuilder({ sampling: { enable: false } }).setDataSender(new RecordingDataSender()).build()
+    const container = await startMySql()
+    const pool = mysqlp.createPool({
+        host: container.getHost(),
+        port: container.getPort(),
+        database: 'test',
+        user: container.getUsername(),
+        password: container.getUserPassword(),
+    })
+
+    let traceRoot
+    const app = new express()
+    app.get('/mysql2-error-unsampled', async (req, res) => {
+        traceRoot = agent.currentTraceObject().getTraceRoot()
+        try {
+            await pool.query('SELECT id FROM no_such_table')
+        } catch (error) {
+            res.send(error.code)
+        }
+    })
+    const server = app.listen(0)
+    await once(server, 'listening')
+    const response = await fetch(`http://localhost:${server.address().port}/mysql2-error-unsampled`)
+    await response.text()
+    server.close()
+    await pool.end()
+
+    t.equal(response.status, 200, 'the route handles the failed query and responds 200')
+    t.equal(traceRoot.getShared().getErrorCode(), 1, 'the query callback marks the error code of the unsampled request')
+    t.end()
+})
+
+test('Koa: a mysql2 query that fails in a route records the error on the Asynchronous Invocation of its query callback', async (t) => {
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+    const container = await startMySql()
+    const pool = mysqlp.createPool({
+        host: container.getHost(),
+        port: container.getPort(),
+        database: 'test',
+        user: container.getUsername(),
+        password: container.getUserPassword(),
+    })
+
+    let traceRoot
+    const app = new Koa()
+    const router = new Router()
+    router.get('/mysql2-error', async (ctx) => {
+        traceRoot = agent.currentTraceObject().getTraceRoot()
+        try {
+            await pool.query('SELECT id FROM no_such_table')
+            ctx.body = 'ok'
+        } catch (error) {
+            ctx.status = 500
+            ctx.body = error.code
+        }
+    })
+    app.use(router.routes()).use(router.allowedMethods())
+    const server = app.listen(0)
+    await once(server, 'listening')
+    const response = await fetch(`http://localhost:${server.address().port}/mysql2-error`)
+    t.equal(response.status, 500, 'the route responds 500 after the query fails')
+    const span = await dataSender.waitForSpan(traceRoot)
+    server.close()
+    await pool.end()
+
+    const querySpanEvent = span.spanEventList.find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+    t.notOk(querySpanEvent.exceptionInfo, 'the query span event has no error, because the query returns before its result')
+    const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
+    t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error of the failed query')
+
+    const actualExceptionMetaDataList = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === traceRoot)
+    t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
+    const actualExceptionMetaData = actualExceptionMetaDataList[0].valueOfProtocolBuffer()
+    const actualExceptions = actualExceptionMetaData.getExceptionsList()
+    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
+    t.equal(actualExceptions[0].getExceptionmessage(), "Table 'test.no_such_table' doesn't exist", 'ExceptionMetaData exception is the error of the failed query')
+    t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(asyncInvocationSpanEvent), 'the Asynchronous Invocation span event points to the exception')
+    t.equal(actualExceptionMetaData.getUritemplate(), '/mysql2-error', 'ExceptionMetaData uriTemplate is the route')
+    t.end()
+})
+
+function exceptionChainId(spanEvent) {
+    return spanEvent.annotations.find(annotation => annotation.getKey() === annotationKey.EXCEPTION_CHAIN_ID.getCode()).getValue()
+}

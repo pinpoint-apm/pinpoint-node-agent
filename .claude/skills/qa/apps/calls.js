@@ -28,6 +28,7 @@ module.exports = {
     mysql2: () => query(() => databases.mysql2.query('SELECT id, name FROM member WHERE id = ?', ['a'])),
     mysql2Error: () => query(() => databases.mysql2.query('SELECT id FROM no_such_table')),
     pg: () => query(() => databases.pg.query('SELECT id, name FROM member WHERE id = $1', ['a'])),
+    pgError: () => query(() => databases.pg.query('SELECT id FROM no_such_table')),
     redis: () => query(() => new Promise((resolve, reject) => databases.redis.set('qa-redis', 'value', (error) => error ? reject(error) : resolve()))),
     ioredis: () => query(() => databases.ioredis.set('qa-ioredis', 'value')),
     mongodb: () => query(() => databases.mongodb.db('test').collection('member').findOne({ id: 'a' })),

@@ -10,12 +10,13 @@ const test = require('tape')
 const CallStack = require('../../../lib/context/trace/call-stack')
 const TraceRoot = require('../../../lib/context/trace/trace-root')
 const SpanEventRecorderFactory = require('../../../lib/context/trace/span-event-recorder-factory')
+const { exceptionRecorderNullObject } = require('../../../lib/context/trace/exception-recorder')
 
 // Ensure NullObjectSQLMetadataService is used by null span event recorders and acts as a no-op
 // without mutating the call stack.
 test('CallStack null span event recorder uses NullObjectSQLMetadataService', (t) => {
     const traceRoot = new TraceRoot('agentId', Date.now(), 'transactionId')
-    const callStack = new CallStack(traceRoot, new SpanEventRecorderFactory())
+    const callStack = new CallStack(traceRoot, new SpanEventRecorderFactory(), exceptionRecorderNullObject)
 
     const nullRecorder = callStack.makeNullSpanEventRecorder()
 

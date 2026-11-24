@@ -27,6 +27,8 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 - [[#531](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/531)] `PINPOINT_SERVICE_TYPE` and json `applicationServiceType`; the application service type is always NODE (1400)
 
 ### Fixed
+- [[#627](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/627)] Record the error of a failed `mysql`, `mysql2` or `pg` query on the Asynchronous Invocation of its callback and in Error Analysis
+  - Error Analysis counts an error once in a trace when it is recorded again, or recorded as the cause of another error
 - [[#632](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/632)] A disabled agent no longer connects to the collector
 - [[#573](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/573)] `features.statsMonitoring` set to `false` stops sending Inspector stats
 - [[#537](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/537)] Do not mark a client disconnect before the response ends as an error (errorCode 1); restores the 1.3.x behavior ([Thanks @chanmo-kim](https://github.com/chanmo-kim))

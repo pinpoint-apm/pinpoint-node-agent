@@ -23,6 +23,9 @@ const axios = require('axios')
 const http = require('http')
 const DisableTrace = require('../../../lib/context/disable-trace')
 const RecordingDataSender = require('../../support/recording-data-sender')
+const Koa = require('koa')
+const Router = require('koa-router')
+const { once } = require('node:events')
 
 test(`connection with query`, async (t) => {
     const dataSender = new RecordingDataSender()
@@ -613,3 +616,251 @@ test('Fix wrong transactionId', (t) => {
         server.close()
     })
 })
+
+test('Express: a mysql query that fails in a route records the error on the Asynchronous Invocation of its query callback', async (t) => {
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+    const container = await startMySql()
+    const pool = mysql.createPool({
+        host: container.getHost(),
+        port: container.getPort(),
+        database: 'test',
+        user: container.getUsername(),
+        password: container.getUserPassword(),
+    })
+
+    let traceRoot
+    const app = new express()
+    app.get('/mysql-error', (req, res) => {
+        traceRoot = agent.currentTraceObject().getTraceRoot()
+        pool.query('SELECT id FROM no_such_table', (error) => {
+            if (error) {
+                res.status(500).send(error.code)
+                return
+            }
+            res.send('ok')
+        })
+    })
+    const server = app.listen(0)
+    await once(server, 'listening')
+    const response = await fetch(`http://localhost:${server.address().port}/mysql-error`)
+    t.equal(response.status, 500, 'the route responds 500 after the query fails')
+    const span = await dataSender.waitForSpan(traceRoot)
+    server.close()
+    pool.end()
+
+    const querySpanEvent = span.spanEventList.find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+    t.notOk(querySpanEvent.exceptionInfo, 'the query span event has no error, because the query returns before its result')
+    const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
+    t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error of the failed query')
+
+    const actualExceptionMetaDataList = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === traceRoot)
+    t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
+    const actualExceptionMetaData = actualExceptionMetaDataList[0].valueOfProtocolBuffer()
+    const actualExceptions = actualExceptionMetaData.getExceptionsList()
+    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
+    t.equal(actualExceptions[0].getExceptionmessage(), "ER_NO_SUCH_TABLE: Table 'test.no_such_table' doesn't exist", 'ExceptionMetaData exception is the error of the failed query')
+    t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(asyncInvocationSpanEvent), 'the Asynchronous Invocation span event points to the exception')
+    t.equal(actualExceptionMetaData.getUritemplate(), '/mysql-error', 'ExceptionMetaData uriTemplate is the route')
+    t.end()
+})
+
+test('Koa: a mysql query that fails in a route records the error on the Asynchronous Invocation of its query callback', async (t) => {
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+    const container = await startMySql()
+    const pool = mysql.createPool({
+        host: container.getHost(),
+        port: container.getPort(),
+        database: 'test',
+        user: container.getUsername(),
+        password: container.getUserPassword(),
+    })
+
+    let traceRoot
+    const app = new Koa()
+    const router = new Router()
+    router.get('/mysql-error', async (ctx) => {
+        traceRoot = agent.currentTraceObject().getTraceRoot()
+        try {
+            await new Promise((resolve, reject) => {
+                pool.query('SELECT id FROM no_such_table', (error, results) => error ? reject(error) : resolve(results))
+            })
+            ctx.body = 'ok'
+        } catch (error) {
+            ctx.status = 500
+            ctx.body = error.code
+        }
+    })
+    app.use(router.routes()).use(router.allowedMethods())
+    const server = app.listen(0)
+    await once(server, 'listening')
+    const response = await fetch(`http://localhost:${server.address().port}/mysql-error`)
+    t.equal(response.status, 500, 'the route responds 500 after the query fails')
+    const span = await dataSender.waitForSpan(traceRoot)
+    server.close()
+    pool.end()
+
+    const querySpanEvent = span.spanEventList.find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+    t.notOk(querySpanEvent.exceptionInfo, 'the query span event has no error, because the query returns before its result')
+    const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
+    t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error of the failed query')
+
+    const actualExceptionMetaDataList = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === traceRoot)
+    t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
+    const actualExceptionMetaData = actualExceptionMetaDataList[0].valueOfProtocolBuffer()
+    const actualExceptions = actualExceptionMetaData.getExceptionsList()
+    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
+    t.equal(actualExceptions[0].getExceptionmessage(), "ER_NO_SUCH_TABLE: Table 'test.no_such_table' doesn't exist", 'ExceptionMetaData exception is the error of the failed query')
+    t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(asyncInvocationSpanEvent), 'the Asynchronous Invocation span event points to the exception')
+    t.equal(actualExceptionMetaData.getUritemplate(), '/mysql-error', 'ExceptionMetaData uriTemplate is the route')
+    t.end()
+})
+
+test('a mysql query in a getConnection callback records its error on the Asynchronous Invocation of its callback', async (t) => {
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+    const container = await startMySql()
+    const pool = mysql.createPool({
+        host: container.getHost(),
+        port: container.getPort(),
+        database: 'test',
+        user: container.getUsername(),
+        password: container.getUserPassword(),
+    })
+
+    const trace = agent.createTraceObject()
+    await localStorage.run(trace, () => new Promise((resolve) => {
+        pool.getConnection((error, connection) => {
+            connection.query('SELECT id FROM no_such_table', () => {
+                connection.release()
+                resolve()
+            })
+        })
+    }))
+    agent.completeTraceObject(trace)
+    await dataSender.waitForSpan(trace.getTraceRoot())
+    pool.end()
+
+    const querySpanEvent = dataSender.findSpanChunks(trace.getTraceRoot()).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+    const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
+    t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error, though the getConnection callback closed its child trace before the result')
+
+    const actualExceptions = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === trace.getTraceRoot()).flatMap(exceptionMetaData => exceptionMetaData.valueOfProtocolBuffer().getExceptionsList())
+    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
+    t.equal(actualExceptions[0].getExceptionmessage(), "ER_NO_SUCH_TABLE: Table 'test.no_such_table' doesn't exist", 'ExceptionMetaData exception is the error of the failed query')
+    t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(asyncInvocationSpanEvent), 'the Asynchronous Invocation span event points to the exception')
+    t.end()
+})
+
+test('a mysql query that starts after the getConnection callback returned records its error on the Asynchronous Invocation of its callback', async (t) => {
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+    const container = await startMySql()
+    const pool = mysql.createPool({
+        host: container.getHost(),
+        port: container.getPort(),
+        database: 'test',
+        user: container.getUsername(),
+        password: container.getUserPassword(),
+    })
+
+    const trace = agent.createTraceObject()
+    await localStorage.run(trace, () => new Promise((resolve) => {
+        pool.getConnection((error, connection) => {
+            setImmediate(() => {
+                connection.query('SELECT id FROM no_such_table', () => {
+                    connection.release()
+                    resolve()
+                })
+            })
+        })
+    }))
+    agent.completeTraceObject(trace)
+    await dataSender.waitForSpan(trace.getTraceRoot())
+    pool.end()
+
+    const querySpanEvent = dataSender.findSpanChunks(trace.getTraceRoot()).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+    const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
+    t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error, though the query span event was sent when it ended in the closed child trace')
+
+    const actualExceptions = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === trace.getTraceRoot()).flatMap(exceptionMetaData => exceptionMetaData.valueOfProtocolBuffer().getExceptionsList())
+    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
+    t.equal(actualExceptions[0].getExceptionmessage(), "ER_NO_SUCH_TABLE: Table 'test.no_such_table' doesn't exist", 'ExceptionMetaData exception is the error of the failed query')
+    t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(asyncInvocationSpanEvent), 'the Asynchronous Invocation span event points to the exception')
+    t.end()
+})
+
+test('25 mysql queries that fail at once in one trace record every error', async (t) => {
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+    const container = await startMySql()
+    const pool = mysql.createPool({
+        host: container.getHost(),
+        port: container.getPort(),
+        database: 'test',
+        user: container.getUsername(),
+        password: container.getUserPassword(),
+        connectionLimit: 25,
+    })
+
+    const trace = agent.createTraceObject()
+    await localStorage.run(trace, () => Promise.all(Array.from({ length: 25 }, () => new Promise((resolve) => {
+        pool.query('SELECT id FROM no_such_table', resolve)
+    }))))
+    agent.completeTraceObject(trace)
+    await dataSender.waitForSpan(trace.getTraceRoot())
+    pool.end()
+
+    const asyncInvocationSpanEventsWithError = dataSender.findSpanChunks(trace.getTraceRoot()).flatMap(spanChunk => spanChunk.spanEventList).filter(spanEvent => spanEvent.serviceType === ServiceType.async.getCode() && spanEvent.exceptionInfo)
+    t.equal(asyncInvocationSpanEventsWithError.length, 25, 'the Asynchronous Invocation span event of every query callback has the error, though the span events of the queries overflow the buffer of 20')
+
+    const actualExceptions = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === trace.getTraceRoot()).flatMap(exceptionMetaData => exceptionMetaData.valueOfProtocolBuffer().getExceptionsList())
+    t.equal(actualExceptions.length, 25, 'ExceptionMetaData has the 25 exceptions')
+    t.end()
+})
+
+test('Express: a mysql query error that the query callback passes to next(error) is one exception in ExceptionMetaData', async (t) => {
+    const dataSender = new RecordingDataSender()
+    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+    const container = await startMySql()
+    const pool = mysql.createPool({
+        host: container.getHost(),
+        port: container.getPort(),
+        database: 'test',
+        user: container.getUsername(),
+        password: container.getUserPassword(),
+    })
+
+    let traceRoot
+    const app = new express()
+    app.get('/mysql-next-error', (req, res, next) => {
+        traceRoot = agent.currentTraceObject().getTraceRoot()
+        pool.query('SELECT id FROM no_such_table', (error) => next(error))
+    })
+    app.use((error, req, res, next) => res.status(500).send(error.code))
+    const server = app.listen(0)
+    await once(server, 'listening')
+    const response = await fetch(`http://localhost:${server.address().port}/mysql-next-error`)
+    t.equal(response.status, 500, 'the error handler responds 500 after the query fails')
+    const span = await dataSender.waitForSpan(traceRoot)
+    server.close()
+    pool.end()
+
+    const querySpanEvent = span.spanEventList.find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+    const callbackSpanEvents = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList
+    const asyncInvocationSpanEvent = callbackSpanEvents.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
+    const errorHandlerSpanEvent = callbackSpanEvents.find(spanEvent => spanEvent.serviceType === ServiceType.express.getCode() && spanEvent.exceptionInfo)
+    t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error')
+    t.ok(errorHandlerSpanEvent, 'the error handler span event in the query callback has the error too')
+
+    const actualExceptions = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === traceRoot).flatMap(exceptionMetaData => exceptionMetaData.valueOfProtocolBuffer().getExceptionsList())
+    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception, because both span events recorded the same error in one trace')
+    t.equal(exceptionChainId(asyncInvocationSpanEvent), actualExceptions[0].getExceptionid(), 'the Asynchronous Invocation span event points to the exception')
+    t.equal(exceptionChainId(errorHandlerSpanEvent), actualExceptions[0].getExceptionid(), 'the error handler span event points to the same exception')
+    t.end()
+})
+
+function exceptionChainId(spanEvent) {
+    return spanEvent.annotations.find(annotation => annotation.getKey() === annotationKey.EXCEPTION_CHAIN_ID.getCode()).getValue()
+}

@@ -225,13 +225,11 @@ function throwHandleTest(span, dataSender, t) {
   t.equal(actualExceptionMetaData.getUritemplate(), '/express3', 'ExceptionMetaData uriTemplate /express3')
 
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
-  const actualSpanEventError = span.spanEventList[1].exception[0]
   t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
-  t.equal(actualExceptions[0].getExceptionclassname(), actualSpanEventError.errorClassName, `ExceptionMetaData exception class name ${actualSpanEventError.errorClassName}`)
-  t.equal(actualExceptions[0].getExceptionmessage(), actualSpanEventError.errorMessage, `ExceptionMetaData exception message ${actualSpanEventError.errorMessage}`)
-  t.equal(actualExceptions[0].getStarttime(), actualSpanEventError.startTime, `ExceptionMetaData exception start time ${actualSpanEventError.startTime}`)
-  t.equal(actualExceptions[0].getExceptionid(), actualSpanEventError.exceptionId, `ExceptionMetaData exception id ${actualSpanEventError.exceptionId}`)
-  t.equal(actualExceptions[0].getExceptiondepth(), actualSpanEventError.exceptionDepth, `ExceptionMetaData exception depth ${actualSpanEventError.exceptionDepth}`)
+  t.equal(actualExceptions[0].getExceptionclassname(), 'Error', 'ExceptionMetaData exception class name Error')
+  t.equal(actualExceptions[0].getExceptionmessage(), 'error case', 'ExceptionMetaData exception message error case')
+  t.equal(actualExceptions[0].getExceptiondepth(), 0, 'ExceptionMetaData exception depth 0')
+  t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(span.spanEventList[1]), 'the Router.use span event points to the ExceptionMetaData exception')
 }
 
 function nextErrorHandleTest(span, dataSender, t) {
@@ -269,14 +267,12 @@ function nextErrorHandleTest(span, dataSender, t) {
   t.equal(actualExceptionMetaData.getSpanid(), span.traceRoot.getTraceId().getSpanId(), `ExceptionMetaData spanId ${actualExceptionMetaData.getSpanid()}`)
   t.equal(actualExceptionMetaData.getUritemplate(), '/express4', 'ExceptionMetaData uriTemplate /express4')
 
-  const actualSpanEventError = span.spanEventList[1].exception[0]
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
   t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
-  t.equal(actualExceptions[0].getExceptionclassname(), actualSpanEventError.errorClassName, `ExceptionMetaData exception class name ${actualSpanEventError.errorClassName}`)
-  t.equal(actualExceptions[0].getExceptionmessage(), actualSpanEventError.errorMessage, `ExceptionMetaData exception message ${actualSpanEventError.errorMessage}`)
-  t.equal(actualExceptions[0].getStarttime(), actualSpanEventError.startTime, `ExceptionMetaData exception start time ${actualSpanEventError.startTime}`)
-  t.equal(actualExceptions[0].getExceptionid(), actualSpanEventError.exceptionId, `ExceptionMetaData exception id ${actualSpanEventError.exceptionId}`)
-  t.equal(actualExceptions[0].getExceptiondepth(), actualSpanEventError.exceptionDepth, `ExceptionMetaData exception depth ${actualSpanEventError.exceptionDepth}`)
+  t.equal(actualExceptions[0].getExceptionclassname(), 'Error', 'ExceptionMetaData exception class name Error')
+  t.equal(actualExceptions[0].getExceptionmessage(), 'error case', 'ExceptionMetaData exception message error case')
+  t.equal(actualExceptions[0].getExceptiondepth(), 0, 'ExceptionMetaData exception depth 0')
+  t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(span.spanEventList[1]), 'the Router.use span event points to the ExceptionMetaData exception')
 }
 
 function unhandledExceptionStatsFrameTest(span, dataSender, t) {
@@ -287,15 +283,11 @@ function unhandledExceptionStatsFrameTest(span, dataSender, t) {
   t.equal(actualExceptions.length, 1, 'ExceptionMetaData exceptions length 1')
 
   const actualException = actualExceptions[0]
-  const actualSpanEventError = span.spanEventList[1].exception[0]
-
-  t.equal(actualException.getExceptionmessage(), actualSpanEventError.errorMessage, 'ExceptionMetaData exception message should match span event error message')
-  t.equal(actualException.getExceptionid(), actualSpanEventError.exceptionId, 'ExceptionMetaData exception id should match span event exception id')
+  t.equal(actualException.getExceptionmessage(), 'Pinpoint unhandled exception test route', 'ExceptionMetaData exception message is the message of the error')
+  t.equal(actualException.getExceptionid(), exceptionChainId(span.spanEventList[1]), 'the span event of the error points to the ExceptionMetaData exception')
 
   const stackTraceElements = actualException.getStacktraceelementList()
-  const frameStack = actualSpanEventError.frameStack
-
-  t.equal(stackTraceElements.length, frameStack.length, 'ExceptionMetaData stacktraceelementList length should match span event frameStack length')
+  t.true(/express\.test\.js$/.test(stackTraceElements[0].getFilename()), 'the first stack trace element is the route that made the error')
 }
 
 const testName2 = 'express2'
@@ -712,7 +704,7 @@ test('express with error analysis disabled responds to a throwing handler and re
         const errorSpanEvent = span.spanEventList.find(spanEvent => spanEvent.exceptionInfo)
         t.ok(errorSpanEvent, 'the error middleware span event records the exception info')
         t.equal(errorSpanEvent.exceptionInfo.intValue, 1, 'exceptionInfo intValue should be 1')
-        t.equal(errorSpanEvent.exception, undefined, 'exception object should not be set')
+        t.notOk(errorSpanEvent.annotations.find(annotation => annotation.getKey() === annotationKey.EXCEPTION_CHAIN_ID.getCode()), 'the span event has no exception chain id')
         t.equal(dataSender.actualExceptionMetaData().length, 0, 'no exception meta data is sent')
         server.close()
         t.end()
@@ -1131,10 +1123,10 @@ test('Express: a fetch() that fails in a route sends the ExceptionMetaData of it
   t.equal(actualExceptionMetaData.getSpanid(), traceRoot.getTraceId().getSpanId(), 'ExceptionMetaData has the span id of the request')
   t.equal(actualExceptionMetaData.getUritemplate(), '/fetch-closed-port', 'ExceptionMetaData uriTemplate is the route path')
 
-  const fetchSpanEvent = dataSender.findSpanChunks(traceRoot).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.exception)
+  const fetchSpanEvent = dataSender.findSpanChunks(traceRoot).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.exceptionInfo)
   const actualExceptions = actualExceptionMetaData.getExceptionsList()
   t.equal(actualExceptions.length, 3, 'ExceptionMetaData has the AggregateError and its two connect errors')
-  t.equal(actualExceptions[0].getExceptionid(), fetchSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the fetch() span event of the SpanChunk')
+  t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(fetchSpanEvent), 'ExceptionMetaData exception is the one recorded on the fetch() span event of the SpanChunk')
   t.equal(actualExceptions[0].getExceptionclassname(), 'AggregateError', 'the undici request error of the fetch() is an AggregateError')
   t.deepEqual(actualExceptions.slice(1).map(exception => exception.getExceptionmessage()).sort(), [`connect ECONNREFUSED 127.0.0.1:${closedPort}`, `connect ECONNREFUSED ::1:${closedPort}`], 'then the two connect errors in AggregateError.errors, one per localhost address')
   t.notEqual(actualExceptions[1].getExceptionid(), actualExceptions[0].getExceptionid(), 'a connect error has its own exceptionId')
@@ -1175,7 +1167,7 @@ test('Express: an outgoing http.request() that fails in a route records the erro
   t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
   const actualExceptions = actualExceptionMetaDataList[0].valueOfProtocolBuffer().getExceptionsList()
   t.equal(actualExceptions.length, 3, 'ExceptionMetaData has the AggregateError and its two connect errors')
-  t.equal(actualExceptions[0].getExceptionid(), actualHttpClientSpanEvent.exception[0].exceptionId, 'ExceptionMetaData exception is the one recorded on the asyncHttpClient span event')
+  t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(actualHttpClientSpanEvent), 'ExceptionMetaData exception is the one recorded on the asyncHttpClient span event')
   t.equal(actualExceptions[0].getExceptionclassname(), 'AggregateError', 'the http.request() error is an AggregateError')
   t.equal(actualExceptions[0].getStacktraceelementList()[0].getFilename(), 'node:net', 'the first frame of the AggregateError is in node:net')
   t.true(actualExceptions[0].getStacktraceelementList()[0].getLinenumber() > 0, 'the first frame of the AggregateError has its line number')
@@ -1837,3 +1829,7 @@ test('Express: AgentStat sends the transaction count and response time of comple
     })
   })
 })
+
+function exceptionChainId(spanEvent) {
+  return spanEvent.annotations.find(annotation => annotation.getKey() === annotationKey.EXCEPTION_CHAIN_ID.getCode()).getValue()
+}

@@ -454,6 +454,35 @@ test('Should record ExceptionMetaData with uriTemplate when route throws in Koa'
   })
 })
 
+test('Koa: a fetch() in a route records the URL with its path in its http.request span event', async (t) => {
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+
+  const targetServer = http.createServer((req, res) => res.end('target')).listen(0)
+  await once(targetServer, 'listening')
+  const targetPort = targetServer.address().port
+
+  let traceRoot
+  const app = new Koa()
+  const router = new Router()
+  router.get('/fetch-path', async (ctx) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    ctx.body = await (await fetch(`http://127.0.0.1:${targetPort}/downstream?id=1`)).text()
+  })
+  app.use(router.routes()).use(router.allowedMethods())
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const response = await fetch(`http://localhost:${server.address().port}/fetch-path`)
+  t.equal(response.status, 200, 'the route responds 200 after the fetch()')
+  await dataSender.waitForSpan(traceRoot)
+  server.close()
+  targetServer.close()
+
+  const fetchSpanEvent = dataSender.findSpanChunks(traceRoot).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.serviceType === ServiceType.asyncHttpClient.getCode())
+  t.equal(httpUrl(fetchSpanEvent), `127.0.0.1:${targetPort}/downstream`, 'the http.url of the fetch() span event is the host and path, without the query')
+  t.end()
+})
+
 test('Koa: a fetch() that fails in a route sends the ExceptionMetaData of its async child trace', async (t) => {
   const dataSender = new RecordingDataSender()
   const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
@@ -1330,4 +1359,8 @@ test('Koa: a route responds when the agent fails to record its URI template', as
 
 function exceptionChainId(spanEvent) {
   return spanEvent.annotations.find(annotation => annotation.getKey() === annotationKey.EXCEPTION_CHAIN_ID.getCode()).getValue()
+}
+
+function httpUrl(spanEvent) {
+  return spanEvent.annotations.find(annotation => annotation.getKey() === annotationKey.HTTP_URL.getCode()).getValue()
 }

@@ -1084,6 +1084,33 @@ test('Functional Test: requestExceptionMetaData should deliver error.cause chain
   t.end()
 })
 
+test('Express: a fetch() in a route records the URL with its path in its http.request span event', async (t) => {
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+
+  const targetServer = http.createServer((req, res) => res.end('target')).listen(0)
+  await once(targetServer, 'listening')
+  const targetPort = targetServer.address().port
+
+  let traceRoot
+  const app = new express()
+  app.get('/fetch-path', async (req, res) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    res.send(await (await fetch(`http://127.0.0.1:${targetPort}/downstream?id=1`)).text())
+  })
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const response = await fetch(`http://localhost:${server.address().port}/fetch-path`)
+  t.equal(response.status, 200, 'the route responds 200 after the fetch()')
+  await dataSender.waitForSpan(traceRoot)
+  server.close()
+  targetServer.close()
+
+  const fetchSpanEvent = dataSender.findSpanChunks(traceRoot).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.serviceType === ServiceType.asyncHttpClient.getCode())
+  t.equal(httpUrl(fetchSpanEvent), `127.0.0.1:${targetPort}/downstream`, 'the http.url of the fetch() span event is the host and path, without the query')
+  t.end()
+})
+
 test('Express: a fetch() that fails in a route sends the ExceptionMetaData of its async child trace', async (t) => {
   const dataSender = new RecordingDataSender()
   const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
@@ -2101,4 +2128,8 @@ test('Express: a route responds when the agent fails to record its URI template'
 
 function exceptionChainId(spanEvent) {
   return spanEvent.annotations.find(annotation => annotation.getKey() === annotationKey.EXCEPTION_CHAIN_ID.getCode()).getValue()
+}
+
+function httpUrl(spanEvent) {
+  return spanEvent.annotations.find(annotation => annotation.getKey() === annotationKey.HTTP_URL.getCode()).getValue()
 }

@@ -505,6 +505,28 @@ test('Next.js: an API route records the fetch() before and after its first await
     t.end()
 })
 
+test('Next.js: a fetch() in an API route records the URL with its path in its http.request span event', async (t) => {
+    receivedSpans = []
+    receivedSpanChunks = []
+    const http = require('http')
+    const targetServer = http.createServer((req, res) => res.end('target')).listen(0)
+    await once(targetServer, 'listening')
+    const targetPort = targetServer.address().port
+    const target = `http://127.0.0.1:${targetPort}/downstream?id=1`
+
+    const response = await fetch(`http://127.0.0.1:3000/api/fetch-after-await?target=${encodeURIComponent(target)}`)
+    t.equal(response.status, 200, 'the API route responds 200 after the fetch() calls')
+    const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/fetch-after-await'), 10000)
+    const [httpRequestSpanEvent] = span.getSpaneventList()
+    const actualSpanChunk = await waitForSpanChunk((spanChunk) => spanChunk.getLocalasyncid()?.getAsyncid() === httpRequestSpanEvent.getAsyncevent(), 10000)
+    targetServer.close()
+
+    const fetchSpanEvent = actualSpanChunk.getSpaneventList().find((spanEvent) => spanEvent.getServicetype() === ServiceType.asyncHttpClient.getCode())
+    const httpUrlAnnotation = fetchSpanEvent.getAnnotationList().find(ann => ann.getKey() === AnnotationKey.HTTP_URL.getCode())
+    t.equal(httpUrlAnnotation.getValue().getStringvalue(), `127.0.0.1:${targetPort}/downstream`, 'the http.url of the fetch() span event is the host and path, without the query')
+    t.end()
+})
+
 test('Next.js: an API route records a fetch() in a setTimeout callback at depth 1, with no route span event', async (t) => {
     receivedSpans = []
     const http = require('http')

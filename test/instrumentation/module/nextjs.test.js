@@ -483,6 +483,48 @@ test('Next.js: a mysql2 query that fails in an API route records the error on th
     t.end()
 })
 
+test('Next.js: an API route records the fetch() before and after its first await at depth 1, with no route span event', async (t) => {
+    receivedSpans = []
+    const http = require('http')
+    const targetServer = http.createServer((req, res) => res.end('target')).listen(0)
+    await once(targetServer, 'listening')
+    const target = `http://localhost:${targetServer.address().port}/`
+
+    const response = await fetch(`http://127.0.0.1:3000/api/fetch-after-await?target=${encodeURIComponent(target)}`)
+    t.equal(response.status, 200, 'the API route responds 200 after the two fetch() calls')
+    const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/fetch-after-await'), 10000)
+    targetServer.close()
+
+    const spanEvents = span.getSpaneventList()
+    t.equal(spanEvents.length, 2, 'the PSpan has only the two fetch() span events, with no route span event')
+    const [fetchA, fetchB] = spanEvents
+    t.equal(fetchA.getServicetype(), ServiceType.asyncHttpClientInternal.getCode(), 'fetch a is the fetch() before the first await')
+    t.equal(fetchA.getDepth(), 1, 'fetch a is at depth 1')
+    t.equal(fetchB.getServicetype(), ServiceType.asyncHttpClientInternal.getCode(), 'fetch b is the fetch() after the first await')
+    t.equal(fetchB.getDepth(), 1, 'fetch b is at depth 1')
+    t.end()
+})
+
+test('Next.js: an API route records a fetch() in a setTimeout callback at depth 1, with no route span event', async (t) => {
+    receivedSpans = []
+    const http = require('http')
+    const targetServer = http.createServer((req, res) => res.end('target')).listen(0)
+    await once(targetServer, 'listening')
+    const target = `http://localhost:${targetServer.address().port}/`
+
+    const response = await fetch(`http://127.0.0.1:3000/api/fetch-in-timer?target=${encodeURIComponent(target)}`)
+    t.equal(response.status, 200, 'the API route responds 200 after the fetch() in the setTimeout callback')
+    const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/fetch-in-timer'), 10000)
+    targetServer.close()
+
+    const spanEvents = span.getSpaneventList()
+    t.equal(spanEvents.length, 1, 'the PSpan has only the fetch() span event, with no route span event')
+    const [fetchA] = spanEvents
+    t.equal(fetchA.getServicetype(), ServiceType.asyncHttpClientInternal.getCode(), 'fetch a is the fetch() in the setTimeout callback')
+    t.equal(fetchA.getDepth(), 1, 'fetch a is at depth 1')
+    t.end()
+})
+
 test('client disconnect before the /api/client-disconnect response should not record span error or failure in URI stats', async (t) => {
     receivedSpans = []
     receivedStats = []
@@ -749,6 +791,38 @@ test('Next.js with error analysis disabled responds to a throwing API route and 
     t.end()
 })
 
+test('Next.js: no URI stat is sent when uriStats is off', async (t) => {
+    receivedSpans = []
+    receivedStats = []
+    const server = await startNextServer(3001, { PINPOINT_FEATURES_URI_STATS: 'false' })
+    t.teardown(() => server.kill())
+
+    const response = await fetch('http://127.0.0.1:3001/api/custom-uri')
+    t.equal(response.status, 200, '/api/custom-uri responds with 200')
+    const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/custom-uri'), 10000)
+    t.ok(span, 'the request is traced')
+    await new Promise(resolve => setTimeout(resolve, 3000))
+
+    t.false(receivedUriStatUris().includes('/user/input/uri/from/pages'), 'no URI stat has the user input URI template')
+    t.end()
+})
+
+test('Next.js: the user input URI template is not used when uriStats.useUserInput is off', async (t) => {
+    receivedSpans = []
+    receivedStats = []
+    const server = await startNextServer(3002, { PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT: 'false' })
+    t.teardown(() => server.kill())
+
+    const response = await fetch('http://127.0.0.1:3002/api/custom-uri')
+    t.equal(response.status, 200, '/api/custom-uri responds with 200')
+    const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/custom-uri'), 10000)
+    t.ok(span, 'the request is traced')
+    await new Promise(resolve => setTimeout(resolve, 3000))
+
+    t.false(receivedUriStatUris().includes('/user/input/uri/from/pages'), 'no URI stat has the user input URI template')
+    t.end()
+})
+
 test('teardown', async (t) => {
     if (nextServerProcess) {
         nextServerProcess.kill()
@@ -886,4 +960,42 @@ function formatForTComment(data) {
             .trimRight()
             .replace(/\r?\n/g, '\n|') + '\n'
     )
+}
+
+function startNextServer(port, env) {
+    const { spawn } = require('child_process')
+    const server = spawn(
+        path.normalize('./node_modules/.bin/next'),
+        ['start', '-H', '127.0.0.1', '-p', String(port)],
+        {
+            cwd: testAppDir,
+            env: Object.assign({}, process.env, {
+                NODE_OPTIONS: '-r ../../../index.js',
+                NODE_ENV: 'production',
+                DB_HOST: container.getHost(),
+                DB_PORT: container.getPort(3306),
+                DB_USER: container.getUsername(),
+                DB_PASSWORD: container.getUserPassword(),
+                NEXT_TELEMETRY_DISABLED: '1',
+                PINPOINT_APPLICATION_NAME: 'nextjs.test.js',
+                PINPOINT_SERVICE_NAME: 'next.js.service',
+                PINPOINT_COLLECTOR_IP: '127.0.0.1',
+                PINPOINT_COLLECTOR_SPAN_PORT: String(spanCollectorPort),
+                PINPOINT_COLLECTOR_STAT_PORT: String(spanCollectorPort),
+                PINPOINT_COLLECTOR_TCP_PORT: String(spanCollectorPort),
+                PINPOINT_SAMPLING_RATE: '1',
+                PINPOINT_FEATURES_URI_STATS_TIME_WINDOW: '1000'
+            }, env),
+        }
+    )
+    return new Promise((resolve, reject) => {
+        waitForNextServerReady(server, (error) => error ? reject(error) : resolve(server))
+    })
+}
+
+function receivedUriStatUris() {
+    return receivedStats
+        .map(stat => stat.getAgenturistat?.())
+        .filter(agentUriStat => agentUriStat)
+        .flatMap(agentUriStat => agentUriStat.getEachuristatList().map(each => each.getUri()))
 }

@@ -182,7 +182,7 @@ test('nested request HTTP', async function (t) {
             t.equal(traceHeader.host, 'localhost:5006', 'http://localhost:5006/test host')
             t.equal(traceHeader.parentApplicationName, agent.getConfig().getApplicationName(), 'http://localhost:5006/test parentApplicationName')
             t.equal(traceHeader.parentApplicationType, 1400, 'http://localhost:5006/test parentApplicationType')
-            t.equal(traceId.parentSpanId, actualTraceOn5005.spanBuilder.traceRoot.getTraceId().spanId, 'http://localhost:5006/test parentSpanId')
+            t.equal(traceId.parentSpanId, actualTraceOn5005.getTraceRoot().getTraceId().spanId, 'http://localhost:5006/test parentSpanId')
             t.equal(requestTrace.rpcName, '/test', 'http://localhost:5006/test rpcName')
             t.equal(traceHeader.sampled, undefined, 'http://localhost:5006/test header sampled')
             t.deepEqual(traceId, actualTraceOn5006.getTraceId(), 'http://localhost:5006/test transactionId')

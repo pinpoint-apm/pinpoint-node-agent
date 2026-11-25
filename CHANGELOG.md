@@ -23,10 +23,13 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 - [[#607](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/607)] Functional tests for the Pinpoint v4 headers
 
 ### Removed
+- [[#628](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/628)] `SpanRecorderEnricher` from `pinpoint-node-agent/uri-stats`
 - [[#561](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/561)] The `SendSpan` gRPC stream
 - [[#531](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/531)] `PINPOINT_SERVICE_TYPE` and json `applicationServiceType`; the application service type is always NODE (1400)
 
 ### Fixed
+- [[#628](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/628)] Express route and middleware handlers and Koa route handlers run in their own Asynchronous Invocation, so the calls a handler makes after an `await` stay under its route
+  - The URI template of a route in an Express sub-app or in a Koa router that another route dispatches to is recorded for URI stats
 - [[#627](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/627)] Record the error of a failed `mysql`, `mysql2` or `pg` query on the Asynchronous Invocation of its callback and in Error Analysis
   - Error Analysis counts an error once in a trace when it is recorded again, or recorded as the cause of another error
 - [[#632](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/632)] A disabled agent no longer connects to the collector

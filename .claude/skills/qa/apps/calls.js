@@ -32,6 +32,16 @@ module.exports = {
     redis: () => query(() => new Promise((resolve, reject) => databases.redis.set('qa-redis', 'value', (error) => error ? reject(error) : resolve()))),
     ioredis: () => query(() => databases.ioredis.set('qa-ioredis', 'value')),
     mongodb: () => query(() => databases.mongodb.db('test').collection('member').findOne({ id: 'a' })),
+    fetchAfterAwait: async () => {
+        const first = await fetchUrl(target())
+        const second = await fetchUrl(target())
+        const third = await fetchUrl(target())
+        return { status: 200, body: { outgoing: [first.status, second.status, third.status] } }
+    },
+    fetchInTimer: () => new Promise((resolve) => setTimeout(async () => {
+        const outgoing = await fetchUrl(target())
+        resolve({ status: 200, body: { outgoing: outgoing.status } })
+    }, 10)),
     parallel: async () => {
         const [outgoing, mysql2] = await Promise.all([fetchUrl(target()), module.exports.mysql2()])
         return { status: 200, body: { outgoing: outgoing.status, mysql2: mysql2.status } }

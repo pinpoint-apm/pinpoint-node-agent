@@ -13,8 +13,9 @@ const express = require('express')
 const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
-const DisableTrace = require('../../../lib/context/disable-trace')
+const DisableChildTrace = require('../../../lib/context/trace/disable-child-trace')
 const ServiceType = require('../../../lib/context/service-type')
+const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const http = require('http')
 const https = require('https')
 const net = require('node:net')
@@ -27,8 +28,9 @@ const { UriStatsMonitor } = require('../../../lib/metric/uri/uri-stats-monitor')
 const DateNow = require('../../../lib/support/date-now')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 const { ParentTraceHeader } = require('../../fixtures/parent-trace-header')
-const { receiverTypeNameOfFunctionMethod } = require('../../support/stack-frame')
 const RecordingDataSender = require('../../support/recording-data-sender')
+const TraceContext = require('../../../lib/context/trace-context')
+const SpanEventRecorder = require('../../../lib/context/trace/span-event-recorder')
 const { startRequestStoreProbe } = require('../../support/request-store-probe')
 const { User } = require('../../support/user')
 const TraceHeaderBuilder = require('../../../lib/instrumentation/http/trace-header-builder')
@@ -212,7 +214,7 @@ function throwHandleTest(span, dataSender, t) {
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
   t.equal(actualErrorMethodDescriptor.methodName, 'use', 'methodName')
   t.equal(spanEvent.sequence, 1, 'sequence')
-  t.equal(spanEvent.depth, 2, 'spanEvent.depth')
+  t.equal(spanEvent.depth, 1, 'the error handler is a sibling of Router.get that threw')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
   t.true(/express\.test\.js:\d+:\d+$/.test(spanEvent.exceptionInfo.stringValue), 'error case')
 
@@ -255,7 +257,7 @@ function nextErrorHandleTest(span, dataSender, t) {
   t.equal(actualErrorMethodDescriptor.className, 'Router', 'className')
   t.equal(actualErrorMethodDescriptor.methodName, 'use', 'methodName')
   t.equal(spanEvent.sequence, 1, 'sequence')
-  t.equal(spanEvent.depth, 2, 'spanEvent.depth')
+  t.equal(spanEvent.depth, 1, 'the error handler is a sibling of Router.get that called next(error)')
   t.equal(spanEvent.exceptionInfo.intValue, 1, 'error value')
   t.true(/express\.test\.js:\d+:\d+$/.test(spanEvent.exceptionInfo.stringValue), 'error case')
 
@@ -520,7 +522,7 @@ test('incoming request by Disable Trace requests', (t) => {
     if (actualRequestCount == 1 || actualRequestCount == 4) {
       t.equal('' + (getTransactionId().sequence - 1), actualTraceIdTransactionId, `traceRoot.transactionId equals transactionIdGenerator.sequence ${traceRoot.transactionId}`)
     } else {
-      t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
+      t.true(trace instanceof DisableChildTrace, `the handler of an unsampled request runs in a DisableChildTrace actualRequestCount=${actualRequestCount}`)
       t.equal(actualTraceIdTransactionId, '' + (getDisabledId().sequence + 5), 'DisableTrace transaction no updated transactionIdGenerator.sequence')
     }
 
@@ -543,7 +545,7 @@ test('incoming request by Disable Trace requests', (t) => {
     if (actualRequestCount == 1 || actualRequestCount == 4) {
       t.equal(actualTraceIdTransactionId, trace.getTraceId().transactionId, 'API transaction id sequence equals transactionIdGenerator.sequence')
     } else {
-      t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
+      t.true(trace instanceof DisableChildTrace, `the handler of an unsampled request runs in a DisableChildTrace actualRequestCount=${actualRequestCount}`)
       t.equal(actualTraceIdTransactionId, '' + (getDisabledId().sequence + 5), 'API DisableTrace transaction no updated transactionIdGenerator.sequence')
     }
 
@@ -566,7 +568,7 @@ test('incoming request by Disable Trace requests', (t) => {
     if (actualRequestCount == 1 || actualRequestCount == 4) {
       t.equal(actualTraceIdTransactionId, trace.getTraceId().transactionId, 'API transaction id sequence equals transactionIdGenerator.sequence')
     } else {
-      t.true(trace instanceof DisableTrace, `trace is DisableTrace actualRequestCount=${actualRequestCount}`)
+      t.true(trace instanceof DisableChildTrace, `the handler of an unsampled request runs in a DisableChildTrace actualRequestCount=${actualRequestCount}`)
       t.equal(actualTraceIdTransactionId, '' + (getDisabledId().sequence + 5), 'API DisableTrace transaction no updated transactionIdGenerator.sequence')
     }
     res.send('ok /api2 get')
@@ -615,7 +617,7 @@ test('incoming request by Disable Trace requests', (t) => {
     t.equal(result2.status, 200, 'second / request status code is 200')
 
     actualTrace = rootPathTraces[1]
-    t.true(actualTrace instanceof DisableTrace, 'HTTP Request URI')
+    t.true(actualTrace instanceof DisableChildTrace, 'the second request is unsampled')
 
     actualApiRequest = apiRequests[1]
     t.equal(actualApiRequest.url, '/api', 'DisableTrace api request url is /api')
@@ -629,7 +631,7 @@ test('incoming request by Disable Trace requests', (t) => {
     t.equal(result3.status, 200, 'third / request status code is 200')
 
     actualTrace = rootPathTraces[2]
-    t.true(actualTrace instanceof DisableTrace, 'third HTTP Request URI is DisableTrace')
+    t.true(actualTrace instanceof DisableChildTrace, 'the third request is unsampled')
 
     actualApiRequest = apiRequests[2]
     t.equal(actualApiRequest.url, '/api', 'Third request is DisableTrace api request url is /api')
@@ -1002,12 +1004,7 @@ test('Functional Test: requestExceptionMetaData should deliver converted excepti
     'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
     'route.js.next (<workspace>/node_modules/express/lib/router/route.js:<line>)',
     'Route.dispatch (<workspace>/node_modules/express/lib/router/route.js:<line>)',
-    'InterceptorRunner.run (<workspace>/lib/instrumentation/interceptor-runner.js:<line>)',
-    'express-layer-interceptor.js.wrapped (<workspace>/lib/instrumentation/module/express/express-layer-interceptor.js:<line>)',
-    'Layer.handle [as handle_request] (<workspace>/node_modules/express/lib/router/layer.js:<line>)',
-    'index.js.<anonymous> (<workspace>/node_modules/express/lib/router/index.js:<line>)',
-    `${receiverTypeNameOfFunctionMethod('router')}.process_params (<workspace>/node_modules/express/lib/router/index.js:<line>)`,
-    'index.js.next (<workspace>/node_modules/express/lib/router/index.js:<line>)',
+    'express-layer-interceptor.js.<anonymous> (<workspace>/lib/instrumentation/module/express/express-layer-interceptor.js:<line>)',
   ].join('\n')
 
   const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -1017,7 +1014,6 @@ test('Functional Test: requestExceptionMetaData should deliver converted excepti
       .replace(/\\/g, '/')
       .replace(new RegExp(escapeRegExp(workspacePath), 'g'), '<workspace>')
       .replace(/express\.test\.js:\d+/g, 'express.test.js:<line>')
-      .replace(/interceptor-runner\.js:\d+/g, 'interceptor-runner.js:<line>')
       .replace(/express-layer-interceptor\.js:\d+/g, 'express-layer-interceptor.js:<line>')
       .replace(/(node_modules\/express\/lib\/router\/[a-zA-Z0-9_-]+\.js):\d+/g, '$1:<line>')
   }
@@ -1157,7 +1153,7 @@ test('Express: an outgoing http.request() that fails in a route records the erro
   await dataSender.waitForSpan(traceRoot)
   server.close()
 
-  const httpRequestSpanEvent = dataSender.findSpan(traceRoot).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.asyncHttpClientInternal.getCode())
+  const httpRequestSpanEvent = dataSender.findSpanChunks(traceRoot).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.serviceType === ServiceType.asyncHttpClientInternal.getCode())
   const actualSpanChunk = dataSender.findSpanChunk(httpRequestSpanEvent.asyncId)
   t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'the SpanChunk localAsyncId is the asyncEvent of the http.request span event with sequence 1')
   const actualHttpClientSpanEvent = actualSpanChunk.spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.asyncHttpClient.getCode())
@@ -1828,6 +1824,279 @@ test('Express: AgentStat sends the transaction count and response time of comple
       }
     })
   })
+})
+
+test('Express: a route handler runs in its own Asynchronous Invocation, so the fetch() calls after each await stay under Router.get', async (t) => {
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+  const targetServer = http.createServer((req, res) => res.end('target')).listen(0)
+  await once(targetServer, 'listening')
+  const targetUrl = `http://localhost:${targetServer.address().port}/`
+
+  let traceRoot
+  const app = new express()
+  app.get('/users', async (req, res) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    await (await fetch(targetUrl)).text()
+    await (await fetch(targetUrl)).text()
+    await (await fetch(targetUrl)).text()
+    res.send('ok')
+  })
+  const server = app.listen(0)
+  await once(server, 'listening')
+  await (await fetch(`http://localhost:${server.address().port}/users`)).text()
+  const span = await dataSender.waitForSpan(traceRoot)
+  server.close()
+  targetServer.close()
+
+  t.equal(span.spanEventList.length, 1, 'the PSpan has only Router.get')
+  const routeSpanEvent = span.spanEventList[0]
+  t.equal(routeSpanEvent.depth, 1, 'Router.get is at depth 1')
+
+  const handlerSpanEvents = dataSender.findAsyncInvocationSpanEvents(routeSpanEvent)
+  t.equal(handlerSpanEvents.length, 4, 'the Asynchronous Invocation of Router.get has the three fetch() span events')
+  const [asyncInvocation, fetchA, fetchB, fetchC] = handlerSpanEvents
+  t.equal(asyncInvocation.apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'the SpanChunk linked by the asyncEvent of Router.get starts with the Asynchronous Invocation')
+  t.equal(asyncInvocation.depth, 1, 'the Asynchronous Invocation is at depth 1')
+  t.equal(fetchA.serviceType, ServiceType.asyncHttpClientInternal.getCode(), 'fetch a is the fetch() before the first await')
+  t.equal(fetchA.sequence, 1, 'fetch a is sequence 1')
+  t.equal(fetchA.depth, 2, 'fetch a is at depth 2 under the Asynchronous Invocation')
+  t.equal(fetchB.serviceType, ServiceType.asyncHttpClientInternal.getCode(), 'fetch b is the fetch() after the first await')
+  t.equal(fetchB.sequence, 2, 'fetch b is sequence 2')
+  t.equal(fetchB.depth, 2, 'fetch b is at depth 2 under the Asynchronous Invocation')
+  t.equal(fetchC.serviceType, ServiceType.asyncHttpClientInternal.getCode(), 'fetch c is the fetch() after the second await')
+  t.equal(fetchC.sequence, 3, 'fetch c is sequence 3')
+  t.equal(fetchC.depth, 2, 'fetch c is at depth 2 under the Asynchronous Invocation')
+  t.end()
+})
+
+test('Express: a fetch() in a setTimeout callback of a route handler stays under Router.get', async (t) => {
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+  const targetServer = http.createServer((req, res) => res.end('target')).listen(0)
+  await once(targetServer, 'listening')
+  const targetUrl = `http://localhost:${targetServer.address().port}/`
+
+  let traceRoot
+  const app = new express()
+  app.get('/timer', (req, res) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    setTimeout(async () => {
+      await (await fetch(targetUrl)).text()
+      res.send('ok')
+    }, 10)
+  })
+  const server = app.listen(0)
+  await once(server, 'listening')
+  await (await fetch(`http://localhost:${server.address().port}/timer`)).text()
+  const span = await dataSender.waitForSpan(traceRoot)
+  server.close()
+  targetServer.close()
+
+  t.equal(span.spanEventList.length, 1, 'the PSpan has only Router.get')
+  const routeSpanEvent = span.spanEventList[0]
+
+  const handlerSpanEvents = dataSender.findAsyncInvocationSpanEvents(routeSpanEvent)
+  t.equal(handlerSpanEvents.length, 2, 'the Asynchronous Invocation of Router.get has the fetch() span event')
+  const [asyncInvocation, fetchA] = handlerSpanEvents
+  t.equal(asyncInvocation.apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'the SpanChunk linked by the asyncEvent of Router.get starts with the Asynchronous Invocation')
+  t.equal(fetchA.serviceType, ServiceType.asyncHttpClientInternal.getCode(), 'fetch a is the fetch() in the setTimeout callback')
+  t.equal(fetchA.depth, 2, 'fetch a is at depth 2 under the Asynchronous Invocation')
+  t.end()
+})
+
+test('Express: a middleware handler runs in its own Asynchronous Invocation, and the route after its next() stays a sibling', async (t) => {
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+  const targetServer = http.createServer((req, res) => res.end('target')).listen(0)
+  await once(targetServer, 'listening')
+  const targetUrl = `http://localhost:${targetServer.address().port}/`
+
+  let traceRoot
+  const app = new express()
+  app.use('/users', async (req, res, next) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    await new Promise(resolve => setTimeout(resolve, 10))
+    await (await fetch(targetUrl)).text()
+    next()
+  })
+  app.get('/users', (req, res) => {
+    res.send('ok')
+  })
+  const server = app.listen(0)
+  await once(server, 'listening')
+  await (await fetch(`http://localhost:${server.address().port}/users`)).text()
+  const span = await dataSender.waitForSpan(traceRoot)
+  server.close()
+  targetServer.close()
+
+  t.equal(span.spanEventList.length, 2, 'the PSpan has Router.use and Router.get')
+  const [middlewareSpanEvent, routeSpanEvent] = span.spanEventList
+  t.equal(middlewareSpanEvent.depth, 1, 'Router.use is at depth 1')
+  t.equal(routeSpanEvent.depth, 1, 'Router.get after next() is at depth 1 next to Router.use')
+
+  const middlewareSpanEvents = dataSender.findAsyncInvocationSpanEvents(middlewareSpanEvent)
+  t.equal(middlewareSpanEvents.length, 2, 'the Asynchronous Invocation of Router.use has the fetch() span event')
+  const [middlewareAsyncInvocation, fetchA] = middlewareSpanEvents
+  t.equal(middlewareAsyncInvocation.apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'the SpanChunk linked by the asyncEvent of Router.use starts with the Asynchronous Invocation')
+  t.equal(fetchA.serviceType, ServiceType.asyncHttpClientInternal.getCode(), 'fetch a is the fetch() after the await of the middleware')
+  t.equal(fetchA.depth, 2, 'fetch a is at depth 2 under the Asynchronous Invocation of Router.use')
+
+  const routeSpanEvents = dataSender.findAsyncInvocationSpanEvents(routeSpanEvent)
+  t.equal(routeSpanEvents.length, 1, 'the Asynchronous Invocation of Router.get has no call')
+  t.equal(routeSpanEvents[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'the SpanChunk linked by the asyncEvent of Router.get is the Asynchronous Invocation')
+  t.end()
+})
+
+test('Express: a route of a mounted sub-app runs in the Asynchronous Invocation of the sub-app and records its URI template', async (t) => {
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+
+  let traceRoot
+  const admin = new express()
+  admin.get('/users/:id', async (req, res) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    await new Promise(resolve => setTimeout(resolve, 5))
+    res.send('ok')
+  })
+  const app = new express()
+  app.use('/admin', admin)
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const response = await fetch(`http://localhost:${server.address().port}/admin/users/1`)
+  t.equal(response.status, 200, 'the sub-app route responds 200')
+  t.equal(await response.text(), 'ok', 'the sub-app route sends its body')
+  const span = await dataSender.waitForSpan(traceRoot)
+  server.close()
+
+  t.equal(span.spanEventList.length, 1, 'the PSpan has only the Router.use of the sub-app')
+  const subAppSpanEvents = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0])
+  t.equal(subAppSpanEvents[1].apiId, apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('get').setClassName('Router')).apiId, 'the Router.get of the sub-app route is in the Asynchronous Invocation of the sub-app')
+  t.equal(subAppSpanEvents[1].depth, 2, 'the Router.get of the sub-app route is at depth 2 under that Asynchronous Invocation')
+  t.equal(span.traceRoot.getEnricher('uriStats.uriTemplate'), '/users/:id', 'the URI template of the sub-app route is recorded on the TraceRoot')
+  t.equal(span.traceRoot.getEnricher('uriStats.method'), 'GET', 'the HTTP method of the sub-app route is recorded on the TraceRoot')
+  t.end()
+})
+
+test('Express: a route of a mounted sub-app in an unsampled request records its URI template', async (t) => {
+  const agent = new ProcessAgentBuilder({ sampling: { enable: false } }).setDataSender(new RecordingDataSender()).build()
+
+  let traceRoot
+  const admin = new express()
+  admin.get('/users/:id', async (req, res) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    await new Promise(resolve => setTimeout(resolve, 5))
+    res.send('ok')
+  })
+  const app = new express()
+  app.use('/admin', admin)
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const response = await fetch(`http://localhost:${server.address().port}/admin/users/1`)
+  t.equal(response.status, 200, 'the sub-app route responds 200')
+  server.close()
+
+  t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), '/users/:id', 'the URI template of the sub-app route is recorded on the TraceRoot of the unsampled request')
+  t.end()
+})
+
+test('Express: a route responds when the agent fails to record its span event', async (t) => {
+  const agent = new ProcessAgentBuilder().setDataSender(new RecordingDataSender()).build()
+  const recordApi = SpanEventRecorder.prototype.recordApi
+  SpanEventRecorder.prototype.recordApi = function () {
+    throw new Error('the agent fails to record the span event')
+  }
+  t.teardown(() => {
+    SpanEventRecorder.prototype.recordApi = recordApi
+  })
+
+  let handled = 0
+  let traceInHandler
+  const app = new express()
+  app.get('/agent-error', async (req, res) => {
+    handled++
+    traceInHandler = agent.currentTraceObject()
+    await new Promise(resolve => setTimeout(resolve, 5))
+    res.send('ok')
+  })
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const url = `http://localhost:${server.address().port}/agent-error`
+  const response = await fetch(url)
+  t.equal(response.status, 200, 'the route responds 200')
+  t.equal(await response.text(), 'ok', 'the route sends its body')
+  const nextResponse = await fetch(url)
+  t.equal(nextResponse.status, 200, 'the next request also responds 200')
+  t.equal(handled, 2, 'the route handler runs for both requests')
+  t.ok(traceInHandler, 'the route handler runs inside the trace of the request')
+  server.close()
+  t.end()
+})
+
+test('Express: a route responds when the agent fails to make its Asynchronous Invocation', async (t) => {
+  const agent = new ProcessAgentBuilder().setDataSender(new RecordingDataSender()).build()
+  const continueAsyncContextTraceObject = TraceContext.prototype.continueAsyncContextTraceObject
+  TraceContext.prototype.continueAsyncContextTraceObject = function () {
+    throw new Error('the agent fails to make the Asynchronous Invocation')
+  }
+  t.teardown(() => {
+    TraceContext.prototype.continueAsyncContextTraceObject = continueAsyncContextTraceObject
+  })
+
+  let handled = 0
+  let traceInHandler
+  const app = new express()
+  app.get('/agent-error', async (req, res) => {
+    handled++
+    traceInHandler = agent.currentTraceObject()
+    await new Promise(resolve => setTimeout(resolve, 5))
+    res.send('ok')
+  })
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const url = `http://localhost:${server.address().port}/agent-error`
+  const response = await fetch(url)
+  t.equal(response.status, 200, 'the route responds 200')
+  t.equal(await response.text(), 'ok', 'the route sends its body')
+  const nextResponse = await fetch(url)
+  t.equal(nextResponse.status, 200, 'the next request also responds 200')
+  t.equal(handled, 2, 'the route handler runs for both requests')
+  t.ok(traceInHandler, 'the route handler runs inside the trace of the request')
+  server.close()
+  t.end()
+})
+
+test('Express: a route responds when the agent fails to record its URI template', async (t) => {
+  const agent = new ProcessAgentBuilder().setDataSender(new RecordingDataSender()).build()
+  const recordUriTemplate = SpanRecorder.prototype.recordUriTemplate
+  SpanRecorder.prototype.recordUriTemplate = function () {
+    throw new Error('the agent fails to record the URI template')
+  }
+  t.teardown(() => {
+    SpanRecorder.prototype.recordUriTemplate = recordUriTemplate
+  })
+
+  let handled = 0
+  let traceInHandler
+  const app = new express()
+  app.get('/agent-error', async (req, res) => {
+    handled++
+    traceInHandler = agent.currentTraceObject()
+    await new Promise(resolve => setTimeout(resolve, 5))
+    res.send('ok')
+  })
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const url = `http://localhost:${server.address().port}/agent-error`
+  const response = await fetch(url)
+  t.equal(response.status, 200, 'the route responds 200')
+  t.equal(await response.text(), 'ok', 'the route sends its body')
+  const nextResponse = await fetch(url)
+  t.equal(nextResponse.status, 200, 'the next request also responds 200')
+  t.equal(handled, 2, 'the route handler runs for both requests')
+  t.ok(traceInHandler, 'the route handler runs inside the trace of the request')
+  server.close()
+  t.end()
 })
 
 function exceptionChainId(spanEvent) {

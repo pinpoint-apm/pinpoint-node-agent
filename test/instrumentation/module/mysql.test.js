@@ -501,7 +501,7 @@ test('Disable trace', async (t) => {
         t.equal(result.status, 200, 'status code is 200')
 
         const span = await dataSender.waitForSpan(traceRoot)
-        t.equal(span.spanEventList.length, 2, 'spanEventList length is 2')
+        t.equal(span.spanEventList.length, 1, 'the PSpan has only Router.get')
 
         let actualBuilder = new MethodDescriptorBuilder('get')
             .setClassName('Router')
@@ -519,7 +519,9 @@ test('Disable trace', async (t) => {
         actualBuilder = new MethodDescriptorBuilder('query')
             .setClassName('Connection')
         actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-        actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence == 1)
+        const handlerSpanEvents = dataSender.findAsyncInvocationSpanEvents(actualSpanEvent)
+        t.equal(handlerSpanEvents[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'the route handler runs in the Asynchronous Invocation of Router.get')
+        actualSpanEvent = handlerSpanEvents.find(spanEvent => spanEvent.sequence == 1)
         t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId Connection.query in sampled Trace of DisableTrace Functional Tests')
         t.equal(actualMethodDescriptor.apiDescriptor, 'Connection.query', 'apiDescriptor Connection.query in sampled Trace of DisableTrace Functional Tests')
         t.equal(actualMethodDescriptor.className, 'Connection', 'className Connection.query in sampled Trace of DisableTrace Functional Tests')
@@ -649,7 +651,7 @@ test('Express: a mysql query that fails in a route records the error on the Asyn
     server.close()
     pool.end()
 
-    const querySpanEvent = span.spanEventList.find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+    const querySpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0]).find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
     t.notOk(querySpanEvent.exceptionInfo, 'the query span event has no error, because the query returns before its result')
     const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
     t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error of the failed query')
@@ -701,7 +703,7 @@ test('Koa: a mysql query that fails in a route records the error on the Asynchro
     server.close()
     pool.end()
 
-    const querySpanEvent = span.spanEventList.find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+    const querySpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0]).find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
     t.notOk(querySpanEvent.exceptionInfo, 'the query span event has no error, because the query returns before its result')
     const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
     t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error of the failed query')
@@ -820,7 +822,7 @@ test('25 mysql queries that fail at once in one trace record every error', async
     t.end()
 })
 
-test('Express: a mysql query error that the query callback passes to next(error) is one exception in ExceptionMetaData', async (t) => {
+test('Express: a mysql query error that the query callback passes to next(error) is recorded by the query callback trace and by the request trace', async (t) => {
     const dataSender = new RecordingDataSender()
     const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
     const container = await startMySql()
@@ -847,17 +849,16 @@ test('Express: a mysql query error that the query callback passes to next(error)
     server.close()
     pool.end()
 
-    const querySpanEvent = span.spanEventList.find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
-    const callbackSpanEvents = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList
-    const asyncInvocationSpanEvent = callbackSpanEvents.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
-    const errorHandlerSpanEvent = callbackSpanEvents.find(spanEvent => spanEvent.serviceType === ServiceType.express.getCode() && spanEvent.exceptionInfo)
+    const querySpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0]).find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+    const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
     t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error')
-    t.ok(errorHandlerSpanEvent, 'the error handler span event in the query callback has the error too')
+    const errorHandlerSpanEvent = span.spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.express.getCode() && spanEvent.exceptionInfo)
+    t.equal(errorHandlerSpanEvent.depth, 1, 'the error handler that next(error) calls runs in the request trace, next to Router.get')
 
     const actualExceptions = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === traceRoot).flatMap(exceptionMetaData => exceptionMetaData.valueOfProtocolBuffer().getExceptionsList())
-    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception, because both span events recorded the same error in one trace')
-    t.equal(exceptionChainId(asyncInvocationSpanEvent), actualExceptions[0].getExceptionid(), 'the Asynchronous Invocation span event points to the exception')
-    t.equal(exceptionChainId(errorHandlerSpanEvent), actualExceptions[0].getExceptionid(), 'the error handler span event points to the same exception')
+    t.equal(actualExceptions.length, 2, 'ExceptionMetaData has the error twice, because the query callback trace and the request trace each record their own exceptions')
+    t.ok(actualExceptions.some(exception => exception.getExceptionid() === exceptionChainId(asyncInvocationSpanEvent)), 'the Asynchronous Invocation span event points to the exception of the query callback trace')
+    t.ok(actualExceptions.some(exception => exception.getExceptionid() === exceptionChainId(errorHandlerSpanEvent)), 'the error handler span event points to the exception of the request trace')
     t.end()
 })
 

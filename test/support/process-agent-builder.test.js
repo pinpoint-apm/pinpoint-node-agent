@@ -41,7 +41,7 @@ test('A test records its request in the data sender it passes', (t) => {
         })
     }, () => {
         t.equal(dataSender.spans().length, 2, 'the app span and the other server\'s span are recorded for the test')
-        t.equal(dataSender.spanChunks().length, 1, 'the outgoing request span chunk is recorded for the test')
+        t.equal(dataSender.spanChunks().length, 2, 'the route handler and outgoing request span chunks are recorded for the test')
     })
 })
 
@@ -55,7 +55,7 @@ test('The next test records its request only in its own data sender', (t) => {
         })
     }, () => {
         t.equal(dataSender.spans().length, 2, 'only this test\'s app span and the other server\'s span are recorded for it')
-        t.equal(dataSender.spanChunks().length, 1, 'only this test\'s outgoing request span chunk is recorded for it')
+        t.equal(dataSender.spanChunks().length, 2, 'only this test\'s route handler and outgoing request span chunks are recorded for it')
     })
 })
 

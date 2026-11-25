@@ -13,11 +13,6 @@ export declare class UriStatsConfigBuilder {
     build(): UriStatsConfig
 }
 
-export declare class SpanRecorderEnricher {
-    constructor(config: UriStatsConfig)
-    record(moduleName: string, traceRoot: any, ...args: any[]): void
-}
-
 export interface UriStatsRepository {
     storeUriStats(traceRoot: any, traceEndTime: number): void
 }

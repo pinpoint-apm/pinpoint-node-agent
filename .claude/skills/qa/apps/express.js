@@ -27,6 +27,24 @@ route('/redis', calls.redis)
 route('/ioredis', calls.ioredis)
 route('/mongodb', calls.mongodb)
 route('/parallel', calls.parallel)
+route('/fetch-after-await', calls.fetchAfterAwait)
+route('/fetch-in-timer', calls.fetchInTimer)
+app.get('/user-input-uri', (req, res) => {
+    req['pinpoint.metric.uri-template'] = '/user/input/uri'
+    res.json({ ok: true })
+})
+const admin = express()
+admin.get('/users/:id', async (req, res) => {
+    const { status, body } = await calls.fetchOk()
+    res.status(status).json(body)
+})
+app.use('/admin', admin)
+app.use('/middleware-await', async (req, res, next) => {
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    await calls.fetchOk()
+    next()
+})
+route('/middleware-await', () => ({ status: 200, body: { ok: true } }))
 route('/downstream', calls.downstream)
 app.get('/downstream-throw', () => {
     throw new Error('qa downstream throws')

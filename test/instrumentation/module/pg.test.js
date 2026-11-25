@@ -291,7 +291,7 @@ test('Disable trace with Express and PostgreSQL', async (t) => {
             res.on('data', () => {})
             res.on('end', async () => {
                 const span = await dataSender.waitForSpan(traceRoot)
-                t.equal(span.spanEventList.length, 2, 'spanEventList length is 2')
+                t.equal(span.spanEventList.length, 1, 'the PSpan has only Router.get')
 
                 let actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence == 0)
                 t.ok(actualSpanEvent.apiId > 0, 'apiId should be positive in sampled Trace of DisableTrace Functional Tests')
@@ -300,7 +300,9 @@ test('Disable trace with Express and PostgreSQL', async (t) => {
                 t.equal(actualSpanEvent.serviceType, ServiceType.express.getCode(), 'spanEvent.serviceType Router.get in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualSpanEvent.nextSpanId, '-1', 'spanEvent.nextSpanId Router.get in sampled Trace of DisableTrace Functional Tests')
 
-                actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence == 1)
+                const handlerSpanEvents = dataSender.findAsyncInvocationSpanEvents(actualSpanEvent)
+                t.equal(handlerSpanEvents[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'the route handler runs in the Asynchronous Invocation of Router.get')
+                actualSpanEvent = handlerSpanEvents.find(spanEvent => spanEvent.sequence == 1)
                 t.ok(actualSpanEvent.apiId > 0, 'apiId should be positive Client.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualSpanEvent.sequence, 1, 'spanEvent.sequence Client.query in sampled Trace of DisableTrace Functional Tests')
                 t.equal(actualSpanEvent.depth, 2, 'spanEvent.depth Client.query in sampled Trace of DisableTrace Functional Tests')
@@ -374,7 +376,7 @@ test('Express: a pg query that fails in a route records the error on the Asynchr
     server.close()
     await pool.end()
 
-    const querySpanEvent = span.spanEventList.find(spanEvent => spanEvent.serviceType === pgExecuteQueryServiceType.getCode())
+    const querySpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0]).find(spanEvent => spanEvent.serviceType === pgExecuteQueryServiceType.getCode())
     t.notOk(querySpanEvent.exceptionInfo, 'the query span event has no error, because the query returns before its result')
     const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
     t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error of the failed query')
@@ -424,7 +426,7 @@ test('Koa: a pg query that fails in a route records the error on the Asynchronou
     server.close()
     await pool.end()
 
-    const querySpanEvent = span.spanEventList.find(spanEvent => spanEvent.serviceType === pgExecuteQueryServiceType.getCode())
+    const querySpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0]).find(spanEvent => spanEvent.serviceType === pgExecuteQueryServiceType.getCode())
     t.notOk(querySpanEvent.exceptionInfo, 'the query span event has no error, because the query returns before its result')
     const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
     t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error of the failed query')

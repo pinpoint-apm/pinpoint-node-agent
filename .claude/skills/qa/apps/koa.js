@@ -30,6 +30,20 @@ route('/redis', calls.redis)
 route('/ioredis', calls.ioredis)
 route('/mongodb', calls.mongodb)
 route('/parallel', calls.parallel)
+route('/fetch-after-await', calls.fetchAfterAwait)
+route('/fetch-in-timer', calls.fetchInTimer)
+router.get('/user-input-uri', (ctx) => {
+    ctx.req['pinpoint.metric.uri-template'] = '/user/input/uri'
+    ctx.body = { ok: true }
+})
+const v2 = new Router()
+v2.get('/v2/users/:id', async (ctx) => {
+    const { status, body } = await calls.fetchOk()
+    ctx.status = status
+    ctx.body = body
+})
+const v2Routes = v2.routes()
+router.get('/v2/(.*)', (ctx, next) => v2Routes(ctx, next))
 route('/downstream', calls.downstream)
 router.get('/downstream-throw', () => {
     throw new Error('qa downstream throws')

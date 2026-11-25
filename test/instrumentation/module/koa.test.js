@@ -15,6 +15,7 @@ const annotationKey = require('../../../lib/constant/annotation-key')
 const apiMetaService = require('../../../lib/context/api-meta-service')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const ServiceType = require('../../../lib/context/service-type')
+const defaultPredefinedMethodDescriptorRegistry = require('../../../lib/constant/default-predefined-method-descriptor-registry')
 const { UriStatsRepository, UriStatsRepositoryBuilder } = require('../../../lib/metric/uri/uri-stats-repository')
 const DateNow = require('../../../lib/support/date-now')
 const { TestGrpcDataSenderBuilder, SpanAdaptor, StatAdaptor, MetadataAdaptor } = require('../../support/test-grpc-data-sender')
@@ -26,6 +27,8 @@ const { once } = require('node:events')
 const { sendRequestOverRawSocket } = require('../../support/raw-http-client')
 const { ParentTraceHeader } = require('../../fixtures/parent-trace-header')
 const RecordingDataSender = require('../../support/recording-data-sender')
+const TraceContext = require('../../../lib/context/trace-context')
+const SpanEventRecorder = require('../../../lib/context/trace/span-event-recorder')
 const { startRequestStoreProbe } = require('../../support/request-store-probe')
 const { User } = require('../../support/user')
 const TraceHeaderBuilder = require('../../../lib/instrumentation/http/trace-header-builder')
@@ -531,7 +534,7 @@ test('Koa: an outgoing http.request() that fails in a route records the error in
   await dataSender.waitForSpan(traceRoot)
   server.close()
 
-  const httpRequestSpanEvent = dataSender.findSpan(traceRoot).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.asyncHttpClientInternal.getCode())
+  const httpRequestSpanEvent = dataSender.findSpanChunks(traceRoot).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.serviceType === ServiceType.asyncHttpClientInternal.getCode())
   const actualSpanChunk = dataSender.findSpanChunk(httpRequestSpanEvent.asyncId)
   t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'the SpanChunk localAsyncId is the asyncEvent of the http.request span event with sequence 1')
   const actualHttpClientSpanEvent = actualSpanChunk.spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.asyncHttpClient.getCode())
@@ -1054,6 +1057,275 @@ test('Koa: AgentStat sends the transaction count and response time of completed 
       }
     })
   })
+})
+
+test('Koa: a route handler runs in its own Asynchronous Invocation, so the fetch() calls after each await stay under Router.get', async (t) => {
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+  const targetServer = http.createServer((req, res) => res.end('target')).listen(0)
+  await once(targetServer, 'listening')
+  const targetUrl = `http://localhost:${targetServer.address().port}/`
+
+  let traceRoot
+  const app = new Koa()
+  const router = new Router()
+  router.get('/users', async (ctx) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    await (await fetch(targetUrl)).text()
+    await (await fetch(targetUrl)).text()
+    await (await fetch(targetUrl)).text()
+    ctx.body = 'ok'
+  })
+  app.use(router.routes())
+  const server = app.listen(0)
+  await once(server, 'listening')
+  await (await fetch(`http://localhost:${server.address().port}/users`)).text()
+  const span = await dataSender.waitForSpan(traceRoot)
+  server.close()
+  targetServer.close()
+
+  t.equal(span.spanEventList.length, 1, 'the PSpan has only Router.get')
+  const routeSpanEvent = span.spanEventList[0]
+  t.equal(routeSpanEvent.depth, 1, 'Router.get is at depth 1')
+
+  const handlerSpanEvents = dataSender.findAsyncInvocationSpanEvents(routeSpanEvent)
+  t.equal(handlerSpanEvents.length, 4, 'the Asynchronous Invocation of Router.get has the three fetch() span events')
+  const [asyncInvocation, fetchA, fetchB, fetchC] = handlerSpanEvents
+  t.equal(asyncInvocation.apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'the SpanChunk linked by the asyncEvent of Router.get starts with the Asynchronous Invocation')
+  t.equal(asyncInvocation.depth, 1, 'the Asynchronous Invocation is at depth 1')
+  t.equal(fetchA.serviceType, ServiceType.asyncHttpClientInternal.getCode(), 'fetch a is the fetch() before the first await')
+  t.equal(fetchA.sequence, 1, 'fetch a is sequence 1')
+  t.equal(fetchA.depth, 2, 'fetch a is at depth 2 under the Asynchronous Invocation')
+  t.equal(fetchB.serviceType, ServiceType.asyncHttpClientInternal.getCode(), 'fetch b is the fetch() after the first await')
+  t.equal(fetchB.sequence, 2, 'fetch b is sequence 2')
+  t.equal(fetchB.depth, 2, 'fetch b is at depth 2 under the Asynchronous Invocation')
+  t.equal(fetchC.serviceType, ServiceType.asyncHttpClientInternal.getCode(), 'fetch c is the fetch() after the second await')
+  t.equal(fetchC.sequence, 3, 'fetch c is sequence 3')
+  t.equal(fetchC.depth, 2, 'fetch c is at depth 2 under the Asynchronous Invocation')
+  t.end()
+})
+
+test('Koa: a fetch() in a setTimeout callback of a route handler stays under Router.get', async (t) => {
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+  const targetServer = http.createServer((req, res) => res.end('target')).listen(0)
+  await once(targetServer, 'listening')
+  const targetUrl = `http://localhost:${targetServer.address().port}/`
+
+  let traceRoot
+  const app = new Koa()
+  const router = new Router()
+  router.get('/timer', async (ctx) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    await new Promise(resolve => setTimeout(async () => {
+      await (await fetch(targetUrl)).text()
+      resolve()
+    }, 10))
+    ctx.body = 'ok'
+  })
+  app.use(router.routes())
+  const server = app.listen(0)
+  await once(server, 'listening')
+  await (await fetch(`http://localhost:${server.address().port}/timer`)).text()
+  const span = await dataSender.waitForSpan(traceRoot)
+  server.close()
+  targetServer.close()
+
+  t.equal(span.spanEventList.length, 1, 'the PSpan has only Router.get')
+  const routeSpanEvent = span.spanEventList[0]
+
+  const handlerSpanEvents = dataSender.findAsyncInvocationSpanEvents(routeSpanEvent)
+  t.equal(handlerSpanEvents.length, 2, 'the Asynchronous Invocation of Router.get has the fetch() span event')
+  const [asyncInvocation, fetchA] = handlerSpanEvents
+  t.equal(asyncInvocation.apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'the SpanChunk linked by the asyncEvent of Router.get starts with the Asynchronous Invocation')
+  t.equal(fetchA.serviceType, ServiceType.asyncHttpClientInternal.getCode(), 'fetch a is the fetch() in the setTimeout callback')
+  t.equal(fetchA.depth, 2, 'fetch a is at depth 2 under the Asynchronous Invocation')
+  t.end()
+})
+
+test('Koa: a route that dispatches to the routes of another router responds and records its URI template', async (t) => {
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+
+  let traceRoot
+  const v2 = new Router()
+  v2.get('/v2/users/:id', async (ctx) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    await new Promise(resolve => setTimeout(resolve, 5))
+    ctx.body = 'ok'
+  })
+  const v2Routes = v2.routes()
+  const router = new Router()
+  router.get('/v2/(.*)', (ctx, next) => v2Routes(ctx, next))
+  const app = new Koa()
+  app.use(router.routes())
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const response = await fetch(`http://localhost:${server.address().port}/v2/users/1`)
+  t.equal(response.status, 200, 'the route of the other router responds 200')
+  t.equal(await response.text(), 'ok', 'the route of the other router sends its body')
+  const span = await dataSender.waitForSpan(traceRoot)
+  server.close()
+
+  t.equal(span.spanEventList.length, 1, 'the PSpan has only the Router.get of the dispatching route')
+  const dispatchSpanEvents = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0])
+  t.equal(dispatchSpanEvents[1].serviceType, ServiceType.koa.getCode(), 'the Router.get of the other router is in the Asynchronous Invocation of the dispatching route')
+  t.equal(dispatchSpanEvents[1].depth, 2, 'the Router.get of the other router is at depth 2 under that Asynchronous Invocation')
+  t.equal(span.traceRoot.getEnricher('uriStats.uriTemplate'), '/v2/(.*)', 'the URI template of the dispatching route is recorded first on the TraceRoot')
+  t.end()
+})
+
+test('Koa: the user input URI template replaces the route URI template when uriStats.useUserInput is on', async (t) => {
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder({ features: { uriStats: { useUserInput: true } } }).setDataSender(dataSender).build()
+
+  let traceRoot
+  const router = new Router()
+  router.get('/orders/:orderId', async (ctx) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    ctx.req['pinpoint.metric.uri-template'] = '/user/input/orders'
+    ctx.body = 'ok'
+  })
+  const app = new Koa()
+  app.use(router.routes())
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const response = await fetch(`http://localhost:${server.address().port}/orders/1`)
+  t.equal(response.status, 200, 'the route responds 200')
+  await dataSender.waitForSpan(traceRoot)
+  server.close()
+
+  t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), '/user/input/orders', 'the user input URI template is recorded')
+  t.end()
+})
+
+test('Koa: the route URI template stays when uriStats.useUserInput is off', async (t) => {
+  const dataSender = new RecordingDataSender()
+  const agent = new ProcessAgentBuilder({ features: { uriStats: { useUserInput: false } } }).setDataSender(dataSender).build()
+
+  let traceRoot
+  const router = new Router()
+  router.get('/orders/:orderId', async (ctx) => {
+    traceRoot = agent.currentTraceObject().getTraceRoot()
+    ctx.req['pinpoint.metric.uri-template'] = '/user/input/orders'
+    ctx.body = 'ok'
+  })
+  const app = new Koa()
+  app.use(router.routes())
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const response = await fetch(`http://localhost:${server.address().port}/orders/1`)
+  t.equal(response.status, 200, 'the route responds 200')
+  await dataSender.waitForSpan(traceRoot)
+  server.close()
+
+  t.equal(traceRoot.getEnricher('uriStats.uriTemplate'), '/orders/:orderId', 'the route URI template is recorded')
+  t.end()
+})
+
+test('Koa: a route responds when the agent fails to record its span event', async (t) => {
+  const agent = new ProcessAgentBuilder().setDataSender(new RecordingDataSender()).build()
+  const recordApi = SpanEventRecorder.prototype.recordApi
+  SpanEventRecorder.prototype.recordApi = function () {
+    throw new Error('the agent fails to record the span event')
+  }
+  t.teardown(() => {
+    SpanEventRecorder.prototype.recordApi = recordApi
+  })
+
+  let handled = 0
+  let traceInHandler
+  const router = new Router()
+  router.get('/agent-error', async (ctx) => {
+    handled++
+    traceInHandler = agent.currentTraceObject()
+    await new Promise(resolve => setTimeout(resolve, 5))
+    ctx.body = 'ok'
+  })
+  const app = new Koa()
+  app.use(router.routes())
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const url = `http://localhost:${server.address().port}/agent-error`
+  const response = await fetch(url)
+  t.equal(response.status, 200, 'the route responds 200')
+  t.equal(await response.text(), 'ok', 'the route sends its body')
+  const nextResponse = await fetch(url)
+  t.equal(nextResponse.status, 200, 'the next request also responds 200')
+  t.equal(handled, 2, 'the route handler runs for both requests')
+  t.ok(traceInHandler, 'the route handler runs inside the trace of the request')
+  server.close()
+  t.end()
+})
+
+test('Koa: a route responds when the agent fails to make its Asynchronous Invocation', async (t) => {
+  const agent = new ProcessAgentBuilder().setDataSender(new RecordingDataSender()).build()
+  const continueAsyncContextTraceObject = TraceContext.prototype.continueAsyncContextTraceObject
+  TraceContext.prototype.continueAsyncContextTraceObject = function () {
+    throw new Error('the agent fails to make the Asynchronous Invocation')
+  }
+  t.teardown(() => {
+    TraceContext.prototype.continueAsyncContextTraceObject = continueAsyncContextTraceObject
+  })
+
+  let handled = 0
+  let traceInHandler
+  const router = new Router()
+  router.get('/agent-error', async (ctx) => {
+    handled++
+    traceInHandler = agent.currentTraceObject()
+    await new Promise(resolve => setTimeout(resolve, 5))
+    ctx.body = 'ok'
+  })
+  const app = new Koa()
+  app.use(router.routes())
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const url = `http://localhost:${server.address().port}/agent-error`
+  const response = await fetch(url)
+  t.equal(response.status, 200, 'the route responds 200')
+  t.equal(await response.text(), 'ok', 'the route sends its body')
+  const nextResponse = await fetch(url)
+  t.equal(nextResponse.status, 200, 'the next request also responds 200')
+  t.equal(handled, 2, 'the route handler runs for both requests')
+  t.ok(traceInHandler, 'the route handler runs inside the trace of the request')
+  server.close()
+  t.end()
+})
+
+test('Koa: a route responds when the agent fails to record its URI template', async (t) => {
+  const agent = new ProcessAgentBuilder().setDataSender(new RecordingDataSender()).build()
+  const recordUriTemplate = SpanRecorder.prototype.recordUriTemplate
+  SpanRecorder.prototype.recordUriTemplate = function () {
+    throw new Error('the agent fails to record the URI template')
+  }
+  t.teardown(() => {
+    SpanRecorder.prototype.recordUriTemplate = recordUriTemplate
+  })
+
+  let handled = 0
+  let traceInHandler
+  const router = new Router()
+  router.get('/agent-error', async (ctx) => {
+    handled++
+    traceInHandler = agent.currentTraceObject()
+    await new Promise(resolve => setTimeout(resolve, 5))
+    ctx.body = 'ok'
+  })
+  const app = new Koa()
+  app.use(router.routes())
+  const server = app.listen(0)
+  await once(server, 'listening')
+  const url = `http://localhost:${server.address().port}/agent-error`
+  const response = await fetch(url)
+  t.equal(response.status, 200, 'the route responds 200')
+  t.equal(await response.text(), 'ok', 'the route sends its body')
+  const nextResponse = await fetch(url)
+  t.equal(nextResponse.status, 200, 'the next request also responds 200')
+  t.equal(handled, 2, 'the route handler runs for both requests')
+  t.ok(traceInHandler, 'the route handler runs inside the trace of the request')
+  server.close()
+  t.end()
 })
 
 function exceptionChainId(spanEvent) {

@@ -11,7 +11,6 @@ const { ConfigBuilder } = require('../../lib/config-builder')
 const TraceContextBuilder = require('../../lib/context/trace-context-builder')
 const localStorage = require('../../lib/instrumentation/context/local-storage')
 const { UriStatsConfigBuilder } = require('../../lib/metric/uri/uri-stats-config-builder')
-const { UriStatsSpanRecorderFactory } = require('../../lib/metric/uri/uri-stats-span-recorder-factory')
 const { UriStatsRepositoryBuilder } = require('../../lib/metric/uri/uri-stats-repository')
 const { TraceCompletionEnricher } = require('../../lib/metric/uri/trace-completion-enricher')
 const { SqlStatsConfigBuilder } = require('../../lib/metric/sql/sql-stats-config-builder')
@@ -49,7 +48,6 @@ class ProcessAgentBuilder extends AgentBuilder {
 
         const uriStatsConfig = new UriStatsConfigBuilder(config).build()
         if (uriStatsConfig.isUriStatsEnabled()) {
-            this.setSpanRecorderFactory(new UriStatsSpanRecorderFactory(config, uriStatsConfig))
             this.addEnricher(new TraceCompletionEnricher(new UriStatsRepositoryBuilder(uriStatsConfig).build()))
         }
         if (new SqlStatsConfigBuilder(config).build().isSqlStatsEnabled()) {

@@ -95,6 +95,15 @@ class RecordingDataSender {
         return this.sentSpanChunks.find(spanChunk => spanChunk.localAsyncId?.getAsyncId() === asyncId.getAsyncId())
     }
 
+    // The span events of the Asynchronous Invocation linked by the asyncEvent of a span event, in sequence order,
+    // across every SpanChunk with that localAsyncId.
+    findAsyncInvocationSpanEvents(spanEvent) {
+        return this.sentSpanChunks
+            .filter(spanChunk => spanChunk.localAsyncId?.getAsyncId() === spanEvent.asyncId.getAsyncId())
+            .flatMap(spanChunk => spanChunk.spanEventList)
+            .sort((left, right) => left.sequence - right.sequence)
+    }
+
     findExceptionMetaData(traceRoot) {
         return this.sentExceptionMetaData.find(exceptionMetaData => exceptionMetaData.traceRoot === traceRoot)
     }

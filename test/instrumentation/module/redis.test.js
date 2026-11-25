@@ -71,7 +71,7 @@ test(`${testName1} should Record the connections between express and redis.`, as
       const childTrace = agent.currentTraceObject()
       await axios.get(outgoingServer.url, { httpsAgent: outgoingServer.agent() })
 
-      let actualSpanChunk = dataSender.findSpanChunks(childTrace.getTraceRoot())[0]
+      let actualSpanChunk = dataSender.findSpanChunk(childTrace.localAsyncId)
       t.equal(actualSpanChunk.getTraceRoot(), childTrace.getTraceRoot(), 'transactionId')
       t.equal(actualSpanChunk.localAsyncId.asyncId, childTrace.localAsyncId.asyncId, 'localAsyncId.asyncId')
       t.equal(actualSpanChunk.localAsyncId.sequence, childTrace.localAsyncId.sequence, 'localAsyncId.sequence')
@@ -109,7 +109,7 @@ test(`${testName1} should Record the connections between express and redis.`, as
         t.equal(actualSpanEvent.endPoint, `${container.getHost()}:${container.getMappedPort(6379)}`, 'RedisClient.expire actualSpanEvent.endPoint')
       })
 
-      const actualHttpCallbackNextAsyncId = dataSender.findSpanChunks(childTrace.getTraceRoot())[1].localAsyncId
+      const actualHttpCallbackNextAsyncId = actualSpanChunk.spanEventList.find(spanEvent => spanEvent.sequence === 1).asyncId
       const actualHttpCallbackSpanChunk = dataSender.findSpanChunk(actualHttpCallbackNextAsyncId)
       t.equal(actualHttpCallbackSpanChunk.getTraceRoot(), childTrace.getTraceRoot(), 'HTTP request callback transactionId')
       t.equal(actualHttpCallbackSpanChunk.localAsyncId.asyncId, actualHttpCallbackNextAsyncId.asyncId, 'HTTP request callback localAsyncId.asyncId')
@@ -203,12 +203,14 @@ test(`${testName1} should Record the connections between express and redis.`, as
     actualBuilder = new MethodDescriptorBuilder('set')
       .setClassName('RedisClient')
     actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-    actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence === 3)
+    const routeHandlerSpanEvents = dataSender.findAsyncInvocationSpanEvents(span.spanEventList.find(spanEvent => spanEvent.sequence === 2))
+    t.equal(routeHandlerSpanEvents[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'the route handler runs in the Asynchronous Invocation of Router.post')
+    actualSpanEvent = routeHandlerSpanEvents.find(spanEvent => spanEvent.sequence === 1)
     t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId')
     t.equal(actualMethodDescriptor.apiDescriptor, 'RedisClient.set', 'apiDescriptor')
     t.equal(actualMethodDescriptor.className, 'RedisClient', 'className')
     t.equal(actualMethodDescriptor.methodName, 'set', 'methodName')
-    t.equal(actualSpanEvent.sequence, 3, 'sequence')
+    t.equal(actualSpanEvent.sequence, 1, 'sequence')
     t.equal(actualSpanEvent.depth, 2, 'depth')
     t.equal(actualSpanEvent.serviceType, 8200, 'serviceType')
     t.equal(actualSpanEvent.destinationId, 'Redis', 'destinationId')
@@ -276,7 +278,7 @@ test(`${testName1} redis callback nested asyncTrace with await HTTP get`, async 
     actualBuilder = new MethodDescriptorBuilder('set')
       .setClassName('RedisClient')
     actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-    actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence === 1)
+    actualSpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList.find(spanEvent => spanEvent.sequence === 0)).find(spanEvent => spanEvent.sequence === 1)
     t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId')
     t.equal(actualMethodDescriptor.apiDescriptor, 'RedisClient.set', 'apiDescriptor')
     t.equal(actualMethodDescriptor.className, 'RedisClient', 'className')
@@ -392,8 +394,8 @@ test(`${testName1} await connections between express and redis.`, async function
       client.expire('key', 10)
       await axios.get(outgoingServer.url, { httpsAgent: outgoingServer.agent() })
 
-      let actualSpanChunk = dataSender.findSpanChunks(traceRoot)[0]
-      let actualNextAsyncId = trace.repository.buffer.find(spanEvent => spanEvent.sequence === 1).asyncId
+      let actualNextAsyncId = dataSender.findSpanChunk(trace.localAsyncId).spanEventList.find(spanEvent => spanEvent.sequence === 1).asyncId
+      let actualSpanChunk = dataSender.findSpanChunk(actualNextAsyncId)
       t.equal(actualSpanChunk.getTraceRoot(), trace.getTraceRoot(), 'transactionId')
       t.equal(actualSpanChunk.localAsyncId.asyncId, actualNextAsyncId.asyncId, 'localAsyncId.asyncId')
       t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'localAsyncId.sequence')
@@ -431,7 +433,7 @@ test(`${testName1} await connections between express and redis.`, async function
       actualHttpCallbackNextAsyncId = actualSpanEvent.asyncId
       t.equal(actualSpanChunk.spanEventList.length, 3, 'spanEventList.length')
 
-      const asyncSpanChunk = dataSender.findSpanChunks(traceRoot)[1]
+      const asyncSpanChunk = dataSender.findSpanChunk(actualHttpCallbackNextAsyncId)
       t.equal(asyncSpanChunk.getTraceRoot(), traceRoot, 'HTTP request callback transactionId')
       t.equal(asyncSpanChunk.localAsyncId.asyncId, actualHttpCallbackNextAsyncId.asyncId, 'HTTP request callback localAsyncId.asyncId')
       t.equal(asyncSpanChunk.localAsyncId.sequence, 1, 'HTTP request callback localAsyncId.sequence')
@@ -483,7 +485,7 @@ test(`${testName1} await connections between express and redis.`, async function
     actualBuilder = new MethodDescriptorBuilder('set')
       .setClassName('RedisClient')
     actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-    actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence === 1)
+    actualSpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList.find(spanEvent => spanEvent.sequence === 0)).find(spanEvent => spanEvent.sequence === 1)
     t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId')
     t.equal(actualMethodDescriptor.apiDescriptor, 'RedisClient.set', 'apiDescriptor')
     t.equal(actualMethodDescriptor.className, 'RedisClient', 'className')

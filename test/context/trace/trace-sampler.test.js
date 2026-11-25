@@ -126,27 +126,27 @@ async function outgoingRequest(t, agent, path, expectedSampling) {
             actualTrace = agent.currentTraceObject()
             if (typeof expectedSampling === 'boolean') {
                 if (expectedSampling) {
-                    t.equal(actualTrace.constructor.name, 'Trace', 'actualTrace is Trace')
+                    t.equal(actualTrace.constructor.name, 'ChildTraceBuilder', 'the handler of a sampled request runs in a ChildTraceBuilder')
                 } else {
-                    t.equal(actualTrace.constructor.name, 'DisableTrace', 'actualTrace is DisableTrace')
+                    t.equal(actualTrace.constructor.name, 'DisableChildTrace', 'the handler of an unsampled request runs in a DisableChildTrace')
                 }
             }
             const result1 = await axios.get(getServerUrl(OUTGOING_PATH))
-            t.equal(result1.data, 'ok get', `sampling is ${actualTrace.constructor.name !== 'DisableTrace'}, outgoing req ok`)
+            t.equal(result1.data, 'ok get', `sampling is ${actualTrace.constructor.name !== 'DisableChildTrace'}, outgoing req ok`)
             res.send('ok get')
         })
 
         const OUTGOING_PATH = '/outgoingrequest'
         app.get(OUTGOING_PATH, async (req, res) => {
             const headers = req.headers
-            if (actualTrace.constructor.name === 'DisableTrace') {
+            if (actualTrace.constructor.name === 'DisableChildTrace') {
                 t.equal('s0', headers['pinpoint-sampled'], 'When no sampling, pinpoint-sampled is s0')
             } else {
-                t.equal(actualTrace.spanBuilder.getTraceRoot().getTraceId().toStringDelimiterFormatted(), headers['pinpoint-traceid'])
-                t.equal(actualTrace.spanBuilder.getTraceRoot().getTraceId().getSpanId(), headers['pinpoint-pspanid'])
+                t.equal(actualTrace.getTraceRoot().getTraceId().toStringDelimiterFormatted(), headers['pinpoint-traceid'])
+                t.equal(actualTrace.getTraceRoot().getTraceId().getSpanId(), headers['pinpoint-pspanid'])
                 t.equal(agent.getConfig().getApplicationName(), headers['pinpoint-pappname'])
                 t.equal(Number(headers['pinpoint-papptype']), 1400, 'pinpoint-papptype header is NODE 1400')
-                t.equal(actualTrace.spanBuilder.getTraceRoot().getTraceId().flags, headers['pinpoint-flags'])
+                t.equal(actualTrace.getTraceRoot().getTraceId().flags, headers['pinpoint-flags'])
                 t.equal(headers['pinpoint-sampled'], undefined, 'When sampling, pinpoint-sampled is undefined')
             }
             res.send('ok get')
@@ -158,7 +158,7 @@ async function outgoingRequest(t, agent, path, expectedSampling) {
                 httpAgent: new http.Agent({ keepAlive: false }),
                 httpsAgent: new https.Agent({ keepAlive: false }),
             })
-            t.equal(result1.status, 200, `sampling is ${actualTrace.constructor.name !== 'DisableTrace'}, response status 200 ok`)
+            t.equal(result1.status, 200, `sampling is ${actualTrace.constructor.name !== 'DisableChildTrace'}, response status 200 ok`)
 
             server.close()
             resolve(t)

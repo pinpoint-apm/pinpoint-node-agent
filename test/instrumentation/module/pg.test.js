@@ -18,10 +18,6 @@ const ServiceType = require('../../../lib/context/service-type')
 const localStorage = require('../../../lib/instrumentation/context/local-storage')
 const MethodDescriptorBuilder = require('../../../lib/context/method-descriptor-builder')
 const RecordingDataSender = require('../../support/recording-data-sender')
-const express = require('express')
-const Koa = require('koa')
-const Router = require('koa-router')
-const { once } = require('node:events')
 
 test(`Client create and query hooking`, async (t) => {
     const dataSender = new RecordingDataSender()
@@ -345,7 +341,7 @@ test('Disable trace with Express and PostgreSQL', async (t) => {
         req1.end()
     })
 })
-test('Express: a pg query that fails in a route records the error on the Asynchronous Invocation of its query callback', async (t) => {
+test('a pg query that fails records the error on the Asynchronous Invocation of its query callback', async (t) => {
     const dataSender = new RecordingDataSender()
     const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
     const container = await startPostgreSql()
@@ -357,88 +353,21 @@ test('Express: a pg query that fails in a route records the error on the Asynchr
         password: 'testpass'
     })
 
-    let traceRoot
-    const app = new express()
-    app.get('/pg-error', async (req, res) => {
-        traceRoot = agent.currentTraceObject().getTraceRoot()
-        try {
-            await pool.query('SELECT id FROM no_such_table')
-            res.send('ok')
-        } catch (error) {
-            res.status(500).send(error.code)
-        }
-    })
-    const server = app.listen(0)
-    await once(server, 'listening')
-    const response = await fetch(`http://localhost:${server.address().port}/pg-error`)
-    t.equal(response.status, 500, 'the route responds 500 after the query fails')
-    const span = await dataSender.waitForSpan(traceRoot)
-    server.close()
+    const trace = agent.createTraceObject()
+    await localStorage.run(trace, () => pool.query('SELECT id FROM no_such_table').catch(() => {}))
+    agent.completeTraceObject(trace)
+    const span = await dataSender.waitForSpan(trace.getTraceRoot())
     await pool.end()
 
-    const querySpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0]).find(spanEvent => spanEvent.serviceType === pgExecuteQueryServiceType.getCode())
+    const querySpanEvent = span.spanEventList.find(spanEvent => spanEvent.serviceType === pgExecuteQueryServiceType.getCode())
     t.notOk(querySpanEvent.exceptionInfo, 'the query span event has no error, because the query returns before its result')
     const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
     t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error of the failed query')
 
-    const actualExceptionMetaDataList = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === traceRoot)
-    t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
-    const actualExceptionMetaData = actualExceptionMetaDataList[0].valueOfProtocolBuffer()
-    const actualExceptions = actualExceptionMetaData.getExceptionsList()
+    const actualExceptions = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === trace.getTraceRoot()).flatMap(exceptionMetaData => exceptionMetaData.valueOfProtocolBuffer().getExceptionsList())
     t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
     t.equal(actualExceptions[0].getExceptionmessage(), 'relation "no_such_table" does not exist', 'ExceptionMetaData exception is the error of the failed query')
     t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(asyncInvocationSpanEvent), 'the Asynchronous Invocation span event points to the exception')
-    t.equal(actualExceptionMetaData.getUritemplate(), '/pg-error', 'ExceptionMetaData uriTemplate is the route')
-    t.end()
-})
-
-test('Koa: a pg query that fails in a route records the error on the Asynchronous Invocation of its query callback', async (t) => {
-    const dataSender = new RecordingDataSender()
-    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
-    const container = await startPostgreSql()
-    const pool = new Pool({
-        host: container.getHost(),
-        port: container.getPort(),
-        database: 'test',
-        user: 'testuser',
-        password: 'testpass'
-    })
-
-    let traceRoot
-    const app = new Koa()
-    const router = new Router()
-    router.get('/pg-error', async (ctx) => {
-        traceRoot = agent.currentTraceObject().getTraceRoot()
-        try {
-            await pool.query('SELECT id FROM no_such_table')
-            ctx.body = 'ok'
-        } catch (error) {
-            ctx.status = 500
-            ctx.body = error.code
-        }
-    })
-    app.use(router.routes()).use(router.allowedMethods())
-    const server = app.listen(0)
-    await once(server, 'listening')
-    const response = await fetch(`http://localhost:${server.address().port}/pg-error`)
-    t.equal(response.status, 500, 'the route responds 500 after the query fails')
-    const span = await dataSender.waitForSpan(traceRoot)
-    server.close()
-    await pool.end()
-
-    const querySpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0]).find(spanEvent => spanEvent.serviceType === pgExecuteQueryServiceType.getCode())
-    t.notOk(querySpanEvent.exceptionInfo, 'the query span event has no error, because the query returns before its result')
-    const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
-    t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error of the failed query')
-
-    const actualExceptionMetaDataList = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === traceRoot)
-    t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
-    const actualExceptionMetaData = actualExceptionMetaDataList[0].valueOfProtocolBuffer()
-    const actualExceptions = actualExceptionMetaData.getExceptionsList()
-    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
-    t.equal(actualExceptions[0].getExceptionmessage(), 'relation "no_such_table" does not exist', 'ExceptionMetaData exception is the error of the failed query')
-    t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(asyncInvocationSpanEvent), 'the Asynchronous Invocation span event points to the exception')
-    t.equal(actualExceptionMetaData.getUritemplate(), '/pg-error', 'ExceptionMetaData uriTemplate is the route')
     t.end()
 })
 

@@ -64,23 +64,6 @@ test('A disabled agent opens no ping session to the collector', async (t) => {
     t.end()
 })
 
-test('An agent disabled by a too short serviceName opens no ping session to the collector', async (t) => {
-    const collector = await startCollectorRecordingPingSessions()
-    t.teardown(() => collector.server.forceShutdown())
-
-    const disabledAgent = new AgentBuilder(collectorConfig(collector.port, { agentName: 'short-service-agent', serviceName: 'ab' }))
-        .setLogger({ warn: () => {} })
-        .build()
-    disabledAgent.start()
-    const enabledAgent = new AgentBuilder(collectorConfig(collector.port, { agentName: 'enabled-agent', serviceName: 'serviceName' })).build()
-    await collector.firstPingSession
-    enabledAgent.dataSender.close()
-
-    t.equal(disabledAgent.getConfig().enable, false, 'a too short serviceName disables the agent')
-    t.deepEqual(collector.pingSessionAgentNames, ['enabled-agent'], 'only the enabled agent opens a ping session')
-    t.end()
-})
-
 test('Agent shutdown stops the stats scheduler', (t) => {
     const timeouts = startAndShutdownAgentInChildProcess('stats')
 

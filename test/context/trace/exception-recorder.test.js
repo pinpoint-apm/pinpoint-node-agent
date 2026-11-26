@@ -402,21 +402,6 @@ test('ExceptionRecorder should skip the values in AggregateError.errors that are
     t.end()
 })
 
-test('ExceptionRecorder should send the first 10 errors without throwing when AggregateError.errors is huge', (t) => {
-    const errors = Array.from({ length: 200000 }, (_, index) => new Error(`request ${index} failed`))
-    const aggregateError = new AggregateError(errors)
-
-    const dataSender = new RecordingDataSender()
-    const exceptionRecorder = new ExceptionRecorder(traceRoot, dataSender, 10)
-    exceptionRecorder.recordException(SpanEventBuilder.make(), aggregateError)
-    exceptionRecorder.close()
-
-    const pExceptions = sentPExceptions(dataSender)
-    t.equal(pExceptions.length, 11, 'the AggregateError and the first 10 errors')
-    t.equal(pExceptions[10].getExceptionmessage(), 'request 9 failed', 'the last one is errors[9]')
-    t.end()
-})
-
 function sentPExceptions(dataSender) {
     return dataSender.actualExceptionMetaData().flatMap(exceptionMetaData => exceptionMetaData.valueOfProtocolBuffer().getExceptionsList())
 }

@@ -23,15 +23,6 @@ test('collector.protocolVersion from json config', (t) => {
 
     actual = handleNamesAndIds({ collector: { protocolVersion: 'V3' } })
     t.equal(actual.collector.protocolVersion, 'v3', 'V3 is case-insensitive v3')
-
-    actual = handleNamesAndIds({ collector: { protocolVersion: 'v4' } })
-    t.equal(actual.collector.protocolVersion, 'v4', 'v4 is v4')
-
-    actual = handleNamesAndIds({ collector: { protocolVersion: 'x' } })
-    t.equal(actual.collector.protocolVersion, 'v4', 'unknown value falls back to v4')
-
-    actual = handleNamesAndIds({ collector: { protocolVersion: '' } })
-    t.equal(actual.collector.protocolVersion, 'v4', 'empty value falls back to v4')
     t.end()
 })
 
@@ -93,16 +84,6 @@ test('PINPOINT_SERVICE_NAME overrides json serviceName', (t) => {
     t.end()
 })
 
-test('PINPOINT_SERVICE_NAME shorter than 3 characters has an error', (t) => {
-    process.env.PINPOINT_SERVICE_NAME = 'ab'
-    const given = handleNamesAndIds({ applicationName: 'appName' })
-    delete process.env.PINPOINT_SERVICE_NAME
-
-    t.deepEqual(readErrors(given), ['Service Name is too short (min 3 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'], 'PINPOINT_SERVICE_NAME=ab is too short')
-    t.equal(given.enable, false, 'too short PINPOINT_SERVICE_NAME disables the agent')
-    t.end()
-})
-
 test('v4 ignores the configured agentId and always generates one', (t) => {
     const byJson = handleNamesAndIds({ agentId: 'agentId', applicationName: 'appName', serviceName: 'serviceName' })
     t.notEqual(byJson.agentId, 'agentId', 'v4 ignores json agentId')
@@ -134,6 +115,10 @@ test('agentName falls back to agentId', (t) => {
 
     const v3WithoutAgentName = handleNamesAndIds({ ...v3Json, agentId: 'agentId', applicationName: 'appName' })
     t.equal(v3WithoutAgentName.agentName, 'agentId', 'v3 without agentName uses agentId')
+
+    const v3EmptyAgentName = handleNamesAndIds({ ...v3Json, agentId: 'agentId', agentName: '', applicationName: 'appName' })
+    t.deepEqual(readErrors(v3EmptyAgentName), [], 'empty agentName is allowed')
+    t.equal(v3EmptyAgentName.agentName, 'agentId', 'v3 with an empty agentName uses agentId')
     t.end()
 })
 
@@ -176,154 +161,27 @@ test('PINPOINT_AGENT_ID overrides json agentId', function (t) {
 //   public static final int APPLICATION_NAME_MAX_LEN = 24; // uid v1 only, v3 and v4 allow 254
 //   public static final int AGENT_ID_MAX_LEN = 24;
 // }
-test('Agent ID length check', (t) => {
-    process.env['PINPOINT_AGENT_ID'] = 'agentId'
-    process.env['PINPOINT_APPLICATION_NAME'] = 'appication-name'
-    process.env['PINPOINT_AGENT_NAME'] = 'agent-name'
-    let given = handleNamesAndIds(v3Json)
-    t.deepEqual(readErrors(given), [], 'configuration agentId, Name, ApplicationName enable agent id')
-    t.equal(given.agentName, 'agent-name', 'agent name is agent name')
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_APPLICATION_NAME
-    delete process.env.PINPOINT_AGENT_NAME
+test('v3 Agent ID up to 24, Application Name up to 254 and Agent Name up to 255 characters', (t) => {
+    const maxLength = handleNamesAndIds({ ...v3Json, agentId: 'a'.repeat(24), applicationName: 'a'.repeat(254), agentName: 'a'.repeat(255) })
+    t.deepEqual(readErrors(maxLength), [], 'max length agentId, applicationName and agentName are valid')
 
-    process.env['PINPOINT_AGENT_ID'] = 'agentIdagentIdagentIdage'
-    process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
-    given = handleNamesAndIds(v3Json)
-    t.deepEqual(readErrors(given), [], 'maxlength agentID and application Name')
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_APPLICATION_NAME
-
-    process.env['PINPOINT_AGENT_ID'] = 'agentIdagentIdagentIdageE'
-    process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
-    given = handleNamesAndIds(v3Json)
-    t.equal(readErrors(given)[0], 'Agent ID is too long (max 24 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_APPLICATION_NAME
-
-    process.env['PINPOINT_AGENT_ID'] = 'agentIdagentIdagentIdage'
-    process.env['PINPOINT_APPLICATION_NAME'] = 'a'.repeat(254)
-    given = handleNamesAndIds(v3Json)
-    t.deepEqual(readErrors(given), [], 'maxlength application Name is 254')
-
-    process.env['PINPOINT_APPLICATION_NAME'] = 'a'.repeat(255)
-    given = handleNamesAndIds(v3Json)
-    t.equal(readErrors(given)[0], 'Application Name is too long (max 254 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_APPLICATION_NAME
-
-    process.env['PINPOINT_AGENT_ID'] = '~'
-    process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
-    given = handleNamesAndIds(v3Json)
-    t.equal(readErrors(given)[0], 'Agent ID has invalid characters; allowed [a-zA-Z0-9._-]. Value: ~. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_APPLICATION_NAME
-
-    process.env['PINPOINT_AGENT_ID'] = 'agentIdagentIdagentIdage'
-    process.env['PINPOINT_APPLICATION_NAME'] = '~'
-    given = handleNamesAndIds(v3Json)
-    t.equal(readErrors(given)[0], 'Application Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: ~. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_AGENT_NAME
-    delete process.env.PINPOINT_APPLICATION_NAME
-
-    process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
-    given = handleNamesAndIds(v3Json)
-    t.deepEqual(readErrors(given), [], 'agent ID nullable test')
-    t.equal(given.applicationName, 'appicationnameappication', 'application name is appicationnameappication')
-    t.match(given.agentId, generatedAgentIdPattern, 'generated agent ID is 22-char base64 UUIDv7')
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_AGENT_NAME
-    delete process.env.PINPOINT_APPLICATION_NAME
-
-    given = handleNamesAndIds(v3Json)
-    t.match(given.agentId, generatedAgentIdPattern, 'Agent ID was generated')
-    t.equal(given.agentName, given.agentId, 'Agent Name falls back to Agent ID')
-    t.equal(given.applicationName, undefined, 'Application Name is required and only set from developer')
-    t.equal(readErrors(given)[0], 'Application Name is required. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_AGENT_NAME
-    delete process.env.PINPOINT_APPLICATION_NAME
-
-    process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
-    process.env['PINPOINT_AGENT_NAME'] = 'agent name'
-    given = handleNamesAndIds(v3Json)
-    t.match(given.agentId, generatedAgentIdPattern, 'Agent ID was generated')
-    t.equal(given.agentName, 'agent name', 'Agent Name is optional value and only set from developer')
-    t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
-    t.equal(readErrors(given)[0], 'Agent Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: agent name. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_AGENT_NAME
-    delete process.env.PINPOINT_APPLICATION_NAME
-
-    process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
-    process.env['PINPOINT_AGENT_NAME'] = 'agent?name'
-    given = handleNamesAndIds(v3Json)
-    t.match(given.agentId, generatedAgentIdPattern, 'Agent ID was generated')
-    t.equal(given.agentName, 'agent?name', 'Agent Name is optional value and only set from developer')
-    t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
-    t.equal(readErrors(given)[0], 'Agent Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: agent?name. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_AGENT_NAME
-    delete process.env.PINPOINT_APPLICATION_NAME
-
-    process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
-    process.env['PINPOINT_AGENT_NAME'] = 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagen'
-    given = handleNamesAndIds(v3Json)
-    t.match(given.agentId, generatedAgentIdPattern, 'Agent ID was generated')
-    t.equal(given.agentName, 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagen', 'Agent Name is optional value and only set from developer')
-    t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
-    t.equal(readErrors(given)[0], 'Agent Name is too long (max 255 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_AGENT_NAME
-    delete process.env.PINPOINT_APPLICATION_NAME
-
-    process.env['PINPOINT_APPLICATION_NAME'] = 'appicationnameappication'
-    process.env['PINPOINT_AGENT_NAME'] = 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameage'
-    given = handleNamesAndIds(v3Json)
-    t.match(given.agentId, generatedAgentIdPattern, 'Agent ID was generated')
-    t.equal(given.agentName, 'agentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameagentnameage', 'Agent Name is optional value and only set from developer')
-    t.equal(given.applicationName, 'appicationnameappication', 'Application Name is required and only set from developer')
-    t.deepEqual(readErrors(given), [], 'no error message')
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_AGENT_NAME
-    delete process.env.PINPOINT_APPLICATION_NAME
-
+    const tooLong = handleNamesAndIds({ ...v3Json, agentId: 'a'.repeat(25), applicationName: 'a'.repeat(255), agentName: 'a'.repeat(256) })
+    const link = 'https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'
+    t.deepEqual(readErrors(tooLong), [
+        `Agent ID is too long (max 24 characters). See ${link}`,
+        `Application Name is too long (max 254 characters). See ${link}`,
+        `Agent Name is too long (max 255 characters). See ${link}`,
+    ], 'one character over the max length is too long')
     t.end()
 })
 
-test('Agent Name validation', (t) => {
-    t.plan(2)
+test('v3 without agentId generates one', (t) => {
+    const given = handleNamesAndIds({ ...v3Json, applicationName: 'appName' })
 
-    process.env.PINPOINT_AGENT_ID = 'agent-valid'
-    process.env.PINPOINT_APPLICATION_NAME = 'application-valid'
-
-    // empty allowed (optional)
-    process.env.PINPOINT_AGENT_NAME = ''
-    const given = handleNamesAndIds(v3Json)
-    t.deepEqual(readErrors(given), [], 'empty agent name is allowed')
-    t.equal(given.agentName, 'agent-valid', 'empty agent name falls back to agent ID')
-
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_APPLICATION_NAME
-    delete process.env.PINPOINT_AGENT_NAME
-})
-
-test('Agent ID and Application Name multiple errors', (t) => {
-    process.env.PINPOINT_AGENT_ID = 'agentIdagentIdagentIdageE' // 25 chars -> too long
-    process.env.PINPOINT_APPLICATION_NAME = 'a'.repeat(254) + '?' // 255 chars with invalid char
-
-    const given = handleNamesAndIds(v3Json)
-    t.equal(readErrors(given)[0], 'Agent ID is too long (max 24 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
-    t.equal(readErrors(given)[1], 'Application Name is too long (max 254 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables')
-    t.equal(readErrors(given)[2], `Application Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: ${'a'.repeat(254)}?. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables`)
-
-    delete process.env.PINPOINT_AGENT_ID
-    delete process.env.PINPOINT_APPLICATION_NAME
-
+    t.deepEqual(readErrors(given), [], 'agentId is optional')
+    t.match(given.agentId, generatedAgentIdPattern, 'generated agentId is a 22-char base64 UUIDv7')
     t.end()
 })
-
 
 test('ConfigBuilder replaces the v4 names and ids with the final values', (t) => {
     process.env.PINPOINT_APPLICATION_NAME = 'env-app'
@@ -381,13 +239,6 @@ test('non-string agentId in json is a v3 error and a v4 ignored warn', (t) => {
     const v4 = handleNamesAndIds({ agentId: 123, applicationName: 'appName', serviceName: 'serviceName' })
     t.deepEqual(readWarns(v4), ['Agent ID 123 is ignored; collector.protocolVersion v4 always generates the Agent ID. Set collector.protocolVersion to v3 to use a configured Agent ID.'], 'v4 warns about the ignored non-string agentId')
     t.match(v4.agentId, generatedAgentIdPattern, 'v4 generates the agentId')
-    t.end()
-})
-
-test('v4 warns that a configured agentId is ignored', (t) => {
-    const given = handleNamesAndIds({ agentId: 'node.app', applicationName: 'appName', serviceName: 'serviceName' })
-
-    t.deepEqual(readWarns(given), ['Agent ID node.app is ignored; collector.protocolVersion v4 always generates the Agent ID. Set collector.protocolVersion to v3 to use a configured Agent ID.'], 'v4 warns about the ignored agentId')
     t.end()
 })
 

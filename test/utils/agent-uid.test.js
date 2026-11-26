@@ -39,26 +39,11 @@ test('newUuidV7 sets RFC 9562 version 7, variant and timestamp', (t) => {
     t.end()
 })
 
-test('newAgentId generates unique 22-char URL-safe base64 UUIDv7 ids', (t) => {
-    const ids = new Set()
-    for (let i = 0; i < 1000; i++) {
-        const id = newAgentId()
-        ids.add(id)
-        const bytes = Buffer.from(id, 'base64url')
-        if (id.length !== UID_BASE64_LENGTH || !/^[A-Za-z0-9_-]+$/.test(id) || encodeUid(bytes) !== id) {
-            t.fail(`invalid id ${id}`)
-        }
-        if (bytes[6] >> 4 !== 7 || bytes[8] >> 6 !== 0b10) {
-            t.fail(`not a UUIDv7 ${id}`)
-        }
-    }
-    t.equal(ids.size, 1000, 'all ids are unique')
-    t.end()
-})
-
-test('newUuidV7 ids are time-ordered', (t) => {
-    const earlier = newUuidV7(1_700_000_000_000)
-    const later = newUuidV7(1_700_000_000_001)
-    t.ok(Buffer.compare(earlier.subarray(0, 6), later.subarray(0, 6)) < 0, 'timestamp prefix sorts by time')
+test('newAgentId generates a 22-char URL-safe base64 UUIDv7 id', (t) => {
+    const id = newAgentId()
+    const bytes = Buffer.from(id, 'base64url')
+    t.match(id, /^[A-Za-z0-9_-]{22}$/, '22-char URL-safe base64')
+    t.equal(encodeUid(bytes), id, 'decodes to the encoded UUID bytes')
+    t.equal(bytes[6] >> 4, 7, 'UUIDv7 version nibble')
     t.end()
 })

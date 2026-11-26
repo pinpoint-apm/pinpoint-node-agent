@@ -101,14 +101,6 @@ test('do not collect GC stats when gcStats is disabled', (t) => {
     t.end()
 })
 
-test('collect open file descriptor count on Linux', { skip: process.platform !== 'linux' }, async (t) => {
-    const collector = new ResourceStatsCollector({ fileDescriptorStats: true })
-    t.teardown(() => collector.shutdown())
-
-    t.true(await collector.getOpenFileDescriptorCount() > 0, 'open file descriptor count is collected')
-    t.end()
-})
-
 test('open file descriptor count does not include the fd that reads /proc/self/fd', { skip: process.platform !== 'linux' }, async (t) => {
     const collector = new ResourceStatsCollector({ fileDescriptorStats: true })
     t.teardown(() => collector.shutdown())

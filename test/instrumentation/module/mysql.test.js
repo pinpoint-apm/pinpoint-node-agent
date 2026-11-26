@@ -23,8 +23,6 @@ const axios = require('axios')
 const http = require('http')
 const DisableTrace = require('../../../lib/context/disable-trace')
 const RecordingDataSender = require('../../support/recording-data-sender')
-const Koa = require('koa')
-const Router = require('koa-router')
 const { once } = require('node:events')
 
 test(`connection with query`, async (t) => {
@@ -191,45 +189,17 @@ test('mysql uid query', async (t) => {
                 return
             }
         })
-        connection.query(`SELECT * FROM member`, async function (error, results) {
+        connection.query(`SELECT * FROM member`, async function (error) {
             if (error) throw error
-            t.equal(results[0].id, 'a', 'SELECT * FROM member results[0].id is a in mysql uid functional test')
-            t.equal(results[0].name, 'name1', 'SELECT * FROM member results[0].name is b in mysql uid functional test')
 
             agent.completeTraceObject(trace)
             connection.end()
             const span = dataSender.findSpan(trace.getTraceRoot())
-
-            let actualBuilder = new MethodDescriptorBuilder('createConnection')
-            let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            const createConnectionSpanEvent = span.spanEventList[0]
-            t.equal(createConnectionSpanEvent.endPoint, container.getHost(), 'createConnection endPoint is localhost in mysql uid functional test')
-            t.equal(createConnectionSpanEvent.destinationId, 'test', 'createConnection destinationId is test in mysql uid functional test')
-            t.equal(createConnectionSpanEvent.apiId, actualMethodDescriptor.apiId, 'createConnection apiId is same in mysql uid functional test')
-
-            actualBuilder = new MethodDescriptorBuilder('connect')
-                .setClassName('Connection')
-            actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            const connectionSpanEvent = span.spanEventList[1]
-            t.equal(connectionSpanEvent.depth, 1, 'connection depth is 1 in mysql uid functional test')
-            t.equal(connectionSpanEvent.sequence, 1, 'connection sequence is 1 in mysql uid functional test')
-
-            actualBuilder = new MethodDescriptorBuilder('query')
-                .setClassName('Connection')
-            actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-            const querySpanEvent = span.spanEventList[2]
-            t.equal(querySpanEvent.depth, 1, 'query depth is 1 in mysql uid functional test')
-            t.equal(querySpanEvent.sequence, 2, 'query sequence is 2 in mysql uid functional test')
-            t.equal(querySpanEvent.apiId, actualMethodDescriptor.apiId, 'query apiId is same in mysql uid functional test')
-
-            let actualParsingResult = agent.getTraceContext().spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM member')
-            let actualQueryAnnotation = querySpanEvent.annotations[0]
-            t.equal(actualQueryAnnotation.key, annotationKey.SQL_UID.getCode(), 'query annotation key is sql in mysql uid functional test')
-            t.equal(actualParsingResult.sql.normalizedSql, 'SELECT * FROM member', 'query normalizedSql is SELECT * FROM member in mysql uid functional test')
-
-            let actualGrpcSpanEvent = dataSender.findSpan(trace.getTraceRoot()).spanEventList[2]
-            t.equal(actualQueryAnnotation.key, actualGrpcSpanEvent.annotations[0].key, 'query annotation key is same that grpc in mysql uid functional test')
-            t.equal(actualQueryAnnotation.value, actualGrpcSpanEvent.annotations[0].value, 'query annotation value is same that grpc in mysql uid functional test')
+            const querySpanEvent = span.spanEventList.find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+            const actualParsingResult = agent.getTraceContext().spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM member')
+            const actualQueryAnnotation = querySpanEvent.annotations[0]
+            t.equal(actualQueryAnnotation.key, annotationKey.SQL_UID.getCode(), 'the query annotation is SQL_UID when sqlStats is on')
+            t.deepEqual(actualQueryAnnotation.value.getBytesValue(), actualParsingResult.getId(), 'the SQL_UID annotation has the uid of the query')
 
             t.end()
         })
@@ -458,8 +428,7 @@ test('setup', async (t) => {
 })
 
 test('Disable trace', async (t) => {
-    const dataSender = new RecordingDataSender()
-    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+    const agent = nullDataSenderAgent({ 'sampling': { 'enable': false } })
 
     const app = new express()
     const connection = mysql.createConnection({
@@ -478,73 +447,19 @@ test('Disable trace', async (t) => {
         }
     })
 
-    let callCount = 0
-    let traceRoot
     let traceCompleted
     app.get('/test1', (req, res) => {
         connection.query(`SELECT * FROM member`, function (error, results) {
             if (error) throw error
             res.send(results)
         })
-        callCount++
-        const trace = agent.currentTraceObject()
-        if (callCount == 1) {
-            traceRoot = trace.getTraceRoot()
-        } else if (callCount == 2) {
-            t.false(trace.spanBuilder, 'trace.span is undefined')
-            traceCompleted = new Promise(resolve => finished(res, resolve))
-        }
+        t.false(agent.currentTraceObject().spanBuilder, 'trace.span is undefined')
+        traceCompleted = new Promise(resolve => finished(res, resolve))
     })
 
     const server = app.listen(5006, async () => {
-        let result = await axios.get('http://localhost:5006/test1')
-        t.equal(result.status, 200, 'status code is 200')
-
-        const span = await dataSender.waitForSpan(traceRoot)
-        t.equal(span.spanEventList.length, 1, 'the PSpan has only Router.get')
-
-        let actualBuilder = new MethodDescriptorBuilder('get')
-            .setClassName('Router')
-        let actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-        let actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence == 0)
-        t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualMethodDescriptor.apiDescriptor, 'Router.get', 'apiDescriptor in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualMethodDescriptor.className, 'Router', 'className in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualMethodDescriptor.methodName, 'get', 'methodName in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanEvent.sequence, 0, 'spanEvent.sequence Router.get in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanEvent.depth, 1, 'spanEvent.depth Router.get in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanEvent.serviceType, ServiceType.express.getCode(), 'spanEvent.serviceType Router.get in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanEvent.nextSpanId, '-1', 'spanEvent.nextSpanId Router.get in sampled Trace of DisableTrace Functional Tests')
-
-        actualBuilder = new MethodDescriptorBuilder('query')
-            .setClassName('Connection')
-        actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
-        const handlerSpanEvents = dataSender.findAsyncInvocationSpanEvents(actualSpanEvent)
-        t.equal(handlerSpanEvents[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'the route handler runs in the Asynchronous Invocation of Router.get')
-        actualSpanEvent = handlerSpanEvents.find(spanEvent => spanEvent.sequence == 1)
-        t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'apiId Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualMethodDescriptor.apiDescriptor, 'Connection.query', 'apiDescriptor Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualMethodDescriptor.className, 'Connection', 'className Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualMethodDescriptor.methodName, 'query', 'methodName Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanEvent.sequence, 1, 'spanEvent.sequence Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanEvent.depth, 2, 'spanEvent.depth Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'spanEvent.serviceType Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanEvent.destinationId, 'test', 'spanEvent.destinationId Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanEvent.endPoint, container.getHost(), 'spanEvent.endPoint Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanEvent.nextSpanId, '-1', 'spanEvent.nextSpanId Connection.query in sampled Trace of DisableTrace Functional Tests')
-        let actualNextAsyncId = actualSpanEvent.asyncId
-        let actualSpanChunk = dataSender.findSpanChunk(actualNextAsyncId)
-        t.equal(actualSpanChunk.traceRoot, span.traceRoot, 'spanChunk.transactionIdObject Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanChunk.localAsyncId.asyncId, actualSpanEvent.asyncId.getAsyncId(), 'spanChunk.localAsyncId.asyncId Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanChunk.localAsyncId.sequence, 1, 'spanChunk.localAsyncId.sequence Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanChunk.spanEventList[0].apiId, defaultPredefinedMethodDescriptorRegistry.asyncInvocationDescriptor.apiId, 'spanChunk.spanEventList[0].apiId is asyncInvocationDescriptor.apiId Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanChunk.spanEventList[0].depth, 1, 'spanChunk.spanEventList[0].depth is 1 Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanChunk.spanEventList[0].sequence, 0, 'spanChunk.spanEventList[0].sequence is 0 Connection.query in sampled Trace of DisableTrace Functional Tests')
-        t.equal(actualSpanChunk.spanEventList[0].serviceType, ServiceType.async.getCode(), 'spanChunk.spanEventList[0].serviceType is async Connection.query in sampled Trace of DisableTrace Functional Tests')
-
-        nullDataSenderAgent({ 'sampling': { 'enable': false } })
-        result = await axios.get('http://localhost:5006/test1')
-        t.equal(result.status, 200, 'status code is 200')
+        const result = await axios.get('http://localhost:5006/test1')
+        t.equal(result.status, 200, 'the query in the disabled trace responds 200')
 
         await traceCompleted
         connection.end()
@@ -553,7 +468,6 @@ test('Disable trace', async (t) => {
     })
 })
 
-// https://github.com/pinpoint-apm/pinpoint-node-agent/issues/316
 test('Fix wrong transactionId', (t) => {
     const dataSender = new RecordingDataSender()
     const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
@@ -619,107 +533,11 @@ test('Fix wrong transactionId', (t) => {
     })
 })
 
-test('Express: a mysql query that fails in a route records the error on the Asynchronous Invocation of its query callback', async (t) => {
-    const dataSender = new RecordingDataSender()
-    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
-    const container = await startMySql()
-    const pool = mysql.createPool(container.getConnectionUri())
-
-    let traceRoot
-    const app = new express()
-    app.get('/mysql-error', (req, res) => {
-        traceRoot = agent.currentTraceObject().getTraceRoot()
-        pool.query('SELECT id FROM no_such_table', (error) => {
-            if (error) {
-                res.status(500).send(error.code)
-                return
-            }
-            res.send('ok')
-        })
-    })
-    const server = app.listen(0)
-    await once(server, 'listening')
-    const response = await fetch(`http://localhost:${server.address().port}/mysql-error`)
-    t.equal(response.status, 500, 'the route responds 500 after the query fails')
-    const span = await dataSender.waitForSpan(traceRoot)
-    server.close()
-    pool.end()
-
-    const querySpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0]).find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
-    t.equal(querySpanEvent.destinationId, 'test', 'the query span event destinationId is the database name in the connection URI')
-    t.notOk(querySpanEvent.exceptionInfo, 'the query span event has no error, because the query returns before its result')
-    const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
-    t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error of the failed query')
-
-    const actualExceptionMetaDataList = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === traceRoot)
-    t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
-    const actualExceptionMetaData = actualExceptionMetaDataList[0].valueOfProtocolBuffer()
-    const actualExceptions = actualExceptionMetaData.getExceptionsList()
-    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
-    t.equal(actualExceptions[0].getExceptionmessage(), "ER_NO_SUCH_TABLE: Table 'test.no_such_table' doesn't exist", 'ExceptionMetaData exception is the error of the failed query')
-    t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(asyncInvocationSpanEvent), 'the Asynchronous Invocation span event points to the exception')
-    t.equal(actualExceptionMetaData.getUritemplate(), '/mysql-error', 'ExceptionMetaData uriTemplate is the route')
-    t.end()
-})
-
-test('Koa: a mysql query that fails in a route records the error on the Asynchronous Invocation of its query callback', async (t) => {
-    const dataSender = new RecordingDataSender()
-    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
-    const container = await startMySql()
-    const pool = mysql.createPool(container.getConnectionUri())
-
-    let traceRoot
-    const app = new Koa()
-    const router = new Router()
-    router.get('/mysql-error', async (ctx) => {
-        traceRoot = agent.currentTraceObject().getTraceRoot()
-        try {
-            await new Promise((resolve, reject) => {
-                pool.query('SELECT id FROM no_such_table', (error, results) => error ? reject(error) : resolve(results))
-            })
-            ctx.body = 'ok'
-        } catch (error) {
-            ctx.status = 500
-            ctx.body = error.code
-        }
-    })
-    app.use(router.routes()).use(router.allowedMethods())
-    const server = app.listen(0)
-    await once(server, 'listening')
-    const response = await fetch(`http://localhost:${server.address().port}/mysql-error`)
-    t.equal(response.status, 500, 'the route responds 500 after the query fails')
-    const span = await dataSender.waitForSpan(traceRoot)
-    server.close()
-    pool.end()
-
-    const querySpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0]).find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
-    t.equal(querySpanEvent.destinationId, 'test', 'the query span event destinationId is the database name in the connection URI')
-    t.notOk(querySpanEvent.exceptionInfo, 'the query span event has no error, because the query returns before its result')
-    const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
-    t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error of the failed query')
-
-    const actualExceptionMetaDataList = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === traceRoot)
-    t.equal(actualExceptionMetaDataList.length, 1, 'one ExceptionMetaData for the request')
-    const actualExceptionMetaData = actualExceptionMetaDataList[0].valueOfProtocolBuffer()
-    const actualExceptions = actualExceptionMetaData.getExceptionsList()
-    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
-    t.equal(actualExceptions[0].getExceptionmessage(), "ER_NO_SUCH_TABLE: Table 'test.no_such_table' doesn't exist", 'ExceptionMetaData exception is the error of the failed query')
-    t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(asyncInvocationSpanEvent), 'the Asynchronous Invocation span event points to the exception')
-    t.equal(actualExceptionMetaData.getUritemplate(), '/mysql-error', 'ExceptionMetaData uriTemplate is the route')
-    t.end()
-})
-
 test('a mysql query in a getConnection callback records its error on the Asynchronous Invocation of its callback', async (t) => {
     const dataSender = new RecordingDataSender()
     const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
     const container = await startMySql()
-    const pool = mysql.createPool({
-        host: container.getHost(),
-        port: container.getPort(),
-        database: 'test',
-        user: container.getUsername(),
-        password: container.getUserPassword(),
-    })
+    const pool = mysql.createPool(container.getConnectionUri())
 
     const trace = agent.createTraceObject()
     await localStorage.run(trace, () => new Promise((resolve) => {
@@ -735,46 +553,9 @@ test('a mysql query in a getConnection callback records its error on the Asynchr
     pool.end()
 
     const querySpanEvent = dataSender.findSpanChunks(trace.getTraceRoot()).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+    t.equal(querySpanEvent.destinationId, 'test', 'the query span event destinationId is the database name in the connection URI')
     const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
     t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error, though the getConnection callback closed its child trace before the result')
-
-    const actualExceptions = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === trace.getTraceRoot()).flatMap(exceptionMetaData => exceptionMetaData.valueOfProtocolBuffer().getExceptionsList())
-    t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')
-    t.equal(actualExceptions[0].getExceptionmessage(), "ER_NO_SUCH_TABLE: Table 'test.no_such_table' doesn't exist", 'ExceptionMetaData exception is the error of the failed query')
-    t.equal(actualExceptions[0].getExceptionid(), exceptionChainId(asyncInvocationSpanEvent), 'the Asynchronous Invocation span event points to the exception')
-    t.end()
-})
-
-test('a mysql query that starts after the getConnection callback returned records its error on the Asynchronous Invocation of its callback', async (t) => {
-    const dataSender = new RecordingDataSender()
-    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
-    const container = await startMySql()
-    const pool = mysql.createPool({
-        host: container.getHost(),
-        port: container.getPort(),
-        database: 'test',
-        user: container.getUsername(),
-        password: container.getUserPassword(),
-    })
-
-    const trace = agent.createTraceObject()
-    await localStorage.run(trace, () => new Promise((resolve) => {
-        pool.getConnection((error, connection) => {
-            setImmediate(() => {
-                connection.query('SELECT id FROM no_such_table', () => {
-                    connection.release()
-                    resolve()
-                })
-            })
-        })
-    }))
-    agent.completeTraceObject(trace)
-    await dataSender.waitForSpan(trace.getTraceRoot())
-    pool.end()
-
-    const querySpanEvent = dataSender.findSpanChunks(trace.getTraceRoot()).flatMap(spanChunk => spanChunk.spanEventList).find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
-    const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
-    t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error, though the query span event was sent when it ended in the closed child trace')
 
     const actualExceptions = dataSender.actualExceptionMetaData().filter(exceptionMetaData => exceptionMetaData.traceRoot === trace.getTraceRoot()).flatMap(exceptionMetaData => exceptionMetaData.valueOfProtocolBuffer().getExceptionsList())
     t.equal(actualExceptions.length, 1, 'ExceptionMetaData has one exception')

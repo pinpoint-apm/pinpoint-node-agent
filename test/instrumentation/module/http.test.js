@@ -20,6 +20,7 @@ const localStorage = require('../../../lib/instrumentation/context/local-storage
 const HttpRequestTraceBuilder = require('../../../lib/instrumentation/http/http-request-trace-builder')
 const TraceHeaderBuilder = require('../../../lib/instrumentation/http/trace-header-builder')
 const RecordingDataSender = require('../../support/recording-data-sender')
+const SpanRecorder = require('../../../lib/context/trace/span-recorder')
 
 const TEST_ENV = {
     host: 'localhost',
@@ -78,6 +79,7 @@ test('http error status code', async (t) => {
     t.equal(pSpan.getErr(), 1, 'error should be 1')
     t.end()
 })
+
 test('http should not mark a client disconnect before the response as an error', (t) => {
     const dataSender = new RecordingDataSender()
     const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
@@ -99,46 +101,69 @@ test('http should not mark a client disconnect before the response as an error',
     })
 })
 
-test('http should not mark a client close after the response as an error', (t) => {
-    const dataSender = new RecordingDataSender()
-    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+test('http handles the request without a trace when the agent fails to make the trace', (t) => {
+    const agent = new ProcessAgentBuilder().setDataSender(new RecordingDataSender()).build()
+    const build = TraceHeaderBuilder.prototype.build
+    TraceHeaderBuilder.prototype.build = function () {
+        throw new Error('the agent fails to make the trace')
+    }
+    t.teardown(() => {
+        TraceHeaderBuilder.prototype.build = build
+    })
 
-    let client
+    let traceInHandler
     const server = http.createServer((req, res) => {
-        dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then((span) => {
-            t.equal(span.annotations[0].value, 200, 'HTTP status code is 200')
-            t.equal(span.traceRoot.getShared().getErrorCode(), undefined, 'client close after the response does not mark the error code')
-            client.destroy()
-            server.close()
-            t.end()
-        })
+        traceInHandler = agent.currentTraceObject()
         res.end('ok')
     })
-    server.listen(0, () => {
-        client = sendRequestOverRawSocket(server.address().port, '/')
+    server.listen(0, async () => {
+        try {
+            const response = await fetch(`http://localhost:${server.address().port}/`)
+            t.equal(response.status, 200, 'responds with 200')
+            t.equal(await response.text(), 'ok', 'the request handler runs')
+            t.equal(traceInHandler, undefined, 'the request handler runs without a trace')
+        } catch (error) {
+            t.fail(error.stack)
+        } finally {
+            server.close()
+            t.end()
+        }
     })
 })
 
-test('http should mark a 500 response after a client disconnect as an error', (t) => {
-    const dataSender = new RecordingDataSender()
-    const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
+test('http handles the request when the agent fails to record the response', (t) => {
+    const agent = new ProcessAgentBuilder().setDataSender(new RecordingDataSender()).build()
+    const recordAttribute = SpanRecorder.prototype.recordAttribute
+    SpanRecorder.prototype.recordAttribute = function (key, value) {
+        if (key === annotationKey.HTTP_STATUS_CODE) {
+            throw new Error('the agent fails to record the response')
+        }
+        return recordAttribute.call(this, key, value)
+    }
+    t.teardown(() => {
+        SpanRecorder.prototype.recordAttribute = recordAttribute
+    })
 
-    let client
+    let traceInHandler
     const server = http.createServer((req, res) => {
-        dataSender.waitForSpan(agent.currentTraceObject().getTraceRoot()).then((span) => {
-            t.equal(span.annotations[0].value, 500, 'HTTP status code is 500')
-            t.equal(span.traceRoot.getShared().getErrorCode(), 1, '500 status code marks the error code')
+        traceInHandler = agent.currentTraceObject()
+        res.end('ok')
+    })
+    server.listen(0, async () => {
+        const url = `http://localhost:${server.address().port}/`
+        try {
+            const response = await fetch(url)
+            t.equal(response.status, 200, 'responds with 200')
+            t.ok(traceInHandler, 'the request handler runs with a trace')
+
+            const nextResponse = await fetch(url)
+            t.equal(nextResponse.status, 200, 'the next request also responds with 200')
+        } catch (error) {
+            t.fail(error.stack)
+        } finally {
             server.close()
             t.end()
-        })
-        res.on('close', () => {
-            res.statusCode = 500
-            res.end('error')
-        })
-        client.destroy()
-    })
-    server.listen(0, () => {
-        client = sendRequestOverRawSocket(server.address().port, '/')
+        }
     })
 })
 

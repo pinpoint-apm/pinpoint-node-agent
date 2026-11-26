@@ -148,11 +148,11 @@ The other calls between apps:
    expect   transaction list  1 row, URL /mysql2, no error mark
             call tree         Node Server Process  /mysql2, http.status.code 200
                                 <route row>
-                                  PoolConnection.query  (MYSQL), SQL SELECT id, name FROM member WHERE id = ?,
-                                                        SQL-BindValue a
+                                  Pool.query  (MYSQL)
                                     Pool.getConnection  (MYSQL)
                                       Asynchronous Invocation  (ASYNC)
-                                        PoolConnection.query  (MYSQL)
+                                        PoolConnection.query  (MYSQL), SQL SELECT id, name FROM member WHERE id = ?,
+                                                              SQL-BindValue a
             Error Analysis    no error
 
 8. A route whose MySQL query fails
@@ -160,10 +160,10 @@ The other calls between apps:
    expect   transaction list  1 row, URL /mysql2-error, error mark
             call tree         Node Server Process  /mysql2-error, http.status.code 500
                                 <route row>
-                                  PoolConnection.query  (MYSQL), SQL SELECT id FROM no_such_table
+                                  Pool.query  (MYSQL)
                                     Pool.getConnection  (MYSQL)
                                       Asynchronous Invocation  (ASYNC)
-                                        PoolConnection.query  (MYSQL)
+                                        PoolConnection.query  (MYSQL), SQL SELECT id FROM no_such_table
                                     Asynchronous Invocation  (ASYNC), error
                                       Error: Table 'test.no_such_table' doesn't exist
             Error Analysis    1 error, class Error, message Table 'test.no_such_table' doesn't exist,
@@ -218,7 +218,7 @@ The other calls between apps:
                                   http.request  (ASYNC_HTTP_CLIENT)
                                     Asynchronous Invocation  (ASYNC)
                                       GET  127.0.0.1:TARGET_PORT/, http.status.code 200
-                                  PoolConnection.query  (MYSQL), the rows of scenario 7
+                                  Pool.query  (MYSQL), the rows of scenario 7
 ```
 
 ### 3. Route handlers
@@ -484,4 +484,6 @@ The other calls between apps:
                               SELECT id FROM no_such_table               1
                               SELECT ?                                   2 (the SELECT 1 of /ready on
                                                                            mysql2 and pg)
+            Server Map        the link from node-agent-qa to the MySQL database test counts 4 calls
+                              for each app: the SELECT 1 of /ready, /mysql2, /mysql2-error and /parallel
 ```

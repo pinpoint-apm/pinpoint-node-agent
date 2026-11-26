@@ -176,15 +176,27 @@ test(`Connection Pool with query hooking`, async (t) => {
             t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'serviceType in createPool spanEvent')
 
             actualBuilder = new MethodDescriptorBuilder('query')
-                .setClassName('PoolConnection')
+                .setClassName('Pool')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             actualSpanEvent = span.spanEventList.find( spanEvent => spanEvent.sequence == 1)
-            t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in Pool.getConnection() spanEvent')
-            t.equal(actualSpanEvent.endPoint, container.getHost(), 'endPoint in Pool.getConnection() spanEvent')
-            t.equal(actualSpanEvent.destinationId, 'test', 'destinationId in Pool.getConnection() spanEvent')
-            t.equal(actualSpanEvent.sequence, 1, 'sequence in Pool.getConnection() spanEvent')
-            t.equal(actualSpanEvent.depth, 1, 'depth in Pool.getConnection() spanEvent')
-            t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType in Pool.query() spanEvent')
+            t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in Pool.query() spanEvent')
+            t.equal(actualSpanEvent.endPoint, container.getHost(), 'endPoint in Pool.query() spanEvent')
+            t.equal(actualSpanEvent.destinationId, 'test', 'destinationId in Pool.query() spanEvent')
+            t.equal(actualSpanEvent.sequence, 1, 'sequence in Pool.query() spanEvent')
+            t.equal(actualSpanEvent.depth, 1, 'depth in Pool.query() spanEvent')
+            t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'serviceType in Pool.query() spanEvent is MYSQL, so the MySQL link counts only the PoolConnection.query that runs the query')
+
+            const poolGetConnectionSpanEvent = span.spanEventList.find(spanEvent => spanEvent.depth === 2)
+            const poolQueryConnectionSpanEvent = dataSender.findSpanChunk(poolGetConnectionSpanEvent.asyncId).spanEventList[1]
+            t.equal(poolQueryConnectionSpanEvent.apiId, apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('query').setClassName('PoolConnection')).apiId, 'apiId in PoolConnection.query() spanEvent in the getConnection callback of Pool.query()')
+            t.equal(poolQueryConnectionSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType in PoolConnection.query() spanEvent in the getConnection callback of Pool.query()')
+            t.equal(poolQueryConnectionSpanEvent.destinationId, 'test', 'destinationId in PoolConnection.query() spanEvent in the getConnection callback of Pool.query()')
+            const poolQueryAnnotation = poolQueryConnectionSpanEvent.annotations[0]
+            t.equal(poolQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'SQL annotation key in PoolConnection.query() spanEvent in the getConnection callback of Pool.query()')
+            t.equal(poolQueryAnnotation.value.intValue, agent.getTraceContext().spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = ?').sqlId, 'SQL id in PoolConnection.query() spanEvent in the getConnection callback of Pool.query()')
+            t.equal(poolQueryAnnotation.value.stringValue2, 'a', 'bind value in PoolConnection.query() spanEvent in the getConnection callback of Pool.query()')
+            const transactionSpanEvents = span.spanEventList.concat(dataSender.findSpanChunks(span.traceRoot).flatMap(spanChunk => spanChunk.spanEventList))
+            t.equal(transactionSpanEvents.filter(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode()).length, 1, 'one MYSQL_EXECUTE_QUERY spanEvent for one Pool.query()')
 
             let actualSpanChunk = dataSender.findSpanChunk(actualSpanEvent.asyncId)
             t.equal(actualSpanChunk.getTraceRoot(), trace.getTraceRoot(), 'transactionIdObject in spanChunk in Pool.getConnection()')
@@ -298,14 +310,19 @@ test(`mysql2/promise createPool with query hooking`, async (t) => {
             t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'serviceType in createPool spanEvent')
 
             actualBuilder = new MethodDescriptorBuilder('query')
-                .setClassName('PoolConnection')
+                .setClassName('Pool')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             actualSpanEvent = span.spanEventList.find(spanEvent => spanEvent.sequence == 1)
             t.equal(actualSpanEvent.apiId, actualMethodDescriptor.apiId, 'apiId in Pool.query() spanEvent')
             t.equal(actualSpanEvent.endPoint, container.getHost(), 'endPoint in Pool.query() spanEvent')
             t.equal(actualSpanEvent.destinationId, 'test', 'destinationId in Pool.query() spanEvent')
             t.equal(actualSpanEvent.depth, 1, 'depth in Pool.query() spanEvent')
-            t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType in Pool.query() spanEvent')
+            t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'serviceType in Pool.query() spanEvent is MYSQL')
+
+            const poolGetConnectionSpanEvent = span.spanEventList.find(spanEvent => spanEvent.depth === 2)
+            const poolQueryConnectionSpanEvent = dataSender.findSpanChunk(poolGetConnectionSpanEvent.asyncId).spanEventList[1]
+            t.equal(poolQueryConnectionSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType in PoolConnection.query() spanEvent in the getConnection callback of Pool.query()')
+            t.equal(poolQueryConnectionSpanEvent.annotations[0].value.stringValue2, 'a', 'bind value in PoolConnection.query() spanEvent in the getConnection callback of Pool.query()')
         })
 
         setImmediate(async () => {
@@ -357,6 +374,9 @@ test(`Cluster with query`, async (t) => {
         t.equal(results[0].id, 'a', 'id in SELECT query hooking')
         t.equal(results[0].name, 'name1', 'name in SELECT query hooking')
         t.equal(results[0].joined.toISOString().slice(0, 10), '2023-01-17', 'joined in SELECT query hooking')
+
+        const [namespaceResults] = await poolCluster.of('*').query(`SELECT * FROM member WHERE id = ?`, 'b')
+        t.equal(namespaceResults[0].id, 'b', 'id in PoolCluster.of().query()')
 
         dataSender.waitForSpan(trace.getTraceRoot()).then((span) => {
             let actualBuilder = new MethodDescriptorBuilder('createPoolCluster')
@@ -410,6 +430,19 @@ test(`Cluster with query`, async (t) => {
             t.equal(actualSpanChunk.spanEventList[0].sequence, 0, 'sequence in spanChunk in PoolConnection.query()')
             t.equal(actualSpanChunk.spanEventList[0].depth, 1, 'depth in spanChunk in PoolConnection.query()')
             t.equal(actualSpanChunk.spanEventList[0].serviceType, ServiceType.async.getCode(), 'serviceType in spanChunk in PoolConnection.query()')
+
+            const namespaceGetConnectionSpanEvent = span.spanEventList[5]
+            t.equal(namespaceGetConnectionSpanEvent.apiId, apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('getConnection').setClassName('Pool')).apiId, 'apiId in Pool.getConnection() spanEvent of PoolCluster.of().query()')
+            const namespaceQuerySpanEvent = dataSender.findSpanChunk(namespaceGetConnectionSpanEvent.asyncId).spanEventList[1]
+            t.equal(namespaceQuerySpanEvent.apiId, apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('query').setClassName('PoolConnection')).apiId, 'apiId in PoolConnection.query() spanEvent in the getConnection callback of PoolCluster.of().query()')
+            t.equal(namespaceQuerySpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'serviceType in PoolConnection.query() spanEvent in the getConnection callback of PoolCluster.of().query()')
+            t.equal(namespaceQuerySpanEvent.destinationId, 'test', 'destinationId in PoolConnection.query() spanEvent in the getConnection callback of PoolCluster.of().query()')
+            const namespaceQueryAnnotation = namespaceQuerySpanEvent.annotations[0]
+            t.equal(namespaceQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'SQL annotation key in PoolConnection.query() spanEvent in the getConnection callback of PoolCluster.of().query()')
+            t.equal(namespaceQueryAnnotation.value.intValue, agent.getTraceContext().spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM member WHERE id = ?').sqlId, 'SQL id in PoolConnection.query() spanEvent in the getConnection callback of PoolCluster.of().query()')
+            t.equal(namespaceQueryAnnotation.value.stringValue2, 'b', 'bind value in PoolConnection.query() spanEvent in the getConnection callback of PoolCluster.of().query()')
+            const transactionSpanEvents = span.spanEventList.concat(dataSender.findSpanChunks(span.traceRoot).flatMap(spanChunk => spanChunk.spanEventList))
+            t.equal(transactionSpanEvents.filter(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode()).length, 2, 'one MYSQL_EXECUTE_QUERY spanEvent for connection.query() and one for PoolCluster.of().query()')
             t.end()
         })
 

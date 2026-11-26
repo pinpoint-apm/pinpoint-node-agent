@@ -47,8 +47,21 @@ module.exports = {
         return { status: 200, body: { outgoing: outgoing.status, mysql2: mysql2.status } }
     },
     downstream: (headers) => ({ status: 200, body: { pinpointHeaders: pinpointHeaders(headers) } }),
-    httpRequestApp: (app, path) => httpRequest(appUrls[app]() + path),
-    fetchApp: (app, path) => fetchUrl(appUrls[app]() + path),
+    downstreamSlow: () => new Promise((resolve) => setTimeout(() => resolve({ status: 200, body: { slow: 'ok' } }), 1000)),
+    downstreamDatabases: async () => {
+        const mysql2 = await module.exports.mysql2()
+        const pg = await module.exports.pg()
+        const ioredis = await module.exports.ioredis()
+        const mysql2Error = await module.exports.mysql2Error()
+        return { status: 200, body: { mysql2: mysql2.status, pg: pg.status, ioredis: ioredis.status, mysql2Error: mysql2Error.status } }
+    },
+    httpRequestApp: (app, path, options) => httpRequest(appUrls[app]() + path, options),
+    fetchApp: (app, path, options) => fetchUrl(appUrls[app]() + path, options),
+    abortBeforeAnswer: () => ({ signal: AbortSignal.timeout(100) }),
+    both: async (first, second) => {
+        const outgoing = await Promise.all([first, second])
+        return { status: 200, body: { outgoing: outgoing.map(({ status }) => status) } }
+    },
 }
 
 async function connectDatabases() {
@@ -61,9 +74,9 @@ async function connectDatabases() {
     return { mysql2, pg, redis, ioredis, mongodb }
 }
 
-function httpRequest(url) {
+function httpRequest(url, options = {}) {
     return new Promise((resolve) => {
-        http.request(url, (res) => {
+        http.request(url, options, (res) => {
             let body = ''
             res.setEncoding('utf8')
             res.on('data', (chunk) => body += chunk)
@@ -74,12 +87,12 @@ function httpRequest(url) {
     })
 }
 
-async function fetchUrl(url) {
+async function fetchUrl(url, options) {
     try {
-        const res = await fetch(url)
+        const res = await fetch(url, options)
         return { status: res.status, body: parse(await res.text()) }
     } catch (error) {
-        return { status: 502, body: { code: error.cause?.code } }
+        return { status: 502, body: { code: error.cause?.code ?? error.name } }
     }
 }
 

@@ -1,6 +1,6 @@
 # QA startup validation scenarios
 
-A release QA runs these on one app (`apps/express.js`) with no databases, no target and no
+A release QA runs these on one app (`.claude/skills/qa/apps/express.js`) with no databases, no target and no
 requests. Judge by the DEV agent list and the collector connections of the app process.
 
 ```text

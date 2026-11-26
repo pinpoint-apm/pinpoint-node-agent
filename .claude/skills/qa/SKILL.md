@@ -26,7 +26,6 @@ agent sees it. Run QA after the tests pass.
 - Run every scenario in `scenarios.md` on each framework, plus the scenarios of the issue.
   A change that adds a feature adds its route to `apps/` and its scenario to `scenarios.md`
   in the same format.
-- A release QA also runs `startup-scenarios.md` on one app.
 - Report each expected value of a scenario as matched or not.
 
 ## Environment
@@ -63,7 +62,7 @@ Pick the checks per change and say why each one was picked or skipped.
 ### Memory
 
 - Pick it when the change touches the lifetime of traces, AsyncLocalStorage, senders,
-  caches, timers or sockets, and before every release.
+  caches, timers or sockets.
 - Run the app with `--inspect` or `--heapsnapshot-signal=SIGUSR2`. Load it with
   `wrk -t2 -c2` on the main route, plus the error routes every few seconds.
 - Take a snapshot after warm-up, then more at intervals under load.
@@ -84,8 +83,8 @@ Pick the checks per change and say why each one was picked or skipped.
 - One line per scenario: PASS or FAIL, the scenario, the evidence (command, output,
   received data). Base and change branch side by side.
 - Then the environment: worktree, commit, Node.js version, app, load.
-- Post the report as a comment on the PR under test; a release QA goes on the release
-  issue. When QA runs before the PR exists, post it right after the PR is created.
+- Post the report as a comment on the PR under test. When QA runs before the PR exists,
+  post it right after the PR is created.
 
 ## Cleanup
 

@@ -73,6 +73,16 @@ Each app calls the other two, one with `http.request()` and one with `fetch()`:
 the caller answers with the status and body it got. `/downstream` answers with the `Pinpoint-*`
 headers it received.
 
+The other calls between apps:
+
+| Caller path | What the caller does | What the called app does |
+|---|---|---|
+| `/call-both` | calls `/downstream` of both other apps at the same time with `Promise.all` | answers |
+| `/call-<app>-then-throw` | calls `/downstream`, then throws; Express passes the error to `next()` | answers |
+| `/call-<app>-fetch-fail` | calls `/downstream-fetch-fail` | `fetch()` to `CLOSED_PORT`, answers 502 |
+| `/call-<app>-abort` | calls `/downstream-slow` and aborts after 100 ms, answers 502 | answers after 1 s |
+| `/call-<app>-databases` | calls `/downstream-databases` | runs the queries of scenarios 7, 9, 12 and 8 in that order, answers 200 |
+
 ## Scenarios
 
 ### 1. Outgoing HTTP calls
@@ -293,6 +303,7 @@ headers it received.
                               pinpoint-flags 0, pinpoint-pappname = the caller's application name,
                               pinpoint-papptype 1400, pinpoint-pservicename = the caller's service name,
                               pinpoint-host 127.0.0.1:<app port>
+            Server Map        a link from node-agent-qa to node-agent-qa
 
 22. A route that calls another app that throws
    request  GET /call-<app>-throw for both other apps
@@ -315,12 +326,95 @@ headers it received.
    request  GET /call-<app> for both other apps
    expect   transaction list  no row from the caller or the called app
             response          only pinpoint-sampled s0
+
+24. A route that calls both other apps at the same time
+   request  GET /call-both
+   expect   transaction list  3 rows with the same transaction id: the caller's /call-both and
+                              /downstream of each called app, no error mark
+            call tree         Node Server Process  /call-both, http.status.code 200
+                                <route row>
+                                  the rows of scenario 21 for each called app, both under the same
+                                  <route row>
+            Error Analysis    no error
+
+25. A route that throws after another app answers
+   request  GET /call-<app>-then-throw for both other apps
+   expect   transaction list  2 rows with the same transaction id: the caller's
+                              /call-<app>-then-throw with an error mark, the called app's /downstream
+                              without one
+            call tree         Node Server Process  /call-<app>-then-throw, http.status.code 500
+                                the rows of scenario 21 for the called app
+              Express           Router.use  error, Error: qa caller throws after the call
+              Koa               Router.get  error, Error: qa caller throws after the call
+              Next.js           no error row
+            Error Analysis    Express, Koa: 1 error on the caller, class Error,
+                              message qa caller throws after the call,
+                              URI template /call-<app>-then-throw
+                              Next.js: no error
+
+26. A route that calls another app whose fetch() fails
+   request  GET /call-<app>-fetch-fail for both other apps
+   expect   transaction list  2 rows with the same transaction id, both with an error mark
+            call tree         Node Server Process  /call-<app>-fetch-fail, http.status.code 502
+                                <route row>
+                                  http.request  (ASYNC_HTTP_CLIENT)
+                                    Asynchronous Invocation  (ASYNC)
+                                      GET  127.0.0.1:<app port><app path prefix>/downstream-fetch-fail,
+                                           http.status.code 502
+                                        Node Server Process  /downstream-fetch-fail of the called app,
+                                                             http.status.code 502
+                                          the rows of scenario 4 under the called app's route row
+            Error Analysis    1 error on the called app, class Error,
+                              message connect ECONNREFUSED 127.0.0.1:CLOSED_PORT,
+                              URI template /downstream-fetch-fail (called app Next.js: null);
+                              no error on the caller
+
+27. A route that aborts its call before another app answers
+   request  GET /call-<app>-abort for both other apps
+   expect   transaction list  2 rows with the same transaction id: the caller's /call-<app>-abort
+                              with an error mark, about 100 ms; the called app's /downstream-slow
+                              without one, about 1 s
+            call tree         Node Server Process  /call-<app>-abort, http.status.code 502
+                                <route row>
+                                  http.request  (ASYNC_HTTP_CLIENT)
+                                    Asynchronous Invocation  (ASYNC)
+                                      GET  127.0.0.1:<app port><app path prefix>/downstream-slow, error
+                                        http.request(): AbortError: The operation was aborted
+                                        fetch(): TimeoutError: The operation was aborted due to timeout
+                                        Node Server Process  /downstream-slow of the called app,
+                                                             http.status.code 200
+            Error Analysis    1 error on the caller, URI template /call-<app>-abort (Next.js: null):
+                              http.request(): class AbortError, message The operation was aborted,
+                              with the cause TimeoutError
+                              fetch(): class TimeoutError, message The operation was aborted due to
+                              timeout
+                              no error on the called app
+
+28. A route that calls another app that queries databases
+   request  GET /call-<app>-databases for both other apps
+   expect   transaction list  2 rows with the same transaction id: the caller's /call-<app>-databases
+                              without an error mark, the called app's /downstream-databases with one
+            call tree         Node Server Process  /call-<app>-databases, http.status.code 200
+                                <route row>
+                                  http.request  (ASYNC_HTTP_CLIENT)
+                                    Asynchronous Invocation  (ASYNC)
+                                      GET  127.0.0.1:<app port><app path prefix>/downstream-databases,
+                                           http.status.code 200
+                                        Node Server Process  /downstream-databases of the called app,
+                                                             http.status.code 200
+                                          <route row>
+                                            the rows of scenarios 7, 9, 12 and 8, in that order
+            Error Analysis    1 error on the called app, class Error,
+                              message Table 'test.no_such_table' doesn't exist,
+                              URI template /downstream-databases (called app Next.js: null)
+            Server Map        links from node-agent-qa to the MySQL database test, the PostgreSQL
+                              database test and Redis
 ```
 
 ### 5. Requests from outside
 
 ```text
-24. A request from an app outside Pinpoint
+29. A request from an app outside Pinpoint
    request  GET /downstream with Pinpoint-TraceID qa-external-<app>^<epoch ms>^1,
             Pinpoint-SpanID 1111111111, Pinpoint-pSpanID 2222222222, Pinpoint-Flags 0,
             Pinpoint-pAppName qa-external, Pinpoint-pAppType 1000,
@@ -331,7 +425,7 @@ headers it received.
                                 Node Server Process  /downstream, http.status.code 200
                                   <route row>
 
-25. A request with sampling off from the caller
+30. A request with sampling off from the caller
    request  GET /downstream with Pinpoint-Sampled s0
    expect   transaction list  no row
 ```
@@ -339,7 +433,7 @@ headers it received.
 ### 6. Sampling
 
 ```text
-26. Sampling off
+31. Sampling off
    app      PINPOINT_SAMPLING=false
    request  GET /http-request-ok, /fetch-closed-port, /throw, /mysql2
    expect   transaction list  no row from the agent
@@ -349,25 +443,25 @@ headers it received.
 ### 7. URI stats
 
 ```text
-27. URI stats with the default settings
+32. URI stats with the default settings
    app      default settings: URI stats on, uriStats.httpMethod off, uriStats.useUserInput on
    request  GET /fetch-ok, then /user-input-uri, which sets the URI template /user/input/uri
    expect   URI stats         Express, Koa: a row /fetch-ok and a row /user/input/uri, no HTTP method
                               Next.js: a row /user/input/uri; no row for /api/fetch-ok
 
-28. URI stats with the HTTP method
+33. URI stats with the HTTP method
    app      PINPOINT_FEATURES_URI_STATS_HTTP_METHOD=true
    request  GET /fetch-ok
    expect   URI stats         Express, Koa: a row /fetch-ok with the HTTP method GET
                               Next.js: no row
 
-29. URI stats without the user input
+34. URI stats without the user input
    app      PINPOINT_FEATURES_URI_STATS_USE_USER_INPUT=false
    request  GET /user-input-uri
    expect   URI stats         Express, Koa: a row /user-input-uri, the route URI template
                               Next.js: no row
 
-30. URI stats off
+35. URI stats off
    app      PINPOINT_FEATURES_URI_STATS=false
    request  GET /fetch-ok, then /user-input-uri
    expect   URI stats         no row from the app
@@ -376,12 +470,12 @@ headers it received.
 ### 8. Query summary
 
 ```text
-31. Query summary off, the default
-   app      default settings, the run of scenarios 1-25
+36. Query summary off, the default
+   app      default settings, the run of scenarios 1-30
    request  the query routes of scenarios 7, 8, 9, 10 and 14
    expect   query summary     no query of the application in that run
 
-32. Query summary on
+37. Query summary on
    app      query summary on, started fresh
    request  GET /ready, then /mysql2, /mysql2-error, /pg, /parallel once each
    expect   query summary     grouped by query, the count for each app:

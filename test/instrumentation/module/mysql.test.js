@@ -623,13 +623,7 @@ test('Express: a mysql query that fails in a route records the error on the Asyn
     const dataSender = new RecordingDataSender()
     const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
     const container = await startMySql()
-    const pool = mysql.createPool({
-        host: container.getHost(),
-        port: container.getPort(),
-        database: 'test',
-        user: container.getUsername(),
-        password: container.getUserPassword(),
-    })
+    const pool = mysql.createPool(container.getConnectionUri())
 
     let traceRoot
     const app = new express()
@@ -652,6 +646,7 @@ test('Express: a mysql query that fails in a route records the error on the Asyn
     pool.end()
 
     const querySpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0]).find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+    t.equal(querySpanEvent.destinationId, 'test', 'the query span event destinationId is the database name in the connection URI')
     t.notOk(querySpanEvent.exceptionInfo, 'the query span event has no error, because the query returns before its result')
     const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
     t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error of the failed query')
@@ -671,13 +666,7 @@ test('Koa: a mysql query that fails in a route records the error on the Asynchro
     const dataSender = new RecordingDataSender()
     const agent = new ProcessAgentBuilder().setDataSender(dataSender).build()
     const container = await startMySql()
-    const pool = mysql.createPool({
-        host: container.getHost(),
-        port: container.getPort(),
-        database: 'test',
-        user: container.getUsername(),
-        password: container.getUserPassword(),
-    })
+    const pool = mysql.createPool(container.getConnectionUri())
 
     let traceRoot
     const app = new Koa()
@@ -704,6 +693,7 @@ test('Koa: a mysql query that fails in a route records the error on the Asynchro
     pool.end()
 
     const querySpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0]).find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+    t.equal(querySpanEvent.destinationId, 'test', 'the query span event destinationId is the database name in the connection URI')
     t.notOk(querySpanEvent.exceptionInfo, 'the query span event has no error, because the query returns before its result')
     const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
     t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error of the failed query')

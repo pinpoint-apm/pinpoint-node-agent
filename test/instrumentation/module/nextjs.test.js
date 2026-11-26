@@ -468,6 +468,7 @@ test('Next.js: a mysql2 query that fails in an API route records the error on th
 
     const span = await waitForSpan((s) => s.getAcceptevent()?.getRpc()?.includes('/api/mysql-error'), 10000)
     const querySpanEvent = span.getSpaneventList().find((spanEvent) => spanEvent.getServicetype() === mysqlExecuteQueryServiceType.getCode())
+    t.equal(querySpanEvent.getNextevent().getMessageevent().getDestinationid(), 'test', 'the query span event destinationId is the database name in the connection URI')
     t.notOk(querySpanEvent.getExceptioninfo(), 'the query span event has no error, because the query returns before its result')
     const callbackSpanChunk = await waitForSpanChunk((spanChunk) => spanChunk.getLocalasyncid()?.getAsyncid() === querySpanEvent.getAsyncevent(), 10000)
     const asyncInvocationSpanEvent = callbackSpanChunk.getSpaneventList().find((spanEvent) => spanEvent.getServicetype() === ServiceType.async.getCode())

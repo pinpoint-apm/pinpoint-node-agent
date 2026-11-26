@@ -28,6 +28,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 - [[#531](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/531)] `PINPOINT_SERVICE_TYPE` and json `applicationServiceType`; the application service type is always NODE (1400)
 
 ### Fixed
+- [[#647](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/647)] A `mysql` or `mysql2` `pool.query()` records one `MYSQL_EXECUTE_QUERY` span event, so the MySQL link counts one call; the SQL is on the `PoolConnection.query` that runs it
 - [[#641](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/641)] Record the database name of a `mysql` or `mysql2` pool or connection created from a connection URI
 - [[#626](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/626)] Record the request path of a `fetch()` call in the URL of its span event
 - [[#637](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/637)] Express route and middleware handlers and Koa route handlers run in their own Asynchronous Invocation, so the calls a handler makes after an `await` stay under its route

@@ -66,6 +66,15 @@ test(`connection with query`, async (t) => {
             if (error) throw error
             t.equal(results.affectedRows, 1, 'INSERT INTO `member` (id, name) VALUES (?, ?)')
         })
+        connection.beginTransaction(function (error) {
+            if (error) throw error
+        })
+        connection.query({ sql: 'SELECT * FROM `member` WHERE id = ?', timeout: 40000 }, ['b'], function (error, results) {
+            if (error) throw error
+            t.equal(results[0].id, 'b', 'SELECT member id with query options')
+        })
+        connection.query('SELECT * FROM `member` WHERE id = ?', ['a'])
+        connection.query('SELECT ?, ?, ?', ['a', null, Object.create(null)], function () {})
         connection.query('SELECT * FROM `member` WHERE id = ?', 'c', async function (error, results) {
             if (error) throw error
 
@@ -156,6 +165,17 @@ test(`connection with query`, async (t) => {
             t.equal(actualQueryAnnotation.value.stringValue1, '', 'the query annotation value stringValue1 is sql normalizedSql parsedParameters')
             t.equal(actualQueryAnnotation.value.stringValue2, 'c,cname,2023-08-18', 'the query annotation value stringValue2 is bind value')
             t.equal(actualParsingResult.sql.normalizedSql, 'INSERT INTO `member` (id, name, joined) VALUES (?, ?, ?)', 'the query annotation sql normalizedSql')
+
+            const beginTransactionAnnotation = span.spanEventList[6].annotations[0]
+            t.equal(beginTransactionAnnotation.value.intValue, agent.getTraceContext().spanEventRecorderFactory.sqlMetadataService.cacheSql('START TRANSACTION').sqlId, 'the beginTransaction query annotation is START TRANSACTION')
+            t.equal(beginTransactionAnnotation.value.stringValue2, null, 'the beginTransaction query annotation has no bind value')
+
+            const queryOptionsAnnotation = span.spanEventList[7].annotations[0]
+            t.equal(queryOptionsAnnotation.value.intValue, agent.getTraceContext().spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM `member` WHERE id = ?').sqlId, 'the query options annotation is the sql of the options')
+            t.equal(queryOptionsAnnotation.value.stringValue2, 'b', 'the query options annotation bind value is the values argument')
+
+            t.equal(span.spanEventList[8].annotations[0].value.stringValue2, 'a', 'the query annotation of a query without a callback has the bind value')
+            t.equal(span.spanEventList[9].annotations[0].value.stringValue2, 'a,,', 'null and an object without toString keep their places as empty bind values')
 
             t.end()
         })
@@ -294,14 +314,26 @@ test(`Connection Pool with query`, async (t) => {
             t.equal(actualSpanEvent.destinationId, 'test', 'PoolConnection.query spanEvent destinationId on pool.query via getConnection')
 
             actualBuilder = new MethodDescriptorBuilder('query')
-                .setClassName('PoolConnection')
+                .setClassName('Pool')
             actualMethodDescriptor = apiMetaService.cacheApiWithBuilder(actualBuilder)
             actualSpanEvent = span.spanEventList[2]
-            t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'Pool.getConnection spanEvent apiId on pool.query')
-            t.equal(actualSpanEvent.depth, 1, 'Pool.getConnection spanEvent depth on pool.query')
-            t.equal(actualSpanEvent.sequence, 2, 'Pool.getConnection spanEvent sequence on pool.query')
-            t.equal(actualSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'PoolConnection.query spanEvent serviceType on pool.query')
-            t.equal(actualSpanEvent.destinationId, 'test', 'PoolConnection.query spanEvent destinationId on pool.query direct')
+            t.equal(actualMethodDescriptor.apiId, actualSpanEvent.apiId, 'Pool.query spanEvent apiId')
+            t.equal(actualSpanEvent.depth, 1, 'Pool.query spanEvent depth')
+            t.equal(actualSpanEvent.sequence, 2, 'Pool.query spanEvent sequence')
+            t.equal(actualSpanEvent.serviceType, mysqlServiceType.getCode(), 'Pool.query spanEvent serviceType is MYSQL, so the MySQL link counts only the PoolConnection.query that runs the query')
+            t.equal(actualSpanEvent.destinationId, 'test', 'Pool.query spanEvent destinationId')
+            const transactionSpanEvents = span.spanEventList.concat(dataSender.findSpanChunks(span.traceRoot).flatMap(spanChunk => spanChunk.spanEventList))
+            t.equal(transactionSpanEvents.filter(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode()).length, 2, 'one MYSQL_EXECUTE_QUERY spanEvent for connection.query and one for pool.query')
+
+            const poolGetConnectionSpanEvent = span.spanEventList.find(spanEvent => spanEvent.depth === 2)
+            const poolQueryConnectionSpanEvent = dataSender.findSpanChunk(poolGetConnectionSpanEvent.asyncId).spanEventList[1]
+            t.equal(poolQueryConnectionSpanEvent.apiId, apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('query').setClassName('PoolConnection')).apiId, 'PoolConnection.query spanEvent apiId in the getConnection callback of pool.query')
+            t.equal(poolQueryConnectionSpanEvent.serviceType, mysqlExecuteQueryServiceType.getCode(), 'PoolConnection.query spanEvent serviceType in the getConnection callback of pool.query')
+            t.equal(poolQueryConnectionSpanEvent.destinationId, 'test', 'PoolConnection.query spanEvent destinationId in the getConnection callback of pool.query')
+            const poolQueryAnnotation = poolQueryConnectionSpanEvent.annotations[0]
+            t.equal(poolQueryAnnotation.key, annotationKey.SQL_ID.getCode(), 'PoolConnection.query SQL annotation key in the getConnection callback of pool.query')
+            t.equal(poolQueryAnnotation.value.intValue, agent.getTraceContext().spanEventRecorderFactory.sqlMetadataService.cacheSql('SELECT * FROM `member` where id = ?').sqlId, 'PoolConnection.query SQL id in the getConnection callback of pool.query')
+            t.equal(poolQueryAnnotation.value.stringValue2, 'b', 'PoolConnection.query bind value in the getConnection callback of pool.query')
 
             actualSpanChunk = dataSender.findSpanChunk(actualSpanEvent.asyncId)
             t.equal(actualSpanChunk.traceRoot, span.traceRoot, 'spanChunk transactionIdObject on pool.query')
@@ -620,7 +652,8 @@ test('Express: a mysql query error that the query callback passes to next(error)
     server.close()
     pool.end()
 
-    const querySpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0]).find(spanEvent => spanEvent.serviceType === mysqlExecuteQueryServiceType.getCode())
+    const poolQueryApiId = apiMetaService.cacheApiWithBuilder(new MethodDescriptorBuilder('query').setClassName('Pool')).apiId
+    const querySpanEvent = dataSender.findAsyncInvocationSpanEvents(span.spanEventList[0]).find(spanEvent => spanEvent.apiId === poolQueryApiId)
     const asyncInvocationSpanEvent = dataSender.findSpanChunk(querySpanEvent.asyncId).spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.async.getCode())
     t.ok(asyncInvocationSpanEvent.exceptionInfo, 'the Asynchronous Invocation span event of the query callback has the error')
     const errorHandlerSpanEvent = span.spanEventList.find(spanEvent => spanEvent.serviceType === ServiceType.express.getCode() && spanEvent.exceptionInfo)

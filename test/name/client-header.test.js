@@ -73,7 +73,7 @@ function agent(protocolVersion) {
         agentId: 'agentId',
         applicationName: 'appName',
         serviceName: 'serviceName',
-        collector: { ip: 'localhost', spanPort: port, statPort: port, tcpPort: port, protocolVersion },
+        collector: { ip: 'localhost', span: { port }, stats: { port }, agent: { port }, protocolVersion },
         features: { dataSending: true, statsMonitoring: false },
     }
     const config = new ConfigBuilder(json).setUserDefinedJson({}).build()

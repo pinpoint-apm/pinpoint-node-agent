@@ -16,10 +16,12 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
   - AgentInfo sends the Node.js version as `vmVersion`
 - [[#576](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/576)] Inspector Transactions Per Second and Response Time charts
 - [[#609](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/609)] Error Analysis supports `AggregateError`
-- [[#562](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/562)] Span batches are sent gzip-compressed; set `collector.spanBatch.compression` / `PINPOINT_SPAN_BATCH_COMPRESSION` to `none` to turn it off
+- [[#562](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/562)] Span batches are sent gzip-compressed; set `collector.span.compression` / `PINPOINT_SPAN_COMPRESSION` to `none` to turn it off
+- [[#563](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/563)] URI stats are sent gzip-compressed; set `collector.stats.compression` / `PINPOINT_STATS_COMPRESSION` to `none` to turn it off
 
 ### Changed
-- [[#561](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/561)] Send spans with the unary `SendSpanBatch` RPC; requires Collector 3.1.0 or later. Tune with `collector.spanBatch` / `PINPOINT_SPAN_BATCH_SIZE`, `PINPOINT_SPAN_BATCH_DEADLINE_MILLIS` and `PINPOINT_SPAN_BATCH_MAX_REQUESTS`
+- [[#561](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/561)] Send spans with the unary `SendSpanBatch` RPC; requires Collector 3.1.0 or later. Tune with `collector.span` / `PINPOINT_SPAN_BATCH_SIZE`, `PINPOINT_SPAN_DEADLINE_MILLIS` and `PINPOINT_SPAN_MAX_REQUESTS`
+- [[#563](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/563)] `pinpoint-config.json` groups the collector settings by collector service: `collector.spanPort`, `collector.statPort` and `collector.tcpPort` are now `collector.span.port`, `collector.stats.port` and `collector.agent.port`; see [Migrating `pinpoint-config.json` to v2.0](README.md#migrating-pinpoint-configjson-to-v20)
 - [[#532](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/532)] Require Node.js 22 or later; Node.js 18 and 20 are no longer supported
 - [[#607](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/607)] Functional tests for the Pinpoint v4 headers
 
@@ -70,7 +72,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
 - [[#505](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/505)] Fix `UNKNOWN_DATABASE` shown for MySQL `pool.getConnection` → `connection.query` path
 
 ### Changed
-- [[#478](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/478)] Documented `pinpoint-config.json` format changes for migration to v1.4. See the [migration guide](https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#migrating-pinpoint-configjson-to-v14) for details.
+- [[#478](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/478)] Documented `pinpoint-config.json` format changes for migration to v1.4. See the [migration guide](https://github.com/pinpoint-apm/pinpoint-node-agent/blob/1.4.1/README.md#migrating-pinpoint-configjson-to-v14) for details.
 
 ### Improvements
 - [[#477](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/477)] Refactored enricher system — `AgentBuilder` now assembles all dependencies and injects into `TraceContext`

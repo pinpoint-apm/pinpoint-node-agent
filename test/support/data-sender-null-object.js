@@ -8,7 +8,7 @@
 
 const dataSenderNullObject = Object.freeze({
     send() {},
-    sendStat() {},
+    sendAgentStats() {},
     sendPing() {},
     sendSupportedServicesCommand() {},
     close() {},

@@ -114,7 +114,7 @@ function startCollectorRecordingPingSessions() {
 function collectorConfig(port, json) {
     return new ConfigBuilder({
         applicationName: 'appName',
-        collector: { ip: 'localhost', spanPort: port, statPort: port, tcpPort: port },
+        collector: { ip: 'localhost', span: { port }, stats: { port }, agent: { port } },
         features: { dataSending: true },
         ...json,
     }).setUserDefinedJson({}).build()

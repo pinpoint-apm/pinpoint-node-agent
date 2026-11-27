@@ -74,28 +74,38 @@ test('PINPOINT_FEATURES_FILE_DESCRIPTOR_STATS=true enables file descriptor stats
   t.end()
 })
 
-test('span batch config defaults to size 20, deadlineMillis 500, maxRequests 10 and gzip compression', (t) => {
+test('span batch config defaults to size 20, deadlineMillis 500, maxRequests 10 and gzip compression, and stats to gzip', (t) => {
   const json = require('../lib/pinpoint-config-default.json')
   const conf = new ConfigBuilder().setDefaultJson(json).build()
 
   t.deepEqual(conf.getSpanBatch(), { size: 20, deadlineMillis: 500, maxRequests: 10, compression: 'gzip' })
+  t.equal(conf.getStatsCompression(), 'gzip', 'the stats compression defaults to gzip')
   t.end()
 })
 
-test('span batch config uses the default for a non-positive, non-number or unknown value', (t) => {
-  const conf = new ConfigBuilder({ collector: { spanBatch: { size: 0, deadlineMillis: -1, maxRequests: 'ten', compression: 'zstd' } } }).build()
+test('collector config uses the default for a null group and span batch config for a non-positive, non-number or unknown value', (t) => {
+  const conf = new ConfigBuilder({ collector: { span: { batchSize: 0, deadlineMillis: -1, maxRequests: 'ten', compression: 'zstd' }, stats: { compression: 'zstd' } } }).build()
 
   t.deepEqual(conf.getSpanBatch(), { size: 20, deadlineMillis: 500, maxRequests: 10, compression: 'gzip' })
-  t.deepEqual(conf.messages.warns, ["Unknown collector.spanBatch.compression 'zstd', using gzip. Supported values: gzip, none"], 'an unknown compression is logged once in the Configuration warns')
+  t.equal(conf.getStatsCompression(), 'gzip', 'an unknown stats compression is gzip')
+  t.deepEqual(conf.messages.warns, [
+    "Unknown collector.span.compression / PINPOINT_SPAN_COMPRESSION 'zstd', using gzip. Supported values: gzip, none",
+    "Unknown collector.stats.compression / PINPOINT_STATS_COMPRESSION 'zstd', using gzip. Supported values: gzip, none"
+  ], 'an unknown compression is logged once in the Configuration warns')
 
-  const falseCompressionConf = new ConfigBuilder({ collector: { spanBatch: { compression: false } } }).build()
+  const falseCompressionConf = new ConfigBuilder({ collector: { span: { compression: false } } }).build()
   t.equal(falseCompressionConf.getSpanBatch().compression, 'gzip', 'a non-string compression is gzip')
-  t.deepEqual(falseCompressionConf.messages.warns, ["Unknown collector.spanBatch.compression 'false', using gzip. Supported values: gzip, none"], 'a non-string compression is logged as unknown')
+  t.deepEqual(falseCompressionConf.messages.warns, ["Unknown collector.span.compression / PINPOINT_SPAN_COMPRESSION 'false', using gzip. Supported values: gzip, none"], 'a non-string compression is logged as unknown')
+
+  const nullGroupConf = new ConfigBuilder({ collector: { span: null, stats: null, agent: null } }).build()
+  t.deepEqual(nullGroupConf.getCollector(), { ip: 'localhost', spanPort: 9993, statsPort: 9992, agentPort: 9991 }, 'a null collector group uses the default ports')
+  t.deepEqual(nullGroupConf.getSpanBatch(), { size: 20, deadlineMillis: 500, maxRequests: 10, compression: 'gzip' }, 'a null span group uses the default span batch config')
+  t.equal(nullGroupConf.getStatsCompression(), 'gzip', 'a null stats group uses gzip')
   t.end()
 })
 
-test('span batch config uses the default for a non-integer size or maxRequests', (t) => {
-  const conf = new ConfigBuilder({ collector: { spanBatch: { size: 0.5, deadlineMillis: 250.5, maxRequests: 1.5 } } }).build()
+test('span batch config uses the default for a non-integer batchSize or maxRequests', (t) => {
+  const conf = new ConfigBuilder({ collector: { span: { batchSize: 0.5, deadlineMillis: 250.5, maxRequests: 1.5 } } }).build()
 
   t.deepEqual(conf.getSpanBatch(), { size: 20, deadlineMillis: 250.5, maxRequests: 10, compression: 'gzip' })
   t.end()
@@ -122,9 +132,9 @@ test('should return the number value when the env value is number type', functio
   process.env['PINPOINT_SAMPLING_RATE'] = "10"
 
   const given = givenDefaultIdAndName()
-  t.equal(given.collector.tcpPort, 9894, 'given PINPOINT_COLLECTOR_TCP_PORT env, should equal config')
-  t.equal(given.collector.statPort, 9895, 'given PINPOINT_COLLECTOR_STAT_PORT env, should equal config')
-  t.equal(given.collector.spanPort, 9896, 'given PINPOINT_COLLECTOR_SPAN_PORT env, should equal config')
+  t.equal(given.getCollector().agentPort, 9894, 'given PINPOINT_COLLECTOR_TCP_PORT env, should equal config')
+  t.equal(given.getCollector().statsPort, 9895, 'given PINPOINT_COLLECTOR_STAT_PORT env, should equal config')
+  t.equal(given.getCollector().spanPort, 9896, 'given PINPOINT_COLLECTOR_SPAN_PORT env, should equal config')
   t.equal(given.sampling.rate, 10, 'given PINPOINT_SAMPLING_RATE env, should equal config')
 
   delete process.env.PINPOINT_COLLECTOR_TCP_PORT
@@ -135,19 +145,22 @@ test('should return the number value when the env value is number type', functio
   t.end()
 })
 
-test('span batch env values set collector.spanBatch', function(t) {
+test('span batch and stat compression env values set collector.span and collector.stats', function(t) {
   process.env['PINPOINT_SPAN_BATCH_SIZE'] = "50"
-  process.env['PINPOINT_SPAN_BATCH_DEADLINE_MILLIS'] = "300"
-  process.env['PINPOINT_SPAN_BATCH_MAX_REQUESTS'] = "5"
-  process.env['PINPOINT_SPAN_BATCH_COMPRESSION'] = "none"
+  process.env['PINPOINT_SPAN_DEADLINE_MILLIS'] = "300"
+  process.env['PINPOINT_SPAN_MAX_REQUESTS'] = "5"
+  process.env['PINPOINT_SPAN_COMPRESSION'] = "none"
+  process.env['PINPOINT_STATS_COMPRESSION'] = "none"
 
   const given = givenDefaultIdAndName()
-  t.deepEqual(given.getSpanBatch(), { size: 50, deadlineMillis: 300, maxRequests: 5, compression: 'none' }, 'given PINPOINT_SPAN_BATCH_* env, should equal config')
+  t.deepEqual(given.getSpanBatch(), { size: 50, deadlineMillis: 300, maxRequests: 5, compression: 'none' }, 'given PINPOINT_SPAN_BATCH_SIZE and PINPOINT_SPAN_* env, should equal config')
+  t.equal(given.getStatsCompression(), 'none', 'given PINPOINT_STATS_COMPRESSION env, should equal config')
 
   delete process.env.PINPOINT_SPAN_BATCH_SIZE
-  delete process.env.PINPOINT_SPAN_BATCH_DEADLINE_MILLIS
-  delete process.env.PINPOINT_SPAN_BATCH_MAX_REQUESTS
-  delete process.env.PINPOINT_SPAN_BATCH_COMPRESSION
+  delete process.env.PINPOINT_SPAN_DEADLINE_MILLIS
+  delete process.env.PINPOINT_SPAN_MAX_REQUESTS
+  delete process.env.PINPOINT_SPAN_COMPRESSION
+  delete process.env.PINPOINT_STATS_COMPRESSION
 
   t.end()
 })
@@ -184,9 +197,9 @@ test('should not exist in the process.env property when you do not set an enviro
   t.equal(given.sampling.enable, true, 'No set PINPOINT_SAMPLING env, should equal default config')
   t.equal(given.enable, true, 'No set PINPOINT_ENABLE env, should equal default config')
 
-  t.equal(given.collector.tcpPort, 9991, 'No set PINPOINT_COLLECTOR_TCP_PORT env, should equal default config')
-  t.equal(given.collector.statPort, 9992, 'No set PINPOINT_COLLECTOR_STAT_PORT env, should equal default config')
-  t.equal(given.collector.spanPort, 9993, 'No set PINPOINT_COLLECTOR_SPAN_PORT env, should equal default config')
+  t.equal(given.getCollector().agentPort, 9991, 'No set PINPOINT_COLLECTOR_TCP_PORT env, should equal default config')
+  t.equal(given.getCollector().statsPort, 9992, 'No set PINPOINT_COLLECTOR_STAT_PORT env, should equal default config')
+  t.equal(given.getCollector().spanPort, 9993, 'No set PINPOINT_COLLECTOR_SPAN_PORT env, should equal default config')
   t.end()
 })
 

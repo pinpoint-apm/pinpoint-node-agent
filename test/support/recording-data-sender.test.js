@@ -62,7 +62,7 @@ test('RecordingDataSender records, then forwards to the data sender it wraps', (
     const forwarded = []
     const dataSender = new RecordingDataSender({
         send: (data) => forwarded.push(['send', data]),
-        sendStat: (stats) => forwarded.push(['sendStat', stats]),
+        sendAgentStats: (stats) => forwarded.push(['sendAgentStats', stats]),
         sendPing: () => forwarded.push(['sendPing']),
         sendSupportedServicesCommand: () => forwarded.push(['sendSupportedServicesCommand']),
         close: () => forwarded.push(['close']),
@@ -72,20 +72,20 @@ test('RecordingDataSender records, then forwards to the data sender it wraps', (
     const stats = {}
 
     dataSender.send(span)
-    dataSender.sendStat(stats)
+    dataSender.sendAgentStats(stats)
     dataSender.sendPing()
     dataSender.sendSupportedServicesCommand()
     dataSender.close()
 
     t.equal(dataSender.findSpan(traceRoot), span, 'the span is recorded')
-    t.deepEqual(forwarded, [['send', span], ['sendStat', stats], ['sendPing'], ['sendSupportedServicesCommand'], ['close']], 'every call is forwarded')
+    t.deepEqual(forwarded, [['send', span], ['sendAgentStats', stats], ['sendPing'], ['sendSupportedServicesCommand'], ['close']], 'every call is forwarded')
     t.end()
 })
 
 test('RecordingDataSender without a wrapped data sender accepts the calls the agent makes', (t) => {
     const dataSender = new RecordingDataSender()
 
-    dataSender.sendStat({})
+    dataSender.sendAgentStats({})
     dataSender.sendPing()
     dataSender.sendSupportedServicesCommand()
     dataSender.close()

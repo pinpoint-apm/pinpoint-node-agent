@@ -27,8 +27,8 @@ const forwardingDataSender = {
     send(data) {
         dataSenderInUse.send(data)
     },
-    sendStat(stats) {
-        dataSenderInUse.sendStat(stats)
+    sendAgentStats(stats) {
+        dataSenderInUse.sendAgentStats(stats)
     },
     sendPing() {
         dataSenderInUse.sendPing()

@@ -27,7 +27,7 @@ process.stdout.write(JSON.stringify({ beforeStart, afterStart, afterShutdown }))
 function statsOnlyAgent() {
     const config = new ConfigBuilder({ applicationName: 'appName', serviceName: 'serviceName' }).setUserDefinedJson({}).build()
     return new AgentBuilder(config)
-        .setDataSender({ send: () => {}, sendStat: () => {}, close: () => {} })
+        .setDataSender({ send: () => {}, sendAgentStats: () => {}, close: () => {} })
         .setLogger({ warn: () => {} })
         .disablePingScheduler()
         .disableServiceCommand()
@@ -37,7 +37,7 @@ function statsOnlyAgent() {
 function statsMonitoringOffAgent() {
     const config = new ConfigBuilder({ applicationName: 'appName', serviceName: 'serviceName', features: { statsMonitoring: false } }).setUserDefinedJson({}).build()
     return new AgentBuilder(config)
-        .setDataSender({ send: () => {}, sendStat: () => {}, close: () => {} })
+        .setDataSender({ send: () => {}, sendAgentStats: () => {}, close: () => {} })
         .setLogger({ warn: () => {} })
         .disablePingScheduler()
         .disableServiceCommand()

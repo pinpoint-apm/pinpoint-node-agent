@@ -35,7 +35,7 @@ test('collectInterval is the time since the previous stat', (t) => {
 
 test('AgentStatsMonitor does not send a stat collected before shutdown', async (t) => {
     const sentStats = []
-    const agentStatsMonitor = new AgentStatsMonitor({ sendStat: (stat) => sentStats.push(stat) }, 'agentId', 1)
+    const agentStatsMonitor = new AgentStatsMonitor({ sendAgentStats: (stat) => sentStats.push(stat) }, 'agentId', 1)
 
     agentStatsMonitor.send()
     agentStatsMonitor.shutdown()

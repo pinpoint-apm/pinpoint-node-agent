@@ -16,6 +16,7 @@ All notable changes to Pinpoint Node.js agent will be documented in this file.
   - AgentInfo sends the Node.js version as `vmVersion`
 - [[#576](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/576)] Inspector Transactions Per Second and Response Time charts
 - [[#609](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/609)] Error Analysis supports `AggregateError`
+- [[#562](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/562)] Span batches are sent gzip-compressed; set `collector.spanBatch.compression` / `PINPOINT_SPAN_BATCH_COMPRESSION` to `none` to turn it off
 
 ### Changed
 - [[#561](https://github.com/pinpoint-apm/pinpoint-node-agent/issues/561)] Send spans with the unary `SendSpanBatch` RPC; requires Collector 3.1.0 or later. Tune with `collector.spanBatch` / `PINPOINT_SPAN_BATCH_SIZE`, `PINPOINT_SPAN_BATCH_DEADLINE_MILLIS` and `PINPOINT_SPAN_BATCH_MAX_REQUESTS`

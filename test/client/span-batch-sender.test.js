@@ -7,12 +7,15 @@
 'use strict'
 
 const test = require('tape')
+const http2 = require('node:http2')
+const zlib = require('node:zlib')
 const grpc = require('@grpc/grpc-js')
 const loglevel = require('loglevel')
 const services = require('../../lib/data/v1/Service_grpc_pb')
 const spanMessages = require('../../lib/data/v1/Span_pb')
 const SpanBatchSender = require('../../lib/client/span-batch-sender')
 const UnaryDeadlineOptionsBuilder = require('../../lib/client/unary-deadline-options-builder')
+const OptionsBuilder = require('../../lib/client/retry/options-builder')
 const { spanWithId } = require('../fixtures/span-with-id')
 
 const oneMinuteMillis = 60 * 1000
@@ -342,6 +345,76 @@ test('a collector without SendSpanBatch stops span sending with one default-logg
     })
 })
 
+test('span batches are gzip-compressed with compression gzip and sent as is with none', (t) => {
+    const collector = new Http2Collector(() => okStatus)
+    collector.listen((address) => {
+        const gzipSpanClient = new services.SpanClient(address, grpc.credentials.createInsecure(), new OptionsBuilder().setCompression('gzip').build())
+        const uncompressedSpanClient = new services.SpanClient(address, grpc.credentials.createInsecure(), new OptionsBuilder().setCompression('none').build())
+        const gzipSender = new SpanBatchSender(gzipSpanClient, { size: 1, deadlineMillis: oneMinuteMillis, maxRequests: 10 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger(), uncompressedSpanClient)
+        const uncompressedSender = new SpanBatchSender(uncompressedSpanClient, { size: 1, deadlineMillis: oneMinuteMillis, maxRequests: 10 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger())
+
+        collector.onRequest = () => {
+            const gzipRequest = collector.requests[0]
+            t.equal(gzipRequest.encoding, 'gzip', 'compression gzip sends the grpc-encoding: gzip header')
+            t.true(gzipRequest.compressed, 'compression gzip sets the compressed flag of the message')
+            t.equal(gzipRequest.batch.getSpanList()[0].getSpan().getTransactionid().getSequence(), '1', 'the gunzipped batch carries the pushed span')
+
+            collector.onRequest = () => {
+                const uncompressedRequest = collector.requests[1]
+                t.equal(uncompressedRequest.encoding, undefined, 'compression none sends no grpc-encoding header')
+                t.false(uncompressedRequest.compressed, 'compression none leaves the compressed flag unset')
+                t.equal(uncompressedRequest.batch.getSpanList()[0].getSpan().getTransactionid().getSequence(), '2', 'the uncompressed batch carries the pushed span')
+                t.end()
+            }
+            uncompressedSender.push(spanWithId('2'))
+        }
+        gzipSender.push(spanWithId('1'))
+
+        t.teardown(() => {
+            gzipSender.end()
+            uncompressedSender.end()
+            gzipSpanClient.close()
+            uncompressedSpanClient.close()
+            collector.close()
+        })
+    })
+})
+
+test('a collector without a gzip decompressor gets uncompressed span batches for the rest of the sender life with one default-logger warning', (t) => {
+    const defaultLoggerWarnings = []
+    const originalWarn = loglevel.warn
+    loglevel.warn = function () { defaultLoggerWarnings.push(Array.from(arguments).join(' ')) }
+
+    const collector = new Http2Collector((request) => request.encoding === 'gzip' ? decompressorUnavailableStatus : okStatus)
+    collector.listen((address) => {
+        const gzipSpanClient = new services.SpanClient(address, grpc.credentials.createInsecure(), new OptionsBuilder().setCompression('gzip').build())
+        const uncompressedSpanClient = new services.SpanClient(address, grpc.credentials.createInsecure(), new OptionsBuilder().build())
+        const sender = new SpanBatchSender(gzipSpanClient, { size: 1, deadlineMillis: oneMinuteMillis, maxRequests: 10 }, new UnaryDeadlineOptionsBuilder(), new CapturingLogger(), uncompressedSpanClient)
+        afterSendSpanBatchResponses(gzipSpanClient, 2, () => {
+            collector.onRequest = () => {
+                const requestAfterFallback = collector.requests[2]
+                t.equal(requestAfterFallback.encoding, undefined, 'the batch after the fallback has no grpc-encoding header')
+                t.false(requestAfterFallback.compressed, 'the batch after the fallback is not compressed')
+                t.equal(requestAfterFallback.batch.getSpanList()[0].getSpan().getTransactionid().getSequence(), '3', 'span sending goes on after the fallback')
+                t.equal(defaultLoggerWarnings.length, 1, 'one default-logger warning for two rejected gzip batches')
+                t.true(defaultLoggerWarnings[0].includes("The collector does not accept gzip span batches (Can't find decompressor for gzip), so they are sent uncompressed from now on."), 'the warning names the collector answer')
+                t.end()
+            }
+            sender.push(spanWithId('3'))
+        })
+        sender.push(spanWithId('1'))
+        sender.push(spanWithId('2'))
+
+        t.teardown(() => {
+            loglevel.warn = originalWarn
+            sender.end()
+            gzipSpanClient.close()
+            uncompressedSpanClient.close()
+            collector.close()
+        })
+    })
+})
+
 test('a span pushed after end() sends no request', (t) => {
     const server = new grpc.Server()
     server.addService(services.SpanService, {
@@ -388,6 +461,61 @@ test('a SendSpanBatch call that throws on a closed channel is logged instead of 
         t.end()
     })
 })
+
+const okStatus = { code: grpc.status.OK }
+// grpc-java ServerImpl answer to a request whose grpc-encoding it cannot decompress
+const decompressorUnavailableStatus = { code: grpc.status.UNIMPLEMENTED, message: "Can't find decompressor for gzip" }
+
+// grpc.Server removes grpc-encoding before a handler runs, so this collector reads the HTTP/2 request itself.
+class Http2Collector {
+    constructor(answer) {
+        this.answer = answer
+        this.requests = []
+        this.server = http2.createServer()
+        this.server.on('stream', (stream, headers) => {
+            const chunks = []
+            stream.on('data', (chunk) => chunks.push(chunk))
+            stream.on('end', () => {
+                const request = readSpanBatchRequest(headers, Buffer.concat(chunks))
+                this.requests.push(request)
+                respond(stream, this.answer(request))
+                this.onRequest?.()
+            })
+        })
+    }
+
+    listen(callback) {
+        this.server.listen(0, 'localhost', () => callback(`localhost:${this.server.address().port}`))
+    }
+
+    close() {
+        this.server.close()
+    }
+}
+
+function readSpanBatchRequest(headers, frame) {
+    const compressed = frame.readUInt8(0) === 1
+    const message = frame.subarray(5)
+    return {
+        encoding: headers['grpc-encoding'],
+        compressed,
+        batch: spanMessages.PSpanMessageBatch.deserializeBinary(compressed ? zlib.gunzipSync(message) : message)
+    }
+}
+
+function respond(stream, status) {
+    if (status.code !== grpc.status.OK) {
+        stream.respond({ ':status': 200, 'content-type': 'application/grpc', 'grpc-status': `${status.code}`, 'grpc-message': status.message }, { endStream: true })
+        return
+    }
+
+    stream.respond({ ':status': 200, 'content-type': 'application/grpc' }, { waitForTrailers: true })
+    stream.on('wantTrailers', () => stream.sendTrailers({ 'grpc-status': `${grpc.status.OK}` }))
+    const message = Buffer.from(new spanMessages.PSpanResultBatch().serializeBinary())
+    const header = Buffer.alloc(5)
+    header.writeUInt32BE(message.length, 1)
+    stream.end(Buffer.concat([header, message]))
+}
 
 class CapturingLogger {
     constructor() {

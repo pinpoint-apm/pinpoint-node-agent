@@ -74,25 +74,30 @@ test('PINPOINT_FEATURES_FILE_DESCRIPTOR_STATS=true enables file descriptor stats
   t.end()
 })
 
-test('span batch config defaults to size 20, deadlineMillis 500 and maxRequests 10', (t) => {
+test('span batch config defaults to size 20, deadlineMillis 500, maxRequests 10 and gzip compression', (t) => {
   const json = require('../lib/pinpoint-config-default.json')
   const conf = new ConfigBuilder().setDefaultJson(json).build()
 
-  t.deepEqual(conf.getSpanBatch(), { size: 20, deadlineMillis: 500, maxRequests: 10 })
+  t.deepEqual(conf.getSpanBatch(), { size: 20, deadlineMillis: 500, maxRequests: 10, compression: 'gzip' })
   t.end()
 })
 
-test('span batch config uses the default for a non-positive or non-number value', (t) => {
-  const conf = new ConfigBuilder({ collector: { spanBatch: { size: 0, deadlineMillis: -1, maxRequests: 'ten' } } }).build()
+test('span batch config uses the default for a non-positive, non-number or unknown value', (t) => {
+  const conf = new ConfigBuilder({ collector: { spanBatch: { size: 0, deadlineMillis: -1, maxRequests: 'ten', compression: 'zstd' } } }).build()
 
-  t.deepEqual(conf.getSpanBatch(), { size: 20, deadlineMillis: 500, maxRequests: 10 })
+  t.deepEqual(conf.getSpanBatch(), { size: 20, deadlineMillis: 500, maxRequests: 10, compression: 'gzip' })
+  t.deepEqual(conf.messages.warns, ["Unknown collector.spanBatch.compression 'zstd', using gzip. Supported values: gzip, none"], 'an unknown compression is logged once in the Configuration warns')
+
+  const falseCompressionConf = new ConfigBuilder({ collector: { spanBatch: { compression: false } } }).build()
+  t.equal(falseCompressionConf.getSpanBatch().compression, 'gzip', 'a non-string compression is gzip')
+  t.deepEqual(falseCompressionConf.messages.warns, ["Unknown collector.spanBatch.compression 'false', using gzip. Supported values: gzip, none"], 'a non-string compression is logged as unknown')
   t.end()
 })
 
 test('span batch config uses the default for a non-integer size or maxRequests', (t) => {
   const conf = new ConfigBuilder({ collector: { spanBatch: { size: 0.5, deadlineMillis: 250.5, maxRequests: 1.5 } } }).build()
 
-  t.deepEqual(conf.getSpanBatch(), { size: 20, deadlineMillis: 250.5, maxRequests: 10 })
+  t.deepEqual(conf.getSpanBatch(), { size: 20, deadlineMillis: 250.5, maxRequests: 10, compression: 'gzip' })
   t.end()
 })
 
@@ -134,13 +139,15 @@ test('span batch env values set collector.spanBatch', function(t) {
   process.env['PINPOINT_SPAN_BATCH_SIZE'] = "50"
   process.env['PINPOINT_SPAN_BATCH_DEADLINE_MILLIS'] = "300"
   process.env['PINPOINT_SPAN_BATCH_MAX_REQUESTS'] = "5"
+  process.env['PINPOINT_SPAN_BATCH_COMPRESSION'] = "none"
 
   const given = givenDefaultIdAndName()
-  t.deepEqual(given.getSpanBatch(), { size: 50, deadlineMillis: 300, maxRequests: 5 }, 'given PINPOINT_SPAN_BATCH_* env, should equal config')
+  t.deepEqual(given.getSpanBatch(), { size: 50, deadlineMillis: 300, maxRequests: 5, compression: 'none' }, 'given PINPOINT_SPAN_BATCH_* env, should equal config')
 
   delete process.env.PINPOINT_SPAN_BATCH_SIZE
   delete process.env.PINPOINT_SPAN_BATCH_DEADLINE_MILLIS
   delete process.env.PINPOINT_SPAN_BATCH_MAX_REQUESTS
+  delete process.env.PINPOINT_SPAN_BATCH_COMPRESSION
 
   t.end()
 })

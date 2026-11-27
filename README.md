@@ -111,9 +111,10 @@ PINPOINT_COLLECTOR_IP | localhost | Collector address, e.g. `192.168.0.1`.
 PINPOINT_COLLECTOR_SPAN_PORT | 9993 | Collector span port.
 PINPOINT_COLLECTOR_STAT_PORT | 9992 | Collector stat port.
 PINPOINT_COLLECTOR_TCP_PORT | 9991 | Collector agent and metadata port.
-PINPOINT_SPAN_BATCH_SIZE | 20 | Spans and span chunks sent in one `SendSpanBatch` request.
+PINPOINT_SPAN_BATCH_SIZE | 20 | Spans and span chunks sent in one `SendSpanBatch` request, up to 1000.
 PINPOINT_SPAN_BATCH_DEADLINE_MILLIS | 500 | How long in ms queued spans wait before they are sent in a batch smaller than the size.
 PINPOINT_SPAN_BATCH_MAX_REQUESTS | 10 | Max `SendSpanBatch` requests awaiting a response. Batches beyond it wait; when 1000 spans are waiting, the oldest is discarded.
+PINPOINT_SPAN_BATCH_COMPRESSION | gzip | `gzip` or `none`. Compression of `SendSpanBatch` requests; an unknown value is gzip. If the collector cannot decompress gzip, the agent logs a warning and sends uncompressed batches.
 PINPOINT_PROTOCOL_VERSION | v4 | `v4` or `v3` (case-insensitive). See [Agent Identification](#agent-identification-v4-and-v3).
 PINPOINT_ENABLE | true | Set `false` to disable the agent.
 PINPOINT_SAMPLING | true | Set `false` to disable sampling.
@@ -180,7 +181,7 @@ Example `pinpoint-config.json`:
     "tcpPort": 9991,
     "deadlineMinutes": 10,
     "protocolVersion": "v4",
-    "spanBatch": { "size": 20, "deadlineMillis": 500, "maxRequests": 10 }
+    "spanBatch": { "size": 20, "deadlineMillis": 500, "maxRequests": 10, "compression": "gzip" }
   },
   "sampling": { "enable": true, "rate": 10 },
   "plugins": {

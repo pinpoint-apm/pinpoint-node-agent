@@ -15,6 +15,7 @@ on Node.js 22.
 | `apps/koa.js` | Koa, `koa-router` `router.get(path, handler)` |
 | `apps/nextjs/` | Next.js, one Pages Router API route per path, so each path starts with `/api` |
 | `apps/target.js` | the server the outgoing calls reach, without the agent; answers `ok` |
+| `apps/span-proxy.js` | an HTTP/2 proxy between the agent and the collector span port, without the agent; logs grpc-encoding, the compressed flag and the bytes of each request, and on SIGTERM the bytes per request of each RPC; with `--reject-gzip` it answers gzip requests UNIMPLEMENTED "Can't find decompressor for gzip" |
 
 Environment of every app:
 
@@ -24,6 +25,7 @@ Environment of every app:
 | `TARGET_PORT` | the port of `apps/target.js` |
 | `CLOSED_PORT` | a port nothing listens on |
 | `QA_MYSQL_URL`, `QA_PG_URL`, `QA_REDIS_URL`, `QA_MONGODB_URL` | connection URLs of the databases |
+| `SPAN_PROXY_PORT`, `SPAN_PROXY_COLLECTOR`, `SPAN_PROXY_TCP_PORTS` | `apps/span-proxy.js` only: its port, the collector span address `host:port`, and the collector stat and tcp ports it forwards as is; the app's `PINPOINT_COLLECTOR_IP` is `127.0.0.1` and `PINPOINT_COLLECTOR_SPAN_PORT` is `SPAN_PROXY_PORT` |
 
 Start them:
 
@@ -486,4 +488,33 @@ The other calls between apps:
                                                                            mysql2 and pg)
             Server Map        the link from node-agent-qa to the MySQL database test counts 4 calls
                               for each app: the SELECT 1 of /ready, /mysql2, /mysql2-error and /parallel
+```
+
+### 9. Span batch compression
+
+Run on one app, Express, when the change touches span sending or upgrades `@grpc/grpc-js`;
+optional at release QA.
+
+```text
+38. Span batches with gzip, the default
+   app      default settings; the span port goes through apps/span-proxy.js
+   request  GET /fetch-ok 100 times
+   expect   span proxy        every SendSpanBatch request has grpc-encoding gzip and compressed 1
+            span proxy        bytes per SendSpanBatch request below scenario 39
+            call tree         the rows of scenario 2
+
+39. Span batches without compression
+   app      PINPOINT_SPAN_BATCH_COMPRESSION=none; the span port goes through apps/span-proxy.js
+   request  GET /fetch-ok 100 times
+   expect   span proxy        every SendSpanBatch request has grpc-encoding identity and compressed 0
+            call tree         the rows of scenario 2
+
+40. A collector without a gzip decompressor
+   app      default settings; the span port goes through apps/span-proxy.js --reject-gzip
+   request  GET /fetch-ok 30 times
+   expect   span proxy        the first gzip requests rejected, then every request grpc-encoding identity
+            agent log         one warning: The collector does not accept gzip span batches
+                              (Can't find decompressor for gzip), so they are sent uncompressed from now on.
+                              no warning: Collector 3.1.0 or later is required
+            transaction list  a row for each request sent after the fallback
 ```

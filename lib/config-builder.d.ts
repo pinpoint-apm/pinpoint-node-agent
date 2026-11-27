@@ -19,8 +19,9 @@ export class Config {
     getGrpcServiceConfig(): unknown
     getSamplingRate(): number
     getExclusionUrl(): { patterns: string[]; cacheSize?: number }
-    getCollector(): { ip: string; spanPort: number; statPort: number; tcpPort: number }
+    getCollector(): { ip: string; spanPort: number; statsPort: number; agentPort: number }
     getSpanBatch(): { size: number; deadlineMillis: number; maxRequests: number; compression: 'gzip' | 'none' }
+    getStatsCompression(): 'gzip' | 'none'
     getDeadlineSeconds(): number
     isSamplingEnabled(): boolean
     getLogLevels(): Record<string, string>

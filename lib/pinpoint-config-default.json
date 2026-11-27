@@ -1,14 +1,19 @@
 {
     "collector": {
         "ip": "localhost",
-        "spanPort": 9993,
-        "statPort": 9992,
-        "tcpPort": 9991,
-        "spanBatch": {
-            "size": 20,
+        "span": {
+            "port": 9993,
+            "batchSize": 20,
             "deadlineMillis": 500,
             "maxRequests": 10,
             "compression": "gzip"
+        },
+        "stats": {
+            "port": 9992,
+            "compression": "gzip"
+        },
+        "agent": {
+            "port": 9991
         },
         "deadlineMinutes": 10
     },

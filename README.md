@@ -3,43 +3,13 @@ The official Node.js agent for [Pinpoint](https://github.com/pinpoint-apm/pinpoi
 
 For feedback or questions, open an issue in [pinpoint-apm/pinpoint-node-agent](https://github.com/pinpoint-apm/pinpoint-node-agent/issues).
 
-## Table of Contents
-- [Installation and Getting Started](#installation-and-getting-started)
-- [Configuration](#configuration)
-  - [Agent Identification: `v4` and `v3`](#agent-identification-v4-and-v3)
-  - [Environment Variables](#environment-variables)
-  - [Configuration File (`pinpoint-config.json`)](#configuration-file-pinpoint-configjson)
-- [Supported Modules](#supported-modules)
-- [Agent - Collector Compatibility](#agent---collector-compatibility)
-- [Migrating `pinpoint-config.json` to v1.4](#migrating-pinpoint-configjson-to-v14)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Installation and Getting Started
-Requires Node.js 22 or later.
-
-### 1. Install
-With [npm](https://www.npmjs.com/):
+## Getting Started
+Install the agent in your app:
 ```sh
-npm install --save pinpoint-node-agent
-```
-With [yarn](https://yarnpkg.com):
-```sh
-yarn add pinpoint-node-agent
+npm install pinpoint-node-agent
 ```
 
-### 2. Set the Names
-The agent identifies itself with `v4` by default, which requires an application name and a service name. The agent name is recommended; it is shown in the Inspector UI.
-```sh
-export PINPOINT_APPLICATION_NAME="your-app-name"
-export PINPOINT_SERVICE_NAME="your-service-name"
-export PINPOINT_AGENT_NAME="your-pod-or-host-name"
-export PINPOINT_COLLECTOR_IP="your-collector-host"
-```
-With `v3`, only the application name is required. See [Agent Identification](#agent-identification-v4-and-v3).
-
-### 3. Load the Agent
-Load the agent before any other module.
+Load the agent on the first line of the entry file, before any other module.
 
 ES modules
 ```javascript
@@ -51,8 +21,36 @@ CommonJS
 require('pinpoint-node-agent')
 ```
 
-#### Next.js
-Use `NODE_OPTIONS` in `package.json`:
+Set the names and the collector address, then start the app:
+```sh
+export PINPOINT_APPLICATION_NAME="your-app-name"
+export PINPOINT_SERVICE_NAME="your-service-name"
+export PINPOINT_AGENT_NAME="your-pod-or-host-name"
+export PINPOINT_COLLECTOR_IP="your-collector-host"
+node server.js
+```
+
+Other settings are also environment variables; see [Environment Variables](#environment-variables).
+
+### Docker and Kubernetes
+```dockerfile
+ENV PINPOINT_APPLICATION_NAME="your-app-name" \
+    PINPOINT_SERVICE_NAME="your-service-name" \
+    PINPOINT_COLLECTOR_IP="your-collector-host"
+CMD ["node", "server.js"]
+```
+
+In Kubernetes, name each agent after its pod:
+```yaml
+env:
+  - name: PINPOINT_AGENT_NAME
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.name
+```
+
+### Next.js
+Load the agent with `NODE_OPTIONS` in the start script:
 ```json
 "scripts": {
   "build": "next build",
@@ -110,11 +108,12 @@ PINPOINT_AGENT_ID | | `v3` only. Generated if unset. Ignored with `v4`, which al
 PINPOINT_COLLECTOR_IP | localhost | Collector address, e.g. `192.168.0.1`.
 PINPOINT_COLLECTOR_SPAN_PORT | 9993 | Collector span port.
 PINPOINT_COLLECTOR_STAT_PORT | 9992 | Collector stat port.
-PINPOINT_COLLECTOR_TCP_PORT | 9991 | Collector agent and metadata port.
+PINPOINT_COLLECTOR_TCP_PORT | 9991 | Collector agent port, also used for metadata and commands.
 PINPOINT_SPAN_BATCH_SIZE | 20 | Spans and span chunks sent in one `SendSpanBatch` request, up to 1000.
-PINPOINT_SPAN_BATCH_DEADLINE_MILLIS | 500 | How long in ms queued spans wait before they are sent in a batch smaller than the size.
-PINPOINT_SPAN_BATCH_MAX_REQUESTS | 10 | Max `SendSpanBatch` requests awaiting a response. Batches beyond it wait; when 1000 spans are waiting, the oldest is discarded.
-PINPOINT_SPAN_BATCH_COMPRESSION | gzip | `gzip` or `none`. Compression of `SendSpanBatch` requests; an unknown value is gzip. If the collector cannot decompress gzip, the agent logs a warning and sends uncompressed batches.
+PINPOINT_SPAN_DEADLINE_MILLIS | 500 | How long in ms queued spans wait before they are sent in a batch smaller than the size.
+PINPOINT_SPAN_MAX_REQUESTS | 10 | Max `SendSpanBatch` requests awaiting a response. Batches beyond it wait; when 1000 spans are waiting, the oldest is discarded.
+PINPOINT_SPAN_COMPRESSION | gzip | `gzip` or `none`. Compression of `SendSpanBatch` requests. If the collector cannot decompress gzip, the agent logs a warning and sends uncompressed batches.
+PINPOINT_STATS_COMPRESSION | gzip | `gzip` or `none`. Compression of URI stats. If the collector cannot decompress gzip, the agent logs a warning and sends them uncompressed.
 PINPOINT_PROTOCOL_VERSION | v4 | `v4` or `v3` (case-insensitive). See [Agent Identification](#agent-identification-v4-and-v3).
 PINPOINT_ENABLE | true | Set `false` to disable the agent.
 PINPOINT_SAMPLING | true | Set `false` to disable sampling.
@@ -168,34 +167,7 @@ my-service/
 └─ pinpoint-config.json
 ```
 
-Example `pinpoint-config.json`:
-```json
-{
-  "applicationName": "your-app-name",
-  "serviceName": "your-service-name",
-  "agentName": "your-pod-name",
-  "collector": {
-    "ip": "localhost",
-    "spanPort": 9993,
-    "statPort": 9992,
-    "tcpPort": 9991,
-    "deadlineMinutes": 10,
-    "protocolVersion": "v4",
-    "spanBatch": { "size": 20, "deadlineMillis": 500, "maxRequests": 10, "compression": "gzip" }
-  },
-  "sampling": { "enable": true, "rate": 10 },
-  "plugins": {
-    "http": { "errorStatusCodes": "5xx,401,403" },
-    "express": true,
-    "koa": true
-  },
-  "features": {
-    "uriStats": { "httpMethod": false, "capacity": 1000, "useUserInput": true },
-    "errorAnalysis": { "maxDepth": 10 },
-    "logLevels": { "default-logger": "WARN", "grpcLogger": "SILENT" }
-  }
-}
-```
+The defaults are in [`lib/pinpoint-config-default.json`](lib/pinpoint-config-default.json). Set only the keys you change; the others keep their defaults.
 
 ## Supported Modules
 * HTTP, HTTPS
@@ -209,37 +181,26 @@ Example `pinpoint-config.json`:
 * MongoDB driver v4.0 or later
 
 ## Agent - Collector Compatibility
-Agent Version | Collector 1.x | Collector 2.x | Collector 3.x | Collector 4.0
-------------- | ------------- | ------------- | ------------- | -------------
-v2.0 with `v4` (default) | no | no | no | yes
-v2.0 with `v3` | no | no | 3.1 or later | yes
-v1.4.3 | no | yes | yes | yes
+Agent Version | Collector 3.x | Collector 4.0
+------------- | ------------- | -------------
+v2.0 with `v4` (default) | no | yes
+v2.0 with `v3` | 3.1 or later | yes
+v1.4.3 | yes | yes
 
 v2.0 sends spans with the unary `SendSpanBatch` RPC, which Collector 3.1.0 and later support. With an older collector, the agent logs a warning once and stops sending spans.
 
-## Migrating `pinpoint-config.json` to v1.4
+v2.0 requires Node.js 22 or later.
+
+## Migrating `pinpoint-config.json` to v2.0
 > **If you use environment variables, no migration is needed.**
 
-v1.4 restructured the `pinpoint-config.json` format ([before v1.4](https://github.com/pinpoint-apm/pinpoint-node-agent/blob/1.3.1/lib/pinpoint-config-default.json) → [v1.4](https://github.com/pinpoint-apm/pinpoint-node-agent/blob/1.4.0/lib/pinpoint-config-default.json)). If you have an existing `pinpoint-config.json`, rename its keys as follows:
+v2.0 groups the collector settings by collector service. If you have an existing `pinpoint-config.json`, rename its keys as follows:
 
-| before v1.4 | v1.4 |
+| v1.4 | v2.0 |
 |------|------|
-| `collector.span-port` | `collector.spanPort` |
-| `collector.stat-port` | `collector.statPort` |
-| `collector.tcp-port` | `collector.tcpPort` |
-| `stream-deadline-minutes.client-side` | `collector.deadlineMinutes` |
-| `http-status-code.errors` | `plugins.http.errorStatusCodes` |
-| `express.enable` | `plugins.express` |
-| `koa.enable` | `plugins.koa` |
-| `mongo.enable` | `plugins.mongodb` |
-| `redis.enable` | `plugins.redis` |
-| `enabled-data-sending` | `features.dataSending` |
-| `enabled-stats-monitor-sending` | `features.statsMonitoring` |
-| `enabled-active-thread-count` | `features.activeThreadCount` |
-| `container` | `features.container` |
-| `logger-levels` | `features.logLevels` |
-| _(new)_ | `features.uriStats` |
-| _(new)_ | `features.errorAnalysis` |
+| `collector.spanPort` | `collector.span.port` |
+| `collector.statPort` | `collector.stats.port` |
+| `collector.tcpPort` | `collector.agent.port` |
 
 ## Contributing
 Contributions via pull requests are welcome. Run the full test suite with `npm test` before opening a pull request; integration tests use [Testcontainers](https://testcontainers.com/), so Docker must be running.

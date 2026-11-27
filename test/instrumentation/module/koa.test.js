@@ -165,7 +165,7 @@ test('koa should keep uriTemplate and omit httpMethod in TraceRoot when isUriSta
 
   const dataSender = new RecordingDataSender()
   const agent = new ProcessAgentBuilder({
-    collector: { spanPort: -1, statPort: -1, tcpPort: -1 },
+    collector: { span: { port: -1 }, stats: { port: -1 }, agent: { port: -1 } },
     features: { uriStats: { httpMethod: false } }
   }).setDataSender(dataSender).build()
 

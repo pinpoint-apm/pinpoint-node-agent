@@ -91,7 +91,14 @@ function bindServer(server, address) {
 
 function configWithPort(json, port) {
     const testJson = require('../fixtures/pinpoint-config-test.json')
-    const collector = Object.assign({}, testJson.collector, { spanBatch: { deadlineMillis: 10 } }, json.collector, { ip: 'localhost', spanPort: port, statPort: port, tcpPort: port })
+    const collector = {
+        ...testJson.collector,
+        ...json.collector,
+        ip: 'localhost',
+        span: { deadlineMillis: 10, ...json.collector?.span, port },
+        stats: { ...json.collector?.stats, port },
+        agent: { ...json.collector?.agent, port }
+    }
     return new ConfigBuilder(Object.assign({}, testJson, json, { collector })).build()
 }
 
@@ -165,9 +172,9 @@ function testGrpcDataSenderClass(adaptors) {
             }
         }
 
-        initializeStatStream() {
-            if (initializers.has('initializeStatStream')) {
-                super.initializeStatStream()
+        initializeStatsStreams() {
+            if (initializers.has('initializeStatsStreams')) {
+                super.initializeStatsStreams()
             }
         }
     }
@@ -332,7 +339,7 @@ class SpanAdaptor extends GrpcAdaptor {
 
 class StatAdaptor extends GrpcAdaptor {
     constructor(handlers = {}) {
-        super(services.StatService, ['initializeStatStream'])
+        super(services.StatService, ['initializeStatsStreams'])
         this.handlers = Object.assign({
             sendAgentStat: (call, callback) => {
                 this.receiveMetadata(call.metadata)

@@ -4,9 +4,15 @@
     "serviceName": "test.service.name",
     "collector": {
         "ip": "localhost",
-        "spanPort": 9993,
-        "statPort": 9992,
-        "tcpPort": 9991,
+        "span": {
+            "port": 9993
+        },
+        "stats": {
+            "port": 9992
+        },
+        "agent": {
+            "port": 9991
+        },
         "deadlineMinutes": 10
     },
     "sampling": {

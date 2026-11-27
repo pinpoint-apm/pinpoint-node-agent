@@ -32,8 +32,8 @@ class RecordingDataSender {
         this.dataSender?.send(data)
     }
 
-    sendStat(stats) {
-        this.dataSender?.sendStat(stats)
+    sendAgentStats(stats) {
+        this.dataSender?.sendAgentStats(stats)
     }
 
     sendPing() {

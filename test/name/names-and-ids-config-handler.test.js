@@ -42,13 +42,13 @@ test('v4 without serviceName has an error', (t) => {
     const given = handleNamesAndIds({ applicationName: 'appName' })
 
     t.equal(given.collector.protocolVersion, 'v4', 'default version is v4')
-    t.deepEqual(readErrors(given), ['Service Name is required. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'], 'serviceName is required for v4')
+    t.deepEqual(readErrors(given), ['Service Name is required. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#agent-identification-v4-and-v3'], 'serviceName is required for v4')
     t.end()
 })
 
 test('v4 serviceName from 3 to 254 characters with [a-zA-Z0-9._-]', (t) => {
     const tooShort = handleNamesAndIds({ applicationName: 'appName', serviceName: 'ab' })
-    t.deepEqual(readErrors(tooShort), ['Service Name is too short (min 3 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'], '2 characters serviceName is too short')
+    t.deepEqual(readErrors(tooShort), ['Service Name is too short (min 3 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#agent-identification-v4-and-v3'], '2 characters serviceName is too short')
     t.equal(tooShort.enable, false, 'too short serviceName disables the agent')
 
     const minLength = handleNamesAndIds({ applicationName: 'appName', serviceName: 'abc' })
@@ -59,10 +59,10 @@ test('v4 serviceName from 3 to 254 characters with [a-zA-Z0-9._-]', (t) => {
     t.equal(maxLength.serviceName, 'a'.repeat(254), 'serviceName is kept')
 
     const tooLong = handleNamesAndIds({ applicationName: 'appName', serviceName: 'a'.repeat(255) })
-    t.deepEqual(readErrors(tooLong), ['Service Name is too long (max 254 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'], '255 characters serviceName is too long')
+    t.deepEqual(readErrors(tooLong), ['Service Name is too long (max 254 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#agent-identification-v4-and-v3'], '255 characters serviceName is too long')
 
     const invalid = handleNamesAndIds({ applicationName: 'appName', serviceName: '~~~' })
-    t.deepEqual(readErrors(invalid), ['Service Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: ~~~. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'], 'invalid characters in serviceName')
+    t.deepEqual(readErrors(invalid), ['Service Name has invalid characters; allowed [a-zA-Z0-9._-]. Value: ~~~. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#agent-identification-v4-and-v3'], 'invalid characters in serviceName')
     t.end()
 })
 
@@ -102,7 +102,7 @@ test('v4 agentName up to 254 characters', (t) => {
     t.deepEqual(readErrors(maxLength), [], '254 characters agentName is valid')
 
     const tooLong = handleNamesAndIds({ agentName: 'a'.repeat(255), applicationName: 'appName', serviceName: 'serviceName' })
-    t.deepEqual(readErrors(tooLong), ['Agent Name is too long (max 254 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'], '255 characters agentName is too long for v4')
+    t.deepEqual(readErrors(tooLong), ['Agent Name is too long (max 254 characters). See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#agent-identification-v4-and-v3'], '255 characters agentName is too long for v4')
     t.end()
 })
 
@@ -166,7 +166,7 @@ test('v3 Agent ID up to 24, Application Name up to 254 and Agent Name up to 255 
     t.deepEqual(readErrors(maxLength), [], 'max length agentId, applicationName and agentName are valid')
 
     const tooLong = handleNamesAndIds({ ...v3Json, agentId: 'a'.repeat(25), applicationName: 'a'.repeat(255), agentName: 'a'.repeat(256) })
-    const link = 'https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'
+    const link = 'https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#agent-identification-v4-and-v3'
     t.deepEqual(readErrors(tooLong), [
         `Agent ID is too long (max 24 characters). See ${link}`,
         `Application Name is too long (max 254 characters). See ${link}`,
@@ -200,7 +200,7 @@ test('ConfigBuilder replaces the v4 names and ids with the final values', (t) =>
 test('ConfigBuilder disables the agent and appends the names and ids messages after the pinpoint-config.json warns', (t) => {
     const config = new ConfigBuilder({ agentId: 'node.app', applicationName: '~' }).setUserDefinedJson({ messages: { warns: ['pinpoint-config.json warn'] } }).build()
 
-    const link = 'https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'
+    const link = 'https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#agent-identification-v4-and-v3'
     t.equal(config.enable, false, 'names and ids errors disable the agent')
     t.deepEqual(config.messages.warns, [
         'pinpoint-config.json warn',
@@ -216,7 +216,7 @@ test('ConfigBuilder disables the agent and appends the names and ids messages af
 test('non-string names in json are errors instead of crashes', (t) => {
     const given = handleNamesAndIds({ applicationName: 1, serviceName: 123 })
 
-    const link = 'https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'
+    const link = 'https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#agent-identification-v4-and-v3'
     t.deepEqual(readErrors(given), [
         `Application Name must be a string. Value: 1. See ${link}`,
         `Service Name must be a string. Value: 123. See ${link}`,
@@ -227,13 +227,13 @@ test('non-string names in json are errors instead of crashes', (t) => {
 test('non-string agentName in json is an error instead of falling back to agentId', (t) => {
     const given = handleNamesAndIds({ agentName: 123, applicationName: 'appName', serviceName: 'serviceName' })
 
-    t.deepEqual(readErrors(given), ['Agent Name must be a string. Value: 123. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'], 'non-string agentName is an error')
+    t.deepEqual(readErrors(given), ['Agent Name must be a string. Value: 123. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#agent-identification-v4-and-v3'], 'non-string agentName is an error')
     t.end()
 })
 
 test('non-string agentId in json is a v3 error and a v4 ignored warn', (t) => {
     const v3 = handleNamesAndIds({ ...v3Json, agentId: 123, applicationName: 'appName' })
-    t.deepEqual(readErrors(v3), ['Agent ID must be a string. Value: 123. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#3-configuration-with-environment-variables'], 'v3 non-string agentId is an error')
+    t.deepEqual(readErrors(v3), ['Agent ID must be a string. Value: 123. See https://github.com/pinpoint-apm/pinpoint-node-agent?tab=readme-ov-file#agent-identification-v4-and-v3'], 'v3 non-string agentId is an error')
     t.equal(v3.agentId, 123, 'v3 does not generate an agentId for a non-string agentId')
 
     const v4 = handleNamesAndIds({ agentId: 123, applicationName: 'appName', serviceName: 'serviceName' })
